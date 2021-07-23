@@ -1,10 +1,10 @@
 {
-  "name": "@paulrberg/solidity-template",
-  "description": "Setup for writing Solidity smart contracts",
-  "version": "1.0.0",
+  "name": "mammon-core",
+  "description": "Treasury reinsurance protocol",
+  "version": "0.0.1",
   "author": {
-    "name": "Paul Razvan Berg",
-    "url": "https://paulrberg.com"
+    "name": "Tarun Chitra",
+    "url": "https://www.gauntlet.network"
   },
   "devDependencies": {
     "@codechecks/client": "^0.1.10",
