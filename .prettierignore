@@ -8,5 +8,7 @@ lib/
 node_modules/
 typechain/
 
+contracts/dependencies/
+
 # files
 coverage.json
