@@ -10,7 +10,6 @@ import "https://github.com/balancer-labs/configurable-rights-pool/blob/master/li
 contract MammonBalancerPrivatePoolVault is Ownable {
     uint private constant ONE = 10**18;
     uint private constant MIN_CONVERGENCE_SPEED = 10**12;
-    uint private constant MAX_UINT = type(uint).max;
     uint private constant BASE_WEIGHT = ONE * 5;
 
     IBFactory private bFactory;
@@ -44,14 +43,14 @@ contract MammonBalancerPrivatePoolVault is Ownable {
         // Transfer token0 to this contract
         IERC20(token0).transferFrom(msg.sender, address(this), amounts[0]);
         // Approve the balancer pool
-        IERC20(token0).approve(address(bPool), MAX_UINT);
+        IERC20(token0).approve(address(bPool), type(uint).max);
         // Bind token0
         bPool.bind(token0, amounts[0], weights[0]);
 
         // Transfer token1 to this contract
         IERC20(token1).transferFrom(msg.sender, address(this), amounts[1]);
         // Approve the balancer pool
-        IERC20(token1).approve(address(bPool), MAX_UINT);
+        IERC20(token1).approve(address(bPool), type(uint).max);
         // Bind token1
         bPool.bind(token1, amounts[1], weights[1]);
 
@@ -81,8 +80,8 @@ contract MammonBalancerPrivatePoolVault is Ownable {
                 );
             }
 
-            if (token.allowance(address(this), address(bPool)) != MAX_UINT) {
-                token.approve(address(bPool), MAX_UINT);
+            if (token.allowance(address(this), address(bPool)) != type(uint).max) {
+                token.approve(address(bPool), type(uint).max);
             }
 
             bPool.rebind(tokens[i], newBalance, newDenorm);
