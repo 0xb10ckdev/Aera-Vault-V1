@@ -176,30 +176,30 @@ contract MammonBalancerPrivatePoolVault is Ownable {
         bPool.setSwapFee(newSwapFee);
     }
 
-    function isInitialized() public view returns (bool) {
+    function isInitialized() external view returns (bool) {
         return initialized;
     }
 
-    function isPublicSwap() public view returns (bool) {
+    function isPublicSwap() external view returns (bool) {
         return bPool.isPublicSwap();
     }
 
-    function getBFactory() public view returns (IBFactory) {
+    function BFactory() external view returns (IBFactory) {
         return bFactory;
     }
 
-    function getBPool() public view returns (IBPool) {
+    function BPool() external view returns (IBPool) {
         return bPool;
     }
 
-    function getCurrentShare2() public view returns (uint256) {
+    function getCurrentShare2() external view returns (uint256) {
         uint256 w1 = getDenormalizedWeight(token0);
         uint256 w2 = getDenormalizedWeight(token1);
 
         return w2 * ONE / (w1 + w2);
     }
 
-    function getConvergenceSpeed() public view returns (uint256) {
+    function getConvergenceSpeed() external view returns (uint256) {
         return convergenceSpeed;
     }
 
@@ -212,7 +212,7 @@ contract MammonBalancerPrivatePoolVault is Ownable {
     }
 
     function getSpotPrice(address tokenIn, address tokenOut)
-        public
+        external
         view
         returns (uint256)
     {
@@ -220,7 +220,7 @@ contract MammonBalancerPrivatePoolVault is Ownable {
     }
 
     function getSpotPriceSansFee(address tokenIn, address tokenOut)
-        public
+        external
         view
         returns (uint256)
     {
