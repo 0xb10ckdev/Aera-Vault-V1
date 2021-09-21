@@ -32,8 +32,8 @@ contract MammonBalancerPrivatePoolVault is Ownable {
     }
 
     function init(
-        uint256[] memory amounts,
-        uint256[] memory weights
+        uint256[] calldata amounts,
+        uint256[] calldata weights
     )
         external
         onlyOwner
@@ -60,7 +60,7 @@ contract MammonBalancerPrivatePoolVault is Ownable {
         initialized = true;
     }
 
-    function deposit(uint256[] memory amounts) external onlyOwner {
+    function deposit(uint256[] calldata amounts) external onlyOwner {
         // Deposit each amount of tokens
         require (amounts.length == 2, "need amounts for two tokens");
 
@@ -85,7 +85,7 @@ contract MammonBalancerPrivatePoolVault is Ownable {
         }
     }
 
-    function withdraw(uint256[] memory amounts) external onlyOwner {
+    function withdraw(uint256[] calldata amounts) external onlyOwner {
         // Withdraw as much as possible up to each amount of tokens
         require (amounts.length == 2, "need amounts for two tokens");
 
