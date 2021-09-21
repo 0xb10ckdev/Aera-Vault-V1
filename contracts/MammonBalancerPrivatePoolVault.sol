@@ -3,11 +3,13 @@ pragma solidity >=0.8.6;
 
 import "./interfaces/IBFactory.sol";
 import "./interfaces/IBPool.sol";
-import "./interfaces/IERC20.sol";
+import { SafeERC20, IERC20 as ISafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "https://github.com/balancer-labs/configurable-rights-pool/blob/master/libraries/SmartPoolManager.sol";
 
 contract MammonBalancerPrivatePoolVault is Ownable {
+    using SafeERC20 for ISafeERC20;
+
     uint256 private constant ONE = 10**18;
     uint256 private constant MIN_CONVERGENCE_SPEED = 10**12;
     uint256 private constant BASE_WEIGHT = ONE * 5;
@@ -41,16 +43,16 @@ contract MammonBalancerPrivatePoolVault is Ownable {
         require (weights.length == 2, "need weights for two tokens");
 
         // Transfer token0 to this contract
-        IERC20(token0).transferFrom(msg.sender, address(this), amounts[0]);
+        ISafeERC20(token0).safeTransferFrom(msg.sender, address(this), amounts[0]);
         // Approve the balancer pool
-        IERC20(token0).approve(address(bPool), type(uint256).max);
+        ISafeERC20(token0).safeApprove(address(bPool), type(uint256).max);
         // Bind token0
         bPool.bind(token0, amounts[0], weights[0]);
 
         // Transfer token1 to this contract
-        IERC20(token1).transferFrom(msg.sender, address(this), amounts[1]);
+        ISafeERC20(token1).safeTransferFrom(msg.sender, address(this), amounts[1]);
         // Approve the balancer pool
-        IERC20(token1).approve(address(bPool), type(uint256).max);
+        ISafeERC20(token1).safeApprove(address(bPool), type(uint256).max);
         // Bind token1
         bPool.bind(token1, amounts[1], weights[1]);
 
@@ -65,7 +67,7 @@ contract MammonBalancerPrivatePoolVault is Ownable {
         address[2] memory tokens = [token0, token1];
 
         for (uint256 i = 0; i < tokens.length; i++) {
-            IERC20 token = IERC20(tokens[i]);
+            ISafeERC20 token = ISafeERC20(tokens[i]);
             uint256 tokenBalance = getBalance(tokens[i]);
             uint256 tokenDenorm = getDenormalizedWeight(tokens[i]);
 
@@ -74,15 +76,10 @@ contract MammonBalancerPrivatePoolVault is Ownable {
 
             if (newBalance > tokenBalance) {
                 uint256 needBalance = newBalance - tokenBalance;
-                require (
-                    token.transferFrom(msg.sender, address(this), needBalance),
-                    "deposit: transferFrom failed"
-                );
+                token.safeTransferFrom(msg.sender, address(this), needBalance);
             }
 
-            if (token.allowance(address(this), address(bPool)) != type(uint256).max) {
-                token.approve(address(bPool), type(uint256).max);
-            }
+            token.safeApprove(address(bPool), type(uint256).max);
 
             bPool.rebind(tokens[i], newBalance, newDenorm);
         }
@@ -105,11 +102,8 @@ contract MammonBalancerPrivatePoolVault is Ownable {
 
             bPool.rebind(tokens[i], newBalance, newDenorm);
 
-            IERC20 token = IERC20(tokens[i]);
-            require (
-                token.transfer(msg.sender, token.balanceOf(address(this))),
-                "withdraw: transferFrom failed"
-            );
+            ISafeERC20 token = ISafeERC20(tokens[i]);
+            token.safeTransfer(msg.sender, token.balanceOf(address(this)));
         }
     }
 
