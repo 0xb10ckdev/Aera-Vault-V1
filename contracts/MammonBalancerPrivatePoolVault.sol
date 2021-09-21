@@ -24,8 +24,8 @@ contract MammonBalancerPrivatePoolVault is Ownable {
     uint256 private targetShare2;
     SmartPoolManager.GradualUpdateParams private gradualUpdate;
 
-    constructor (address factory, address _token0, address _token1) {
-        bFactory = IBFactory(factory);
+    constructor (address _factory, address _token0, address _token1) {
+        bFactory = IBFactory(_factory);
         bPool = bFactory.newBPool();
         token0 = _token0;
         token1 = _token1;
