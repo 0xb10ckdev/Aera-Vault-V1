@@ -7,7 +7,7 @@ import { SafeERC20, IERC20 as ISafeERC20 } from "@openzeppelin/contracts/token/E
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "https://github.com/balancer-labs/configurable-rights-pool/blob/master/libraries/SmartPoolManager.sol";
 
-contract MammonBalancerPrivatePoolVault is Ownable {
+contract MammonBalancerPrivatePoolVault is IProtocolAPI, Ownable {
     using SafeERC20 for ISafeERC20;
 
     uint256 private constant ONE = 10**18;
@@ -60,11 +60,11 @@ contract MammonBalancerPrivatePoolVault is Ownable {
         initialized = true;
     }
 
-    function deposit(uint256[] calldata amounts) external onlyOwner {
+    function deposit(uint256 amount0, uint256 amount1) external override onlyOwner {
         /// Deposit each amount of tokens
-        require (amounts.length == 2, "need amounts for two tokens");
 
         address[2] memory tokens = [token0, token1];
+        uint256[2] memory amounts = [amount0, amount1];
 
         for (uint256 i = 0; i < tokens.length; i++) {
             ISafeERC20 token = ISafeERC20(tokens[i]);
@@ -85,11 +85,10 @@ contract MammonBalancerPrivatePoolVault is Ownable {
         }
     }
 
-    function withdraw(uint256[] calldata amounts) external onlyOwner {
+    function withdraw(uint256 amount0, uint256 amount1) external override onlyOwner {
         /// Withdraw as much as possible up to each amount of tokens
-        require (amounts.length == 2, "need amounts for two tokens");
-
         address[2] memory tokens = [token0, token1];
+        uint256[2] memory amounts = [amount0, amount1];
 
         for (uint256 i = 0; i < tokens.length; i++) {
             uint256 tokenBalance = getBalance(tokens[i]);
@@ -134,6 +133,10 @@ contract MammonBalancerPrivatePoolVault is Ownable {
 
     function pokeWeights() external onlyOwner {
         SmartPoolManager.pokeWeights(bPool, gradualUpdate);
+    }
+
+    function finalize() external override onlyOwner {
+        bPool.finalize();
     }
 
     function setTargetShare2(uint256 newTargetShare2) external onlyOwner {
