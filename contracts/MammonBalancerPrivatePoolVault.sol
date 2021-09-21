@@ -42,18 +42,18 @@ contract MammonBalancerPrivatePoolVault is Ownable {
         require (amounts.length == 2, "need amounts for two tokens");
         require (weights.length == 2, "need weights for two tokens");
 
-        // Transfer token0 to this contract
+        /// Transfer token0 to this contract
         ISafeERC20(token0).safeTransferFrom(msg.sender, address(this), amounts[0]);
-        // Approve the balancer pool
+        /// Approve the balancer pool
         ISafeERC20(token0).safeApprove(address(bPool), type(uint256).max);
-        // Bind token0
+        /// Bind token0
         bPool.bind(token0, amounts[0], weights[0]);
 
-        // Transfer token1 to this contract
+        /// Transfer token1 to this contract
         ISafeERC20(token1).safeTransferFrom(msg.sender, address(this), amounts[1]);
-        // Approve the balancer pool
+        /// Approve the balancer pool
         ISafeERC20(token1).safeApprove(address(bPool), type(uint256).max);
-        // Bind token1
+        /// Bind token1
         bPool.bind(token1, amounts[1], weights[1]);
 
         gradualUpdate.startWeights = weights;
@@ -61,7 +61,7 @@ contract MammonBalancerPrivatePoolVault is Ownable {
     }
 
     function deposit(uint256[] calldata amounts) external onlyOwner {
-        // Deposit each amount of tokens
+        /// Deposit each amount of tokens
         require (amounts.length == 2, "need amounts for two tokens");
 
         address[2] memory tokens = [token0, token1];
@@ -86,7 +86,7 @@ contract MammonBalancerPrivatePoolVault is Ownable {
     }
 
     function withdraw(uint256[] calldata amounts) external onlyOwner {
-        // Withdraw as much as possible up to each amount of tokens
+        /// Withdraw as much as possible up to each amount of tokens
         require (amounts.length == 2, "need amounts for two tokens");
 
         address[2] memory tokens = [token0, token1];
@@ -115,9 +115,9 @@ contract MammonBalancerPrivatePoolVault is Ownable {
         public
         onlyOwner
     {
-        // Library computes the startBlock,
-        // computes startWeights as the current
-        // denormalized weights of the core pool tokens.
+        /// Library computes the startBlock,
+        /// computes startWeights as the current
+        /// denormalized weights of the core pool tokens.
         require (newWeights.length == 2, "need new weights for two tokens");
 
         uint256 endBlock = getExpectedFinalBlock();
@@ -137,7 +137,7 @@ contract MammonBalancerPrivatePoolVault is Ownable {
     }
 
     function setTargetShare2(uint256 newTargetShare2) external onlyOwner {
-        // Set target share for token2 and call updateWeightsGradually
+        /// Set target share for token2 and call updateWeightsGradually
         require (
             newTargetShare2 <= ONE,
             "targetShare2 mustn't be greater than 1"
