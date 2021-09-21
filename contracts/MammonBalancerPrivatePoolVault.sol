@@ -7,15 +7,15 @@ import { SafeERC20, IERC20 as ISafeERC20 } from "@openzeppelin/contracts/token/E
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "https://github.com/balancer-labs/configurable-rights-pool/blob/master/libraries/SmartPoolManager.sol";
 
-contract MammonBalancerPrivatePoolVault is IProtocolAPI, Ownable {
+contract MammonVaultV0 is IProtocolAPI, Ownable {
     using SafeERC20 for ISafeERC20;
 
     uint256 private constant ONE = 10**18;
     uint256 private constant MIN_CONVERGENCE_SPEED = 10**12;
     uint256 private constant BASE_WEIGHT = ONE * 5;
 
-    IBFactory private bFactory;
-    IBPool private bPool;
+    IBFactory private factory;
+    IBPool private pool;
 
     bool private initialized;
     address public immutable token0;
@@ -25,8 +25,8 @@ contract MammonBalancerPrivatePoolVault is IProtocolAPI, Ownable {
     SmartPoolManager.GradualUpdateParams private gradualUpdate;
 
     constructor (address _factory, address _token0, address _token1) {
-        bFactory = IBFactory(_factory);
-        bPool = bFactory.newBPool();
+        factory = IBFactory(_factory);
+        pool = factory.newBPool();
         token0 = _token0;
         token1 = _token1;
     }
@@ -45,16 +45,16 @@ contract MammonBalancerPrivatePoolVault is IProtocolAPI, Ownable {
         /// Transfer token0 to this contract
         ISafeERC20(token0).safeTransferFrom(msg.sender, address(this), amounts[0]);
         /// Approve the balancer pool
-        ISafeERC20(token0).safeApprove(address(bPool), type(uint256).max);
+        ISafeERC20(token0).safeApprove(address(pool), type(uint256).max);
         /// Bind token0
-        bPool.bind(token0, amounts[0], weights[0]);
+        pool.bind(token0, amounts[0], weights[0]);
 
         /// Transfer token1 to this contract
         ISafeERC20(token1).safeTransferFrom(msg.sender, address(this), amounts[1]);
         /// Approve the balancer pool
-        ISafeERC20(token1).safeApprove(address(bPool), type(uint256).max);
+        ISafeERC20(token1).safeApprove(address(pool), type(uint256).max);
         /// Bind token1
-        bPool.bind(token1, amounts[1], weights[1]);
+        pool.bind(token1, amounts[1], weights[1]);
 
         gradualUpdate.startWeights = weights;
         initialized = true;
@@ -79,9 +79,9 @@ contract MammonBalancerPrivatePoolVault is IProtocolAPI, Ownable {
                 token.safeTransferFrom(msg.sender, address(this), needBalance);
             }
 
-            token.safeApprove(address(bPool), type(uint256).max);
+            token.safeApprove(address(pool), type(uint256).max);
 
-            bPool.rebind(tokens[i], newBalance, newDenorm);
+            pool.rebind(tokens[i], newBalance, newDenorm);
         }
     }
 
@@ -99,7 +99,7 @@ contract MammonBalancerPrivatePoolVault is IProtocolAPI, Ownable {
             uint256 newBalance = tokenBalance - amounts[i];
             uint256 newDenorm = tokenDenorm * newBalance / tokenBalance;
 
-            bPool.rebind(tokens[i], newBalance, newDenorm);
+            pool.rebind(tokens[i], newBalance, newDenorm);
 
             ISafeERC20 token = ISafeERC20(tokens[i]);
             token.safeTransfer(msg.sender, token.balanceOf(address(this)));
@@ -107,7 +107,7 @@ contract MammonBalancerPrivatePoolVault is IProtocolAPI, Ownable {
     }
 
     function gulp(address token) external onlyOwner {
-        bPool.gulp(token);
+        pool.gulp(token);
     }
 
     function updateWeightsGradually(uint256[] memory newWeights)
@@ -122,7 +122,7 @@ contract MammonBalancerPrivatePoolVault is IProtocolAPI, Ownable {
         uint256 endBlock = getExpectedFinalBlock();
 
         SmartPoolManager.updateWeightsGradually(
-            bPool,
+            pool,
             gradualUpdate,
             newWeights,
             block.number,
@@ -132,11 +132,11 @@ contract MammonBalancerPrivatePoolVault is IProtocolAPI, Ownable {
     }
 
     function pokeWeights() external onlyOwner {
-        SmartPoolManager.pokeWeights(bPool, gradualUpdate);
+        SmartPoolManager.pokeWeights(pool, gradualUpdate);
     }
 
     function finalize() external override onlyOwner {
-        bPool.finalize();
+        pool.finalize();
     }
 
     function setTargetShare2(uint256 newTargetShare2) external onlyOwner {
@@ -172,11 +172,11 @@ contract MammonBalancerPrivatePoolVault is IProtocolAPI, Ownable {
     }
 
     function setPublicSwap(bool value) external onlyOwner {
-        bPool.setPublicSwap(value);
+        pool.setPublicSwap(value);
     }
 
     function setSwapFee(uint256 newSwapFee) external onlyOwner {
-        bPool.setSwapFee(newSwapFee);
+        pool.setSwapFee(newSwapFee);
     }
 
     function isInitialized() external view returns (bool) {
@@ -184,15 +184,15 @@ contract MammonBalancerPrivatePoolVault is IProtocolAPI, Ownable {
     }
 
     function isPublicSwap() external view returns (bool) {
-        return bPool.isPublicSwap();
+        return pool.isPublicSwap();
     }
 
     function BFactory() external view returns (IBFactory) {
-        return bFactory;
+        return factory;
     }
 
     function BPool() external view returns (IBPool) {
-        return bPool;
+        return pool;
     }
 
     function getCurrentShare2() external view returns (uint256) {
@@ -207,7 +207,7 @@ contract MammonBalancerPrivatePoolVault is IProtocolAPI, Ownable {
     }
 
     function getSwapFee() external view returns (uint256) {
-        return bPool.getSwapFee();
+        return pool.getSwapFee();
     }
 
     function getExpectedFinalBlock() public view returns (uint256) {
@@ -219,7 +219,7 @@ contract MammonBalancerPrivatePoolVault is IProtocolAPI, Ownable {
         view
         returns (uint256)
     {
-        return bPool.getSpotPrice(tokenIn, tokenOut);
+        return pool.getSpotPrice(tokenIn, tokenOut);
     }
 
     function getSpotPriceSansFee(address tokenIn, address tokenOut)
@@ -227,18 +227,18 @@ contract MammonBalancerPrivatePoolVault is IProtocolAPI, Ownable {
         view
         returns (uint256)
     {
-        return bPool.getSpotPriceSansFee(tokenIn, tokenOut);
+        return pool.getSpotPriceSansFee(tokenIn, tokenOut);
     }
 
     function getBalance(address token) public view returns (uint256) {
-        return bPool.getBalance(token);
+        return pool.getBalance(token);
     }
 
     function getDenormalizedWeight(address token) public view returns (uint256) {
-        return bPool.getDenormalizedWeight(token);
+        return pool.getDenormalizedWeight(token);
     }
 
     function totalSupply() external view returns (uint256) {
-        return bPool.totalSupply();
+        return pool.totalSupply();
     }
 }
