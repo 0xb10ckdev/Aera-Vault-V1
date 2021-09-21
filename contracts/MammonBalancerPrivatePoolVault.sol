@@ -8,17 +8,17 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "https://github.com/balancer-labs/configurable-rights-pool/blob/master/libraries/SmartPoolManager.sol";
 
 contract MammonBalancerPrivatePoolVault is Ownable {
-    uint private constant ONE = 10**18;
-    uint private constant MIN_CONVERGENCE_SPEED = 10**12;
-    uint private constant BASE_WEIGHT = ONE * 5;
+    uint256 private constant ONE = 10**18;
+    uint256 private constant MIN_CONVERGENCE_SPEED = 10**12;
+    uint256 private constant BASE_WEIGHT = ONE * 5;
 
     IBFactory private bFactory;
     IBPool private bPool;
 
     address public immutable token0;
     address public immutable token1;
-    uint private convergenceSpeed;
-    uint private targetShare2;
+    uint256 private convergenceSpeed;
+    uint256 private targetShare2;
     bool private initialized;
     SmartPoolManager.GradualUpdateParams private gradualUpdate;
 
@@ -43,14 +43,14 @@ contract MammonBalancerPrivatePoolVault is Ownable {
         // Transfer token0 to this contract
         IERC20(token0).transferFrom(msg.sender, address(this), amounts[0]);
         // Approve the balancer pool
-        IERC20(token0).approve(address(bPool), type(uint).max);
+        IERC20(token0).approve(address(bPool), type(uint256).max);
         // Bind token0
         bPool.bind(token0, amounts[0], weights[0]);
 
         // Transfer token1 to this contract
         IERC20(token1).transferFrom(msg.sender, address(this), amounts[1]);
         // Approve the balancer pool
-        IERC20(token1).approve(address(bPool), type(uint).max);
+        IERC20(token1).approve(address(bPool), type(uint256).max);
         // Bind token1
         bPool.bind(token1, amounts[1], weights[1]);
 
@@ -58,50 +58,50 @@ contract MammonBalancerPrivatePoolVault is Ownable {
         initialized = true;
     }
 
-    function deposit(uint[] memory amounts) external onlyOwner {
+    function deposit(uint256[] memory amounts) external onlyOwner {
         // Deposit each amount of tokens
         require (amounts.length == 2, "need amounts for two tokens");
 
         address[2] memory tokens = [token0, token1];
 
-        for (uint i = 0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < tokens.length; i++) {
             IERC20 token = IERC20(tokens[i]);
-            uint tokenBalance = getBalance(tokens[i]);
-            uint tokenDenorm = getDenormalizedWeight(tokens[i]);
+            uint256 tokenBalance = getBalance(tokens[i]);
+            uint256 tokenDenorm = getDenormalizedWeight(tokens[i]);
 
-            uint newBalance = tokenBalance + amounts[i];
-            uint newDenorm = tokenDenorm * newBalance / tokenBalance;
+            uint256 newBalance = tokenBalance + amounts[i];
+            uint256 newDenorm = tokenDenorm * newBalance / tokenBalance;
 
             if (newBalance > tokenBalance) {
-                uint needBalance = newBalance - tokenBalance;
+                uint256 needBalance = newBalance - tokenBalance;
                 require (
                     token.transferFrom(msg.sender, address(this), needBalance),
                     "deposit: transferFrom failed"
                 );
             }
 
-            if (token.allowance(address(this), address(bPool)) != type(uint).max) {
-                token.approve(address(bPool), type(uint).max);
+            if (token.allowance(address(this), address(bPool)) != type(uint256).max) {
+                token.approve(address(bPool), type(uint256).max);
             }
 
             bPool.rebind(tokens[i], newBalance, newDenorm);
         }
     }
 
-    function withdraw(uint[] memory amounts) external onlyOwner {
+    function withdraw(uint256[] memory amounts) external onlyOwner {
         // Withdraw as much as possible up to each amount of tokens
         require (amounts.length == 2, "need amounts for two tokens");
 
         address[2] memory tokens = [token0, token1];
 
-        for (uint i = 0; i < tokens.length; i++) {
-            uint tokenBalance = getBalance(tokens[i]);
-            uint tokenDenorm = getDenormalizedWeight(tokens[i]);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            uint256 tokenBalance = getBalance(tokens[i]);
+            uint256 tokenDenorm = getDenormalizedWeight(tokens[i]);
 
             require (tokenBalance >= amounts[i], "low balance");
 
-            uint newBalance = tokenBalance - amounts[i];
-            uint newDenorm = tokenDenorm * newBalance / tokenBalance;
+            uint256 newBalance = tokenBalance - amounts[i];
+            uint256 newDenorm = tokenDenorm * newBalance / tokenBalance;
 
             bPool.rebind(tokens[i], newBalance, newDenorm);
 
@@ -117,7 +117,7 @@ contract MammonBalancerPrivatePoolVault is Ownable {
         bPool.gulp(token);
     }
 
-    function updateWeightsGradually(uint[] memory newWeights)
+    function updateWeightsGradually(uint256[] memory newWeights)
         public
         onlyOwner
     {
@@ -126,7 +126,7 @@ contract MammonBalancerPrivatePoolVault is Ownable {
         // denormalized weights of the core pool tokens.
         require (newWeights.length == 2, "need new weights for two tokens");
 
-        uint endBlock = getExpectedFinalBlock();
+        uint256 endBlock = getExpectedFinalBlock();
 
         SmartPoolManager.updateWeightsGradually(
             bPool,
@@ -142,15 +142,15 @@ contract MammonBalancerPrivatePoolVault is Ownable {
         SmartPoolManager.pokeWeights(bPool, gradualUpdate);
     }
 
-    function setTargetShare2(uint newTargetShare2) external onlyOwner {
+    function setTargetShare2(uint256 newTargetShare2) external onlyOwner {
         // Set target share for token2 and call updateWeightsGradually
         require (
             newTargetShare2 <= ONE,
             "targetShare2 mustn't be greater than 1"
         );
 
-        uint w1;
-        uint w2;
+        uint256 w1;
+        uint256 w2;
 
         if (newTargetShare2 == ONE) {
             w2 = BASE_WEIGHT;
@@ -163,14 +163,14 @@ contract MammonBalancerPrivatePoolVault is Ownable {
 
         targetShare2 = newTargetShare2;
 
-        uint[] memory newWeights = new uint[](2);
+        uint256[] memory newWeights = new uint256[](2);
         newWeights[0] = w1;
         newWeights[1] = w2;
 
         updateWeightsGradually(newWeights);
     }
 
-    function setConvergenceSpeed(uint newSpeed) external onlyOwner {
+    function setConvergenceSpeed(uint256 newSpeed) external onlyOwner {
         convergenceSpeed = newSpeed;
     }
 
@@ -178,7 +178,7 @@ contract MammonBalancerPrivatePoolVault is Ownable {
         bPool.setPublicSwap(value);
     }
 
-    function setSwapFee(uint newSwapFee) external onlyOwner {
+    function setSwapFee(uint256 newSwapFee) external onlyOwner {
         bPool.setSwapFee(newSwapFee);
     }
 
@@ -198,29 +198,29 @@ contract MammonBalancerPrivatePoolVault is Ownable {
         return bPool;
     }
 
-    function getCurrentShare2() public view returns (uint) {
-        uint w1 = getDenormalizedWeight(token0);
-        uint w2 = getDenormalizedWeight(token1);
+    function getCurrentShare2() public view returns (uint256) {
+        uint256 w1 = getDenormalizedWeight(token0);
+        uint256 w2 = getDenormalizedWeight(token1);
 
         return w2 * ONE / (w1 + w2);
     }
 
-    function getConvergenceSpeed() public view returns (uint) {
+    function getConvergenceSpeed() public view returns (uint256) {
         return convergenceSpeed;
     }
 
-    function getSwapFee() external view returns (uint) {
+    function getSwapFee() external view returns (uint256) {
         return bPool.getSwapFee();
     }
 
-    function getExpectedFinalBlock() public view returns (uint) {
+    function getExpectedFinalBlock() public view returns (uint256) {
         return block.number + ONE / convergenceSpeed;
     }
 
     function getSpotPrice(address tokenIn, address tokenOut)
         public
         view
-        returns (uint)
+        returns (uint256)
     {
         return bPool.getSpotPrice(tokenIn, tokenOut);
     }
@@ -228,20 +228,20 @@ contract MammonBalancerPrivatePoolVault is Ownable {
     function getSpotPriceSansFee(address tokenIn, address tokenOut)
         public
         view
-        returns (uint)
+        returns (uint256)
     {
         return bPool.getSpotPriceSansFee(tokenIn, tokenOut);
     }
 
-    function getBalance(address token) public view returns (uint) {
+    function getBalance(address token) public view returns (uint256) {
         return bPool.getBalance(token);
     }
 
-    function getDenormalizedWeight(address token) public view returns (uint) {
+    function getDenormalizedWeight(address token) public view returns (uint256) {
         return bPool.getDenormalizedWeight(token);
     }
 
-    function totalSupply() external view returns (uint) {
+    function totalSupply() external view returns (uint256) {
         return bPool.totalSupply();
     }
 }
