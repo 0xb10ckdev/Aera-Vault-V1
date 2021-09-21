@@ -15,11 +15,11 @@ contract MammonBalancerPrivatePoolVault is Ownable {
     IBFactory private bFactory;
     IBPool private bPool;
 
+    bool private initialized;
     address public immutable token0;
     address public immutable token1;
     uint256 private convergenceSpeed;
     uint256 private targetShare2;
-    bool private initialized;
     SmartPoolManager.GradualUpdateParams private gradualUpdate;
 
     constructor (address factory, address _token0, address _token1) {
