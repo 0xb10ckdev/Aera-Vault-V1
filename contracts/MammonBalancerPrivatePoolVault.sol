@@ -42,19 +42,8 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
     {
         require (!initialized, "already initialized");
 
-        /// Transfer token0 to this contract
-        ISafeERC20(token0).safeTransferFrom(msg.sender, address(this), amount0);
-        /// Approve the balancer pool
-        ISafeERC20(token0).safeApprove(address(pool), amount0);
-        /// Bind token0
-        pool.bind(token0, amount0, weight0);
-
-        /// Transfer token1 to this contract
-        ISafeERC20(token1).safeTransferFrom(msg.sender, address(this), amount1);
-        /// Approve the balancer pool
-        ISafeERC20(token1).safeApprove(address(pool), amount1);
-        /// Bind token1
-        pool.bind(token1, amount1, weight1);
+        bind(token0, amount0, amount0);
+        bind(token1, amount1, amount1);
 
         gradualUpdate.startWeights = [weight0, weight1];
         initialized = true;
@@ -240,5 +229,14 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
 
     function totalSupply() external view returns (uint256) {
         return pool.totalSupply();
+    }
+
+    function bind(address token, uint256 amount, uint256 weight) internal {
+        /// Transfer token to this contract
+        ISafeERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+        /// Approve the balancer pool
+        ISafeERC20(token).safeApprove(address(pool), amount);
+        /// Bind token
+        pool.bind(token, amount, weight);
     }
 }
