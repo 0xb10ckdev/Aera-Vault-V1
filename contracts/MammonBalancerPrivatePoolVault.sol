@@ -25,6 +25,22 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
     uint256 private targetShare2;
     SmartPoolManager.GradualUpdateParams private gradualUpdate;
 
+    event DEPOSIT(
+        address indexed caller,
+        uint256 amount0,
+        uint256 amount1,
+        uint256 weight0,
+        uint256 weight1
+    );
+
+    event WITHDRAW(
+        address indexed caller,
+        uint256 amount0,
+        uint256 amount1,
+        uint256 weight0,
+        uint256 weight1
+    );
+
     constructor (address _factory, address _token0, address _token1) {
         factory = IBFactory(_factory);
         pool = factory.newBPool();
@@ -56,6 +72,8 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
 
         gradualUpdate.startWeights = [weight0, weight1];
         initialized = true;
+
+        emit DEPOSIT(msg.sender, amount0, amount1, weight0, weight1);
     }
 
     function deposit(uint256 amount0, uint256 amount1)
@@ -73,6 +91,11 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
         if (amount1 > 0) {
             depositToken(token1, amount1);
         }
+
+        uint256 weight0 = getDenormalizedWeight(token0);
+        uint256 weight1 = getDenormalizedWeight(token1);
+
+        emit DEPOSIT(msg.sender, amount0, amount1, weight0, weight1);
     }
 
     function withdraw(uint256 amount0, uint256 amount1)
@@ -90,6 +113,11 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
         if (amount1 > 0) {
             withdrawToken(token1, amount1);
         }
+
+        uint256 weight0 = getDenormalizedWeight(token0);
+        uint256 weight1 = getDenormalizedWeight(token1);
+
+        emit WITHDRAW(msg.sender, amount0, amount1, weight0, weight1);
     }
 
     function gulp(address token) external onlyOwner {
