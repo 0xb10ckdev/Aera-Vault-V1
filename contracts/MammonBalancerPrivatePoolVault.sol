@@ -62,22 +62,12 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
 
     function withdraw(uint256 amount0, uint256 amount1) external override onlyOwner {
         /// Withdraw as much as possible up to each amount of tokens
-        address[2] memory tokens = [token0, token1];
-        uint256[2] memory amounts = [amount0, amount1];
 
-        for (uint256 i = 0; i < tokens.length; i++) {
-            uint256 tokenBalance = getBalance(tokens[i]);
-            uint256 tokenDenorm = getDenormalizedWeight(tokens[i]);
-
-            require (tokenBalance >= amounts[i], "low balance");
-
-            uint256 newBalance = tokenBalance - amounts[i];
-            uint256 newDenorm = tokenDenorm * newBalance / tokenBalance;
-
-            pool.rebind(tokens[i], newBalance, newDenorm);
-
-            ISafeERC20 token = ISafeERC20(tokens[i]);
-            token.safeTransfer(msg.sender, token.balanceOf(address(this)));
+        if (amount0 > 0) {
+            withdrawToken(token0, amount0);
+        }
+        if (amount1 > 0) {
+            withdrawToken(token1, amount1);
         }
     }
 
@@ -226,19 +216,35 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
         pool.bind(token, amount, weight);
     }
 
-    function depositToken(address token, uint256 amount) internal {
-        require (amount > 0, "deposit amount must greater than 0");
+    function depositToken(address _token, uint256 _amount) internal {
+        require (_amount > 0, "deposit amount must greater than 0");
 
-        uint256 tokenBalance = getBalance(token);
-        uint256 tokenDenorm = getDenormalizedWeight(token);
-        uint256 newBalance = tokenBalance + amount;
+        uint256 tokenBalance = getBalance(_token);
+        uint256 tokenDenorm = getDenormalizedWeight(_token);
+        uint256 newBalance = tokenBalance + _amount;
 
         uint256 newDenorm = tokenDenorm * newBalance / tokenBalance;
 
-        ISafeERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+        ISafeERC20 token = ISafeERC20(_token);
 
-        ISafeERC20(token).safeApprove(address(pool), amount);
+        token.safeTransferFrom(msg.sender, address(this), _amount);
+        token.safeApprove(address(pool), _amount);
 
-        pool.rebind(token, newBalance, newDenorm);
+        pool.rebind(_token, newBalance, newDenorm);
+    }
+    
+    function withdrawToken(address _token, uint256 _amount) internal {
+        uint256 tokenBalance = getBalance(_token);
+        uint256 tokenDenorm = getDenormalizedWeight(_token);
+
+        require (tokenBalance >= _amount, "low balance");
+
+        uint256 newBalance = tokenBalance - _amount;
+        uint256 newDenorm = tokenDenorm * newBalance / tokenBalance;
+
+        pool.rebind(_token, newBalance, newDenorm);
+
+        ISafeERC20 token = ISafeERC20(_token);
+        token.safeTransfer(msg.sender, token.balanceOf(address(this)));
     }
 }
