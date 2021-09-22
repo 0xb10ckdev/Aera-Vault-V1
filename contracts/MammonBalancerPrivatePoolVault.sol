@@ -3,11 +3,12 @@ pragma solidity >=0.8.7;
 
 import "./interfaces/IBFactory.sol";
 import "./interfaces/IBPool.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { SafeERC20, IERC20 as ISafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "https://github.com/balancer-labs/configurable-rights-pool/blob/master/libraries/SmartPoolManager.sol";
 
-contract MammonVaultV0 is IProtocolAPI, Ownable {
+contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
     using SafeERC20 for ISafeERC20;
 
     uint256 private constant ONE = 10**18;
@@ -57,13 +58,11 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
         initialized = true;
     }
 
-    function deposit(
-        uint256 amount0,
-        uint256 amount1
-    )
+    function deposit(uint256 amount0, uint256 amount1)
         external
         override
         onlyOwner
+        nonReentrant
     {
         /// Deposit each amount of tokens
         require (initialized, "must be initialized");
@@ -76,13 +75,11 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
         }
     }
 
-    function withdraw(
-        uint256 amount0,
-        uint256 amount1
-    )
+    function withdraw(uint256 amount0, uint256 amount1)
         external
         override
         onlyOwner
+        nonReentrant
     {
         /// Withdraw as much as possible up to each amount of tokens
         require (initialized, "must be initialized");
