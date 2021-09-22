@@ -13,10 +13,6 @@ import "https://github.com/balancer-labs/configurable-rights-pool/blob/master/li
 contract MammonVaultV0 is IMammonVaultV0, Initializable, Ownable, ReentrancyGuard {
     using SafeERC20 for ISafeERC20;
 
-    uint256 private constant ONE = 10**18;
-    uint256 private constant MIN_CONVERGENCE_SPEED = 10**12;
-    uint256 private constant BASE_WEIGHT = ONE * 5;
-
     IBFactory public factory;
     IBPool public pool;
 
