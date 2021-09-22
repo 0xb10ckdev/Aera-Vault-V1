@@ -24,10 +24,9 @@ contract MammonVaultV0 is IMammonVaultV0, Initializable, Ownable, ReentrancyGuar
     address public manager;
     address public immutable token0;
     address public immutable token1;
-    uint256 private targetShare2;
     SmartPoolManager.GradualUpdateParams private gradualUpdate;
 
-    event DEPOSIT(
+    event Deposit(
         address indexed caller,
         uint256 amount0,
         uint256 amount1,
@@ -35,7 +34,7 @@ contract MammonVaultV0 is IMammonVaultV0, Initializable, Ownable, ReentrancyGuar
         uint256 weight1
     );
 
-    event WITHDRAW(
+    event Withdraw(
         address indexed caller,
         uint256 amount0,
         uint256 amount1,
@@ -53,6 +52,7 @@ contract MammonVaultV0 is IMammonVaultV0, Initializable, Ownable, ReentrancyGuar
         pool = factory.newBPool();
         token0 = _token0;
         token1 = _token1;
+        manager = msg.sender;
     }
 
     function initialDeposit(
@@ -80,7 +80,7 @@ contract MammonVaultV0 is IMammonVaultV0, Initializable, Ownable, ReentrancyGuar
         gradualUpdate.startWeights = [weight0, weight1];
         initialized = true;
 
-        emit DEPOSIT(msg.sender, amount0, amount1, weight0, weight1);
+        emit Deposit(msg.sender, amount0, amount1, weight0, weight1);
     }
 
     function deposit(uint256 amount0, uint256 amount1)
@@ -102,7 +102,7 @@ contract MammonVaultV0 is IMammonVaultV0, Initializable, Ownable, ReentrancyGuar
         uint256 weight0 = getDenormalizedWeight(token0);
         uint256 weight1 = getDenormalizedWeight(token1);
 
-        emit DEPOSIT(msg.sender, amount0, amount1, weight0, weight1);
+        emit Deposit(msg.sender, amount0, amount1, weight0, weight1);
     }
 
     function withdraw(uint256 amount0, uint256 amount1)
@@ -124,7 +124,7 @@ contract MammonVaultV0 is IMammonVaultV0, Initializable, Ownable, ReentrancyGuar
         uint256 weight0 = getDenormalizedWeight(token0);
         uint256 weight1 = getDenormalizedWeight(token1);
 
-        emit WITHDRAW(msg.sender, amount0, amount1, weight0, weight1);
+        emit Withdraw(msg.sender, amount0, amount1, weight0, weight1);
     }
 
     function gulp(address token) external override onlyOwner {
@@ -165,6 +165,11 @@ contract MammonVaultV0 is IMammonVaultV0, Initializable, Ownable, ReentrancyGuar
 
     function finalize() external override onlyOwner {
         pool.finalize();
+    }
+
+    function changeManager(address newManager) external override onlyOwner {
+        require(newManager == address(0), "manager mustn't be zero address");
+        manager = newManager;
     }
 
     function setPublicSwap(bool value) external override onlyOwner {
