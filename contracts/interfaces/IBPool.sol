@@ -11,12 +11,8 @@ interface IBPool {
 
     function isPublicSwap() external view returns (bool);
     function getSwapFee() external view returns (uint);
-    function getSpotPrice(address tokenIn, address tokenOut) external view returns (uint);
-    function getSpotPriceSansFee(address tokenIn,address tokenOut) external view returns (uint);
     function getBalance(address token) external view returns (uint);
     function getDenormalizedWeight(address token) external view returns (uint);
-    function getCurrentTokens() external view returns (address[] memory tokens);
-    function totalSupply() external view returns (uint);
     function MIN_WEIGHT() external view returns (uint);
     function MAX_WEIGHT() external view returns (uint);
     function MIN_BALANCE() external view returns (uint);

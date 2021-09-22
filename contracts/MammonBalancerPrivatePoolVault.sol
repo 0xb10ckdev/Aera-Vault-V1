@@ -15,8 +15,8 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
     uint256 private constant MIN_CONVERGENCE_SPEED = 10**12;
     uint256 private constant BASE_WEIGHT = ONE * 5;
 
-    IBFactory private factory;
-    IBPool private pool;
+    IBFactory public factory;
+    IBPool public pool;
 
     bool private initialized;
     address public immutable token0;
@@ -156,34 +156,6 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
         pool.finalize();
     }
 
-    function setTargetShare2(uint256 newTargetShare2) external onlyOwner {
-        /// Set target share for token2 and call updateWeightsGradually
-        require (
-            newTargetShare2 <= ONE,
-            "targetShare2 mustn't be greater than 1"
-        );
-
-        uint256 weight0;
-        uint256 weight1;
-
-        if (newTargetShare2 == ONE) {
-            weight1 = BASE_WEIGHT;
-        } else if (newTargetShare2 == 0) {
-            weight0 = BASE_WEIGHT;
-        } else {
-            weight0 = BASE_WEIGHT;
-            weight1 = weight0 * newTargetShare2 / (ONE - newTargetShare2);
-        }
-
-        targetShare2 = newTargetShare2;
-
-        updateWeightsGradually(weight0, weight1);
-    }
-
-    function setConvergenceSpeed(uint256 newSpeed) external onlyOwner {
-        convergenceSpeed = newSpeed;
-    }
-
     function setPublicSwap(bool value) external onlyOwner {
         pool.setPublicSwap(value);
     }
@@ -192,31 +164,8 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
         pool.setSwapFee(newSwapFee);
     }
 
-    function isInitialized() external view returns (bool) {
-        return initialized;
-    }
-
     function isPublicSwap() external view returns (bool) {
         return pool.isPublicSwap();
-    }
-
-    function BFactory() external view returns (IBFactory) {
-        return factory;
-    }
-
-    function BPool() external view returns (IBPool) {
-        return pool;
-    }
-
-    function getCurrentShare2() external view returns (uint256) {
-        uint256 w1 = getDenormalizedWeight(token0);
-        uint256 w2 = getDenormalizedWeight(token1);
-
-        return w2 * ONE / (w1 + w2);
-    }
-
-    function getConvergenceSpeed() external view returns (uint256) {
-        return convergenceSpeed;
     }
 
     function getSwapFee() external view returns (uint256) {
@@ -225,22 +174,6 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
 
     function getExpectedFinalBlock() public view returns (uint256) {
         return block.number + ONE / convergenceSpeed;
-    }
-
-    function getSpotPrice(address tokenIn, address tokenOut)
-        external
-        view
-        returns (uint256)
-    {
-        return pool.getSpotPrice(tokenIn, tokenOut);
-    }
-
-    function getSpotPriceSansFee(address tokenIn, address tokenOut)
-        external
-        view
-        returns (uint256)
-    {
-        return pool.getSpotPriceSansFee(tokenIn, tokenOut);
     }
 
     function getBalance(address token) public view returns (uint256) {
@@ -253,10 +186,6 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
         returns (uint256)
     {
         return pool.getDenormalizedWeight(token);
-    }
-
-    function totalSupply() external view returns (uint256) {
-        return pool.totalSupply();
     }
 
     function bindToken(address token, uint256 amount, uint256 weight)
