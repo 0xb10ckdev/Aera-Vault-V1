@@ -3,12 +3,13 @@ pragma solidity >=0.8.7;
 
 import "./interfaces/IBFactory.sol";
 import "./interfaces/IBPool.sol";
+import "./interfaces/IMammonVaultV0.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { SafeERC20, IERC20 as ISafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "https://github.com/balancer-labs/configurable-rights-pool/blob/master/libraries/SmartPoolManager.sol";
 
-contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
+contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     using SafeERC20 for ISafeERC20;
 
     uint256 private constant ONE = 10**18;
@@ -19,9 +20,9 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
     IBPool public pool;
 
     bool private initialized;
+    address public manager;
     address public immutable token0;
     address public immutable token1;
-    uint256 private convergenceSpeed;
     uint256 private targetShare2;
     SmartPoolManager.GradualUpdateParams private gradualUpdate;
 
@@ -41,6 +42,11 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
         uint256 weight1
     );
 
+    modifier onlyManager() {
+        require(msg.sender == manager, "caller is not the manager");
+        _;
+    }
+
     constructor (address _factory, address _token0, address _token1) {
         factory = IBFactory(_factory);
         pool = factory.newBPool();
@@ -55,9 +61,10 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
         uint256 weight1
     )
         external
+        override
         onlyOwner
     {
-        require (!initialized, "already initialized");
+        require(!initialized, "already initialized");
 
         require(weight0 >= pool.MIN_WEIGHT(), "weight is less than min");
         require(weight0 <= pool.MAX_WEIGHT(), "weight is greater than max");
@@ -120,19 +127,23 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
         emit WITHDRAW(msg.sender, amount0, amount1, weight0, weight1);
     }
 
-    function gulp(address token) external onlyOwner {
+    function gulp(address token) external override onlyOwner {
         pool.gulp(token);
     }
 
-    function updateWeightsGradually(uint256 weight0, uint256 weight1)
+    function updateWeightsGradually(
+        uint256 weight0,
+        uint256 weight1,
+        uint256 startBlock,
+        uint256 endBlock
+    )
         public
-        onlyOwner
+        override
+        onlyManager
     {
         /// Library computes the startBlock,
         /// computes startWeights as the current
         /// denormalized weights of the core pool tokens.
-
-        uint256 endBlock = getExpectedFinalBlock();
 
         uint256[] memory newWeights = new uint256[](2);
         newWeights[0] = weight0;
@@ -142,13 +153,13 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
             pool,
             gradualUpdate,
             newWeights,
-            block.number,
+            startBlock,
             endBlock,
             0
         );
     }
 
-    function pokeWeights() external onlyOwner {
+    function pokeWeights() external override onlyManager {
         SmartPoolManager.pokeWeights(pool, gradualUpdate);
     }
 
@@ -156,33 +167,31 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
         pool.finalize();
     }
 
-    function setPublicSwap(bool value) external onlyOwner {
+    function setPublicSwap(bool value) external override onlyOwner {
         pool.setPublicSwap(value);
     }
 
-    function setSwapFee(uint256 newSwapFee) external onlyOwner {
+    function setSwapFee(uint256 newSwapFee) external override onlyManager {
         pool.setSwapFee(newSwapFee);
     }
 
-    function isPublicSwap() external view returns (bool) {
+    function isPublicSwap() external view override returns (bool) {
         return pool.isPublicSwap();
     }
 
-    function getSwapFee() external view returns (uint256) {
+    function getSwapFee() external view override returns (uint256) {
         return pool.getSwapFee();
     }
 
-    function getExpectedFinalBlock() public view returns (uint256) {
-        return block.number + ONE / convergenceSpeed;
-    }
 
-    function getBalance(address token) public view returns (uint256) {
+    function getBalance(address token) public view override returns (uint256) {
         return pool.getBalance(token);
     }
 
     function getDenormalizedWeight(address token)
         public
         view
+        override
         returns (uint256)
     {
         return pool.getDenormalizedWeight(token);
