@@ -15,6 +15,8 @@ interface IMammonVaultV0 is IProtocolAPI, IManagerAPI {
 
     function gulp(address token) external;
 
+    function changeManager(address newManager) external;
+
     function setPublicSwap(bool value) external ;
 
     function isPublicSwap() external view returns (bool);
