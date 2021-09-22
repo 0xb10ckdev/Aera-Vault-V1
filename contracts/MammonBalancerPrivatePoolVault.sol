@@ -183,6 +183,13 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         return pool.getSwapFee();
     }
 
+    function holdings0() public view override returns (uint256) {
+        return pool.getBalance(token0);
+    }
+
+    function holdings1() public view override returns (uint256) {
+        return pool.getBalance(token1);
+    }
 
     function getBalance(address token) public view override returns (uint256) {
         return pool.getBalance(token);

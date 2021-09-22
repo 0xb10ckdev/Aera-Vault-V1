@@ -21,6 +21,10 @@ interface IMammonVaultV0 is IProtocolAPI, IManagerAPI {
 
     function getSwapFee() external view returns (uint256);
 
+    function holdings0() external view returns (uint256);
+
+    function holdings1() external view returns (uint256);
+
     function getBalance(address token) external view returns (uint256);
 
     function getDenormalizedWeight(address token)
