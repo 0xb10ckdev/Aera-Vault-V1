@@ -42,8 +42,8 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
     {
         require (!initialized, "already initialized");
 
-        bind(token0, amount0, amount0);
-        bind(token1, amount1, amount1);
+        bindToken(token0, amount0, amount0);
+        bindToken(token1, amount1, amount1);
 
         gradualUpdate.startWeights = [weight0, weight1];
         initialized = true;
@@ -52,25 +52,11 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
     function deposit(uint256 amount0, uint256 amount1) external override onlyOwner {
         /// Deposit each amount of tokens
 
-        address[2] memory tokens = [token0, token1];
-        uint256[2] memory amounts = [amount0, amount1];
-
-        for (uint256 i = 0; i < tokens.length; i++) {
-            ISafeERC20 token = ISafeERC20(tokens[i]);
-            uint256 tokenBalance = getBalance(tokens[i]);
-            uint256 tokenDenorm = getDenormalizedWeight(tokens[i]);
-
-            uint256 newBalance = tokenBalance + amounts[i];
-            uint256 newDenorm = tokenDenorm * newBalance / tokenBalance;
-
-            if (newBalance > tokenBalance) {
-                uint256 needBalance = newBalance - tokenBalance;
-                token.safeTransferFrom(msg.sender, address(this), needBalance);
-            }
-
-            token.safeApprove(address(pool), type(uint256).max);
-
-            pool.rebind(tokens[i], newBalance, newDenorm);
+        if (amount0 > 0) {
+            depositToken(token0, amount0);
+        }
+        if (amount1 > 0) {
+            depositToken(token1, amount1);
         }
     }
 
@@ -231,12 +217,28 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
         return pool.totalSupply();
     }
 
-    function bind(address token, uint256 amount, uint256 weight) internal {
+    function bindToken(address token, uint256 amount, uint256 weight) internal {
         /// Transfer token to this contract
         ISafeERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         /// Approve the balancer pool
         ISafeERC20(token).safeApprove(address(pool), amount);
         /// Bind token
         pool.bind(token, amount, weight);
+    }
+
+    function depositToken(address token, uint256 amount) internal {
+        require (amount > 0, "deposit amount must greater than 0");
+
+        uint256 tokenBalance = getBalance(token);
+        uint256 tokenDenorm = getDenormalizedWeight(token);
+        uint256 newBalance = tokenBalance + amount;
+
+        uint256 newDenorm = tokenDenorm * newBalance / tokenBalance;
+
+        ISafeERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+
+        ISafeERC20(token).safeApprove(address(pool), amount);
+
+        pool.rebind(token, newBalance, newDenorm);
     }
 }
