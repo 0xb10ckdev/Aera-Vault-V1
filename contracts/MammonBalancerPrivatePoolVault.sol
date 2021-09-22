@@ -42,6 +42,14 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
     {
         require (!initialized, "already initialized");
 
+        require(weight0 >= pool.MIN_WEIGHT(), "weight is less than min");
+        require(weight0 <= pool.MAX_WEIGHT(), "weight is greater than max");
+        require(amount0 >= pool.MIN_BALANCE(), "amount is less than min");
+    
+        require(weight1 >= pool.MIN_WEIGHT(), "weight is less than min");
+        require(weight1 <= pool.MAX_WEIGHT(), "weight is greater than max");
+        require(amount1 >= pool.MIN_BALANCE(), "amount is less than min");
+
         bindToken(token0, amount0, weight0);
         bindToken(token1, amount1, weight1);
 
@@ -49,7 +57,14 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
         initialized = true;
     }
 
-    function deposit(uint256 amount0, uint256 amount1) external override onlyOwner {
+    function deposit(
+        uint256 amount0,
+        uint256 amount1
+    )
+        external
+        override
+        onlyOwner
+    {
         /// Deposit each amount of tokens
         require (initialized, "must be initialized");
 
@@ -61,7 +76,14 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
         }
     }
 
-    function withdraw(uint256 amount0, uint256 amount1) external override onlyOwner {
+    function withdraw(
+        uint256 amount0,
+        uint256 amount1
+    )
+        external
+        override
+        onlyOwner
+    {
         /// Withdraw as much as possible up to each amount of tokens
         require (initialized, "must be initialized");
 
@@ -201,7 +223,11 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
         return pool.getBalance(token);
     }
 
-    function getDenormalizedWeight(address token) public view returns (uint256) {
+    function getDenormalizedWeight(address token)
+        public
+        view
+        returns (uint256)
+    {
         return pool.getDenormalizedWeight(token);
     }
 
@@ -209,7 +235,13 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
         return pool.totalSupply();
     }
 
-    function bindToken(address token, uint256 amount, uint256 weight) internal {
+    function bindToken(
+        address token,
+        uint256 amount,
+        uint256 weight
+    )
+        internal
+    {
         /// Transfer token to this contract
         ISafeERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         /// Approve the balancer pool
