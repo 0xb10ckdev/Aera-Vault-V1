@@ -4,12 +4,13 @@ pragma solidity >=0.8.7;
 import "./interfaces/IBFactory.sol";
 import "./interfaces/IBPool.sol";
 import "./interfaces/IMammonVaultV0.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { SafeERC20, IERC20 as ISafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "https://github.com/balancer-labs/configurable-rights-pool/blob/master/libraries/SmartPoolManager.sol";
 
-contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
+contract MammonVaultV0 is IMammonVaultV0, Initializable, Ownable, ReentrancyGuard {
     using SafeERC20 for ISafeERC20;
 
     uint256 private constant ONE = 10**18;
@@ -62,10 +63,9 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     )
         external
         override
+        initializer
         onlyOwner
     {
-        require(!initialized, "already initialized");
-
         require(weight0 >= pool.MIN_WEIGHT(), "weight is less than min");
         require(weight0 <= pool.MAX_WEIGHT(), "weight is greater than max");
         require(amount0 >= pool.MIN_BALANCE(), "amount is less than min");
