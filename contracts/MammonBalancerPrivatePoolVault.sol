@@ -42,8 +42,8 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
     {
         require (!initialized, "already initialized");
 
-        bindToken(token0, amount0, amount0);
-        bindToken(token1, amount1, amount1);
+        bindToken(token0, amount0, weight0);
+        bindToken(token1, amount1, weight1);
 
         gradualUpdate.startWeights = [weight0, weight1];
         initialized = true;
@@ -51,6 +51,7 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
 
     function deposit(uint256 amount0, uint256 amount1) external override onlyOwner {
         /// Deposit each amount of tokens
+        require (initialized, "must be initialized");
 
         if (amount0 > 0) {
             depositToken(token0, amount0);
@@ -62,6 +63,7 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
 
     function withdraw(uint256 amount0, uint256 amount1) external override onlyOwner {
         /// Withdraw as much as possible up to each amount of tokens
+        require (initialized, "must be initialized");
 
         if (amount0 > 0) {
             withdrawToken(token0, amount0);
