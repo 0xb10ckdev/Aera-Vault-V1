@@ -31,7 +31,7 @@ contract MammonVaultV0 is IProtocolAPI, Ownable {
         token1 = _token1;
     }
 
-    function init(
+    function initialDeposit(
         uint256[] calldata amounts,
         uint256[] calldata weights
     )
