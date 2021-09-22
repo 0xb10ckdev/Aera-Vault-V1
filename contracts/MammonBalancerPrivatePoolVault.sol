@@ -96,16 +96,19 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
         pool.gulp(token);
     }
 
-    function updateWeightsGradually(uint256[] memory newWeights)
+    function updateWeightsGradually(uint256 weight0, uint256 weight1)
         public
         onlyOwner
     {
         /// Library computes the startBlock,
         /// computes startWeights as the current
         /// denormalized weights of the core pool tokens.
-        require (newWeights.length == 2, "need new weights for two tokens");
 
         uint256 endBlock = getExpectedFinalBlock();
+
+        uint256[] memory newWeights = new uint256[](2);
+        newWeights[0] = weight0;
+        newWeights[1] = weight1;
 
         SmartPoolManager.updateWeightsGradually(
             pool,
@@ -132,25 +135,21 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
             "targetShare2 mustn't be greater than 1"
         );
 
-        uint256 w1;
-        uint256 w2;
+        uint256 weight0;
+        uint256 weight1;
 
         if (newTargetShare2 == ONE) {
-            w2 = BASE_WEIGHT;
+            weight1 = BASE_WEIGHT;
         } else if (newTargetShare2 == 0) {
-            w1 = BASE_WEIGHT;
+            weight0 = BASE_WEIGHT;
         } else {
-            w1 = BASE_WEIGHT;
-            w2 = w1 * newTargetShare2 / (ONE - newTargetShare2);
+            weight0 = BASE_WEIGHT;
+            weight1 = weight0 * newTargetShare2 / (ONE - newTargetShare2);
         }
 
         targetShare2 = newTargetShare2;
 
-        uint256[] memory newWeights = new uint256[](2);
-        newWeights[0] = w1;
-        newWeights[1] = w2;
-
-        updateWeightsGradually(newWeights);
+        updateWeightsGradually(weight0, weight1);
     }
 
     function setConvergenceSpeed(uint256 newSpeed) external onlyOwner {
@@ -232,11 +231,7 @@ contract MammonVaultV0 is IProtocolAPI, Ownable, ReentrancyGuard {
         return pool.totalSupply();
     }
 
-    function bindToken(
-        address token,
-        uint256 amount,
-        uint256 weight
-    )
+    function bindToken(address token, uint256 amount, uint256 weight)
         internal
     {
         /// Transfer token to this contract
