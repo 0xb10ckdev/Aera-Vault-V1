@@ -16,6 +16,7 @@ import "./libraries/SmartPoolManager.sol";
 /**
  * @dev Represents a treasury vault that is managed by Mammon.
  * Owner is original asset owner that can add and withdraw funds.
+ * This code is not audited or tested. Please do not use in production.
  */
 contract MammonVaultV0 is
     IMammonVaultV0,
@@ -26,11 +27,26 @@ contract MammonVaultV0 is
     using SafeERC20 for IERC20;
     using Math for uint256;
 
+    /**
+     * @dev Balancer pool. Owned by the vault.
+     */
     IBPool public immutable pool;
+    /**
+     * @dev First token address in vault
+     */
     address public immutable token0;
+
+    /**
+     * @dev Second token address in vault
+     */
     address public immutable token1;
+
+    /**
+     * @dev Verifies withdraw limits
+     */
     IWithdrawalValidator public immutable validator;
     // slot start
+
     /**
      * @dev Submits new balance parameters for the vault
      */
@@ -42,7 +58,7 @@ contract MammonVaultV0 is
     uint56 public noticeTimeoutAt;
 
     /**
-     * @dev Notice period for vault termination (in seconds)
+     * @dev Notice period for vault termination (in seconds).
      */
     uint32 public noticePeriod;
 
@@ -81,9 +97,9 @@ contract MammonVaultV0 is
     error ManagerIsZeroAddress();
     error CallerIsNotManager();
     error DepositAmountIsZero();
-    error WeightIsAboveMax(uint256 weight);
-    error WeightIsBelowMin(uint256 weight);
-    error AmountIsBelowMin(uint256 amount);
+    error WeightIsAboveMax(uint256 actual, uint256 max);
+    error WeightIsBelowMin(uint256 actual, uint256 min);
+    error AmountIsBelowMin(uint256 actual, uint256 min);
     error FinalizationNotInitialized();
     error VaultNotInitialized();
     error VaultIsAlreadyInitialized();
@@ -110,6 +126,13 @@ contract MammonVaultV0 is
         _;
     }
 
+    /// @dev Initializes the contract by deploying new Balancer pool by using the provided factory.
+    /// @param _factory - Balancer Pool Factory address
+    /// @param _token0 - First token address. This is immutable, cannot be changed later
+    /// @param _token1 - Second token address. This is immutable, cannot be changed later
+    /// @param _manager - Vault Manager address
+    /// @param _validator - Withdrawal validator contract address. This is immutable, cannot be changed later
+    /// @param _noticePeriod - Notice period in seconds. This is immutable, cannot be changed later
     constructor(
         address _factory,
         address _token0,
@@ -122,14 +145,14 @@ contract MammonVaultV0 is
         token0 = _token0;
         token1 = _token1;
         manager = _manager;
-        noticePeriod = _noticePeriod;
         validator = IWithdrawalValidator(_validator);
+        noticePeriod = _noticePeriod;
         emit ManagerChanged(address(0), _manager);
     }
 
     /**
      * @dev Initializes the Vault. Vault initialization must be performed before
-     * calling withdraw() or deposit() functions. Available only to the owner.
+     *      calling withdraw() or deposit() functions. Available only to the owner.
      */
     function initialDeposit(
         uint256 amount0,
@@ -140,24 +163,27 @@ contract MammonVaultV0 is
         if (initialized) {
             revert VaultIsAlreadyInitialized();
         }
-        if (weight0 < pool.MIN_WEIGHT()) {
-            revert WeightIsBelowMin(weight0);
+        uint256 poolMinWeight = pool.MIN_WEIGHT();
+        if (weight0 < poolMinWeight) {
+            revert WeightIsBelowMin(weight0, poolMinWeight);
         }
-        if (weight0 > pool.MAX_WEIGHT()) {
-            revert WeightIsAboveMax(weight0);
+        uint256 poolMaxWeight = pool.MAX_WEIGHT();
+        if (weight0 > poolMaxWeight) {
+            revert WeightIsAboveMax(weight0, poolMaxWeight);
         }
-        if (amount0 < pool.MIN_BALANCE()) {
-            revert AmountIsBelowMin(amount0);
+        uint256 poolMinAmount = pool.MIN_BALANCE();
+        if (amount0 < poolMinAmount) {
+            revert AmountIsBelowMin(amount0, poolMinAmount);
         }
 
-        if (weight1 < pool.MIN_WEIGHT()) {
-            revert WeightIsBelowMin(weight1);
+        if (weight1 < poolMinWeight) {
+            revert WeightIsBelowMin(weight1, poolMinWeight);
         }
-        if (weight1 > pool.MAX_WEIGHT()) {
-            revert WeightIsAboveMax(weight1);
+        if (weight1 > poolMaxWeight) {
+            revert WeightIsAboveMax(weight1, poolMaxWeight);
         }
-        if (amount1 < pool.MIN_BALANCE()) {
-            revert AmountIsBelowMin(amount1);
+        if (amount1 < poolMinAmount) {
+            revert AmountIsBelowMin(amount1, poolMinAmount);
         }
         initialized = true;
 
@@ -262,7 +288,7 @@ contract MammonVaultV0 is
 
     /**
      * @dev Initiate vault destruction and return all funds to treasury owner.
-     * This is practically irreversible. Available only if the vault is initialized
+     *      This is practically irreversible. Available only if the vault is initialized
      */
     function initializeFinalization()
         external
@@ -276,10 +302,10 @@ contract MammonVaultV0 is
 
     /**
      * @dev Destroys vault and returns all funds to treasury owner. Only possible
-     *  if `noticePeriod` is set to 0 or `initiateFinalization` has been
-     *  called at least `noticePeriod` seconds before current timestamp.
-     *  Also could be called by manager in the event of an emergency
-     *  (e.g., funds at risk).
+     *      if `noticePeriod` is set to 0 or `initiateFinalization` has been
+     *      called at least `noticePeriod` seconds before current timestamp.
+     *      Also could be called by manager in the event of an emergency
+     *      (e.g., funds at risk).
      */
     function finalize() external override {
         if (msg.sender != owner() && msg.sender != manager) {

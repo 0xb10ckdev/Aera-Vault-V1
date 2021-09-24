@@ -3,6 +3,7 @@ pragma solidity >=0.8.7;
 
 import "../interfaces/IBPool.sol";
 
+/// @dev This code is not audited or tested. Please do not use in production.
 library SmartPoolManager {
     struct GradualUpdateParams {
         uint256 startBlock;

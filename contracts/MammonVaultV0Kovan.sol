@@ -3,6 +3,7 @@ pragma solidity >=0.8.7;
 
 import "./MammonVaultV0.sol";
 
+/// @dev This code is not audited or tested. Please do not use in production.
 contract MammonVaultV0Kovan is MammonVaultV0 {
     /**
      * @dev Balancer addresses taken from https://docs.balancer.fi/v/v1/smart-contracts/addresses#kovan
