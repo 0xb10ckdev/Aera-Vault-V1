@@ -10,6 +10,7 @@ contract MammonVaultV0Kovan is MammonVaultV0 {
     address public constant __bfactory =
         address(0x8f7F78080219d4066A8036ccD30D588B416a40DB);
 
+    // solhint-disable no-empty-blocks
     constructor(
         address _token0,
         address _token1,
