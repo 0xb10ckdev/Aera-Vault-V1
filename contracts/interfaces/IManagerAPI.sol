@@ -4,6 +4,9 @@ pragma solidity >=0.8.7;
 interface IManagerAPI {
     function setPublicSwap(bool value) external;
 
+    /**
+     * @dev Start moving weights gradually to target value.
+     */
     function updateWeightsGradually(
         uint256 weight0,
         uint256 weight1,
@@ -11,6 +14,9 @@ interface IManagerAPI {
         uint256 endBlock
     ) external;
 
+    /**
+     * @dev Move underlying Balancer weights if updating gradually
+     */
     function pokeWeights() external;
 
     function setSwapFee(uint256 newSwapFee) external;
