@@ -65,6 +65,10 @@ const config: HardhatUserConfig = {
         mnemonic,
       },
       chainId: chainIds.hardhat,
+      forking: {
+        url: process.env.NODE_RPC  || ("https://mainnet.infura.io/v3/" + infuraApiKey),
+        blockNumber: parseInt(process.env.FORKING_BLOCK!, 10) || undefined,
+      },
     },
     goerli: createTestnetConfig("goerli"),
     kovan: createTestnetConfig("kovan"),
