@@ -10,6 +10,7 @@ contract MammonVaultV0Mainnet is MammonVaultV0 {
     address private constant __bfactory =
         address(0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd);
 
+    // solhint-disable no-empty-blocks
     constructor(
         address _token0,
         address _token1,

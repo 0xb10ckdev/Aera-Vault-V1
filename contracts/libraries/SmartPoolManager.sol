@@ -11,6 +11,7 @@ library SmartPoolManager {
         uint256[] endWeights;
     }
 
+    // solhint-disable no-empty-blocks
     function updateWeightsGradually(
         IBPool bPool,
         GradualUpdateParams storage gradualUpdate,
@@ -20,6 +21,7 @@ library SmartPoolManager {
         uint256 minimumWeightChangeBlockPeriod
     ) external {}
 
+    // solhint-disable no-empty-blocks
     function pokeWeights(
         IBPool bPool,
         GradualUpdateParams storage gradualUpdate

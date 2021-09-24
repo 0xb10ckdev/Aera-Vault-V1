@@ -14,7 +14,8 @@ import "./interfaces/IWithdrawalValidator.sol";
 import "./libraries/SmartPoolManager.sol";
 
 /**
- * @dev Represents a treasury vault that is managed by Mammon. Owner is original asset owner that can add and withdraw funds.
+ * @dev Represents a treasury vault that is managed by Mammon.
+ * Owner is original asset owner that can add and withdraw funds.
  */
 contract MammonVaultV0 is
     IMammonVaultV0,
