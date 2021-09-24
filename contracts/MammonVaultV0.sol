@@ -5,7 +5,6 @@ import "./dependencies/openzeppelin/SafeERC20.sol";
 import "./dependencies/openzeppelin/IERC20.sol";
 import "./dependencies/openzeppelin/Ownable.sol";
 import "./dependencies/openzeppelin/ReentrancyGuard.sol";
-import "./dependencies/openzeppelin/Initializable.sol";
 import "./dependencies/openzeppelin/Math.sol";
 import "./interfaces/IBFactory.sol";
 import "./interfaces/IBPool.sol";
@@ -29,6 +28,7 @@ contract MammonVaultV0 is
     IBPool public immutable pool;
     address public immutable token0;
     address public immutable token1;
+    IWithdrawalValidator public immutable validator;
     // slot start
     /**
      * @dev Submits new balance parameters for the vault
@@ -38,16 +38,18 @@ contract MammonVaultV0 is
     /**
      * @dev Timestamp when notice elapses or 0 if not yet set
      */
-    uint64 public noticeTimeoutAt;
+    uint56 public noticeTimeoutAt;
 
     /**
      * @dev Notice period for vault termination (in seconds)
      */
     uint32 public noticePeriod;
-    // slot end
 
-    IWithdrawalValidator public validator;
+    /**
+     * @dev Indicates that the Vault has been initialized.
+     */
     bool public initialized;
+    // slot end
 
     SmartPoolManager.GradualUpdateParams private gradualUpdate;
 
@@ -70,11 +72,11 @@ contract MammonVaultV0 is
         address indexed manager
     );
 
-    event FinalizationInitialized(uint64 noticeTimeoutAt);
+    event FinalizationInitialized(uint56 noticeTimeoutAt);
     event Finalized();
 
     error CallerIsNotOwnerOrManager();
-    error NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
+    error NoticeTimeoutNotElapsed(uint56 noticeTimeoutAt);
     error ManagerIsZeroAddress();
     error CallerIsNotManager();
     error DepositAmountIsZero();
@@ -267,7 +269,7 @@ contract MammonVaultV0 is
         onlyOwner
         onlyInitialized
     {
-        noticeTimeoutAt = uint64(block.timestamp) + noticePeriod;
+        noticeTimeoutAt = uint56(block.timestamp) + noticePeriod;
         emit FinalizationInitialized(noticeTimeoutAt);
     }
 
