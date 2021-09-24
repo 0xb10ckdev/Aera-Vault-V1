@@ -2,8 +2,10 @@ import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
+import "hardhat-deploy";
+import "@nomiclabs/hardhat-ethers";
 
-import "./tasks/accounts";
+import { accounts } from "./utils/network";
 import "./tasks/clean";
 
 import { resolve } from "path";
@@ -35,6 +37,14 @@ if (!infuraApiKey) {
   throw new Error("Please set your INFURA_API_KEY in a .env file");
 }
 
+const alchemyUrl =
+  process.env.ALCHEMY_URL || "https://mainnet.infura.io/v3/" + infuraApiKey;
+if (process.env.HARDHAT_FORK) {
+  if (!alchemyUrl) {
+    throw new Error("Please set your ALCHEMY_URL in a .env file");
+  }
+}
+
 function createTestnetConfig(
   network: keyof typeof chainIds,
 ): NetworkUserConfig {
@@ -59,16 +69,23 @@ const config: HardhatUserConfig = {
     excludeContracts: [],
     src: "./contracts",
   },
+  namedAccounts: {
+    admin: 0,
+    manager: 1,
+  },
   networks: {
     hardhat: {
-      accounts: {
-        mnemonic,
-      },
+      accounts: accounts(process.env.HARDHAT_FORK),
+      forking: process.env.HARDHAT_FORK
+        ? {
+            url: alchemyUrl!,
+            blockNumber: process.env.HARDHAT_FORK_NUMBER
+              ? parseInt(process.env.HARDHAT_FORK_NUMBER)
+              : undefined,
+          }
+        : undefined,
+      allowUnlimitedContractSize: true,
       chainId: chainIds.hardhat,
-      forking: {
-        url: process.env.NODE_RPC  || ("https://mainnet.infura.io/v3/" + infuraApiKey),
-        blockNumber: parseInt(process.env.FORKING_BLOCK!, 10) || undefined,
-      },
     },
     goerli: createTestnetConfig("goerli"),
     kovan: createTestnetConfig("kovan"),
@@ -101,6 +118,16 @@ const config: HardhatUserConfig = {
     outDir: "typechain",
     target: "ethers-v5",
   },
+  external: process.env.HARDHAT_FORK
+    ? {
+        deployments: {
+          // process.env.HARDHAT_FORK will specify the network that the fork is made from.
+          // these lines allow it to fetch the deployments from the network being forked from both for node and deploy task
+          hardhat: ["deployments/" + process.env.HARDHAT_FORK],
+          localhost: ["deployments/" + process.env.HARDHAT_FORK],
+        },
+      }
+    : undefined,
 };
 
 export default config;
