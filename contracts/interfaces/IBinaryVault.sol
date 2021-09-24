@@ -3,6 +3,7 @@ pragma solidity >=0.8.7;
 
 /**
  * @dev Interface for generic two-asset vault.
+ *      This code is not audited or tested. Please do not use in production.
  */
 interface IBinaryVault {
     /**
