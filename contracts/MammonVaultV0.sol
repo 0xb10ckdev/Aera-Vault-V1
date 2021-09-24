@@ -42,6 +42,11 @@ contract MammonVaultV0 is
     address public immutable token1;
 
     /**
+     * @dev Notice period for vault termination (in seconds).
+     */
+    uint32 public immutable noticePeriod;
+
+    /**
      * @dev Verifies withdraw limits
      */
     IWithdrawalValidator public immutable validator;
@@ -55,18 +60,13 @@ contract MammonVaultV0 is
     /**
      * @dev Timestamp when notice elapses or 0 if not yet set
      */
-    uint56 public noticeTimeoutAt;
-
-    /**
-     * @dev Notice period for vault termination (in seconds).
-     */
-    uint32 public noticePeriod;
+    uint64 public noticeTimeoutAt;
 
     /**
      * @dev Indicates that the Vault has been initialized.
      */
     bool public initialized;
-    // slot end
+    // slot end, 3 bytes left
 
     SmartPoolManager.GradualUpdateParams private gradualUpdate;
 
@@ -89,11 +89,11 @@ contract MammonVaultV0 is
         address indexed manager
     );
 
-    event FinalizationInitialized(uint56 noticeTimeoutAt);
+    event FinalizationInitialized(uint64 noticeTimeoutAt);
     event Finalized();
 
     error CallerIsNotOwnerOrManager();
-    error NoticeTimeoutNotElapsed(uint56 noticeTimeoutAt);
+    error NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
     error ManagerIsZeroAddress();
     error CallerIsNotManager();
     error DepositAmountIsZero();
@@ -296,7 +296,7 @@ contract MammonVaultV0 is
         onlyOwner
         onlyInitialized
     {
-        noticeTimeoutAt = uint56(block.timestamp) + noticePeriod;
+        noticeTimeoutAt = uint64(block.timestamp) + noticePeriod;
         emit FinalizationInitialized(noticeTimeoutAt);
     }
 
