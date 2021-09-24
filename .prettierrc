@@ -11,7 +11,8 @@
       "files": "*.sol",
       "options": {
         "tabWidth": 4,
-        "singleQuote": false
+        "singleQuote": false,
+        "explicitTypes": "always"
       }
     }
   ]

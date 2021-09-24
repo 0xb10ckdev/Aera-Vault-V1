@@ -13,6 +13,17 @@ contract MammonVaultV0Kovan is MammonVaultV0 {
     constructor(
         address _token0,
         address _token1,
-        address _manager
-    ) MammonVaultV0(__bfactory, _token0, _token1, _manager) {}
+        address _manager,
+        address _validator,
+        uint32 _noticePeriod
+    )
+        MammonVaultV0(
+            __bfactory,
+            _token0,
+            _token1,
+            _manager,
+            _validator,
+            _noticePeriod
+        )
+    {}
 }
