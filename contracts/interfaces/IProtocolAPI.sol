@@ -13,5 +13,9 @@ interface IProtocolAPI {
 
     function withdraw(uint256 amount0, uint256 amount1) external;
 
+    function initializeFinalization() external;
+
     function finalize() external;
+
+    function setManager(address newManager) external;
 }

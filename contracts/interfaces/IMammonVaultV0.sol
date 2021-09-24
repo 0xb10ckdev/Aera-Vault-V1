@@ -2,13 +2,13 @@
 pragma solidity >=0.8.7;
 
 import "./IProtocolAPI.sol";
-import "./IManagerAPI.sol";
-
 import "./IBinaryVault.sol";
 
-interface IMammonVaultV0 is IProtocolAPI, IManagerAPI, IBinaryVault {
-    function changeManager(address newManager) external;
-
+/**
+ * @dev Interface for v0 vault. The minimum definition of a v0 mammon vault
+ * is that it supports the protocol API and two assets.
+ */
+interface IMammonVaultV0 is IProtocolAPI, IBinaryVault {
     function isPublicSwap() external view returns (bool);
 
     function getSwapFee() external view returns (uint256);

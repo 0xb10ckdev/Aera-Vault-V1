@@ -2,16 +2,16 @@
 pragma solidity >=0.8.7;
 
 /**
- * @dev Binary vault interface which supports only two tokens
+ * @dev Interface for generic two-asset vault.
  */
 interface IBinaryVault {
     /**
-     * @dev Returns Vault holdings of token0
+     * @dev Return balance of token0 in the vault.
      */
     function holdings0() external view returns (uint256);
 
     /**
-     * @dev Returns Vault holdings of token1
+     * @dev Return balance of token1 in the vault.
      */
     function holdings1() external view returns (uint256);
 }
