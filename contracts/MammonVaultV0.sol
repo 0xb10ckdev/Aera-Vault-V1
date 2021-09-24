@@ -295,6 +295,7 @@ contract MammonVaultV0 is
         override
         onlyOwner
         onlyInitialized
+        nonFinalizing
     {
         noticeTimeoutAt = uint64(block.timestamp) + noticePeriod;
         emit FinalizationInitialized(noticeTimeoutAt);
