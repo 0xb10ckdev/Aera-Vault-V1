@@ -78,6 +78,7 @@ const config: HardhatUserConfig = {
       accounts: accounts(process.env.HARDHAT_FORK),
       forking: process.env.HARDHAT_FORK
         ? {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             url: alchemyUrl!,
             blockNumber: process.env.HARDHAT_FORK_NUMBER
               ? parseInt(process.env.HARDHAT_FORK_NUMBER)
