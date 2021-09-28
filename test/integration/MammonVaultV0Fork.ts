@@ -1,6 +1,7 @@
 import { ethers, deployments } from "hardhat";
 import { expect } from "chai";
 import { Signer } from "ethers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { deployVault, toWei } from "../utils";
 import {
   IERC20,
@@ -26,11 +27,11 @@ describe("Mammon Vault v0", function () {
   let dai: IERC20;
   let weth: IERC20;
 
-  let ADMIN, MANAGER, USER1;
-  let DAI, WETH;
-  let VAULT;
+  let ADMIN: string, MANAGER: string, USER1: string;
+  let DAI: string, WETH: string;
+  let VAULT: string;
 
-  let startBlock;
+  let startBlock: number;
 
   const NOTICE_PERIOD = 10000;
 
@@ -294,7 +295,7 @@ describe("Mammon Vault v0", function () {
 
     it("should be possible to call pokeWeight", async () => {
       for (let i = 0; i < 1000; i += 1) {
-        await ethers.provider.send("evm_mine");
+        await ethers.provider.send("evm_mine", []);
       }
 
       let weight0 = await vault.getDenormalizedWeight(DAI);

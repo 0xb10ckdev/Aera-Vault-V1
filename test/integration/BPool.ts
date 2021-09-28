@@ -1,6 +1,7 @@
 import { ethers, deployments } from "hardhat";
 import { expect } from "chai";
 import { Signer } from "ethers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { deployVault, toWei } from "../utils";
 import {
   IERC20,
@@ -26,9 +27,9 @@ describe("Swap on Balancer Pool", function () {
   let dai: IERC20;
   let weth: IERC20;
 
-  let ADMIN, MANAGER, USER1;
-  let DAI, WETH;
-  let VAULT, BPOOL;
+  let ADMIN: string, MANAGER: string, USER1: string;
+  let DAI: string, WETH: string;
+  let VAULT: string, BPOOL: string;
 
   before(async function () {
     signers = await ethers.getSigners();
