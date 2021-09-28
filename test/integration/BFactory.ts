@@ -12,7 +12,7 @@ let admin: SignerWithAddress;
 let user1: SignerWithAddress;
 let bFactory: IBFactory;
 let weth: IERC20, dai: IERC20;
-let ADMIN, NON_ADMIN, WETH, DAI;
+let ADMIN: string, NON_ADMIN: string, WETH: string, DAI: string;
 const uint256_max: BigNumber = BigNumber.from(2).pow(256).sub(1);
 
 describe("Factory", function () {
