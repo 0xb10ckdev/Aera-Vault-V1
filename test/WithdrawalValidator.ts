@@ -1,25 +1,21 @@
-import hre from "hardhat";
+import { ethers, waffle, artifacts } from "hardhat";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Artifact } from "hardhat/types";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-
-import { PermissiveWithdrawalValidator } from "../typechain/PermissiveWithdrawalValidator";
-import { Signers } from "../types";
 import { expect } from "chai";
+import { Signers } from "../../types";
+import { PermissiveWithdrawalValidator } from "../../typechain";
 
-const { deployContract } = hre.waffle;
+const { deployContract } = waffle;
 
 describe("Withdrawal Validator", function () {
   before(async function () {
     this.signers = {} as Signers;
-
-    const signers: SignerWithAddress[] = await hre.ethers.getSigners();
-    this.signers.admin = signers[0];
+    this.signers.admin = await ethers.getNamedSigner("admin");
   });
 
   describe("Permissive Withdrawal Validator", function () {
     beforeEach(async function () {
-      const validatorArtifact: Artifact = await hre.artifacts.readArtifact(
+      const validatorArtifact: Artifact = await artifacts.readArtifact(
         "PermissiveWithdrawalValidator",
       );
       this.validator = <PermissiveWithdrawalValidator>(
