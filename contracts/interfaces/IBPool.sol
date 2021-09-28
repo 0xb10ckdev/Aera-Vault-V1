@@ -15,6 +15,8 @@ interface IBPool {
         uint256 denorm
     ) external;
 
+    function unbind(address token) external;
+
     function gulp(address token) external;
 
     function finalize() external;

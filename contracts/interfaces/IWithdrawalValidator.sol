@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.6;
+pragma solidity >=0.8.7;
 
 /// @notice Represents the withdrawal conditions for a vault.
 /// @dev Should be extended by vault owner or manager, deployed and attached
