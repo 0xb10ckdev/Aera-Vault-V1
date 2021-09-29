@@ -3,46 +3,42 @@ pragma solidity >=0.8.7;
 
 /// @dev This code is not audited or tested. Please do not use in production.
 interface IBPoolMock {
-    function getSpotPrice(address tokenIn, address tokenOut) external view returns (uint256);
+    function getSpotPrice(address tokenIn, address tokenOut)
+        external
+        view
+        returns (uint256);
+
     function swapExactAmountIn(
         address tokenIn,
-        uint tokenAmountIn,
+        uint256 tokenAmountIn,
         address tokenOut,
-        uint minAmountOut,
-        uint maxPrice
-    )
-        external
-        returns (uint tokenAmountOut, uint spotPriceAfter);
+        uint256 minAmountOut,
+        uint256 maxPrice
+    ) external returns (uint256 tokenAmountOut, uint256 spotPriceAfter);
 
     function swapExactAmountOut(
         address tokenIn,
-        uint maxAmountIn,
+        uint256 maxAmountIn,
         address tokenOut,
-        uint tokenAmountOut,
-        uint maxPrice
-    )
-        external
-        returns (uint tokenAmountIn, uint spotPriceAfter);
+        uint256 tokenAmountOut,
+        uint256 maxPrice
+    ) external returns (uint256 tokenAmountIn, uint256 spotPriceAfter);
 
     function calcOutGivenIn(
-        uint tokenBalanceIn,
-        uint tokenWeightIn,
-        uint tokenBalanceOut,
-        uint tokenWeightOut,
-        uint tokenAmountIn,
-        uint swapFee
-    )
-        external view
-        returns (uint tokenAmountOut);
+        uint256 tokenBalanceIn,
+        uint256 tokenWeightIn,
+        uint256 tokenBalanceOut,
+        uint256 tokenWeightOut,
+        uint256 tokenAmountIn,
+        uint256 swapFee
+    ) external view returns (uint256 tokenAmountOut);
 
     function calcInGivenOut(
-        uint tokenBalanceIn,
-        uint tokenWeightIn,
-        uint tokenBalanceOut,
-        uint tokenWeightOut,
-        uint tokenAmountOut,
-        uint swapFee
-    )
-        external view
-        returns (uint tokenAmountIn);
+        uint256 tokenBalanceIn,
+        uint256 tokenWeightIn,
+        uint256 tokenBalanceOut,
+        uint256 tokenWeightOut,
+        uint256 tokenAmountOut,
+        uint256 swapFee
+    ) external view returns (uint256 tokenAmountIn);
 }
