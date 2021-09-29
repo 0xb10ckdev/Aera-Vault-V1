@@ -1,4 +1,4 @@
-import { Signer } from "ethers";
+import { BigNumber, Signer } from "ethers";
 import { ethers, deployments } from "hardhat";
 import { DEFAULT_NOTICE_PERIOD, getConfig } from "../scripts/config";
 import {
@@ -35,6 +35,6 @@ export const deployVault = async (
     .deploy(token0, token1, manager, validator, noticePeriod);
 };
 
-export const toWei = (value: any) => {
+export const toWei = (value: number | string): BigNumber => {
   return ethers.utils.parseEther(value.toString());
-}
+};

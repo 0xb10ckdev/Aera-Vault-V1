@@ -8,7 +8,7 @@ import {
   IERC20__factory,
   MammonVaultV0,
   IBPoolMock,
-  IBPoolMock__factory
+  IBPoolMock__factory,
 } from "../../typechain";
 
 const ONE_TOKEN = toWei("1");
@@ -27,7 +27,7 @@ describe("Swap on Balancer Pool", function () {
   let dai: IERC20;
   let weth: IERC20;
 
-  let ADMIN: string, MANAGER: string, USER1: string;
+  let MANAGER: string, USER1: string;
   let DAI: string, WETH: string;
   let VAULT: string, BPOOL: string;
 
@@ -36,7 +36,6 @@ describe("Swap on Balancer Pool", function () {
     admin = await ethers.getNamedSigner("admin");
     manager = await ethers.getNamedSigner("manager");
     user1 = signers[2];
-    ADMIN = await admin.getAddress();
     MANAGER = await manager.getAddress();
     USER1 = await user1.getAddress();
 
@@ -56,17 +55,12 @@ describe("Swap on Balancer Pool", function () {
     DAI = dai.address;
     WETH = weth.address;
 
-    vault = await deployVault(
-      admin,
-      DAI,
-      WETH,
-      MANAGER,
-    );
+    vault = await deployVault(admin, DAI, WETH, MANAGER);
 
     VAULT = vault.address;
     BPOOL = await vault.pool();
 
-    bPool = IBPoolMock__factory.connect(BPOOL, admin.provider!);
+    bPool = IBPoolMock__factory.connect(BPOOL, admin);
 
     await dai.approve(VAULT, ONE_TOKEN);
     await weth.approve(VAULT, ONE_TOKEN);
@@ -78,239 +72,385 @@ describe("Swap on Balancer Pool", function () {
 
     await vault.deposit(toWei(10), toWei(20));
   });
-  
+
   describe("swapExactAmountIn", () => {
     it("should be reverted to call swapExactAmountIn", async () => {
-      let holdings0 = await vault.holdings0();
-      let spotPrice = await bPool.getSpotPrice(DAI, WETH);
+      const holdings0 = await vault.holdings0();
+      const spotPrice = await bPool.getSpotPrice(DAI, WETH);
 
       await expect(
-        bPool.connect(user1).swapExactAmountIn(
-          ZERO_ADDRESS, toWei(3), WETH, toWei(5), spotPrice
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountIn(
+            ZERO_ADDRESS,
+            toWei(3),
+            WETH,
+            toWei(5),
+            spotPrice,
+          ),
       ).to.be.revertedWith("ERR_NOT_BOUND");
 
       await expect(
-        bPool.connect(user1).swapExactAmountIn(
-          DAI, toWei(3), WETH, toWei(5), spotPrice
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountIn(DAI, toWei(3), WETH, toWei(5), spotPrice),
       ).to.be.revertedWith("ERR_SWAP_NOT_PUBLIC");
 
       await vault.connect(manager).setPublicSwap(true);
 
       await expect(
-        bPool.connect(user1).swapExactAmountIn(
-          DAI, holdings0.mul(MAX_IN_RATIO).add(1), WETH, toWei(5), spotPrice
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountIn(
+            DAI,
+            holdings0.mul(MAX_IN_RATIO).add(1),
+            WETH,
+            toWei(5),
+            spotPrice,
+          ),
       ).to.be.revertedWith("ERR_MAX_IN_RATIO");
 
       await expect(
-        bPool.connect(user1).swapExactAmountIn(
-          DAI, toWei(3), WETH, toWei(5), spotPrice.sub(1)
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountIn(DAI, toWei(3), WETH, toWei(5), spotPrice.sub(1)),
       ).to.be.revertedWith("ERR_BAD_LIMIT_PRICE");
 
       await expect(
-        bPool.connect(user1).swapExactAmountIn(
-          DAI, toWei(3), WETH, toWei(5), spotPrice.add(toWei(1))
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountIn(
+            DAI,
+            toWei(3),
+            WETH,
+            toWei(5),
+            spotPrice.add(toWei(1)),
+          ),
       ).to.be.revertedWith("ERR_LIMIT_OUT");
 
       await expect(
-        bPool.connect(user1).swapExactAmountIn(
-          DAI, toWei(3), WETH, toWei(1), spotPrice
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountIn(DAI, toWei(3), WETH, toWei(1), spotPrice),
       ).to.be.revertedWith("ERR_LIMIT_PRICE");
 
       await expect(
-        bPool.connect(user1).swapExactAmountIn(
-          DAI, toWei(3), WETH, toWei(1), spotPrice.add(toWei(1))
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountIn(
+            DAI,
+            toWei(3),
+            WETH,
+            toWei(1),
+            spotPrice.add(toWei(1)),
+          ),
       ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
     });
 
     it("should be possible to sell given number of token0", async () => {
-      let spotPrice = await bPool.getSpotPrice(DAI, WETH);
+      const spotPrice = await bPool.getSpotPrice(DAI, WETH);
       await dai.connect(admin).transfer(USER1, toWei(3));
 
       await expect(
-        bPool.connect(user1).swapExactAmountIn(
-          DAI, toWei(3), WETH, toWei(1), spotPrice.add(toWei(1))
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountIn(
+            DAI,
+            toWei(3),
+            WETH,
+            toWei(1),
+            spotPrice.add(toWei(1)),
+          ),
       ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
 
-      let holdings0 = await vault.holdings0();
-      let holdings1 = await vault.holdings1();
-      let weight0 = await vault.getDenormalizedWeight(DAI);
-      let weight1 = await vault.getDenormalizedWeight(WETH);
-      let swapFee = await vault.getSwapFee();
-      let balance1 = await weth.balanceOf(USER1);
+      const holdings0 = await vault.holdings0();
+      const holdings1 = await vault.holdings1();
+      const weight0 = await vault.getDenormalizedWeight(DAI);
+      const weight1 = await vault.getDenormalizedWeight(WETH);
+      const swapFee = await vault.getSwapFee();
+      const balance1 = await weth.balanceOf(USER1);
 
-      let tokenAmountOut = await bPool.calcOutGivenIn(
-        holdings0, weight0, holdings1, weight1, toWei(3), swapFee
+      const tokenAmountOut = await bPool.calcOutGivenIn(
+        holdings0,
+        weight0,
+        holdings1,
+        weight1,
+        toWei(3),
+        swapFee,
       );
 
       await dai.connect(user1).approve(BPOOL, toWei(3));
 
       expect(
-        await bPool.connect(user1).estimateGas.swapExactAmountIn(
-          DAI, toWei(3), WETH, toWei(1), spotPrice.add(toWei(1))
-        )
+        await bPool
+          .connect(user1)
+          .estimateGas.swapExactAmountIn(
+            DAI,
+            toWei(3),
+            WETH,
+            toWei(1),
+            spotPrice.add(toWei(1)),
+          ),
       ).to.below(150000);
-      await bPool.connect(user1).swapExactAmountIn(
-        DAI, toWei(3), WETH, toWei(1), spotPrice.add(toWei(1))
-      );
+      await bPool
+        .connect(user1)
+        .swapExactAmountIn(
+          DAI,
+          toWei(3),
+          WETH,
+          toWei(1),
+          spotPrice.add(toWei(1)),
+        );
 
-      expect(await weth.balanceOf(USER1)).to.equal(balance1.add(tokenAmountOut));
+      expect(await weth.balanceOf(USER1)).to.equal(
+        balance1.add(tokenAmountOut),
+      );
     });
 
     it("should be possible to sell given number of token1", async () => {
-      let spotPrice = await bPool.getSpotPrice(WETH, DAI);
+      const spotPrice = await bPool.getSpotPrice(WETH, DAI);
       await weth.connect(admin).transfer(USER1, toWei(3));
 
       await expect(
-        bPool.connect(user1).swapExactAmountIn(
-          WETH, toWei(3), DAI, toWei(1), spotPrice.add(toWei(1))
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountIn(
+            WETH,
+            toWei(3),
+            DAI,
+            toWei(1),
+            spotPrice.add(toWei(1)),
+          ),
       ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
 
-      let holdings0 = await vault.holdings0();
-      let holdings1 = await vault.holdings1();
-      let weight0 = await vault.getDenormalizedWeight(DAI);
-      let weight1 = await vault.getDenormalizedWeight(WETH);
-      let swapFee = await vault.getSwapFee();
-      let balance0 = await dai.balanceOf(USER1);
-      let tokenAmountOut = await bPool.calcOutGivenIn(
-        holdings1, weight1, holdings0, weight0, toWei(3), swapFee
+      const holdings0 = await vault.holdings0();
+      const holdings1 = await vault.holdings1();
+      const weight0 = await vault.getDenormalizedWeight(DAI);
+      const weight1 = await vault.getDenormalizedWeight(WETH);
+      const swapFee = await vault.getSwapFee();
+      const balance0 = await dai.balanceOf(USER1);
+      const tokenAmountOut = await bPool.calcOutGivenIn(
+        holdings1,
+        weight1,
+        holdings0,
+        weight0,
+        toWei(3),
+        swapFee,
       );
 
       await weth.connect(user1).approve(BPOOL, toWei(3));
       expect(
-        await bPool.connect(user1).estimateGas.swapExactAmountIn(
-          WETH, toWei(3), DAI, toWei(1), spotPrice.add(toWei(1))
-        )
+        await bPool
+          .connect(user1)
+          .estimateGas.swapExactAmountIn(
+            WETH,
+            toWei(3),
+            DAI,
+            toWei(1),
+            spotPrice.add(toWei(1)),
+          ),
       ).to.below(150000);
-      await bPool.connect(user1).swapExactAmountIn(
-        WETH, toWei(3), DAI, toWei(1), spotPrice.add(toWei(1))
+      await bPool
+        .connect(user1)
+        .swapExactAmountIn(
+          WETH,
+          toWei(3),
+          DAI,
+          toWei(1),
+          spotPrice.add(toWei(1)),
+        );
+      expect(await dai.balanceOf(USER1)).to.equal(
+        balance0.add(tokenAmountOut),
       );
-      expect(await dai.balanceOf(USER1)).to.equal(balance0.add(tokenAmountOut));
     });
   });
 
   describe("swapExactAmountOut", () => {
     it("should be reverted to call swapExactAmountOut", async () => {
-      let holdings1 = await vault.holdings1();
-      let spotPrice = await bPool.getSpotPrice(DAI, WETH);
+      const holdings1 = await vault.holdings1();
+      const spotPrice = await bPool.getSpotPrice(DAI, WETH);
 
       await vault.connect(manager).setPublicSwap(false);
 
       await expect(
-        bPool.connect(user1).swapExactAmountOut(
-          ZERO_ADDRESS, toWei(5), WETH, toWei(3), spotPrice
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountOut(
+            ZERO_ADDRESS,
+            toWei(5),
+            WETH,
+            toWei(3),
+            spotPrice,
+          ),
       ).to.be.revertedWith("ERR_NOT_BOUND");
 
       await expect(
-        bPool.connect(user1).swapExactAmountOut(
-          DAI, toWei(5), WETH, toWei(3), spotPrice
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountOut(DAI, toWei(5), WETH, toWei(3), spotPrice),
       ).to.be.revertedWith("ERR_SWAP_NOT_PUBLIC");
 
       await vault.connect(manager).setPublicSwap(true);
 
       await expect(
-        bPool.connect(user1).swapExactAmountOut(
-          DAI, toWei(30), WETH, holdings1.mul(MAX_OUT_RATIO).add(1), spotPrice
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountOut(
+            DAI,
+            toWei(30),
+            WETH,
+            holdings1.mul(MAX_OUT_RATIO).add(1),
+            spotPrice,
+          ),
       ).to.be.revertedWith("ERR_MAX_OUT_RATIO");
 
       await expect(
-        bPool.connect(user1).swapExactAmountOut(
-          DAI, toWei(5), WETH, toWei(3), spotPrice.sub(1)
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountOut(DAI, toWei(5), WETH, toWei(3), spotPrice.sub(1)),
       ).to.be.revertedWith("ERR_BAD_LIMIT_PRICE");
 
       await expect(
-        bPool.connect(user1).swapExactAmountOut(
-          DAI, toWei(5), WETH, toWei(5), spotPrice.add(toWei(1))
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountOut(
+            DAI,
+            toWei(5),
+            WETH,
+            toWei(5),
+            spotPrice.add(toWei(1)),
+          ),
       ).to.be.revertedWith("ERR_LIMIT_IN");
 
       await expect(
-        bPool.connect(user1).swapExactAmountOut(
-          DAI, toWei(5), WETH, toWei(3), spotPrice
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountOut(DAI, toWei(5), WETH, toWei(3), spotPrice),
       ).to.be.revertedWith("ERR_LIMIT_PRICE");
 
       await expect(
-        bPool.connect(user1).swapExactAmountOut(
-          DAI, toWei(5), WETH, toWei(3), spotPrice.add(toWei(1))
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountOut(
+            DAI,
+            toWei(5),
+            WETH,
+            toWei(3),
+            spotPrice.add(toWei(1)),
+          ),
       ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
     });
 
     it("should be possible to buy given number of token1", async () => {
-      let spotPrice = await bPool.getSpotPrice(DAI, WETH);
+      const spotPrice = await bPool.getSpotPrice(DAI, WETH);
       await dai.connect(admin).transfer(USER1, toWei(3));
 
       await expect(
-        bPool.connect(user1).swapExactAmountOut(
-          DAI, toWei(5), WETH, toWei(3), spotPrice.add(toWei(1))
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountOut(
+            DAI,
+            toWei(5),
+            WETH,
+            toWei(3),
+            spotPrice.add(toWei(1)),
+          ),
       ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
 
-      let holdings0 = await vault.holdings0();
-      let holdings1 = await vault.holdings1();
-      let weight0 = await vault.getDenormalizedWeight(DAI);
-      let weight1 = await vault.getDenormalizedWeight(WETH);
-      let swapFee = await vault.getSwapFee();
-      let balance0 = await dai.balanceOf(USER1);
-      let tokenAmountIn = await bPool.calcInGivenOut(
-        holdings0, weight0, holdings1, weight1, toWei(3), swapFee
+      const holdings0 = await vault.holdings0();
+      const holdings1 = await vault.holdings1();
+      const weight0 = await vault.getDenormalizedWeight(DAI);
+      const weight1 = await vault.getDenormalizedWeight(WETH);
+      const swapFee = await vault.getSwapFee();
+      const balance0 = await dai.balanceOf(USER1);
+      const tokenAmountIn = await bPool.calcInGivenOut(
+        holdings0,
+        weight0,
+        holdings1,
+        weight1,
+        toWei(3),
+        swapFee,
       );
 
       await dai.connect(user1).approve(BPOOL, toWei(5));
       expect(
-        await bPool.connect(user1).estimateGas.swapExactAmountOut(
-          DAI, toWei(5), WETH, toWei(3), spotPrice.add(toWei(1))
-        )
+        await bPool
+          .connect(user1)
+          .estimateGas.swapExactAmountOut(
+            DAI,
+            toWei(5),
+            WETH,
+            toWei(3),
+            spotPrice.add(toWei(1)),
+          ),
       ).to.below(150000);
-      await bPool.connect(user1).swapExactAmountOut(
-        DAI, toWei(5), WETH, toWei(3), spotPrice.add(toWei(1))
-      );
+      await bPool
+        .connect(user1)
+        .swapExactAmountOut(
+          DAI,
+          toWei(5),
+          WETH,
+          toWei(3),
+          spotPrice.add(toWei(1)),
+        );
       expect(await dai.balanceOf(USER1)).to.equal(balance0.sub(tokenAmountIn));
     });
 
     it("should be possible to buy given number of token0", async () => {
-      let spotPrice = await bPool.getSpotPrice(WETH, DAI);
+      const spotPrice = await bPool.getSpotPrice(WETH, DAI);
       await weth.connect(admin).transfer(USER1, toWei(3));
 
       await expect(
-        bPool.connect(user1).swapExactAmountOut(
-          WETH, toWei(3), DAI, toWei(1), spotPrice.add(toWei(1))
-        )
+        bPool
+          .connect(user1)
+          .swapExactAmountOut(
+            WETH,
+            toWei(3),
+            DAI,
+            toWei(1),
+            spotPrice.add(toWei(1)),
+          ),
       ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
 
-      let holdings0 = await vault.holdings0();
-      let holdings1 = await vault.holdings1();
-      let weight0 = await vault.getDenormalizedWeight(DAI);
-      let weight1 = await vault.getDenormalizedWeight(WETH);
-      let swapFee = await vault.getSwapFee();
-      let balance1 = await weth.balanceOf(USER1);
-      let tokenAmountIn = await bPool.calcInGivenOut(
-        holdings1, weight1, holdings0, weight0, toWei(1), swapFee
+      const holdings0 = await vault.holdings0();
+      const holdings1 = await vault.holdings1();
+      const weight0 = await vault.getDenormalizedWeight(DAI);
+      const weight1 = await vault.getDenormalizedWeight(WETH);
+      const swapFee = await vault.getSwapFee();
+      const balance1 = await weth.balanceOf(USER1);
+      const tokenAmountIn = await bPool.calcInGivenOut(
+        holdings1,
+        weight1,
+        holdings0,
+        weight0,
+        toWei(1),
+        swapFee,
       );
 
       await weth.connect(user1).approve(BPOOL, toWei(3));
       expect(
-        await bPool.connect(user1).estimateGas.swapExactAmountOut(
-          WETH, toWei(3), DAI, toWei(1), spotPrice.add(toWei(1))
-        )
+        await bPool
+          .connect(user1)
+          .estimateGas.swapExactAmountOut(
+            WETH,
+            toWei(3),
+            DAI,
+            toWei(1),
+            spotPrice.add(toWei(1)),
+          ),
       ).to.below(150000);
-      await bPool.connect(user1).swapExactAmountOut(
-        WETH, toWei(3), DAI, toWei(1), spotPrice.add(toWei(1))
+      await bPool
+        .connect(user1)
+        .swapExactAmountOut(
+          WETH,
+          toWei(3),
+          DAI,
+          toWei(1),
+          spotPrice.add(toWei(1)),
+        );
+      expect(await weth.balanceOf(USER1)).to.equal(
+        balance1.sub(tokenAmountIn),
       );
-      expect(await weth.balanceOf(USER1)).to.equal(balance1.sub(tokenAmountIn));
     });
   });
 });
