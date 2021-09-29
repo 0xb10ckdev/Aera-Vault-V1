@@ -78,42 +78,35 @@ describe("Mammon Vault v0", function () {
 
       await expect(
         vault.initialDeposit(ONE_TOKEN, ONE_TOKEN, MIN_WEIGHT, MIN_WEIGHT.sub(1))
-      ).to.be.revertedWith(
-        `WeightIsBelowMin(${MIN_WEIGHT.sub(1).toString()}, ${MIN_WEIGHT.toString()})`
-      );
+      ).to.be.revertedWith("WeightIsBelowMin");
 
       await expect(
         vault.initialDeposit(ONE_TOKEN, ONE_TOKEN, MIN_WEIGHT.sub(1), MIN_WEIGHT)
-      ).to.be.revertedWith(
-        `WeightIsBelowMin(${MIN_WEIGHT.sub(1).toString()}, ${MIN_WEIGHT.toString()})`
-      );
+      ).to.be.revertedWith("WeightIsBelowMin");
 
       await expect(
         vault.initialDeposit(ONE_TOKEN, ONE_TOKEN, MAX_WEIGHT, MAX_WEIGHT.add(1))
-      ).to.be.revertedWith(
-        `WeightIsAboveMax(${MAX_WEIGHT.add(1).toString()}, ${MAX_WEIGHT.toString()})`
-      );
+      ).to.be.revertedWith("WeightIsAboveMax");
 
       await expect(
         vault.initialDeposit(ONE_TOKEN, ONE_TOKEN, MAX_WEIGHT.add(1), MAX_WEIGHT)
-      ).to.be.revertedWith(
-        `WeightIsAboveMax(${MAX_WEIGHT.add(1).toString()}, ${MAX_WEIGHT.toString()})`
-      );
+      ).to.be.revertedWith("WeightIsAboveMax");
 
       await expect(
         vault.initialDeposit(MIN_BALANCE.sub(1), MIN_BALANCE, MIN_WEIGHT, MIN_WEIGHT)
-      ).to.be.revertedWith(
-        `AmountIsBelowMin(${MIN_BALANCE.sub(1).toString()}, ${MIN_BALANCE.toString()})`
-      );
+      ).to.be.revertedWith("AmountIsBelowMin");
 
       await expect(
         vault.initialDeposit(MIN_BALANCE, MIN_BALANCE.sub(1), MIN_WEIGHT, MIN_WEIGHT)
-      ).to.be.revertedWith(
-        `AmountIsBelowMin(${MIN_BALANCE.sub(1).toString()}, ${MIN_BALANCE.toString()})`
-      );
+      ).to.be.revertedWith("AmountIsBelowMin");
     });
 
     it("should be possible to initialize the vault", async () => {
+      expect(
+        await vault.estimateGas.initialDeposit(
+          ONE_TOKEN, ONE_TOKEN, MIN_WEIGHT, MIN_WEIGHT
+        )
+      ).to.below(600000);
       await vault.initialDeposit(ONE_TOKEN, ONE_TOKEN, MIN_WEIGHT, MIN_WEIGHT);
 
       expect(await vault.holdings0()).to.equal(ONE_TOKEN);
@@ -148,6 +141,9 @@ describe("Mammon Vault v0", function () {
       let balance1 = await weth.balanceOf(ADMIN);
       let spotPrice = await bPool.getSpotPrice(DAI, WETH);
 
+      expect(
+        await vault.estimateGas.deposit(toWei(10), toWei(20))
+      ).to.below(300000);
       await vault.deposit(toWei(10), toWei(20));
 
       let newHoldings0 = holdings0.add(toWei(10));
@@ -181,6 +177,9 @@ describe("Mammon Vault v0", function () {
       let balance1 = await weth.balanceOf(ADMIN);
       let spotPrice = await bPool.getSpotPrice(DAI, WETH);
 
+      expect(
+        await vault.estimateGas.withdraw(toWei(5), toWei(10))
+      ).to.below(250000);
       await vault.withdraw(toWei(5), toWei(10));
 
       let newHoldings0 = holdings0.sub(toWei(5));
@@ -211,6 +210,7 @@ describe("Mammon Vault v0", function () {
       });
 
       it("should be possible to change manager", async () => {
+        expect(await vault.estimateGas.setManager(MANAGER)).to.below(35000);
         await vault.setManager(MANAGER);
 
         expect(await vault.manager()).to.equal(MANAGER);
@@ -225,6 +225,9 @@ describe("Mammon Vault v0", function () {
       });
 
       it("should be possible to set public swap", async () => {
+        expect(
+          await vault.connect(manager).estimateGas.setPublicSwap(true)
+        ).to.below(45000);
         await vault.connect(manager).setPublicSwap(true);
 
         expect(await vault.isPublicSwap()).to.equal(true);
@@ -247,6 +250,9 @@ describe("Mammon Vault v0", function () {
       });
 
       it("should be possible to set swap fee", async () => {
+        expect(
+          await vault.connect(manager).estimateGas.setSwapFee(toWei(0.01))
+        ).to.below(50000);
         await vault.connect(manager).setSwapFee(toWei(0.01));
 
         expect(await vault.getSwapFee()).to.equal(toWei(0.01));
@@ -282,6 +288,11 @@ describe("Mammon Vault v0", function () {
       let blocknumber = await ethers.provider.getBlockNumber();
       startBlock = blocknumber + 1;
 
+      expect(
+        await vault.connect(manager).estimateGas.updateWeightsGradually(
+          toWei(2), toWei(3), blocknumber + 1, blocknumber + 10001
+        )
+      ).to.below(200000);
       await vault.connect(manager).updateWeightsGradually(
         toWei(2), toWei(3), blocknumber + 1, blocknumber + 10001
       );
@@ -301,6 +312,9 @@ describe("Mammon Vault v0", function () {
       let weight0 = await vault.getDenormalizedWeight(DAI);
       let weight1 = await vault.getDenormalizedWeight(WETH);
 
+      expect(
+        await vault.connect(manager).estimateGas.pokeWeights()
+      ).to.below(120000);
       await vault.connect(manager).pokeWeights();
 
       let blocknumber = await ethers.provider.getBlockNumber();
@@ -327,6 +341,9 @@ describe("Mammon Vault v0", function () {
         vault.connect(manager).initializeFinalization()
       ).to.be.revertedWith("Ownable: caller is not the owner");
 
+      expect(
+        await vault.estimateGas.initializeFinalization()
+      ).to.below(30000);
       await vault.initializeFinalization();
       let noticeTimeoutAt = await vault.noticeTimeoutAt();
   
@@ -343,6 +360,7 @@ describe("Mammon Vault v0", function () {
       let balance0 = await dai.balanceOf(ADMIN);
       let balance1 = await weth.balanceOf(ADMIN);
 
+      expect(await vault.estimateGas.finalize()).to.below(220000);
       await vault.finalize();
 
       expect(await dai.balanceOf(ADMIN)).to.equal(balance0.add(holdings0));
