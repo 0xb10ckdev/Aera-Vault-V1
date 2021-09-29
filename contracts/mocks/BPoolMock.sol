@@ -5,15 +5,15 @@ import "../dependencies/openzeppelin/IERC20.sol";
 
 /// @dev This code is not audited or tested. Please do not use in production.
 contract BPoolMock {
-    mapping(address=>uint256) public balances;
-    mapping(address=>uint256) public denorms;
+    mapping(address => uint256) public balances;
+    mapping(address => uint256) public denorms;
 
     constructor() {}
 
     function bind(
         address token,
-        uint balance,
-        uint denorm
+        uint256 balance,
+        uint256 denorm
     ) external {
         rebind(token, balance, denorm);
     }
@@ -25,11 +25,14 @@ contract BPoolMock {
     ) public {
         if (balance > balances[token]) {
             IERC20(token).transferFrom(
-                msg.sender, address(this), balance - balances[token]
+                msg.sender,
+                address(this),
+                balance - balances[token]
             );
         } else {
             IERC20(token).transfer(
-                msg.sender, balances[token] - balance
+                msg.sender,
+                balances[token] - balance
             );
         }
         balances[token] = balance;
@@ -42,27 +45,27 @@ contract BPoolMock {
         denorms[token] = 0;
     }
 
-    function getBalance(address token)
-        external view returns(uint256)
-    {
+    function getBalance(address token) external view returns(uint256) {
         return balances[token];
     }
 
     function getDenormalizedWeight(address token)
-        external view returns (uint256)
+        external
+        view
+        returns (uint256)
     {
         return denorms[token];
     }
 
-    function MIN_WEIGHT() external view returns(uint256) {
+    function MIN_WEIGHT() external view returns (uint256) {
         return 10**18;
     }
 
-    function MAX_WEIGHT() external view returns(uint256) {
+    function MAX_WEIGHT() external view returns (uint256) {
         return 10**18 * 50;
     }
 
-    function MIN_BALANCE() external view returns(uint256) {
+    function MIN_BALANCE() external view returns (uint256) {
         return 10**6;
     }
 }
