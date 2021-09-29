@@ -151,6 +151,12 @@ describe("Swap on Balancer Pool", function () {
       );
 
       await dai.connect(user1).approve(BPOOL, toWei(3));
+
+      expect(
+        await bPool.connect(user1).estimateGas.swapExactAmountIn(
+          DAI, toWei(3), WETH, toWei(1), spotPrice.add(toWei(1))
+        )
+      ).to.below(150000);
       await bPool.connect(user1).swapExactAmountIn(
         DAI, toWei(3), WETH, toWei(1), spotPrice.add(toWei(1))
       );
@@ -179,6 +185,11 @@ describe("Swap on Balancer Pool", function () {
       );
 
       await weth.connect(user1).approve(BPOOL, toWei(3));
+      expect(
+        await bPool.connect(user1).estimateGas.swapExactAmountIn(
+          WETH, toWei(3), DAI, toWei(1), spotPrice.add(toWei(1))
+        )
+      ).to.below(150000);
       await bPool.connect(user1).swapExactAmountIn(
         WETH, toWei(3), DAI, toWei(1), spotPrice.add(toWei(1))
       );
@@ -259,6 +270,11 @@ describe("Swap on Balancer Pool", function () {
       );
 
       await dai.connect(user1).approve(BPOOL, toWei(5));
+      expect(
+        await bPool.connect(user1).estimateGas.swapExactAmountOut(
+          DAI, toWei(5), WETH, toWei(3), spotPrice.add(toWei(1))
+        )
+      ).to.below(150000);
       await bPool.connect(user1).swapExactAmountOut(
         DAI, toWei(5), WETH, toWei(3), spotPrice.add(toWei(1))
       );
@@ -286,6 +302,11 @@ describe("Swap on Balancer Pool", function () {
       );
 
       await weth.connect(user1).approve(BPOOL, toWei(3));
+      expect(
+        await bPool.connect(user1).estimateGas.swapExactAmountOut(
+          WETH, toWei(3), DAI, toWei(1), spotPrice.add(toWei(1))
+        )
+      ).to.below(150000);
       await bPool.connect(user1).swapExactAmountOut(
         WETH, toWei(3), DAI, toWei(1), spotPrice.add(toWei(1))
       );
