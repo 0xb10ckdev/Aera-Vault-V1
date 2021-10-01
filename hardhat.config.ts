@@ -69,6 +69,7 @@ const config: HardhatUserConfig = {
       accounts: {
         mnemonic,
       },
+      initialBaseFeePerGas: 0,
       chainId: chainIds.hardhat,
     },
     goerli: createTestnetConfig("goerli"),
