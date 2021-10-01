@@ -57,6 +57,36 @@ describe("Mammon Vault v0", function () {
       await WETH.approve(vault.address, ONE_TOKEN);
     });
 
+    it("should be reverted to call functions", async () => {
+      await expect(vault.deposit(ONE_TOKEN, ONE_TOKEN)).to.be.revertedWith(
+        "VaultNotInitialized",
+      );
+
+      await expect(vault.withdraw(ONE_TOKEN, ONE_TOKEN)).to.be.revertedWith(
+        "VaultNotInitialized",
+      );
+
+      const blocknumber = await ethers.provider.getBlockNumber();
+      await expect(
+        vault
+          .connect(manager)
+          .updateWeightsGradually(
+            MIN_WEIGHT,
+            MIN_WEIGHT,
+            blocknumber + 1,
+            blocknumber + 1000,
+          ),
+      ).to.be.revertedWith("VaultNotInitialized");
+
+      await expect(vault.connect(manager).pokeWeights()).to.be.revertedWith(
+        "VaultNotInitialized",
+      );
+
+      await expect(vault.initializeFinalization()).to.be.revertedWith(
+        "VaultNotInitialized",
+      );
+    });
+
     it("should be reverted to initialize the vault", async () => {
       await expect(
         vault.initialDeposit(
@@ -311,7 +341,7 @@ describe("Mammon Vault v0", function () {
 
       it("should be possible to withdraw token0", async () => {
         expect(await vault.estimateGas.withdraw(toWei(5), toWei(0))).to.below(
-          140000,
+          150000,
         );
         await vault.withdraw(toWei(5), toWei(0));
 
@@ -339,7 +369,7 @@ describe("Mammon Vault v0", function () {
 
       it("should be possible to withdraw token1", async () => {
         expect(await vault.estimateGas.withdraw(toWei(0), toWei(5))).to.below(
-          140000,
+          150000,
         );
         await vault.withdraw(toWei(0), toWei(5));
 
@@ -367,7 +397,7 @@ describe("Mammon Vault v0", function () {
 
       it("should be possible to withdraw tokens", async () => {
         expect(await vault.estimateGas.withdraw(toWei(5), toWei(15))).to.below(
-          210000,
+          230000,
         );
         await vault.withdraw(toWei(5), toWei(15));
 
