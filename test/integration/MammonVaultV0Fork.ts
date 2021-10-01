@@ -1,5 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
+import { BigNumber } from "ethers";
 import hre, { ethers } from "hardhat";
 import deployValidator from "../../deploy/0_validator";
 import {
@@ -145,33 +146,111 @@ describe("Mammon Vault v0", function () {
   describe("when Vault is initialized", () => {
     beforeEach(async () => {
       await DAI.approve(vault.address, toWei(100));
-      await WETH.approve(vault.address, toWei(50));
+      await WETH.approve(vault.address, toWei(100));
       await vault.initialDeposit(ONE_TOKEN, ONE_TOKEN, MIN_WEIGHT, MIN_WEIGHT);
     });
 
     describe("when depositing to Vault", () => {
+      let weight0: BigNumber;
+      let weight1: BigNumber;
+      let holdings0: BigNumber;
+      let holdings1: BigNumber;
+      let balance0: BigNumber;
+      let balance1: BigNumber;
+      let spotPrice: BigNumber;
+
+      beforeEach(async () => {
+        weight0 = await vault.getDenormalizedWeight(DAI.address);
+        weight1 = await vault.getDenormalizedWeight(WETH.address);
+        holdings0 = await vault.holdings0();
+        holdings1 = await vault.holdings1();
+        balance0 = await DAI.balanceOf(admin.address);
+        balance1 = await WETH.balanceOf(admin.address);
+        spotPrice = await bPool.getSpotPrice(DAI.address, WETH.address);
+      });
+
       it("should be reverted to deposit tokens", async () => {
+        await expect(vault.deposit(toWei(0), toWei(100))).to.be.revertedWith(
+          "ERC20: transfer amount exceeds allowance",
+        );
+
+        await expect(vault.deposit(toWei(100), toWei(0))).to.be.revertedWith(
+          "ERC20: transfer amount exceeds allowance",
+        );
+
         await expect(vault.deposit(toWei(50), toWei(20))).to.be.revertedWith(
           "ERR_MAX_WEIGHT",
+        );
+
+        await expect(vault.deposit(toWei(10), toWei(80))).to.be.revertedWith(
+          "ERR_MAX_WEIGHT",
+        );
+
+        await expect(vault.deposit(toWei(20), toWei(40))).to.be.revertedWith(
+          "ERR_MAX_TOTAL_WEIGHT",
+        );
+      });
+
+      it("should be possible to deposit token0", async () => {
+        expect(await vault.estimateGas.deposit(toWei(5), toWei(0))).to.below(
+          180000,
+        );
+        await vault.deposit(toWei(5), toWei(0));
+
+        const newHoldings0 = holdings0.add(toWei(5));
+        const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+
+        expect(await vault.holdings0()).to.equal(newHoldings0);
+        expect(await vault.holdings1()).to.equal(holdings1);
+        expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
+          newWeight0,
+        );
+        expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
+          weight1,
+        );
+        expect(await DAI.balanceOf(admin.address)).to.equal(
+          balance0.sub(toWei(5)),
+        );
+        expect(await WETH.balanceOf(admin.address)).to.equal(balance1);
+        expect(await bPool.getSpotPrice(DAI.address, WETH.address)).to.equal(
+          spotPrice,
+        );
+      });
+
+      it("should be possible to deposit token1", async () => {
+        expect(await vault.estimateGas.deposit(toWei(0), toWei(5))).to.below(
+          180000,
+        );
+        await vault.deposit(toWei(0), toWei(5));
+
+        const newHoldings1 = holdings1.add(toWei(5));
+        const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+        expect(await vault.holdings0()).to.equal(holdings0);
+        expect(await vault.holdings1()).to.equal(newHoldings1);
+        expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
+          weight0,
+        );
+        expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
+          newWeight1,
+        );
+        expect(await DAI.balanceOf(admin.address)).to.equal(balance0);
+        expect(await WETH.balanceOf(admin.address)).to.equal(
+          balance1.sub(toWei(5)),
+        );
+        expect(await bPool.getSpotPrice(DAI.address, WETH.address)).to.equal(
+          spotPrice,
         );
       });
 
       it("should be possible to deposit tokens", async () => {
-        const weight0 = await vault.getDenormalizedWeight(DAI.address);
-        const weight1 = await vault.getDenormalizedWeight(WETH.address);
-        const holdings0 = await vault.holdings0();
-        const holdings1 = await vault.holdings1();
-        const balance0 = await DAI.balanceOf(admin.address);
-        const balance1 = await WETH.balanceOf(admin.address);
-        const spotPrice = await bPool.getSpotPrice(DAI.address, WETH.address);
-
-        expect(await vault.estimateGas.deposit(toWei(10), toWei(20))).to.below(
+        expect(await vault.estimateGas.deposit(toWei(5), toWei(15))).to.below(
           300000,
         );
-        await vault.deposit(toWei(10), toWei(20));
+        await vault.deposit(toWei(5), toWei(15));
 
-        const newHoldings0 = holdings0.add(toWei(10));
-        const newHoldings1 = holdings1.add(toWei(20));
+        const newHoldings0 = holdings0.add(toWei(5));
+        const newHoldings1 = holdings1.add(toWei(15));
         const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
         const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
 
@@ -184,10 +263,10 @@ describe("Mammon Vault v0", function () {
           newWeight1,
         );
         expect(await DAI.balanceOf(admin.address)).to.equal(
-          balance0.sub(toWei(10)),
+          balance0.sub(toWei(5)),
         );
         expect(await WETH.balanceOf(admin.address)).to.equal(
-          balance1.sub(toWei(20)),
+          balance1.sub(toWei(15)),
         );
         expect(await bPool.getSpotPrice(DAI.address, WETH.address)).to.equal(
           spotPrice,
