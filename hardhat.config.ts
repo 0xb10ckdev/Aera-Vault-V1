@@ -6,7 +6,6 @@ import "hardhat-contract-sizer";
 import "hardhat-deploy";
 import "@nomiclabs/hardhat-ethers";
 
-import { accounts } from "./utils/network";
 import "./tasks/clean";
 
 import { resolve } from "path";
@@ -89,7 +88,7 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
-      accounts: accounts(process.env.HARDHAT_FORK),
+      accounts: { mnemonic },
       initialBaseFeePerGas: 0,
       forking: process.env.HARDHAT_FORK
         ? {
