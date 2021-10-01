@@ -2,6 +2,7 @@ import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
+import "hardhat-contract-sizer";
 
 import "./tasks/accounts";
 import "./tasks/clean";
@@ -58,6 +59,10 @@ const config: HardhatUserConfig = {
     enabled: process.env.REPORT_GAS ? true : false,
     excludeContracts: [],
     src: "./contracts",
+  },
+  contractSizer: {
+    runOnCompile: process.env.REPORT_SIZE ? true : false,
+    disambiguatePaths: false,
   },
   networks: {
     hardhat: {

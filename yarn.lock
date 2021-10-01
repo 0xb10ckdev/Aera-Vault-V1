@@ -342,134 +342,86 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ethereumjs/block@npm:^3.2.0, @ethereumjs/block@npm:^3.2.1":
-  version: 3.2.1
-  resolution: "@ethereumjs/block@npm:3.2.1"
+"@ethereumjs/block@npm:^3.4.0, @ethereumjs/block@npm:^3.5.0, @ethereumjs/block@npm:^3.5.1":
+  version: 3.5.1
+  resolution: "@ethereumjs/block@npm:3.5.1"
   dependencies:
-    "@ethereumjs/common": ^2.2.0
-    "@ethereumjs/tx": ^3.1.3
-    ethereumjs-util: ^7.0.10
-    merkle-patricia-tree: ^4.1.0
-  checksum: 8f98a9339e6d4743d03429034588757a1360167a7682489b9e1d3a43edb69752fc24540d1b590922883514fae116f3efbf37ec357d466b09da2e91850cfa35e8
+    "@ethereumjs/common": ^2.5.0
+    "@ethereumjs/tx": ^3.3.1
+    ethereumjs-util: ^7.1.1
+    merkle-patricia-tree: ^4.2.1
+  checksum: 255f270d2461970a0d5518906674e4bb7ce0b4f1f0b32a724465fb85b7a989bc7c98285af1a7f29580ccd2afbc04558e4283575d90a5ebcbb5012d7537205d61
   languageName: node
   linkType: hard
 
-"@ethereumjs/block@npm:^3.3.0":
-  version: 3.3.0
-  resolution: "@ethereumjs/block@npm:3.3.0"
+"@ethereumjs/blockchain@npm:^5.4.0, @ethereumjs/blockchain@npm:^5.4.1":
+  version: 5.4.2
+  resolution: "@ethereumjs/blockchain@npm:5.4.2"
   dependencies:
-    "@ethereumjs/common": ^2.3.0
-    "@ethereumjs/tx": ^3.2.0
-    ethereumjs-util: ^7.0.10
-    merkle-patricia-tree: ^4.2.0
-  checksum: 3b25b6e478c0a1f3d1e9e63a456d731d8a4d1ac7c893a6527bbaf27c55d52aae1bd5705cb2c96f96bec48f4afc8e99e7220b06338be02d4293f98fb800f3d62b
-  languageName: node
-  linkType: hard
-
-"@ethereumjs/blockchain@npm:^5.2.1":
-  version: 5.2.1
-  resolution: "@ethereumjs/blockchain@npm:5.2.1"
-  dependencies:
-    "@ethereumjs/block": ^3.2.0
-    "@ethereumjs/common": ^2.2.0
-    "@ethereumjs/ethash": ^1.0.0
+    "@ethereumjs/block": ^3.5.1
+    "@ethereumjs/common": ^2.5.0
+    "@ethereumjs/ethash": ^1.1.0
     debug: ^2.2.0
-    ethereumjs-util: ^7.0.9
+    ethereumjs-util: ^7.1.1
     level-mem: ^5.0.1
     lru-cache: ^5.1.1
     rlp: ^2.2.4
     semaphore-async-await: ^1.5.1
-  checksum: 1c3dbfeb59e62d82e498f76531127f0403d42161e8babb737aa349bd001e7148a79826f33cde9311c981b2b5ccb72f204ae952a69d1c09ed18145809d31ef473
+  checksum: 98915e6922b1a987252a28986a98e638549c94c3dcde3efbf5472d5246654b6a8848daef0be8217b317429e74ae14a11af5fcd829c290eabf40ea269033ecfe1
   languageName: node
   linkType: hard
 
-"@ethereumjs/blockchain@npm:^5.3.0":
-  version: 5.3.0
-  resolution: "@ethereumjs/blockchain@npm:5.3.0"
-  dependencies:
-    "@ethereumjs/block": ^3.3.0
-    "@ethereumjs/common": ^2.3.0
-    "@ethereumjs/ethash": ^1.0.0
-    debug: ^2.2.0
-    ethereumjs-util: ^7.0.10
-    level-mem: ^5.0.1
-    lru-cache: ^5.1.1
-    rlp: ^2.2.4
-    semaphore-async-await: ^1.5.1
-  checksum: b321c676e64cac9b7c106dc9ef9fe8af16cba8157803e8640fed89d38b267a2073f856f4ad3b7b94d70fb36928b62fc07a8b8d6b97b8e1a8e58d2c35f1738396
-  languageName: node
-  linkType: hard
-
-"@ethereumjs/common@npm:^2.2.0":
-  version: 2.2.0
-  resolution: "@ethereumjs/common@npm:2.2.0"
+"@ethereumjs/common@npm:^2.4.0, @ethereumjs/common@npm:^2.5.0":
+  version: 2.5.0
+  resolution: "@ethereumjs/common@npm:2.5.0"
   dependencies:
     crc-32: ^1.2.0
-    ethereumjs-util: ^7.0.9
-  checksum: 4a2130524b089ec01382d0272c682febd5b6c132d84e702094d0d7a57adf7008d4b1d224b41765fd182658cb04efc43696a2124bf0b38c863c6839363f1b5ccb
+    ethereumjs-util: ^7.1.1
+  checksum: 33df7488496414bfbabea09fadaae192700389a32812933029d696fd1af3166490e626fd61cb6d6ac3cd85fed17515cd5afd336bc7c170edfb5ceb03b9d52046
   languageName: node
   linkType: hard
 
-"@ethereumjs/common@npm:^2.3.0, @ethereumjs/common@npm:^2.3.1":
-  version: 2.3.1
-  resolution: "@ethereumjs/common@npm:2.3.1"
+"@ethereumjs/ethash@npm:^1.1.0":
+  version: 1.1.0
+  resolution: "@ethereumjs/ethash@npm:1.1.0"
   dependencies:
-    crc-32: ^1.2.0
-    ethereumjs-util: ^7.0.10
-  checksum: 762a31ccf2c02a3b086322decbf7f2a75dd06b22d233ca3e5b142240d1551cb0d1f4ded2980447afc2d6ac370551856e184d84a77f46b87682652d96b553610b
-  languageName: node
-  linkType: hard
-
-"@ethereumjs/ethash@npm:^1.0.0":
-  version: 1.0.0
-  resolution: "@ethereumjs/ethash@npm:1.0.0"
-  dependencies:
+    "@ethereumjs/block": ^3.5.0
     "@types/levelup": ^4.3.0
     buffer-xor: ^2.0.1
-    ethereumjs-util: ^7.0.7
+    ethereumjs-util: ^7.1.1
     miller-rabin: ^4.0.0
-  checksum: 51f2c920c86081d51116e3f163fbfeb3e9455e0c05049245c7fa6fe48491a77696ca4c81dbfe8e12c4b4cd8b15606c800937783298f44a2c8ef48ca392be8e25
+  checksum: dc9ca39e2b5f19927d982ad73015446d589b01daed78aee8c6c82e36eabd8ef916eb0c55b1f95d0c7377631a59b8fb414fcee83ecac9c3f067660d7053cfc480
   languageName: node
   linkType: hard
 
-"@ethereumjs/tx@npm:^3.1.3":
-  version: 3.1.4
-  resolution: "@ethereumjs/tx@npm:3.1.4"
+"@ethereumjs/tx@npm:^3.3.0, @ethereumjs/tx@npm:^3.3.1":
+  version: 3.3.2
+  resolution: "@ethereumjs/tx@npm:3.3.2"
   dependencies:
-    "@ethereumjs/common": ^2.2.0
-    ethereumjs-util: ^7.0.10
-  checksum: 2bd4e9817da7666a7d253cacc4b68e32f0bfa752b7bead3f0e0072e84d97854c989fffeb2d306850aaa0d05ad1476a2c8126081924a5b63b3d22596c48aeb457
+    "@ethereumjs/common": ^2.5.0
+    ethereumjs-util: ^7.1.2
+  checksum: 7593a131bbad8f2c995d73ef06e7c054e261f15dda68f994c82d291875c81b58882d73fd1f0e940e9f28c1ae60c7d787a80555c1a834c37b1697f401130d2f7d
   languageName: node
   linkType: hard
 
-"@ethereumjs/tx@npm:^3.2.0, @ethereumjs/tx@npm:^3.2.1":
-  version: 3.2.1
-  resolution: "@ethereumjs/tx@npm:3.2.1"
+"@ethereumjs/vm@npm:^5.5.2":
+  version: 5.5.3
+  resolution: "@ethereumjs/vm@npm:5.5.3"
   dependencies:
-    "@ethereumjs/common": ^2.3.1
-    ethereumjs-util: ^7.0.10
-  checksum: 2d171dad5aa41deae6417b1bd514f2335a2d21b9c6d49d02fdfab279aac2c17c1abf8a28490b78a6f4019bd5d5a64649663175e0efbe9504c24cf09c8146da4a
-  languageName: node
-  linkType: hard
-
-"@ethereumjs/vm@npm:^5.3.2":
-  version: 5.3.2
-  resolution: "@ethereumjs/vm@npm:5.3.2"
-  dependencies:
-    "@ethereumjs/block": ^3.2.1
-    "@ethereumjs/blockchain": ^5.2.1
-    "@ethereumjs/common": ^2.2.0
-    "@ethereumjs/tx": ^3.1.3
+    "@ethereumjs/block": ^3.5.0
+    "@ethereumjs/blockchain": ^5.4.1
+    "@ethereumjs/common": ^2.5.0
+    "@ethereumjs/tx": ^3.3.1
     async-eventemitter: ^0.2.4
     core-js-pure: ^3.0.1
     debug: ^2.2.0
-    ethereumjs-util: ^7.0.10
+    ethereumjs-util: ^7.1.1
     functional-red-black-tree: ^1.0.1
     mcl-wasm: ^0.7.1
-    merkle-patricia-tree: ^4.1.0
+    merkle-patricia-tree: ^4.2.1
     rustbn.js: ~0.2.0
     util.promisify: ^1.0.1
-  checksum: 6aa6a477b685aefa59c83479d4643869f1c2631f045ceac8f43835ac4901347e0dab616099381eeddf5c699f1652a269fb9bb92a3a9cbff6d31d2d6137f6ee8e
+  checksum: 6767ade8e42682bc41a84a83ac4f816a30a2ce900acd0976aa0f9c9c7361030c11065d941fe2b416f3ecd1c03ef233194c8c42b34eeabcdb20eba56c1d3f7ef9
   languageName: node
   linkType: hard
 
@@ -3724,6 +3676,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cli-table3@npm:^0.6.0":
+  version: 0.6.0
+  resolution: "cli-table3@npm:0.6.0"
+  dependencies:
+    colors: ^1.1.2
+    object-assign: ^4.1.0
+    string-width: ^4.2.0
+  dependenciesMeta:
+    colors:
+      optional: true
+  checksum: 4b61f9db4fb26039ab9299089d5a8a6a269f0d79eefd1e8b9479746f26ec186365bc6bf2bceb4812446cc213426b0f86cd86b7fc130a43d270d0f76e77f251f3
+  languageName: node
+  linkType: hard
+
 "cli-table@npm:^0.3.1":
   version: 0.3.6
   resolution: "cli-table@npm:0.3.6"
@@ -3862,7 +3828,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"colors@npm:^1.1.2":
+"colors@npm:^1.1.2, colors@npm:^1.4.0":
   version: 1.4.0
   resolution: "colors@npm:1.4.0"
   checksum: a0f266ac041a9774d92cc9624a984707678d2eeec125d54e8d8231075ce36c24c5352fb5d0f90c6ee420d0f63e354417cec716386ad341309334aad18e32b933
@@ -4223,6 +4189,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cross-env@npm:^7.0.3":
+  version: 7.0.3
+  resolution: "cross-env@npm:7.0.3"
+  dependencies:
+    cross-spawn: ^7.0.1
+  bin:
+    cross-env: src/bin/cross-env.js
+    cross-env-shell: src/bin/cross-env-shell.js
+  checksum: af4fa4dab3ddf6c25ed5e0c95ef53ea363aceb41741e22b7eae83a12cc10cb2416e3aba29c95f2f2c3a1aa918d3444fe92fab318a8ba761e8d52ae88388496cc
+  languageName: node
+  linkType: hard
+
 "cross-fetch@npm:^2.1.0, cross-fetch@npm:^2.1.1":
   version: 2.2.3
   resolution: "cross-fetch@npm:2.2.3"
@@ -4246,7 +4224,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"cross-spawn@npm:^7.0.2, cross-spawn@npm:^7.0.3":
+"cross-spawn@npm:^7.0.1, cross-spawn@npm:^7.0.2, cross-spawn@npm:^7.0.3":
   version: 7.0.3
   resolution: "cross-spawn@npm:7.0.3"
   dependencies:
@@ -5731,7 +5709,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ethereumjs-util@npm:^7.0.10, ethereumjs-util@npm:^7.0.2, ethereumjs-util@npm:^7.0.7, ethereumjs-util@npm:^7.0.8, ethereumjs-util@npm:^7.0.9":
+"ethereumjs-util@npm:^7.0.10, ethereumjs-util@npm:^7.0.2":
   version: 7.0.10
   resolution: "ethereumjs-util@npm:7.0.10"
   dependencies:
@@ -5742,6 +5720,20 @@ __metadata:
     ethjs-util: 0.1.6
     rlp: ^2.2.4
   checksum: 4dd40fd92063179af80be2384c0faa39b93d9583bbaf0ab2f418aefce721c6311b420ca91bc03057568a360b01c304328439f418cc152df32f1a25f7da0ad1d0
+  languageName: node
+  linkType: hard
+
+"ethereumjs-util@npm:^7.1.0, ethereumjs-util@npm:^7.1.1, ethereumjs-util@npm:^7.1.2":
+  version: 7.1.2
+  resolution: "ethereumjs-util@npm:7.1.2"
+  dependencies:
+    "@types/bn.js": ^5.1.0
+    bn.js: ^5.1.2
+    create-hash: ^1.1.2
+    ethereum-cryptography: ^0.1.3
+    ethjs-util: 0.1.6
+    rlp: ^2.2.4
+  checksum: 7821d908995d08621dfb43bd5367f7d92b0adf4b090d7452a9cc9a9761a601a1db637af67b8b8c58ce88ce3114081ce41cf3038037c1ddf4bcdd5e8ee1890c78
   languageName: node
   linkType: hard
 
@@ -7127,6 +7119,18 @@ fsevents@~2.3.1:
   languageName: node
   linkType: hard
 
+"hardhat-contract-sizer@npm:^2.1.1":
+  version: 2.1.1
+  resolution: "hardhat-contract-sizer@npm:2.1.1"
+  dependencies:
+    cli-table3: ^0.6.0
+    colors: ^1.4.0
+  peerDependencies:
+    hardhat: ^2.0.0
+  checksum: 901c01627466c6e025b178b3ad8ae2c4c430e6000bc78c124c7a849adaa831c69edfd9489a276f387e5b10b925adf3372f7e7a7ba49639d64148a04e91e710cc
+  languageName: node
+  linkType: hard
+
 "hardhat-gas-reporter@npm:^1.0.4":
   version: 1.0.4
   resolution: "hardhat-gas-reporter@npm:1.0.4"
@@ -7140,14 +7144,14 @@ fsevents@~2.3.1:
   linkType: hard
 
 "hardhat@npm:^2.4.1":
-  version: 2.4.1
-  resolution: "hardhat@npm:2.4.1"
+  version: 2.6.4
+  resolution: "hardhat@npm:2.6.4"
   dependencies:
-    "@ethereumjs/block": ^3.3.0
-    "@ethereumjs/blockchain": ^5.3.0
-    "@ethereumjs/common": ^2.3.1
-    "@ethereumjs/tx": ^3.2.1
-    "@ethereumjs/vm": ^5.3.2
+    "@ethereumjs/block": ^3.4.0
+    "@ethereumjs/blockchain": ^5.4.0
+    "@ethereumjs/common": ^2.4.0
+    "@ethereumjs/tx": ^3.3.0
+    "@ethereumjs/vm": ^5.5.2
     "@ethersproject/abi": ^5.1.2
     "@sentry/node": ^5.18.1
     "@solidity-parser/parser": ^0.11.0
@@ -7165,7 +7169,7 @@ fsevents@~2.3.1:
     eth-sig-util: ^2.5.2
     ethereum-cryptography: ^0.1.2
     ethereumjs-abi: ^0.6.8
-    ethereumjs-util: ^7.0.10
+    ethereumjs-util: ^7.1.0
     find-up: ^2.1.0
     fp-ts: 1.19.3
     fs-extra: ^7.0.1
@@ -7192,7 +7196,7 @@ fsevents@~2.3.1:
     ws: ^7.4.6
   bin:
     hardhat: internal/cli/cli.js
-  checksum: 2ee516d34363bfc8a0b4de29189b3faa90d1c16a0feedd61797041936470e45f8924f7466839e01cf5adfff1bcd872e095840d91b5900d6e3d3c7d5e7cc9fc52
+  checksum: f0689e0ffdbd25a61fc4e671b8d8a0314379501aa5ae3d46c7dbdc3c481245f47f76592145d7a3ce0c2f1225abc7b4d3737b56e5e9b777068278138a98ac739e
   languageName: node
   linkType: hard
 
@@ -9228,6 +9232,7 @@ fsevents@~2.3.1:
     "@typescript-eslint/parser": ^4.28.1
     chai: ^4.3.4
     commitizen: ^4.2.4
+    cross-env: ^7.0.3
     cz-conventional-changelog: ^3.3.0
     dotenv: ^10.0.0
     eslint: ^7.29.0
@@ -9236,6 +9241,7 @@ fsevents@~2.3.1:
     ethers: ^5.4.0
     fs-extra: ^10.0.0
     hardhat: ^2.4.1
+    hardhat-contract-sizer: ^2.1.1
     hardhat-gas-reporter: ^1.0.4
     husky: ^6.0.0
     lint-staged: ^11.0.0
@@ -9487,21 +9493,6 @@ fsevents@~2.3.1:
   languageName: node
   linkType: hard
 
-"merkle-patricia-tree@npm:^4.1.0":
-  version: 4.1.0
-  resolution: "merkle-patricia-tree@npm:4.1.0"
-  dependencies:
-    "@types/levelup": ^4.3.0
-    ethereumjs-util: ^7.0.8
-    level-mem: ^5.0.1
-    level-ws: ^2.0.0
-    readable-stream: ^3.6.0
-    rlp: ^2.2.3
-    semaphore-async-await: ^1.5.1
-  checksum: e82b5c2b69df49006fb2e8d63a27da3fc01d36c88a7b4130843adb8592b679bdfa9b0ce3d259be3bb637a74d70a77fe9fd39b29c5df82ddc5da64405e7557044
-  languageName: node
-  linkType: hard
-
 "merkle-patricia-tree@npm:^4.2.0":
   version: 4.2.0
   resolution: "merkle-patricia-tree@npm:4.2.0"
@@ -9514,6 +9505,21 @@ fsevents@~2.3.1:
     rlp: ^2.2.4
     semaphore-async-await: ^1.5.1
   checksum: 0b976a004c64a50356e95f1f291e9e341cef9ec9a5b179421afcf64d8d9942a838de4d071caf07dfe2dd39e1b028b1438868b25a6e200b58fb3196476cf3abf2
+  languageName: node
+  linkType: hard
+
+"merkle-patricia-tree@npm:^4.2.1":
+  version: 4.2.1
+  resolution: "merkle-patricia-tree@npm:4.2.1"
+  dependencies:
+    "@types/levelup": ^4.3.0
+    ethereumjs-util: ^7.1.0
+    level-mem: ^5.0.1
+    level-ws: ^2.0.0
+    readable-stream: ^3.6.0
+    rlp: ^2.2.4
+    semaphore-async-await: ^1.5.1
+  checksum: 3c82ebad11f210dd06adcc0b0840352365935e81e71abd3725d5604cd52aebdb3ba8eddf94dff1b4a23efa4e094f5000e9b57920957921c4aa6568de57de5372
   languageName: node
   linkType: hard
 
