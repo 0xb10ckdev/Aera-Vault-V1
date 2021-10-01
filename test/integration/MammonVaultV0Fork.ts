@@ -275,32 +275,104 @@ describe("Mammon Vault v0", function () {
     });
 
     describe("when withdrawing from Vault", () => {
+      let weight0: BigNumber;
+      let weight1: BigNumber;
+      let holdings0: BigNumber;
+      let holdings1: BigNumber;
+      let balance0: BigNumber;
+      let balance1: BigNumber;
+      let spotPrice: BigNumber;
+
       beforeEach(async () => {
         await vault.deposit(toWei(10), toWei(20));
+
+        weight0 = await vault.getDenormalizedWeight(DAI.address);
+        weight1 = await vault.getDenormalizedWeight(WETH.address);
+        holdings0 = await vault.holdings0();
+        holdings1 = await vault.holdings1();
+        balance0 = await DAI.balanceOf(admin.address);
+        balance1 = await WETH.balanceOf(admin.address);
+        spotPrice = await bPool.getSpotPrice(DAI.address, WETH.address);
       });
 
       it("should be reverted to withdraw tokens", async () => {
+        await expect(vault.withdraw(toWei(0), toWei(60))).to.be.revertedWith(
+          "ERR_MIN_WEIGHT",
+        );
+
+        await expect(vault.withdraw(toWei(11), toWei(0))).to.be.revertedWith(
+          "ERR_MIN_WEIGHT",
+        );
+
         await expect(vault.withdraw(toWei(11), toWei(20))).to.be.revertedWith(
           "ERR_MIN_WEIGHT",
         );
       });
 
-      it("should be possible to withdraw tokens", async () => {
-        const weight0 = await vault.getDenormalizedWeight(DAI.address);
-        const weight1 = await vault.getDenormalizedWeight(WETH.address);
-        const holdings0 = await vault.holdings0();
-        const holdings1 = await vault.holdings1();
-        const balance0 = await DAI.balanceOf(admin.address);
-        const balance1 = await WETH.balanceOf(admin.address);
-        const spotPrice = await bPool.getSpotPrice(DAI.address, WETH.address);
-
-        expect(await vault.estimateGas.withdraw(toWei(5), toWei(10))).to.below(
-          250000,
+      it("should be possible to withdraw token0", async () => {
+        expect(await vault.estimateGas.withdraw(toWei(5), toWei(0))).to.below(
+          140000,
         );
-        await vault.withdraw(toWei(5), toWei(10));
+        await vault.withdraw(toWei(5), toWei(0));
 
         const newHoldings0 = holdings0.sub(toWei(5));
-        const newHoldings1 = holdings1.sub(toWei(10));
+        const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+
+        expect(await vault.holdings0()).to.equal(newHoldings0);
+        expect(await vault.holdings1()).to.equal(holdings1);
+        expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
+          newWeight0,
+        );
+        expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
+          weight1,
+        );
+        expect(await DAI.balanceOf(admin.address)).to.equal(
+          balance0.add(toWei(5)),
+        );
+        expect(await WETH.balanceOf(admin.address)).to.equal(
+          balance1.add(toWei(0)),
+        );
+        expect(await bPool.getSpotPrice(DAI.address, WETH.address)).to.equal(
+          spotPrice,
+        );
+      });
+
+      it("should be possible to withdraw token1", async () => {
+        expect(await vault.estimateGas.withdraw(toWei(0), toWei(5))).to.below(
+          140000,
+        );
+        await vault.withdraw(toWei(0), toWei(5));
+
+        const newHoldings1 = holdings1.sub(toWei(5));
+        const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+        expect(await vault.holdings0()).to.equal(holdings0);
+        expect(await vault.holdings1()).to.equal(newHoldings1);
+        expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
+          weight0,
+        );
+        expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
+          newWeight1,
+        );
+        expect(await DAI.balanceOf(admin.address)).to.equal(
+          balance0.add(toWei(0)),
+        );
+        expect(await WETH.balanceOf(admin.address)).to.equal(
+          balance1.add(toWei(5)),
+        );
+        expect(await bPool.getSpotPrice(DAI.address, WETH.address)).to.equal(
+          spotPrice,
+        );
+      });
+
+      it("should be possible to withdraw tokens", async () => {
+        expect(await vault.estimateGas.withdraw(toWei(5), toWei(15))).to.below(
+          210000,
+        );
+        await vault.withdraw(toWei(5), toWei(15));
+
+        const newHoldings0 = holdings0.sub(toWei(5));
+        const newHoldings1 = holdings1.sub(toWei(15));
         const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
         const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
 
@@ -316,7 +388,7 @@ describe("Mammon Vault v0", function () {
           balance0.add(toWei(5)),
         );
         expect(await WETH.balanceOf(admin.address)).to.equal(
-          balance1.add(toWei(10)),
+          balance1.add(toWei(15)),
         );
         expect(await bPool.getSpotPrice(DAI.address, WETH.address)).to.equal(
           spotPrice,
