@@ -34,17 +34,16 @@ if (!mnemonic) {
 }
 
 const infuraApiKey = process.env.INFURA_API_KEY;
-if (!infuraApiKey) {
-  throw new Error("Please set your INFURA_API_KEY in a .env file");
+const alchemyApiKey = process.env.ALCHEMY_API_KEY;
+if (!infuraApiKey && !alchemyApiKey) {
+  throw new Error(
+    "Please set your INFURA_API_KEY or ALCHEMY_API_KEY in a .env file",
+  );
 }
 
-const forkUrl =
-  process.env.ALCHEMY_URL || "https://mainnet.infura.io/v3/" + infuraApiKey;
-if (process.env.HARDHAT_FORK) {
-  if (!forkUrl) {
-    throw new Error("Please set your ALCHEMY_URL in a .env file");
-  }
-}
+const forkUrl = alchemyApiKey
+  ? `https://eth-mainnet.alchemyapi.io/v2/${alchemyApiKey}`
+  : `https://mainnet.infura.io/v3/${infuraApiKey}`;
 
 function createTestnetConfig(
   network: keyof typeof chainIds,
@@ -94,8 +93,7 @@ const config: HardhatUserConfig = {
       initialBaseFeePerGas: 0,
       forking: process.env.HARDHAT_FORK
         ? {
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            url: forkUrl!,
+            url: forkUrl,
             blockNumber: process.env.HARDHAT_FORK_NUMBER
               ? parseInt(process.env.HARDHAT_FORK_NUMBER)
               : undefined,
