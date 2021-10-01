@@ -561,6 +561,38 @@ describe("Mammon Vault v0", function () {
         );
       });
 
+      it("should be reverted to call functions when finalizing", async () => {
+        await vault.initializeFinalization();
+
+        await expect(vault.deposit(ONE_TOKEN, ONE_TOKEN)).to.be.revertedWith(
+          "VaultIsFinalizing",
+        );
+
+        await expect(vault.withdraw(ONE_TOKEN, ONE_TOKEN)).to.be.revertedWith(
+          "VaultIsFinalizing",
+        );
+
+        const blocknumber = await ethers.provider.getBlockNumber();
+        await expect(
+          vault
+            .connect(manager)
+            .updateWeightsGradually(
+              MIN_WEIGHT,
+              MIN_WEIGHT,
+              blocknumber + 1,
+              blocknumber + 1000,
+            ),
+        ).to.be.revertedWith("VaultIsFinalizing");
+
+        await expect(vault.connect(manager).pokeWeights()).to.be.revertedWith(
+          "VaultIsFinalizing",
+        );
+
+        await expect(vault.initializeFinalization()).to.be.revertedWith(
+          "VaultIsFinalizing",
+        );
+      });
+
       it("should be possible to finalize", async () => {
         await vault.initializeFinalization();
         await ethers.provider.send("evm_increaseTime", [NOTICE_PERIOD + 1]);
