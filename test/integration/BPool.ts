@@ -1,7 +1,9 @@
-import { ethers, deployments } from "hardhat";
+import hre, { ethers, deployments } from "hardhat";
 import { expect } from "chai";
 import { Signer } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
+import deployTokens from "../../deploy/0_tokens";
+import deployValidator from "../../deploy/1_validator";
 import { deployVault, toWei } from "../utils";
 import {
   IERC20,
@@ -43,6 +45,9 @@ describe("Swap on Balancer Pool", function () {
   });
 
   before(async function () {
+    await deployTokens(hre);
+    await deployValidator(hre);
+
     dai = IERC20__factory.connect(
       (await deployments.get("DAI")).address,
       admin,
