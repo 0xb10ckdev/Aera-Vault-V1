@@ -72,14 +72,6 @@ const config: HardhatUserConfig = {
     runOnCompile: process.env.REPORT_SIZE ? true : false,
     disambiguatePaths: false,
   },
-  networks: {
-    hardhat: {
-      accounts: {
-        mnemonic,
-      },
-      initialBaseFeePerGas: 0,
-    },
-  },
   namedAccounts: {
     admin: 0,
     manager: 1,
