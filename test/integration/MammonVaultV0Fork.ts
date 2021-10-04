@@ -1,7 +1,9 @@
-import { ethers, deployments } from "hardhat";
+import hre, { ethers, deployments } from "hardhat";
 import { expect } from "chai";
 import { Signer } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
+import deployTokens from "../../deploy/0_tokens";
+import deployValidator from "../../deploy/1_validator";
 import { deployVault, toWei } from "../utils";
 import {
   IERC20,
@@ -47,6 +49,9 @@ describe("Mammon Vault v0", function () {
   });
 
   before(async function () {
+    await deployTokens(hre);
+    await deployValidator(hre);
+
     dai = IERC20__factory.connect(
       (await deployments.get("DAI")).address,
       admin,
@@ -133,7 +138,7 @@ describe("Mammon Vault v0", function () {
           MIN_WEIGHT,
           MIN_WEIGHT,
         ),
-      ).to.below(600000);
+      ).to.below(610000);
       await vault.initialDeposit(ONE_TOKEN, ONE_TOKEN, MIN_WEIGHT, MIN_WEIGHT);
 
       expect(await vault.holdings0()).to.equal(ONE_TOKEN);
@@ -254,7 +259,7 @@ describe("Mammon Vault v0", function () {
       it("should be possible to set public swap", async () => {
         expect(
           await vault.connect(manager).estimateGas.setPublicSwap(true),
-        ).to.below(45000);
+        ).to.below(46000);
         await vault.connect(manager).setPublicSwap(true);
 
         expect(await vault.isPublicSwap()).to.equal(true);
@@ -394,7 +399,7 @@ describe("Mammon Vault v0", function () {
         vault.connect(manager).initializeFinalization(),
       ).to.be.revertedWith("Ownable: caller is not the owner");
 
-      expect(await vault.estimateGas.initializeFinalization()).to.below(30000);
+      expect(await vault.estimateGas.initializeFinalization()).to.below(32000);
       await vault.initializeFinalization();
       const noticeTimeoutAt = await vault.noticeTimeoutAt();
 
@@ -411,7 +416,7 @@ describe("Mammon Vault v0", function () {
       const balance0 = await dai.balanceOf(ADMIN);
       const balance1 = await weth.balanceOf(ADMIN);
 
-      expect(await vault.estimateGas.finalize()).to.below(220000);
+      expect(await vault.estimateGas.finalize()).to.below(240000);
       await vault.finalize();
 
       expect(await dai.balanceOf(ADMIN)).to.equal(balance0.add(holdings0));
