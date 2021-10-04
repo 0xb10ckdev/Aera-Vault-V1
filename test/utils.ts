@@ -1,5 +1,5 @@
 import { BigNumber, Signer } from "ethers";
-import { ethers, deployments } from "hardhat";
+import { deployments, ethers } from "hardhat";
 import { DEFAULT_NOTICE_PERIOD, getConfig } from "../scripts/config";
 import {
   MammonVaultV0Mainnet,

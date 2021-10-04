@@ -38,10 +38,10 @@ if (!infuraApiKey) {
   throw new Error("Please set your INFURA_API_KEY in a .env file");
 }
 
-const alchemyUrl =
+const forkUrl =
   process.env.ALCHEMY_URL || "https://mainnet.infura.io/v3/" + infuraApiKey;
 if (process.env.HARDHAT_FORK) {
-  if (!alchemyUrl) {
+  if (!forkUrl) {
     throw new Error("Please set your ALCHEMY_URL in a .env file");
   }
 }
@@ -85,14 +85,17 @@ const config: HardhatUserConfig = {
   namedAccounts: {
     admin: 0,
     manager: 1,
+    user: 2,
+    stranger: 3,
   },
   networks: {
     hardhat: {
       accounts: accounts(process.env.HARDHAT_FORK),
+      initialBaseFeePerGas: 0,
       forking: process.env.HARDHAT_FORK
         ? {
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            url: alchemyUrl!,
+            url: forkUrl!,
             blockNumber: process.env.HARDHAT_FORK_NUMBER
               ? parseInt(process.env.HARDHAT_FORK_NUMBER)
               : undefined,

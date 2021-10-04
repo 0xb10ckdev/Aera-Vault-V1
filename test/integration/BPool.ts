@@ -1,17 +1,15 @@
-import hre, { ethers, deployments } from "hardhat";
-import { expect } from "chai";
-import { Signer } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
-import deployTokens from "../../deploy/0_tokens";
-import deployValidator from "../../deploy/1_validator";
-import { deployVault, toWei } from "../utils";
+import { expect } from "chai";
+import hre, { ethers } from "hardhat";
+import deployValidator from "../../deploy/0_validator";
 import {
-  IERC20,
-  IERC20__factory,
-  MammonVaultV0,
   IBPoolMock,
   IBPoolMock__factory,
+  IERC20,
+  MammonVaultV0,
 } from "../../typechain";
+import { setupTokens } from "../fixtures";
+import { deployVault, toWei } from "../utils";
 
 const ONE_TOKEN = toWei("1");
 const MIN_WEIGHT = toWei("1");
@@ -20,60 +18,34 @@ const MAX_OUT_RATIO = toWei(1 / 3).add(1);
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 describe("Swap on Balancer Pool", function () {
-  let signers: SignerWithAddress[];
-  let admin: Signer;
-  let manager: Signer;
-  let user1: Signer;
+  let admin: SignerWithAddress;
+  let manager: SignerWithAddress;
+  let user: SignerWithAddress;
   let bPool: IBPoolMock;
   let vault: MammonVaultV0;
-  let dai: IERC20;
-  let weth: IERC20;
-
-  let MANAGER: string, USER1: string;
-  let DAI: string, WETH: string;
-  let VAULT: string, BPOOL: string;
+  let DAI: IERC20, WETH: IERC20;
 
   before(async function () {
-    signers = await ethers.getSigners();
-    admin = await ethers.getNamedSigner("admin");
-    manager = await ethers.getNamedSigner("manager");
-    user1 = signers[2];
-    MANAGER = await manager.getAddress();
-    USER1 = await user1.getAddress();
-
-    await deployments.fixture();
-  });
-
-  before(async function () {
-    await deployTokens(hre);
+    ({ admin, manager, user } = await ethers.getNamedSigners());
     await deployValidator(hre);
+    ({ DAI, WETH } = await setupTokens());
 
-    dai = IERC20__factory.connect(
-      (await deployments.get("DAI")).address,
+    vault = await deployVault(
       admin,
+      DAI.address,
+      WETH.address,
+      manager.address,
     );
-    weth = IERC20__factory.connect(
-      (await deployments.get("WETH")).address,
-      admin,
-    );
 
-    DAI = dai.address;
-    WETH = weth.address;
+    bPool = IBPoolMock__factory.connect(await vault.pool(), admin);
 
-    vault = await deployVault(admin, DAI, WETH, MANAGER);
-
-    VAULT = vault.address;
-    BPOOL = await vault.pool();
-
-    bPool = IBPoolMock__factory.connect(BPOOL, admin);
-
-    await dai.approve(VAULT, ONE_TOKEN);
-    await weth.approve(VAULT, ONE_TOKEN);
+    await DAI.approve(vault.address, ONE_TOKEN);
+    await WETH.approve(vault.address, ONE_TOKEN);
 
     await vault.initialDeposit(ONE_TOKEN, ONE_TOKEN, MIN_WEIGHT, MIN_WEIGHT);
 
-    await dai.approve(VAULT, toWei(50));
-    await weth.approve(VAULT, toWei(20));
+    await DAI.approve(vault.address, toWei(50));
+    await WETH.approve(vault.address, toWei(20));
 
     await vault.deposit(toWei(10), toWei(20));
   });
@@ -81,15 +53,15 @@ describe("Swap on Balancer Pool", function () {
   describe("swapExactAmountIn", () => {
     it("should be reverted to call swapExactAmountIn", async () => {
       const holdings0 = await vault.holdings0();
-      const spotPrice = await bPool.getSpotPrice(DAI, WETH);
+      const spotPrice = await bPool.getSpotPrice(DAI.address, WETH.address);
 
       await expect(
         bPool
-          .connect(user1)
+          .connect(user)
           .swapExactAmountIn(
             ZERO_ADDRESS,
             toWei(3),
-            WETH,
+            WETH.address,
             toWei(5),
             spotPrice,
           ),
@@ -97,19 +69,25 @@ describe("Swap on Balancer Pool", function () {
 
       await expect(
         bPool
-          .connect(user1)
-          .swapExactAmountIn(DAI, toWei(3), WETH, toWei(5), spotPrice),
+          .connect(user)
+          .swapExactAmountIn(
+            DAI.address,
+            toWei(3),
+            WETH.address,
+            toWei(5),
+            spotPrice,
+          ),
       ).to.be.revertedWith("ERR_SWAP_NOT_PUBLIC");
 
       await vault.connect(manager).setPublicSwap(true);
 
       await expect(
         bPool
-          .connect(user1)
+          .connect(user)
           .swapExactAmountIn(
-            DAI,
+            DAI.address,
             holdings0.mul(MAX_IN_RATIO).add(1),
-            WETH,
+            WETH.address,
             toWei(5),
             spotPrice,
           ),
@@ -117,17 +95,23 @@ describe("Swap on Balancer Pool", function () {
 
       await expect(
         bPool
-          .connect(user1)
-          .swapExactAmountIn(DAI, toWei(3), WETH, toWei(5), spotPrice.sub(1)),
+          .connect(user)
+          .swapExactAmountIn(
+            DAI.address,
+            toWei(3),
+            WETH.address,
+            toWei(5),
+            spotPrice.sub(1),
+          ),
       ).to.be.revertedWith("ERR_BAD_LIMIT_PRICE");
 
       await expect(
         bPool
-          .connect(user1)
+          .connect(user)
           .swapExactAmountIn(
-            DAI,
+            DAI.address,
             toWei(3),
-            WETH,
+            WETH.address,
             toWei(5),
             spotPrice.add(toWei(1)),
           ),
@@ -135,17 +119,23 @@ describe("Swap on Balancer Pool", function () {
 
       await expect(
         bPool
-          .connect(user1)
-          .swapExactAmountIn(DAI, toWei(3), WETH, toWei(1), spotPrice),
+          .connect(user)
+          .swapExactAmountIn(
+            DAI.address,
+            toWei(3),
+            WETH.address,
+            toWei(1),
+            spotPrice,
+          ),
       ).to.be.revertedWith("ERR_LIMIT_PRICE");
 
       await expect(
         bPool
-          .connect(user1)
+          .connect(user)
           .swapExactAmountIn(
-            DAI,
+            DAI.address,
             toWei(3),
-            WETH,
+            WETH.address,
             toWei(1),
             spotPrice.add(toWei(1)),
           ),
@@ -153,16 +143,16 @@ describe("Swap on Balancer Pool", function () {
     });
 
     it("should be possible to sell given number of token0", async () => {
-      const spotPrice = await bPool.getSpotPrice(DAI, WETH);
-      await dai.connect(admin).transfer(USER1, toWei(3));
+      const spotPrice = await bPool.getSpotPrice(DAI.address, WETH.address);
+      await DAI.connect(admin).transfer(user.address, toWei(3));
 
       await expect(
         bPool
-          .connect(user1)
+          .connect(user)
           .swapExactAmountIn(
-            DAI,
+            DAI.address,
             toWei(3),
-            WETH,
+            WETH.address,
             toWei(1),
             spotPrice.add(toWei(1)),
           ),
@@ -170,10 +160,10 @@ describe("Swap on Balancer Pool", function () {
 
       const holdings0 = await vault.holdings0();
       const holdings1 = await vault.holdings1();
-      const weight0 = await vault.getDenormalizedWeight(DAI);
-      const weight1 = await vault.getDenormalizedWeight(WETH);
+      const weight0 = await vault.getDenormalizedWeight(DAI.address);
+      const weight1 = await vault.getDenormalizedWeight(WETH.address);
       const swapFee = await vault.getSwapFee();
-      const balance1 = await weth.balanceOf(USER1);
+      const balance1 = await WETH.balanceOf(user.address);
 
       const tokenAmountOut = await bPool.calcOutGivenIn(
         holdings0,
@@ -184,45 +174,45 @@ describe("Swap on Balancer Pool", function () {
         swapFee,
       );
 
-      await dai.connect(user1).approve(BPOOL, toWei(3));
+      await DAI.connect(user).approve(bPool.address, toWei(3));
 
       expect(
         await bPool
-          .connect(user1)
+          .connect(user)
           .estimateGas.swapExactAmountIn(
-            DAI,
+            DAI.address,
             toWei(3),
-            WETH,
+            WETH.address,
             toWei(1),
             spotPrice.add(toWei(1)),
           ),
       ).to.below(150000);
       await bPool
-        .connect(user1)
+        .connect(user)
         .swapExactAmountIn(
-          DAI,
+          DAI.address,
           toWei(3),
-          WETH,
+          WETH.address,
           toWei(1),
           spotPrice.add(toWei(1)),
         );
 
-      expect(await weth.balanceOf(USER1)).to.equal(
+      expect(await WETH.balanceOf(user.address)).to.equal(
         balance1.add(tokenAmountOut),
       );
     });
 
     it("should be possible to sell given number of token1", async () => {
-      const spotPrice = await bPool.getSpotPrice(WETH, DAI);
-      await weth.connect(admin).transfer(USER1, toWei(3));
+      const spotPrice = await bPool.getSpotPrice(WETH.address, DAI.address);
+      await WETH.connect(admin).transfer(user.address, toWei(3));
 
       await expect(
         bPool
-          .connect(user1)
+          .connect(user)
           .swapExactAmountIn(
-            WETH,
+            WETH.address,
             toWei(3),
-            DAI,
+            DAI.address,
             toWei(1),
             spotPrice.add(toWei(1)),
           ),
@@ -230,10 +220,10 @@ describe("Swap on Balancer Pool", function () {
 
       const holdings0 = await vault.holdings0();
       const holdings1 = await vault.holdings1();
-      const weight0 = await vault.getDenormalizedWeight(DAI);
-      const weight1 = await vault.getDenormalizedWeight(WETH);
+      const weight0 = await vault.getDenormalizedWeight(DAI.address);
+      const weight1 = await vault.getDenormalizedWeight(WETH.address);
       const swapFee = await vault.getSwapFee();
-      const balance0 = await dai.balanceOf(USER1);
+      const balance0 = await DAI.balanceOf(user.address);
       const tokenAmountOut = await bPool.calcOutGivenIn(
         holdings1,
         weight1,
@@ -243,28 +233,28 @@ describe("Swap on Balancer Pool", function () {
         swapFee,
       );
 
-      await weth.connect(user1).approve(BPOOL, toWei(3));
+      await WETH.connect(user).approve(bPool.address, toWei(3));
       expect(
         await bPool
-          .connect(user1)
+          .connect(user)
           .estimateGas.swapExactAmountIn(
-            WETH,
+            WETH.address,
             toWei(3),
-            DAI,
+            DAI.address,
             toWei(1),
             spotPrice.add(toWei(1)),
           ),
       ).to.below(150000);
       await bPool
-        .connect(user1)
+        .connect(user)
         .swapExactAmountIn(
-          WETH,
+          WETH.address,
           toWei(3),
-          DAI,
+          DAI.address,
           toWei(1),
           spotPrice.add(toWei(1)),
         );
-      expect(await dai.balanceOf(USER1)).to.equal(
+      expect(await DAI.balanceOf(user.address)).to.equal(
         balance0.add(tokenAmountOut),
       );
     });
@@ -273,17 +263,17 @@ describe("Swap on Balancer Pool", function () {
   describe("swapExactAmountOut", () => {
     it("should be reverted to call swapExactAmountOut", async () => {
       const holdings1 = await vault.holdings1();
-      const spotPrice = await bPool.getSpotPrice(DAI, WETH);
+      const spotPrice = await bPool.getSpotPrice(DAI.address, WETH.address);
 
       await vault.connect(manager).setPublicSwap(false);
 
       await expect(
         bPool
-          .connect(user1)
+          .connect(user)
           .swapExactAmountOut(
             ZERO_ADDRESS,
             toWei(5),
-            WETH,
+            WETH.address,
             toWei(3),
             spotPrice,
           ),
@@ -291,19 +281,25 @@ describe("Swap on Balancer Pool", function () {
 
       await expect(
         bPool
-          .connect(user1)
-          .swapExactAmountOut(DAI, toWei(5), WETH, toWei(3), spotPrice),
+          .connect(user)
+          .swapExactAmountOut(
+            DAI.address,
+            toWei(5),
+            WETH.address,
+            toWei(3),
+            spotPrice,
+          ),
       ).to.be.revertedWith("ERR_SWAP_NOT_PUBLIC");
 
       await vault.connect(manager).setPublicSwap(true);
 
       await expect(
         bPool
-          .connect(user1)
+          .connect(user)
           .swapExactAmountOut(
-            DAI,
+            DAI.address,
             toWei(30),
-            WETH,
+            WETH.address,
             holdings1.mul(MAX_OUT_RATIO).add(1),
             spotPrice,
           ),
@@ -311,17 +307,23 @@ describe("Swap on Balancer Pool", function () {
 
       await expect(
         bPool
-          .connect(user1)
-          .swapExactAmountOut(DAI, toWei(5), WETH, toWei(3), spotPrice.sub(1)),
+          .connect(user)
+          .swapExactAmountOut(
+            DAI.address,
+            toWei(5),
+            WETH.address,
+            toWei(3),
+            spotPrice.sub(1),
+          ),
       ).to.be.revertedWith("ERR_BAD_LIMIT_PRICE");
 
       await expect(
         bPool
-          .connect(user1)
+          .connect(user)
           .swapExactAmountOut(
-            DAI,
+            DAI.address,
             toWei(5),
-            WETH,
+            WETH.address,
             toWei(5),
             spotPrice.add(toWei(1)),
           ),
@@ -329,17 +331,23 @@ describe("Swap on Balancer Pool", function () {
 
       await expect(
         bPool
-          .connect(user1)
-          .swapExactAmountOut(DAI, toWei(5), WETH, toWei(3), spotPrice),
+          .connect(user)
+          .swapExactAmountOut(
+            DAI.address,
+            toWei(5),
+            WETH.address,
+            toWei(3),
+            spotPrice,
+          ),
       ).to.be.revertedWith("ERR_LIMIT_PRICE");
 
       await expect(
         bPool
-          .connect(user1)
+          .connect(user)
           .swapExactAmountOut(
-            DAI,
+            DAI.address,
             toWei(5),
-            WETH,
+            WETH.address,
             toWei(3),
             spotPrice.add(toWei(1)),
           ),
@@ -347,16 +355,16 @@ describe("Swap on Balancer Pool", function () {
     });
 
     it("should be possible to buy given number of token1", async () => {
-      const spotPrice = await bPool.getSpotPrice(DAI, WETH);
-      await dai.connect(admin).transfer(USER1, toWei(3));
+      const spotPrice = await bPool.getSpotPrice(DAI.address, WETH.address);
+      await DAI.connect(admin).transfer(user.address, toWei(3));
 
       await expect(
         bPool
-          .connect(user1)
+          .connect(user)
           .swapExactAmountOut(
-            DAI,
+            DAI.address,
             toWei(5),
-            WETH,
+            WETH.address,
             toWei(3),
             spotPrice.add(toWei(1)),
           ),
@@ -364,10 +372,10 @@ describe("Swap on Balancer Pool", function () {
 
       const holdings0 = await vault.holdings0();
       const holdings1 = await vault.holdings1();
-      const weight0 = await vault.getDenormalizedWeight(DAI);
-      const weight1 = await vault.getDenormalizedWeight(WETH);
+      const weight0 = await vault.getDenormalizedWeight(DAI.address);
+      const weight1 = await vault.getDenormalizedWeight(WETH.address);
       const swapFee = await vault.getSwapFee();
-      const balance0 = await dai.balanceOf(USER1);
+      const balance0 = await DAI.balanceOf(user.address);
       const tokenAmountIn = await bPool.calcInGivenOut(
         holdings0,
         weight0,
@@ -377,41 +385,43 @@ describe("Swap on Balancer Pool", function () {
         swapFee,
       );
 
-      await dai.connect(user1).approve(BPOOL, toWei(5));
+      await DAI.connect(user).approve(bPool.address, toWei(5));
       expect(
         await bPool
-          .connect(user1)
+          .connect(user)
           .estimateGas.swapExactAmountOut(
-            DAI,
+            DAI.address,
             toWei(5),
-            WETH,
+            WETH.address,
             toWei(3),
             spotPrice.add(toWei(1)),
           ),
       ).to.below(150000);
       await bPool
-        .connect(user1)
+        .connect(user)
         .swapExactAmountOut(
-          DAI,
+          DAI.address,
           toWei(5),
-          WETH,
+          WETH.address,
           toWei(3),
           spotPrice.add(toWei(1)),
         );
-      expect(await dai.balanceOf(USER1)).to.equal(balance0.sub(tokenAmountIn));
+      expect(await DAI.balanceOf(user.address)).to.equal(
+        balance0.sub(tokenAmountIn),
+      );
     });
 
     it("should be possible to buy given number of token0", async () => {
-      const spotPrice = await bPool.getSpotPrice(WETH, DAI);
-      await weth.connect(admin).transfer(USER1, toWei(3));
+      const spotPrice = await bPool.getSpotPrice(WETH.address, DAI.address);
+      await WETH.connect(admin).transfer(user.address, toWei(3));
 
       await expect(
         bPool
-          .connect(user1)
+          .connect(user)
           .swapExactAmountOut(
-            WETH,
+            WETH.address,
             toWei(3),
-            DAI,
+            DAI.address,
             toWei(1),
             spotPrice.add(toWei(1)),
           ),
@@ -419,10 +429,10 @@ describe("Swap on Balancer Pool", function () {
 
       const holdings0 = await vault.holdings0();
       const holdings1 = await vault.holdings1();
-      const weight0 = await vault.getDenormalizedWeight(DAI);
-      const weight1 = await vault.getDenormalizedWeight(WETH);
+      const weight0 = await vault.getDenormalizedWeight(DAI.address);
+      const weight1 = await vault.getDenormalizedWeight(WETH.address);
       const swapFee = await vault.getSwapFee();
-      const balance1 = await weth.balanceOf(USER1);
+      const balance1 = await WETH.balanceOf(user.address);
       const tokenAmountIn = await bPool.calcInGivenOut(
         holdings1,
         weight1,
@@ -432,28 +442,28 @@ describe("Swap on Balancer Pool", function () {
         swapFee,
       );
 
-      await weth.connect(user1).approve(BPOOL, toWei(3));
+      await WETH.connect(user).approve(bPool.address, toWei(3));
       expect(
         await bPool
-          .connect(user1)
+          .connect(user)
           .estimateGas.swapExactAmountOut(
-            WETH,
+            WETH.address,
             toWei(3),
-            DAI,
+            DAI.address,
             toWei(1),
             spotPrice.add(toWei(1)),
           ),
       ).to.below(150000);
       await bPool
-        .connect(user1)
+        .connect(user)
         .swapExactAmountOut(
-          WETH,
+          WETH.address,
           toWei(3),
-          DAI,
+          DAI.address,
           toWei(1),
           spotPrice.add(toWei(1)),
         );
-      expect(await weth.balanceOf(USER1)).to.equal(
+      expect(await WETH.balanceOf(user.address)).to.equal(
         balance1.sub(tokenAmountIn),
       );
     });

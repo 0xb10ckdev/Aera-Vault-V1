@@ -1,17 +1,15 @@
-import hre, { ethers, deployments } from "hardhat";
-import { expect } from "chai";
-import { Signer } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
-import deployTokens from "../../deploy/0_tokens";
-import deployValidator from "../../deploy/1_validator";
-import { deployVault, toWei } from "../utils";
+import { expect } from "chai";
+import hre, { ethers } from "hardhat";
+import deployValidator from "../../deploy/0_validator";
 import {
-  IERC20,
-  IERC20__factory,
-  MammonVaultV0,
   IBPoolMock,
   IBPoolMock__factory,
+  IERC20,
+  MammonVaultV0,
 } from "../../typechain";
+import { setupTokens } from "../fixtures";
+import { deployVault, toWei } from "../utils";
 
 const ONE_TOKEN = toWei("1");
 const MIN_WEIGHT = toWei("1");
@@ -20,61 +18,45 @@ const MIN_BALANCE = toWei("1").div(1e12);
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 describe("Mammon Vault v0", function () {
-  let signers: SignerWithAddress[];
-  let admin: Signer;
-  let manager: Signer;
-  let user1: Signer;
+  let admin: SignerWithAddress;
+  let manager: SignerWithAddress;
+  let user: SignerWithAddress;
   let bPool: IBPoolMock;
   let vault: MammonVaultV0;
-  let dai: IERC20;
-  let weth: IERC20;
-
-  let ADMIN: string, MANAGER: string;
-  let DAI: string, WETH: string;
-  let VAULT: string;
-
-  let startBlock: number;
+  let DAI: IERC20;
+  let WETH: IERC20;
+  let snapshot: unknown;
 
   const NOTICE_PERIOD = 10000;
 
-  before(async function () {
-    signers = await ethers.getSigners();
-    admin = await ethers.getNamedSigner("admin");
-    manager = await ethers.getNamedSigner("manager");
-    user1 = signers[2];
-    ADMIN = await admin.getAddress();
-    MANAGER = await manager.getAddress();
-
-    await deployments.fixture();
-  });
-
-  before(async function () {
-    await deployTokens(hre);
+  beforeEach(async function () {
+    snapshot = await ethers.provider.send("evm_snapshot", []);
+    ({ admin, manager, user } = await ethers.getNamedSigners());
     await deployValidator(hre);
 
-    dai = IERC20__factory.connect(
-      (await deployments.get("DAI")).address,
+    ({ DAI, WETH } = await setupTokens());
+
+    vault = await deployVault(
       admin,
+      DAI.address,
+      WETH.address,
+      manager.address,
     );
-    weth = IERC20__factory.connect(
-      (await deployments.get("WETH")).address,
-      admin,
-    );
 
-    DAI = dai.address;
-    WETH = weth.address;
-
-    vault = await deployVault(admin, DAI, WETH, MANAGER);
-
-    VAULT = vault.address;
     bPool = IBPoolMock__factory.connect(await vault.pool(), admin);
   });
 
-  describe("Vault initialization", () => {
-    it("should be reverted to initialize the vault", async () => {
-      await dai.approve(VAULT, ONE_TOKEN);
-      await weth.approve(VAULT, ONE_TOKEN);
+  afterEach(async () => {
+    await ethers.provider.send("evm_revert", [snapshot]);
+  });
 
+  describe("when Vault not initialized", () => {
+    beforeEach(async () => {
+      await DAI.approve(vault.address, ONE_TOKEN);
+      await WETH.approve(vault.address, ONE_TOKEN);
+    });
+
+    it("should be reverted to initialize the vault", async () => {
       await expect(
         vault.initialDeposit(
           ONE_TOKEN,
@@ -143,89 +125,280 @@ describe("Mammon Vault v0", function () {
 
       expect(await vault.holdings0()).to.equal(ONE_TOKEN);
       expect(await vault.holdings1()).to.equal(ONE_TOKEN);
-      expect(await vault.getDenormalizedWeight(DAI)).to.equal(MIN_WEIGHT);
-      expect(await vault.getDenormalizedWeight(WETH)).to.equal(MIN_WEIGHT);
+      expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
+        MIN_WEIGHT,
+      );
+      expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
+        MIN_WEIGHT,
+      );
     });
 
     it("should be reverted to initialize the vault again", async () => {
+      await vault.initialDeposit(ONE_TOKEN, ONE_TOKEN, MIN_WEIGHT, MIN_WEIGHT);
+
       await expect(
         vault.initialDeposit(ONE_TOKEN, ONE_TOKEN, MIN_WEIGHT, MIN_WEIGHT),
       ).to.be.revertedWith("VaultIsAlreadyInitialized()");
     });
   });
 
-  describe("Vault Deposit", () => {
-    it("should be reverted to deposit tokens", async () => {
-      await dai.approve(VAULT, toWei(50));
-      await weth.approve(VAULT, toWei(20));
-
-      await expect(vault.deposit(toWei(50), toWei(20))).to.be.revertedWith(
-        "ERR_MAX_WEIGHT",
-      );
+  describe("when Vault is initialized", () => {
+    beforeEach(async () => {
+      await DAI.approve(vault.address, toWei(100));
+      await WETH.approve(vault.address, toWei(50));
+      await vault.initialDeposit(ONE_TOKEN, ONE_TOKEN, MIN_WEIGHT, MIN_WEIGHT);
     });
 
-    it("should be possible to deposit tokens", async () => {
-      const weight0 = await vault.getDenormalizedWeight(DAI);
-      const weight1 = await vault.getDenormalizedWeight(WETH);
-      const holdings0 = await vault.holdings0();
-      const holdings1 = await vault.holdings1();
-      const balance0 = await dai.balanceOf(ADMIN);
-      const balance1 = await weth.balanceOf(ADMIN);
-      const spotPrice = await bPool.getSpotPrice(DAI, WETH);
+    describe("when depositing to Vault", () => {
+      it("should be reverted to deposit tokens", async () => {
+        await expect(vault.deposit(toWei(50), toWei(20))).to.be.revertedWith(
+          "ERR_MAX_WEIGHT",
+        );
+      });
 
-      expect(await vault.estimateGas.deposit(toWei(10), toWei(20))).to.below(
-        300000,
-      );
-      await vault.deposit(toWei(10), toWei(20));
+      it("should be possible to deposit tokens", async () => {
+        const weight0 = await vault.getDenormalizedWeight(DAI.address);
+        const weight1 = await vault.getDenormalizedWeight(WETH.address);
+        const holdings0 = await vault.holdings0();
+        const holdings1 = await vault.holdings1();
+        const balance0 = await DAI.balanceOf(admin.address);
+        const balance1 = await WETH.balanceOf(admin.address);
+        const spotPrice = await bPool.getSpotPrice(DAI.address, WETH.address);
 
-      const newHoldings0 = holdings0.add(toWei(10));
-      const newHoldings1 = holdings1.add(toWei(20));
-      const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
-      const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+        expect(await vault.estimateGas.deposit(toWei(10), toWei(20))).to.below(
+          300000,
+        );
+        await vault.deposit(toWei(10), toWei(20));
 
-      expect(await vault.holdings0()).to.equal(newHoldings0);
-      expect(await vault.holdings1()).to.equal(newHoldings1);
-      expect(await vault.getDenormalizedWeight(DAI)).to.equal(newWeight0);
-      expect(await vault.getDenormalizedWeight(WETH)).to.equal(newWeight1);
-      expect(await dai.balanceOf(ADMIN)).to.equal(balance0.sub(toWei(10)));
-      expect(await weth.balanceOf(ADMIN)).to.equal(balance1.sub(toWei(20)));
-      expect(await bPool.getSpotPrice(DAI, WETH)).to.equal(spotPrice);
+        const newHoldings0 = holdings0.add(toWei(10));
+        const newHoldings1 = holdings1.add(toWei(20));
+        const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+        const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+        expect(await vault.holdings0()).to.equal(newHoldings0);
+        expect(await vault.holdings1()).to.equal(newHoldings1);
+        expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
+          newWeight0,
+        );
+        expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
+          newWeight1,
+        );
+        expect(await DAI.balanceOf(admin.address)).to.equal(
+          balance0.sub(toWei(10)),
+        );
+        expect(await WETH.balanceOf(admin.address)).to.equal(
+          balance1.sub(toWei(20)),
+        );
+        expect(await bPool.getSpotPrice(DAI.address, WETH.address)).to.equal(
+          spotPrice,
+        );
+      });
     });
-  });
 
-  describe("Vault Withdraw", () => {
-    it("should be reverted to withdraw tokens", async () => {
-      await expect(vault.withdraw(toWei(11), toWei(20))).to.be.revertedWith(
-        "ERR_MIN_WEIGHT",
-      );
+    describe("when withdrawing from Vault", () => {
+      beforeEach(async () => {
+        await vault.deposit(toWei(10), toWei(20));
+      });
+
+      it("should be reverted to withdraw tokens", async () => {
+        await expect(vault.withdraw(toWei(11), toWei(20))).to.be.revertedWith(
+          "ERR_MIN_WEIGHT",
+        );
+      });
+
+      it("should be possible to withdraw tokens", async () => {
+        const weight0 = await vault.getDenormalizedWeight(DAI.address);
+        const weight1 = await vault.getDenormalizedWeight(WETH.address);
+        const holdings0 = await vault.holdings0();
+        const holdings1 = await vault.holdings1();
+        const balance0 = await DAI.balanceOf(admin.address);
+        const balance1 = await WETH.balanceOf(admin.address);
+        const spotPrice = await bPool.getSpotPrice(DAI.address, WETH.address);
+
+        expect(await vault.estimateGas.withdraw(toWei(5), toWei(10))).to.below(
+          250000,
+        );
+        await vault.withdraw(toWei(5), toWei(10));
+
+        const newHoldings0 = holdings0.sub(toWei(5));
+        const newHoldings1 = holdings1.sub(toWei(10));
+        const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+        const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+        expect(await vault.holdings0()).to.equal(newHoldings0);
+        expect(await vault.holdings1()).to.equal(newHoldings1);
+        expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
+          newWeight0,
+        );
+        expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
+          newWeight1,
+        );
+        expect(await DAI.balanceOf(admin.address)).to.equal(
+          balance0.add(toWei(5)),
+        );
+        expect(await WETH.balanceOf(admin.address)).to.equal(
+          balance1.add(toWei(10)),
+        );
+        expect(await bPool.getSpotPrice(DAI.address, WETH.address)).to.equal(
+          spotPrice,
+        );
+      });
     });
 
-    it("should be possible to withdraw tokens", async () => {
-      const weight0 = await vault.getDenormalizedWeight(DAI);
-      const weight1 = await vault.getDenormalizedWeight(WETH);
-      const holdings0 = await vault.holdings0();
-      const holdings1 = await vault.holdings1();
-      const balance0 = await dai.balanceOf(ADMIN);
-      const balance1 = await weth.balanceOf(ADMIN);
-      const spotPrice = await bPool.getSpotPrice(DAI, WETH);
+    describe("when calling updateWeightsGradually()", () => {
+      it("should be reverted to call updateWeightsGradually", async () => {
+        await expect(
+          vault.updateWeightsGradually(toWei(2), toWei(3), 0, 0),
+        ).to.be.revertedWith("CallerIsNotManager");
 
-      expect(await vault.estimateGas.withdraw(toWei(5), toWei(10))).to.below(
-        250000,
-      );
-      await vault.withdraw(toWei(5), toWei(10));
+        await expect(
+          vault
+            .connect(manager)
+            .updateWeightsGradually(toWei(2), toWei(3), 0, 0),
+        ).to.be.revertedWith("ERR_GRADUAL_UPDATE_TIME_TRAVEL");
 
-      const newHoldings0 = holdings0.sub(toWei(5));
-      const newHoldings1 = holdings1.sub(toWei(10));
-      const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
-      const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+        const blocknumber = await ethers.provider.getBlockNumber();
+        await expect(
+          vault
+            .connect(manager)
+            .updateWeightsGradually(
+              toWei(2),
+              toWei(51),
+              blocknumber + 1,
+              blocknumber + 1000,
+            ),
+        ).to.be.revertedWith("ERR_WEIGHT_ABOVE_MAX");
 
-      expect(await vault.holdings0()).to.equal(newHoldings0);
-      expect(await vault.holdings1()).to.equal(newHoldings1);
-      expect(await vault.getDenormalizedWeight(DAI)).to.equal(newWeight0);
-      expect(await vault.getDenormalizedWeight(WETH)).to.equal(newWeight1);
-      expect(await dai.balanceOf(ADMIN)).to.equal(balance0.add(toWei(5)));
-      expect(await weth.balanceOf(ADMIN)).to.equal(balance1.add(toWei(10)));
-      expect(await bPool.getSpotPrice(DAI, WETH)).to.equal(spotPrice);
+        await expect(
+          vault
+            .connect(manager)
+            .updateWeightsGradually(
+              toWei(0.1),
+              toWei(3),
+              blocknumber + 1,
+              blocknumber + 1000,
+            ),
+        ).to.be.revertedWith("ERR_WEIGHT_BELOW_MIN");
+      });
+
+      it("should be possible to call updateWeightsGradually", async () => {
+        const blockNumber = await ethers.provider.getBlockNumber();
+        expect(
+          await vault
+            .connect(manager)
+            .estimateGas.updateWeightsGradually(
+              toWei(2),
+              toWei(3),
+              blockNumber + 1,
+              blockNumber + 10001,
+            ),
+        ).to.below(200000);
+        await vault
+          .connect(manager)
+          .updateWeightsGradually(
+            toWei(2),
+            toWei(3),
+            blockNumber + 1,
+            blockNumber + 10001,
+          );
+      });
+    });
+
+    describe("when calling pokeWeights()", () => {
+      let startBlock: number;
+      beforeEach(async () => {
+        const blockNumber = await ethers.provider.getBlockNumber();
+        startBlock = blockNumber + 1;
+
+        await vault
+          .connect(manager)
+          .updateWeightsGradually(
+            toWei(2),
+            toWei(3),
+            blockNumber + 1,
+            blockNumber + 10001,
+          );
+      });
+
+      it("should be reverted to call pokeWeights()", async () => {
+        await expect(vault.pokeWeights()).to.be.revertedWith(
+          "CallerIsNotManager",
+        );
+      });
+
+      it("should be possible to call pokeWeight", async () => {
+        for (let i = 0; i < 1000; i += 1) {
+          await ethers.provider.send("evm_mine", []);
+        }
+
+        const weight0 = await vault.getDenormalizedWeight(DAI.address);
+        const weight1 = await vault.getDenormalizedWeight(WETH.address);
+
+        expect(
+          await vault.connect(manager).estimateGas.pokeWeights(),
+        ).to.below(120000);
+        await vault.connect(manager).pokeWeights();
+
+        const blockNumber = await ethers.provider.getBlockNumber();
+        const deltaBlock = blockNumber - startBlock;
+        const newWeight0 = weight0.add(
+          toWei(2).sub(weight0).mul(deltaBlock).div(10000),
+        );
+        const newWeight1 = weight1.add(
+          toWei(3).sub(weight1).mul(deltaBlock).div(10000),
+        );
+
+        expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
+          newWeight0,
+        );
+        expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
+          newWeight1,
+        );
+      });
+    });
+
+    describe("when finalizing", () => {
+      it("should be reverted to call finalize", async () => {
+        await expect(vault.connect(user).finalize()).to.be.revertedWith(
+          "CallerIsNotOwnerOrManager",
+        );
+        await expect(vault.finalize()).to.be.revertedWith(
+          "FinalizationNotInitialized",
+        );
+        await expect(
+          vault.connect(manager).initializeFinalization(),
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+
+        expect(await vault.estimateGas.initializeFinalization()).to.below(
+          32000,
+        );
+        await vault.initializeFinalization();
+        const noticeTimeoutAt = await vault.noticeTimeoutAt();
+
+        await expect(vault.finalize()).to.be.revertedWith(
+          `NoticeTimeoutNotElapsed(${noticeTimeoutAt})`,
+        );
+      });
+
+      it("should be possible to finalize", async () => {
+        await vault.initializeFinalization();
+        await ethers.provider.send("evm_increaseTime", [NOTICE_PERIOD + 1]);
+
+        const holdings0 = await vault.holdings0();
+        const holdings1 = await vault.holdings1();
+        const balance0 = await DAI.balanceOf(admin.address);
+        const balance1 = await WETH.balanceOf(admin.address);
+
+        expect(await vault.estimateGas.finalize()).to.below(240000);
+        await vault.finalize();
+
+        expect(await DAI.balanceOf(admin.address)).to.equal(
+          balance0.add(holdings0),
+        );
+        expect(await WETH.balanceOf(admin.address)).to.equal(
+          balance1.add(holdings1),
+        );
+      });
     });
   });
 
@@ -242,10 +415,12 @@ describe("Mammon Vault v0", function () {
       });
 
       it("should be possible to change manager", async () => {
-        expect(await vault.estimateGas.setManager(MANAGER)).to.below(35000);
-        await vault.setManager(MANAGER);
+        expect(await vault.estimateGas.setManager(manager.address)).to.below(
+          35000,
+        );
+        await vault.setManager(manager.address);
 
-        expect(await vault.manager()).to.equal(MANAGER);
+        expect(await vault.manager()).to.equal(manager.address);
       });
     });
 
@@ -289,138 +464,6 @@ describe("Mammon Vault v0", function () {
 
         expect(await vault.getSwapFee()).to.equal(toWei(0.01));
       });
-    });
-  });
-
-  describe("Update Weights Gradually", () => {
-    it("should be reverted to call updateWeightsGradually", async () => {
-      await expect(
-        vault.updateWeightsGradually(toWei(2), toWei(3), 0, 0),
-      ).to.be.revertedWith("CallerIsNotManager");
-
-      await expect(
-        vault
-          .connect(manager)
-          .updateWeightsGradually(toWei(2), toWei(3), 0, 0),
-      ).to.be.revertedWith("ERR_GRADUAL_UPDATE_TIME_TRAVEL");
-
-      const blocknumber = await ethers.provider.getBlockNumber();
-      await expect(
-        vault
-          .connect(manager)
-          .updateWeightsGradually(
-            toWei(2),
-            toWei(51),
-            blocknumber + 1,
-            blocknumber + 1000,
-          ),
-      ).to.be.revertedWith("ERR_WEIGHT_ABOVE_MAX");
-
-      await expect(
-        vault
-          .connect(manager)
-          .updateWeightsGradually(
-            toWei(0.1),
-            toWei(3),
-            blocknumber + 1,
-            blocknumber + 1000,
-          ),
-      ).to.be.revertedWith("ERR_WEIGHT_BELOW_MIN");
-    });
-
-    it("should be possible to call updateWeightsGradually", async () => {
-      const blocknumber = await ethers.provider.getBlockNumber();
-      startBlock = blocknumber + 1;
-
-      expect(
-        await vault
-          .connect(manager)
-          .estimateGas.updateWeightsGradually(
-            toWei(2),
-            toWei(3),
-            blocknumber + 1,
-            blocknumber + 10001,
-          ),
-      ).to.below(200000);
-      await vault
-        .connect(manager)
-        .updateWeightsGradually(
-          toWei(2),
-          toWei(3),
-          blocknumber + 1,
-          blocknumber + 10001,
-        );
-    });
-  });
-
-  describe("Poke Weights", () => {
-    it("should be reverted to call pokeWeight", async () => {
-      await expect(vault.pokeWeights()).to.be.revertedWith(
-        "CallerIsNotManager",
-      );
-    });
-
-    it("should be possible to call pokeWeight", async () => {
-      for (let i = 0; i < 1000; i += 1) {
-        await ethers.provider.send("evm_mine", []);
-      }
-
-      const weight0 = await vault.getDenormalizedWeight(DAI);
-      const weight1 = await vault.getDenormalizedWeight(WETH);
-
-      expect(await vault.connect(manager).estimateGas.pokeWeights()).to.below(
-        120000,
-      );
-      await vault.connect(manager).pokeWeights();
-
-      const blocknumber = await ethers.provider.getBlockNumber();
-      const deltaBlock = blocknumber - startBlock;
-      const newWeight0 = weight0.add(
-        toWei(2).sub(weight0).mul(deltaBlock).div(10000),
-      );
-      const newWeight1 = weight1.add(
-        toWei(3).sub(weight1).mul(deltaBlock).div(10000),
-      );
-
-      expect(await vault.getDenormalizedWeight(DAI)).to.equal(newWeight0);
-      expect(await vault.getDenormalizedWeight(WETH)).to.equal(newWeight1);
-    });
-  });
-
-  describe("Finalize", () => {
-    it("should be reverted to call finalize", async () => {
-      await expect(vault.connect(user1).finalize()).to.be.revertedWith(
-        "CallerIsNotOwnerOrManager",
-      );
-      await expect(vault.finalize()).to.be.revertedWith(
-        "FinalizationNotInitialized",
-      );
-      await expect(
-        vault.connect(manager).initializeFinalization(),
-      ).to.be.revertedWith("Ownable: caller is not the owner");
-
-      expect(await vault.estimateGas.initializeFinalization()).to.below(32000);
-      await vault.initializeFinalization();
-      const noticeTimeoutAt = await vault.noticeTimeoutAt();
-
-      await expect(vault.finalize()).to.be.revertedWith(
-        `NoticeTimeoutNotElapsed(${noticeTimeoutAt})`,
-      );
-    });
-
-    it("should be possible to finalize", async () => {
-      await ethers.provider.send("evm_increaseTime", [NOTICE_PERIOD + 1]);
-
-      const holdings0 = await vault.holdings0();
-      const holdings1 = await vault.holdings1();
-      const balance0 = await dai.balanceOf(ADMIN);
-      const balance1 = await weth.balanceOf(ADMIN);
-
-      expect(await vault.estimateGas.finalize()).to.below(240000);
-      await vault.finalize();
-
-      expect(await dai.balanceOf(ADMIN)).to.equal(balance0.add(holdings0));
-      expect(await weth.balanceOf(ADMIN)).to.equal(balance1.add(holdings1));
     });
   });
 });
