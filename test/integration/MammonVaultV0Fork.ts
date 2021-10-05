@@ -611,6 +611,8 @@ describe("Mammon Vault v0", function () {
         expect(await WETH.balanceOf(admin.address)).to.equal(
           balance1.add(holdings1),
         );
+        
+        expect(await ethers.provider.getCode(vault.address)).to.equal("0x");
       });
     });
   });
