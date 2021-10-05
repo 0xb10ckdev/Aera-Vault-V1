@@ -16,7 +16,7 @@ const ONE_TOKEN = toWei("1");
 const MIN_WEIGHT = toWei("1");
 const MAX_WEIGHT = toWei("50");
 const MIN_BALANCE = toWei("1").div(1e12);
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const ZERO_ADDRESS = ethers.constants.AddressZero;
 
 describe("Mammon Vault v0", function () {
   let admin: SignerWithAddress;
