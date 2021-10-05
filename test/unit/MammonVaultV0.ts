@@ -1,5 +1,4 @@
 import { ethers, waffle, artifacts } from "hardhat";
-import { BigNumber } from "ethers";
 import { Artifact } from "hardhat/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
@@ -32,20 +31,15 @@ describe("Mammon Vault v0", function () {
 
   const NOTICE_PERIOD = 10000;
 
-  let weight0: BigNumber;
-  let weight1: BigNumber;
-  let holdings0: BigNumber;
-  let holdings1: BigNumber;
-  let balance0: BigNumber;
-  let balance1: BigNumber;
+  const getStates = async () => {
+    const weight0 = await vault.getDenormalizedWeight(DAI.address);
+    const weight1 = await vault.getDenormalizedWeight(WETH.address);
+    const holdings0 = await vault.holdings0();
+    const holdings1 = await vault.holdings1();
+    const balance0 = await DAI.balanceOf(admin.address);
+    const balance1 = await WETH.balanceOf(admin.address);
 
-  const storeStates = async () => {
-    weight0 = await vault.getDenormalizedWeight(DAI.address);
-    weight1 = await vault.getDenormalizedWeight(WETH.address);
-    holdings0 = await vault.holdings0();
-    holdings1 = await vault.holdings1();
-    balance0 = await DAI.balanceOf(admin.address);
-    balance1 = await WETH.balanceOf(admin.address);
+    return { weight0, weight1, holdings0, holdings1, balance0, balance1 };
   };
 
   beforeEach(async function () {
@@ -243,7 +237,15 @@ describe("Mammon Vault v0", function () {
 
       it("should be possible to deposit token0", async () => {
         for (let i = 0; i < 10; i += 1) {
-          await storeStates();
+          const {
+            weight0,
+            weight1,
+            holdings0,
+            holdings1,
+            balance0,
+            balance1,
+          } = await getStates();
+
           await DAI.approve(vault.address, toWei(5));
           await vault.deposit(toWei(5), toWei(0));
 
@@ -267,7 +269,15 @@ describe("Mammon Vault v0", function () {
 
       it("should be possible to deposit token1", async () => {
         for (let i = 0; i < 10; i += 1) {
-          await storeStates();
+          const {
+            weight0,
+            weight1,
+            holdings0,
+            holdings1,
+            balance0,
+            balance1,
+          } = await getStates();
+
           await WETH.approve(vault.address, toWei(5));
           await vault.deposit(toWei(0), toWei(5));
 
@@ -291,7 +301,15 @@ describe("Mammon Vault v0", function () {
 
       it("should be possible to deposit tokens", async () => {
         for (let i = 0; i < 10; i += 1) {
-          await storeStates();
+          const {
+            weight0,
+            weight1,
+            holdings0,
+            holdings1,
+            balance0,
+            balance1,
+          } = await getStates();
+
           await DAI.approve(vault.address, toWei(5));
           await WETH.approve(vault.address, toWei(10));
           await vault.deposit(toWei(5), toWei(10));
@@ -334,7 +352,15 @@ describe("Mammon Vault v0", function () {
 
       it("should be possible to withdraw token0", async () => {
         for (let i = 0; i < 10; i += 1) {
-          await storeStates();
+          const {
+            weight0,
+            weight1,
+            holdings0,
+            holdings1,
+            balance0,
+            balance1,
+          } = await getStates();
+
           await vault.withdraw(toWei(5), toWei(0));
 
           const newHoldings0 = holdings0.sub(toWei(5));
@@ -359,7 +385,15 @@ describe("Mammon Vault v0", function () {
 
       it("should be possible to withdraw token1", async () => {
         for (let i = 0; i < 10; i += 1) {
-          await storeStates();
+          const {
+            weight0,
+            weight1,
+            holdings0,
+            holdings1,
+            balance0,
+            balance1,
+          } = await getStates();
+
           await vault.withdraw(toWei(0), toWei(5));
 
           const newHoldings1 = holdings1.sub(toWei(5));
@@ -384,7 +418,15 @@ describe("Mammon Vault v0", function () {
 
       it("should be possible to withdraw tokens", async () => {
         for (let i = 0; i < 10; i += 1) {
-          await storeStates();
+          const {
+            weight0,
+            weight1,
+            holdings0,
+            holdings1,
+            balance0,
+            balance1,
+          } = await getStates();
+
           await vault.withdraw(toWei(5), toWei(10));
 
           const newHoldings0 = holdings0.sub(toWei(5));
