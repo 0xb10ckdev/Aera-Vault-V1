@@ -508,6 +508,8 @@ describe("Mammon Vault v0", function () {
 
         expect(await DAI.balanceOf(admin.address)).to.equal(toWei(1000));
         expect(await WETH.balanceOf(admin.address)).to.equal(toWei(1000));
+
+        expect(await ethers.provider.getCode(vault.address)).to.equal("0x");
       });
     });
   });
