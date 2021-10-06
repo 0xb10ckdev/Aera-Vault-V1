@@ -8,7 +8,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { admin } = await hre.getNamedAccounts();
 
   await deploy("Validator", {
-    contract: "WithdrawalValidator",
+    contract: "WithdrawalValidatorMock",
     from: admin,
     log: true,
   });
