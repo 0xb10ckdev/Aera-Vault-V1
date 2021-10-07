@@ -8,7 +8,8 @@ import {
   PermissiveWithdrawalValidator,
   BFactoryMock,
   ERC20Mock,
-  MammonVaultV0Mock,
+  MammonVaultV0,
+  BPoolMock__factory,
 } from "../../typechain";
 
 const { deployContract } = waffle;
@@ -26,7 +27,7 @@ describe("Mammon Vault v0", function () {
   let admin: Signer;
   let manager: Signer;
   let user1: Signer;
-  let vault: MammonVaultV0Mock;
+  let vault: MammonVaultV0;
   let dai: ERC20Mock;
   let weth: ERC20Mock;
 
@@ -83,19 +84,25 @@ describe("Mammon Vault v0", function () {
 
   describe("Vault Initialization", () => {
     it("vault should be deployed", async () => {
-      const vaultArtifact: Artifact = await artifacts.readArtifact(
-        "MammonVaultV0Mock",
+      const SmartPoolManager = await ethers.getContractFactory(
+        "SmartPoolManager",
       );
-
-      vault = <MammonVaultV0Mock>(
-        await deployContract(admin, vaultArtifact, [
+      const smartPoolManager = await SmartPoolManager.connect(admin).deploy();
+      const VaultFactory = await ethers.getContractFactory("MammonVaultV0", {
+        libraries: {
+          "contracts/libraries/SmartPoolManager.sol:SmartPoolManager":
+            smartPoolManager.address,
+        },
+      });
+      vault = <MammonVaultV0>(
+        await VaultFactory.connect(admin).deploy(
           bFactory.address,
           dai.address,
           weth.address,
           USER1,
           validator.address,
           NOTICE_PERIOD,
-        ])
+        )
       );
       VAULT = vault.address;
     });
@@ -111,11 +118,7 @@ describe("Mammon Vault v0", function () {
           MIN_WEIGHT,
           MIN_WEIGHT.sub(1),
         ),
-      ).to.be.revertedWith(
-        `WeightIsBelowMin(${MIN_WEIGHT.sub(
-          1,
-        ).toString()}, ${MIN_WEIGHT.toString()})`,
-      );
+      ).to.be.revertedWith("WeightIsBelowMin");
 
       await expect(
         vault.initialDeposit(
@@ -124,11 +127,7 @@ describe("Mammon Vault v0", function () {
           MIN_WEIGHT.sub(1),
           MIN_WEIGHT,
         ),
-      ).to.be.revertedWith(
-        `WeightIsBelowMin(${MIN_WEIGHT.sub(
-          1,
-        ).toString()}, ${MIN_WEIGHT.toString()})`,
-      );
+      ).to.be.revertedWith("WeightIsBelowMin");
 
       await expect(
         vault.initialDeposit(
@@ -137,11 +136,7 @@ describe("Mammon Vault v0", function () {
           MAX_WEIGHT,
           MAX_WEIGHT.add(1),
         ),
-      ).to.be.revertedWith(
-        `WeightIsAboveMax(${MAX_WEIGHT.add(
-          1,
-        ).toString()}, ${MAX_WEIGHT.toString()})`,
-      );
+      ).to.be.revertedWith("WeightIsAboveMax");
 
       await expect(
         vault.initialDeposit(
@@ -150,11 +145,7 @@ describe("Mammon Vault v0", function () {
           MAX_WEIGHT.add(1),
           MAX_WEIGHT,
         ),
-      ).to.be.revertedWith(
-        `WeightIsAboveMax(${MAX_WEIGHT.add(
-          1,
-        ).toString()}, ${MAX_WEIGHT.toString()})`,
-      );
+      ).to.be.revertedWith("WeightIsAboveMax");
 
       await expect(
         vault.initialDeposit(
@@ -163,11 +154,7 @@ describe("Mammon Vault v0", function () {
           MIN_WEIGHT,
           MIN_WEIGHT,
         ),
-      ).to.be.revertedWith(
-        `AmountIsBelowMin(${MIN_BALANCE.sub(
-          1,
-        ).toString()}, ${MIN_BALANCE.toString()})`,
-      );
+      ).to.be.revertedWith("AmountIsBelowMin");
 
       await expect(
         vault.initialDeposit(
@@ -176,11 +163,7 @@ describe("Mammon Vault v0", function () {
           MIN_WEIGHT,
           MIN_WEIGHT,
         ),
-      ).to.be.revertedWith(
-        `AmountIsBelowMin(${MIN_BALANCE.sub(
-          1,
-        ).toString()}, ${MIN_BALANCE.toString()})`,
-      );
+      ).to.be.revertedWith("AmountIsBelowMin");
     });
 
     it("should be possible to initialize the vault", async () => {
@@ -274,12 +257,12 @@ describe("Mammon Vault v0", function () {
       await expect(
         vault.updateWeightsGradually(toWei(2), toWei(3), 0, 0),
       ).to.be.revertedWith("CallerIsNotManager()");
+    });
 
-      await expect(
-        vault
-          .connect(manager)
-          .updateWeightsGradually(toWei(2), toWei(3), 0, 0),
-      ).to.be.revertedWith("updateWeightsGradually is called");
+    it("should be possible to call updateWeightsGradually", async () => {
+      await vault
+        .connect(manager)
+        .updateWeightsGradually(toWei(2), toWei(3), 0, 0);
     });
   });
 
@@ -288,10 +271,10 @@ describe("Mammon Vault v0", function () {
       await expect(vault.pokeWeights()).to.be.revertedWith(
         "CallerIsNotManager()",
       );
+    });
 
-      await expect(vault.connect(manager).pokeWeights()).to.be.revertedWith(
-        "pokeWeights is called",
-      );
+    it("should be possible to call pokeWeight", async () => {
+      await vault.connect(manager).pokeWeights();
     });
   });
 
