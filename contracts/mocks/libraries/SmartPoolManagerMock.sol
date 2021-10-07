@@ -12,7 +12,7 @@ library SmartPoolManagerMock {
         uint256[] endWeights;
     }
 
-    // solhint-disable no-empty-blocks
+    // solhint-disable no-unused-vars
     function updateWeightsGradually(
         IBPool bPool,
         GradualUpdateParams storage gradualUpdate,
@@ -24,7 +24,7 @@ library SmartPoolManagerMock {
         revert("updateWeightsGradually is called");
     }
 
-    // solhint-disable no-empty-blocks
+    // solhint-disable no-unused-vars
     function pokeWeights(
         IBPool bPool,
         GradualUpdateParams storage gradualUpdate
