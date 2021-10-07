@@ -5,6 +5,9 @@ import "../dependencies/openzeppelin/IERC20.sol";
 
 /// @dev This code is not audited or tested. Please do not use in production.
 contract BPoolMock {
+    bool public publicSwap;
+    uint256 public swapFee;
+
     mapping(address => uint256) public balances;
     mapping(address => uint256) public denorms;
 
@@ -56,18 +59,34 @@ contract BPoolMock {
         return denorms[token];
     }
 
+    function setPublicSwap(bool newPublicSwap) external {
+        publicSwap = newPublicSwap;
+    }
+
+    function setSwapFee(uint256 newSwapFee) external {
+        swapFee = newSwapFee;
+    }
+
+    function getSwapFee() external view returns (uint256) {
+        return swapFee;
+    }
+
+    function isPublicSwap() external view returns (bool) {
+        return publicSwap;
+    }
+
     // solhint-disable-next-line func-name-mixedcase
-    function MIN_WEIGHT() external view returns (uint256) {
+    function MIN_WEIGHT() external pure returns (uint256) {
         return 10**18;
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function MAX_WEIGHT() external view returns (uint256) {
+    function MAX_WEIGHT() external pure returns (uint256) {
         return 10**18 * 50;
     }
 
     // solhint-disable-next-line func-name-mixedcase
-    function MIN_BALANCE() external view returns (uint256) {
+    function MIN_BALANCE() external pure returns (uint256) {
         return 10**6;
     }
 }
