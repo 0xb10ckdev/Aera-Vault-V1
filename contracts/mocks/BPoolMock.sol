@@ -8,8 +8,6 @@ contract BPoolMock {
     mapping(address => uint256) public balances;
     mapping(address => uint256) public denorms;
 
-    constructor() {}
-
     function bind(
         address token,
         uint256 balance,
@@ -23,29 +21,30 @@ contract BPoolMock {
         uint256 balance,
         uint256 denorm
     ) public {
-        if (balance > balances[token]) {
+        uint256 currentBalance = balances[token];
+        balances[token] = balance;
+        denorms[token] = denorm;
+
+        if (balance > currentBalance) {
             IERC20(token).transferFrom(
                 msg.sender,
                 address(this),
-                balance - balances[token]
+                balance - currentBalance
             );
         } else {
-            IERC20(token).transfer(
-                msg.sender,
-                balances[token] - balance
-            );
+            IERC20(token).transfer(msg.sender, currentBalance - balance);
         }
-        balances[token] = balance;
-        denorms[token] = denorm;
     }
 
     function unbind(address token) public {
-        IERC20(token).transfer(msg.sender, balances[token]);
+        uint256 currentBalance = balances[token];
         balances[token] = 0;
         denorms[token] = 0;
+
+        IERC20(token).transfer(msg.sender, currentBalance);
     }
 
-    function getBalance(address token) external view returns(uint256) {
+    function getBalance(address token) external view returns (uint256) {
         return balances[token];
     }
 
@@ -57,14 +56,17 @@ contract BPoolMock {
         return denorms[token];
     }
 
+    // solhint-disable-next-line func-name-mixedcase
     function MIN_WEIGHT() external view returns (uint256) {
         return 10**18;
     }
 
+    // solhint-disable-next-line func-name-mixedcase
     function MAX_WEIGHT() external view returns (uint256) {
         return 10**18 * 50;
     }
 
+    // solhint-disable-next-line func-name-mixedcase
     function MIN_BALANCE() external view returns (uint256) {
         return 10**6;
     }
