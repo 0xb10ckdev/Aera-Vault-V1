@@ -1,7 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
-import hre, { ethers } from "hardhat";
-import deployValidator from "../../deploy/0_validator";
+import { deployments, ethers } from "hardhat";
 import {
   IBPoolMock,
   IBPoolMock__factory,
@@ -55,9 +54,14 @@ describe("Mammon Vault v0", function () {
   beforeEach(async function () {
     snapshot = await ethers.provider.send("evm_snapshot", []);
     ({ admin, manager, user } = await ethers.getNamedSigners());
-    await deployValidator(hre);
 
     ({ DAI, WETH } = await setupTokens());
+
+    await deployments.deploy("Validator", {
+      contract: "WithdrawalValidatorMock",
+      from: admin.address,
+      log: true,
+    });
 
     vault = await deployVault(
       admin,
