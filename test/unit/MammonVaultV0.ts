@@ -4,7 +4,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
 import { toWei } from "../utils";
 import {
-  PermissiveWithdrawalValidator,
+  WithdrawalValidatorMock,
   BFactoryMock,
   ERC20Mock,
   MammonVaultV0,
@@ -19,7 +19,7 @@ const MIN_BALANCE = toWei("1").div(1e12);
 const ZERO_ADDRESS = ethers.constants.AddressZero;
 
 describe("Mammon Vault v0", function () {
-  let validator: PermissiveWithdrawalValidator;
+  let validator: WithdrawalValidatorMock;
   let bFactory: BFactoryMock;
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
@@ -47,9 +47,9 @@ describe("Mammon Vault v0", function () {
     [admin, manager, user] = await ethers.getSigners();
 
     const validatorArtifact: Artifact = await artifacts.readArtifact(
-      "PermissiveWithdrawalValidator",
+      "WithdrawalValidatorMock",
     );
-    validator = <PermissiveWithdrawalValidator>(
+    validator = <WithdrawalValidatorMock>(
       await deployContract(admin, validatorArtifact)
     );
 
@@ -338,20 +338,8 @@ describe("Mammon Vault v0", function () {
     });
 
     describe("when withdrawing from Vault", () => {
-      beforeEach(async () => {
-        await DAI.approve(vault.address, toWei(100));
-        await WETH.approve(vault.address, toWei(100));
-        await vault.deposit(toWei(50), toWei(100));
-      });
-
-      it("should be revert to withdraw tokens", async () => {
-        await expect(
-          vault.connect(manager).withdraw(toWei(5), toWei(10)),
-        ).to.be.revertedWith("Ownable: caller is not the owner");
-      });
-
-      it("should be possible to withdraw token0", async () => {
-        for (let i = 0; i < 10; i += 1) {
+      describe("when allowance on validator is invalid", () => {
+        it("should withdraw no tokens", async () => {
           const {
             weight0,
             weight1,
@@ -361,94 +349,135 @@ describe("Mammon Vault v0", function () {
             balance1,
           } = await getStates();
 
-          await vault.withdraw(toWei(5), toWei(0));
-
-          const newHoldings0 = holdings0.sub(toWei(5));
-          const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
-
-          expect(await vault.holdings0()).to.equal(newHoldings0);
-          expect(await vault.holdings1()).to.equal(holdings1);
-          expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
-            newWeight0,
-          );
-          expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
-            weight1,
-          );
-          expect(await DAI.balanceOf(admin.address)).to.equal(
-            balance0.add(toWei(5)),
-          );
-          expect(await WETH.balanceOf(admin.address)).to.equal(
-            balance1.add(toWei(0)),
-          );
-        }
-      });
-
-      it("should be possible to withdraw token1", async () => {
-        for (let i = 0; i < 10; i += 1) {
-          const {
-            weight0,
-            weight1,
-            holdings0,
-            holdings1,
-            balance0,
-            balance1,
-          } = await getStates();
-
-          await vault.withdraw(toWei(0), toWei(5));
-
-          const newHoldings1 = holdings1.sub(toWei(5));
-          const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+          await vault.withdraw(toWei(5), toWei(15));
 
           expect(await vault.holdings0()).to.equal(holdings0);
-          expect(await vault.holdings1()).to.equal(newHoldings1);
+          expect(await vault.holdings1()).to.equal(holdings1);
           expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
             weight0,
           );
           expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
-            newWeight1,
+            weight1,
           );
-          expect(await DAI.balanceOf(admin.address)).to.equal(
-            balance0.add(toWei(0)),
-          );
-          expect(await WETH.balanceOf(admin.address)).to.equal(
-            balance1.add(toWei(5)),
-          );
-        }
+          expect(await DAI.balanceOf(admin.address)).to.equal(balance0);
+          expect(await WETH.balanceOf(admin.address)).to.equal(balance1);
+        });
       });
 
-      it("should be possible to withdraw tokens", async () => {
-        for (let i = 0; i < 10; i += 1) {
-          const {
-            weight0,
-            weight1,
-            holdings0,
-            holdings1,
-            balance0,
-            balance1,
-          } = await getStates();
+      describe("when allowance on validator is valid", () => {
+        beforeEach(async () => {
+          await DAI.approve(vault.address, toWei(100));
+          await WETH.approve(vault.address, toWei(100));
+          await vault.deposit(toWei(50), toWei(100));
+          await validator.setAllowance(toWei(100), toWei(100));
+        });
 
-          await vault.withdraw(toWei(5), toWei(10));
+        it("should be revert to withdraw tokens", async () => {
+          await expect(
+            vault.connect(manager).withdraw(toWei(5), toWei(10)),
+          ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
 
-          const newHoldings0 = holdings0.sub(toWei(5));
-          const newHoldings1 = holdings1.sub(toWei(10));
-          const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
-          const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+        it("should be possible to withdraw token0", async () => {
+          for (let i = 0; i < 10; i += 1) {
+            const {
+              weight0,
+              weight1,
+              holdings0,
+              holdings1,
+              balance0,
+              balance1,
+            } = await getStates();
 
-          expect(await vault.holdings0()).to.equal(newHoldings0);
-          expect(await vault.holdings1()).to.equal(newHoldings1);
-          expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
-            newWeight0,
-          );
-          expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
-            newWeight1,
-          );
-          expect(await DAI.balanceOf(admin.address)).to.equal(
-            balance0.add(toWei(5)),
-          );
-          expect(await WETH.balanceOf(admin.address)).to.equal(
-            balance1.add(toWei(10)),
-          );
-        }
+            await vault.withdraw(toWei(5), toWei(0));
+
+            const newHoldings0 = holdings0.sub(toWei(5));
+            const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+
+            expect(await vault.holdings0()).to.equal(newHoldings0);
+            expect(await vault.holdings1()).to.equal(holdings1);
+            expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
+              newWeight0,
+            );
+            expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
+              weight1,
+            );
+            expect(await DAI.balanceOf(admin.address)).to.equal(
+              balance0.add(toWei(5)),
+            );
+            expect(await WETH.balanceOf(admin.address)).to.equal(
+              balance1.add(toWei(0)),
+            );
+          }
+        });
+
+        it("should be possible to withdraw token1", async () => {
+          for (let i = 0; i < 10; i += 1) {
+            const {
+              weight0,
+              weight1,
+              holdings0,
+              holdings1,
+              balance0,
+              balance1,
+            } = await getStates();
+
+            await vault.withdraw(toWei(0), toWei(5));
+
+            const newHoldings1 = holdings1.sub(toWei(5));
+            const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+            expect(await vault.holdings0()).to.equal(holdings0);
+            expect(await vault.holdings1()).to.equal(newHoldings1);
+            expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
+              weight0,
+            );
+            expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
+              newWeight1,
+            );
+            expect(await DAI.balanceOf(admin.address)).to.equal(
+              balance0.add(toWei(0)),
+            );
+            expect(await WETH.balanceOf(admin.address)).to.equal(
+              balance1.add(toWei(5)),
+            );
+          }
+        });
+
+        it("should be possible to withdraw tokens", async () => {
+          for (let i = 0; i < 10; i += 1) {
+            const {
+              weight0,
+              weight1,
+              holdings0,
+              holdings1,
+              balance0,
+              balance1,
+            } = await getStates();
+
+            await vault.withdraw(toWei(5), toWei(10));
+
+            const newHoldings0 = holdings0.sub(toWei(5));
+            const newHoldings1 = holdings1.sub(toWei(10));
+            const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+            const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+            expect(await vault.holdings0()).to.equal(newHoldings0);
+            expect(await vault.holdings1()).to.equal(newHoldings1);
+            expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
+              newWeight0,
+            );
+            expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
+              newWeight1,
+            );
+            expect(await DAI.balanceOf(admin.address)).to.equal(
+              balance0.add(toWei(5)),
+            );
+            expect(await WETH.balanceOf(admin.address)).to.equal(
+              balance1.add(toWei(10)),
+            );
+          }
+        });
       });
     });
 
