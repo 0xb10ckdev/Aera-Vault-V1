@@ -31,6 +31,20 @@ describe("Mammon Vault v0", function () {
 
   const NOTICE_PERIOD = 10000;
 
+  const testAmounts = [
+    [1, 10],
+    [5, 5],
+    [20, 50],
+    [50, 1000],
+    [100, 35],
+    [1000, 100],
+    [88964, 4346],
+    [27891, 637],
+    [2865, 13788],
+    [77568, 37812],
+    [4566543, 889778],
+  ];
+
   const getStates = async () => {
     const weight0 = await vault.getDenormalizedWeight(DAI.address);
     const weight1 = await vault.getDenormalizedWeight(WETH.address);
@@ -66,7 +80,7 @@ describe("Mammon Vault v0", function () {
         "WETH",
         "WETH.address",
         18,
-        toWei(1000),
+        toWei(10000000),
       ])
     );
     WETH = <ERC20Mock>(
@@ -74,7 +88,7 @@ describe("Mammon Vault v0", function () {
         "DAI",
         "DAI.address",
         18,
-        toWei(1000),
+        toWei(10000000),
       ])
     );
 
@@ -246,10 +260,13 @@ describe("Mammon Vault v0", function () {
             balance1,
           } = await getStates();
 
-          await DAI.approve(vault.address, toWei(5));
-          await vault.deposit(toWei(5), toWei(0));
+          const amount0 = toWei(testAmounts[i][0]);
+          const amount1 = toWei(0);
 
-          const newHoldings0 = holdings0.add(toWei(5));
+          await DAI.approve(vault.address, amount0);
+          await vault.deposit(amount0, amount1);
+
+          const newHoldings0 = holdings0.add(amount0);
           const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
 
           expect(await vault.holdings0()).to.equal(newHoldings0);
@@ -261,7 +278,7 @@ describe("Mammon Vault v0", function () {
             weight1,
           );
           expect(await DAI.balanceOf(admin.address)).to.equal(
-            balance0.sub(toWei(5)),
+            balance0.sub(amount0),
           );
           expect(await WETH.balanceOf(admin.address)).to.equal(balance1);
         }
@@ -278,10 +295,13 @@ describe("Mammon Vault v0", function () {
             balance1,
           } = await getStates();
 
-          await WETH.approve(vault.address, toWei(5));
-          await vault.deposit(toWei(0), toWei(5));
+          const amount0 = toWei(0);
+          const amount1 = toWei(testAmounts[i][1]);
 
-          const newHoldings1 = holdings1.add(toWei(5));
+          await WETH.approve(vault.address, amount1);
+          await vault.deposit(amount0, amount1);
+
+          const newHoldings1 = holdings1.add(amount1);
           const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
 
           expect(await vault.holdings0()).to.equal(holdings0);
@@ -294,7 +314,7 @@ describe("Mammon Vault v0", function () {
           );
           expect(await DAI.balanceOf(admin.address)).to.equal(balance0);
           expect(await WETH.balanceOf(admin.address)).to.equal(
-            balance1.sub(toWei(5)),
+            balance1.sub(amount1),
           );
         }
       });
@@ -310,12 +330,15 @@ describe("Mammon Vault v0", function () {
             balance1,
           } = await getStates();
 
-          await DAI.approve(vault.address, toWei(5));
-          await WETH.approve(vault.address, toWei(10));
-          await vault.deposit(toWei(5), toWei(10));
+          const amount0 = toWei(testAmounts[i][0]);
+          const amount1 = toWei(testAmounts[i][1]);
 
-          const newHoldings0 = holdings0.add(toWei(5));
-          const newHoldings1 = holdings1.add(toWei(10));
+          await DAI.approve(vault.address, amount0);
+          await WETH.approve(vault.address, amount1);
+          await vault.deposit(amount0, amount1);
+
+          const newHoldings0 = holdings0.add(amount0);
+          const newHoldings1 = holdings1.add(amount1);
           const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
           const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
 
@@ -328,10 +351,10 @@ describe("Mammon Vault v0", function () {
             newWeight1,
           );
           expect(await DAI.balanceOf(admin.address)).to.equal(
-            balance0.sub(toWei(5)),
+            balance0.sub(amount0),
           );
           expect(await WETH.balanceOf(admin.address)).to.equal(
-            balance1.sub(toWei(10)),
+            balance1.sub(amount1),
           );
         }
       });
@@ -366,10 +389,10 @@ describe("Mammon Vault v0", function () {
 
       describe("when allowance on validator is valid", () => {
         beforeEach(async () => {
-          await DAI.approve(vault.address, toWei(100));
-          await WETH.approve(vault.address, toWei(100));
-          await vault.deposit(toWei(50), toWei(100));
-          await validator.setAllowance(toWei(100), toWei(100));
+          await DAI.approve(vault.address, toWei(1000000));
+          await WETH.approve(vault.address, toWei(1000000));
+          await vault.deposit(toWei(1000000), toWei(1000000));
+          await validator.setAllowance(toWei(1000000), toWei(1000000));
         });
 
         it("should be revert to withdraw tokens", async () => {
@@ -389,9 +412,12 @@ describe("Mammon Vault v0", function () {
               balance1,
             } = await getStates();
 
-            await vault.withdraw(toWei(5), toWei(0));
+            const amount0 = toWei(testAmounts[i][0]);
+            const amount1 = toWei(0);
 
-            const newHoldings0 = holdings0.sub(toWei(5));
+            await vault.withdraw(amount0, amount1);
+
+            const newHoldings0 = holdings0.sub(amount0);
             const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
 
             expect(await vault.holdings0()).to.equal(newHoldings0);
@@ -403,11 +429,9 @@ describe("Mammon Vault v0", function () {
               weight1,
             );
             expect(await DAI.balanceOf(admin.address)).to.equal(
-              balance0.add(toWei(5)),
+              balance0.add(amount0),
             );
-            expect(await WETH.balanceOf(admin.address)).to.equal(
-              balance1.add(toWei(0)),
-            );
+            expect(await WETH.balanceOf(admin.address)).to.equal(balance1);
           }
         });
 
@@ -422,9 +446,12 @@ describe("Mammon Vault v0", function () {
               balance1,
             } = await getStates();
 
-            await vault.withdraw(toWei(0), toWei(5));
+            const amount0 = toWei(0);
+            const amount1 = toWei(testAmounts[i][1]);
 
-            const newHoldings1 = holdings1.sub(toWei(5));
+            await vault.withdraw(amount0, amount1);
+
+            const newHoldings1 = holdings1.sub(amount1);
             const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
 
             expect(await vault.holdings0()).to.equal(holdings0);
@@ -435,11 +462,9 @@ describe("Mammon Vault v0", function () {
             expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
               newWeight1,
             );
-            expect(await DAI.balanceOf(admin.address)).to.equal(
-              balance0.add(toWei(0)),
-            );
+            expect(await DAI.balanceOf(admin.address)).to.equal(balance0);
             expect(await WETH.balanceOf(admin.address)).to.equal(
-              balance1.add(toWei(5)),
+              balance1.add(amount1),
             );
           }
         });
@@ -455,10 +480,13 @@ describe("Mammon Vault v0", function () {
               balance1,
             } = await getStates();
 
-            await vault.withdraw(toWei(5), toWei(10));
+            const amount0 = toWei(testAmounts[i][0]);
+            const amount1 = toWei(testAmounts[i][1]);
 
-            const newHoldings0 = holdings0.sub(toWei(5));
-            const newHoldings1 = holdings1.sub(toWei(10));
+            await vault.withdraw(amount0, amount1);
+
+            const newHoldings0 = holdings0.sub(amount0);
+            const newHoldings1 = holdings1.sub(amount1);
             const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
             const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
 
@@ -471,10 +499,10 @@ describe("Mammon Vault v0", function () {
               newWeight1,
             );
             expect(await DAI.balanceOf(admin.address)).to.equal(
-              balance0.add(toWei(5)),
+              balance0.add(amount0),
             );
             expect(await WETH.balanceOf(admin.address)).to.equal(
-              balance1.add(toWei(10)),
+              balance1.add(amount1),
             );
           }
         });
@@ -577,8 +605,8 @@ describe("Mammon Vault v0", function () {
         await ethers.provider.send("evm_increaseTime", [NOTICE_PERIOD + 1]);
         await vault.finalize();
 
-        expect(await DAI.balanceOf(admin.address)).to.equal(toWei(1000));
-        expect(await WETH.balanceOf(admin.address)).to.equal(toWei(1000));
+        expect(await DAI.balanceOf(admin.address)).to.equal(toWei(10000000));
+        expect(await WETH.balanceOf(admin.address)).to.equal(toWei(10000000));
 
         expect(await ethers.provider.getCode(vault.address)).to.equal("0x");
       });
