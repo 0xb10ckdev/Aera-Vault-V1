@@ -231,11 +231,14 @@ contract MammonVaultV0 is
     {
         (uint256 allowance0, uint256 allowance1) = validator.allowance();
 
-        if (amount0 > 0) {
-            withdrawToken(token0, amount0, holdings0(), allowance0);
+        uint256 exactAmount0 = amount0.min(holdings0()).min(allowance0);
+        uint256 exactAmount1 = amount1.min(holdings1()).min(allowance1);
+
+        if (exactAmount0 > 0) {
+            withdrawToken(token0, exactAmount0, holdings0());
         }
-        if (amount1 > 0) {
-            withdrawToken(token1, amount1, holdings1(), allowance1);
+        if (exactAmount1 > 0) {
+            withdrawToken(token1, exactAmount1, holdings1());
         }
 
         uint256 weight0 = getDenormalizedWeight(token0);
@@ -401,14 +404,11 @@ contract MammonVaultV0 is
     function withdrawToken(
         address _token,
         uint256 _amount,
-        uint256 _balance,
-        uint256 _allowance
+        uint256 _balance
     ) internal {
         uint256 tokenDenorm = getDenormalizedWeight(_token);
 
-        uint256 delta = _amount.min(_balance).min(_allowance);
-
-        uint256 newBalance = _balance - delta;
+        uint256 newBalance = _balance - _amount;
         uint256 newDenorm = (tokenDenorm * newBalance) / _balance;
 
         pool.rebind(_token, newBalance, newDenorm);
