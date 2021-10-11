@@ -96,7 +96,6 @@ contract MammonVaultV0 is
     error NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
     error ManagerIsZeroAddress();
     error CallerIsNotManager();
-    error DepositAmountIsZero();
     error WeightIsAboveMax(uint256 actual, uint256 max);
     error WeightIsBelowMin(uint256 actual, uint256 min);
     error AmountIsBelowMin(uint256 actual, uint256 min);
@@ -386,10 +385,6 @@ contract MammonVaultV0 is
         uint256 _amount,
         uint256 _balance
     ) internal {
-        if (_amount == 0) {
-            revert DepositAmountIsZero();
-        }
-
         uint256 tokenDenorm = getDenormalizedWeight(_token);
         uint256 newBalance = _balance + _amount;
 
