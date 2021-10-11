@@ -102,7 +102,7 @@ const config: HardhatUserConfig = {
     artifacts: "./artifacts",
     cache: "./cache",
     sources: "./contracts",
-    tests: "./test",
+    tests: process.env.TEST_PATH || "./test",
   },
   solidity: {
     version: "0.8.7",

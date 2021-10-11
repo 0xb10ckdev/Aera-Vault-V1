@@ -84,7 +84,9 @@
     "postinstall": "husky install",
     "prettier": "prettier --config ./.prettierrc --write \"**/*.{js,json,md,sol,ts}\"",
     "prettier:check": "prettier --check --config ./.prettierrc \"**/*.{js,json,md,sol,ts}\"",
-    "test": "hardhat test",
+    "test:unit": "cross-env TEST_PATH=./test/unit hardhat test",
+    "test:integration": "cross-env TEST_PATH=./test/integration HARDHAT_FORK=mainnet HARDHAT_FORK_NUMBER=13000000 hardhat test",
+    "test": "yarn test:unit && yarn test:integration",
     "gas": "cross-env REPORT_GAS=true hardhat test",
     "size": "cross-env REPORT_SIZE=true hardhat compile",
     "typechain": "hardhat typechain"
