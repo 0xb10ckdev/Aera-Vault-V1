@@ -12,17 +12,17 @@ import {
 
 async function main(): Promise<void> {
   if (!process.env.TOKEN0) {
-    console.log("Token0 is not set");
+    console.log("--token0 parameter is not specified");
     return;
   }
   if (!process.env.TOKEN1) {
-    console.log("Token1 is not set");
+    console.log("--token1 parameter is not specified");
     return;
   }
 
   const token0 = process.env.TOKEN0;
   const token1 = process.env.TOKEN1;
-  const manager = process.env.MANAGER || ethers.constants.ZERO_ADDRESS;
+  const manager = process.env.MANAGER || ethers.constants.AddressZero;
 
   console.log("Deploying vault with");
   console.log(`Token0: ${token0}`);
