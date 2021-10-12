@@ -231,14 +231,17 @@ contract MammonVaultV0 is
     {
         (uint256 allowance0, uint256 allowance1) = validator.allowance();
 
-        uint256 exactAmount0 = amount0.min(holdings0()).min(allowance0);
-        uint256 exactAmount1 = amount1.min(holdings1()).min(allowance1);
+        uint256 holdings0 = holdings0();
+        uint256 holdings1 = holdings1();
+
+        uint256 exactAmount0 = amount0.min(holdings0).min(allowance0);
+        uint256 exactAmount1 = amount1.min(holdings1).min(allowance1);
 
         if (exactAmount0 > 0) {
-            withdrawToken(token0, exactAmount0, holdings0());
+            withdrawToken(token0, exactAmount0, holdings0);
         }
         if (exactAmount1 > 0) {
-            withdrawToken(token1, exactAmount1, holdings1());
+            withdrawToken(token1, exactAmount1, holdings1);
         }
 
         uint256 weight0 = getDenormalizedWeight(token0);
