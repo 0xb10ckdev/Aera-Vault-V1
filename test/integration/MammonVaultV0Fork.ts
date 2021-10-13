@@ -1,16 +1,18 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
+import { Artifact } from "hardhat/types";
 import { expect } from "chai";
-import { deployments, ethers } from "hardhat";
 import {
   IBPoolMock,
   IBPoolMock__factory,
   IERC20,
   MammonVaultV0,
   WithdrawalValidatorMock,
-  WithdrawalValidatorMock__factory,
 } from "../../typechain";
 import { setupTokens } from "../fixtures";
 import { deployVault, toWei } from "../utils";
+import { ethers, waffle, artifacts } from "hardhat";
+
+const { deployContract } = waffle;
 
 const ONE_TOKEN = toWei("1");
 const MIN_WEIGHT = toWei("1");
@@ -57,24 +59,22 @@ describe("Mammon Vault v0", function () {
 
     ({ DAI, WETH } = await setupTokens());
 
-    await deployments.deploy("Validator", {
-      contract: "WithdrawalValidatorMock",
-      from: admin.address,
-      log: true,
-    });
+    const validatorArtifact: Artifact = await artifacts.readArtifact(
+      "WithdrawalValidatorMock",
+    );
+    validator = <WithdrawalValidatorMock>(
+      await deployContract(admin, validatorArtifact)
+    );
 
     vault = await deployVault(
       admin,
       DAI.address,
       WETH.address,
       manager.address,
+      validator.address,
     );
 
     bPool = IBPoolMock__factory.connect(await vault.pool(), admin);
-    validator = WithdrawalValidatorMock__factory.connect(
-      await vault.validator(),
-      admin,
-    );
   });
 
   afterEach(async () => {
@@ -117,60 +117,66 @@ describe("Mammon Vault v0", function () {
       );
     });
 
-    it("should be reverted to initialize the vault", async () => {
-      await expect(
-        vault.initialDeposit(
-          ONE_TOKEN,
-          ONE_TOKEN,
-          MIN_WEIGHT,
-          MIN_WEIGHT.sub(1),
-        ),
-      ).to.be.revertedWith("WeightIsBelowMin");
+    describe("should be reverted to initialize the vault", () => {
+      it("should be reverted when weight is below than min", async () => {
+        await expect(
+          vault.initialDeposit(
+            ONE_TOKEN,
+            ONE_TOKEN,
+            MIN_WEIGHT,
+            MIN_WEIGHT.sub(1),
+          ),
+        ).to.be.revertedWith("WeightIsBelowMin");
 
-      await expect(
-        vault.initialDeposit(
-          ONE_TOKEN,
-          ONE_TOKEN,
-          MIN_WEIGHT.sub(1),
-          MIN_WEIGHT,
-        ),
-      ).to.be.revertedWith("WeightIsBelowMin");
+        await expect(
+          vault.initialDeposit(
+            ONE_TOKEN,
+            ONE_TOKEN,
+            MIN_WEIGHT.sub(1),
+            MIN_WEIGHT,
+          ),
+        ).to.be.revertedWith("WeightIsBelowMin");
+      });
 
-      await expect(
-        vault.initialDeposit(
-          ONE_TOKEN,
-          ONE_TOKEN,
-          MAX_WEIGHT,
-          MAX_WEIGHT.add(1),
-        ),
-      ).to.be.revertedWith("WeightIsAboveMax");
+      it("should be reverted when weight is above than max", async () => {
+        await expect(
+          vault.initialDeposit(
+            ONE_TOKEN,
+            ONE_TOKEN,
+            MAX_WEIGHT,
+            MAX_WEIGHT.add(1),
+          ),
+        ).to.be.revertedWith("WeightIsAboveMax");
 
-      await expect(
-        vault.initialDeposit(
-          ONE_TOKEN,
-          ONE_TOKEN,
-          MAX_WEIGHT.add(1),
-          MAX_WEIGHT,
-        ),
-      ).to.be.revertedWith("WeightIsAboveMax");
+        await expect(
+          vault.initialDeposit(
+            ONE_TOKEN,
+            ONE_TOKEN,
+            MAX_WEIGHT.add(1),
+            MAX_WEIGHT,
+          ),
+        ).to.be.revertedWith("WeightIsAboveMax");
+      });
 
-      await expect(
-        vault.initialDeposit(
-          MIN_BALANCE.sub(1),
-          MIN_BALANCE,
-          MIN_WEIGHT,
-          MIN_WEIGHT,
-        ),
-      ).to.be.revertedWith("AmountIsBelowMin");
+      it("should be reverted when amount is below than min", async () => {
+        await expect(
+          vault.initialDeposit(
+            MIN_BALANCE.sub(1),
+            MIN_BALANCE,
+            MIN_WEIGHT,
+            MIN_WEIGHT,
+          ),
+        ).to.be.revertedWith("AmountIsBelowMin");
 
-      await expect(
-        vault.initialDeposit(
-          MIN_BALANCE,
-          MIN_BALANCE.sub(1),
-          MIN_WEIGHT,
-          MIN_WEIGHT,
-        ),
-      ).to.be.revertedWith("AmountIsBelowMin");
+        await expect(
+          vault.initialDeposit(
+            MIN_BALANCE,
+            MIN_BALANCE.sub(1),
+            MIN_WEIGHT,
+            MIN_WEIGHT,
+          ),
+        ).to.be.revertedWith("AmountIsBelowMin");
+      });
     });
 
     it("should be possible to initialize the vault", async () => {
