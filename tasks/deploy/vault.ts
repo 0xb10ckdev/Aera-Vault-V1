@@ -6,7 +6,7 @@ task("deploy:vault")
   .addParam("token1", "Token1's address")
   .addParam("manager", "Manager's address")
   .addParam("validator", "Validator's address")
-  .addParam("noticePeriod", "Notice Period in second")
+  .addParam("noticePeriod", "Notice period in seconds")
   .setAction(async (taskArgs, { deployments, ethers }) => {
     const token0 = taskArgs.token0;
     const token1 = taskArgs.token1;
