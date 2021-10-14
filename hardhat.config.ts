@@ -6,7 +6,7 @@ import "hardhat-contract-sizer";
 import "hardhat-deploy";
 import "@nomiclabs/hardhat-ethers";
 import "./tasks/clean";
-import { task } from "hardhat/config";
+import "./tasks/deploy";
 
 import { resolve } from "path";
 
@@ -15,17 +15,6 @@ import { HardhatUserConfig } from "hardhat/config";
 import { NetworkUserConfig } from "hardhat/types";
 
 dotenvConfig({ path: resolve(__dirname, "./.env") });
-
-task("deploy", "Deploy Mammon Vault")
-  .addOptionalParam("token0", "Token0's address")
-  .addOptionalParam("token1", "Token1's address")
-  .addOptionalParam("manager", "Manager's address")
-  .setAction(async (taskArgs, hre) => {
-    process.env.TOKEN0 = taskArgs.token0;
-    process.env.TOKEN1 = taskArgs.token1;
-    process.env.MANAGER = taskArgs.manager;
-    await hre.run("run", { script: "scripts/deploy.ts" });
-  });
 
 const chainIds = {
   ganache: 1337,
