@@ -1,16 +1,17 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
-import { deployments, ethers } from "hardhat";
+import hre, { deployments, ethers } from "hardhat";
 import {
   IBPoolMock,
   IBPoolMock__factory,
   IERC20,
   MammonVaultV0,
+  MammonVaultV0__factory,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
 } from "../../typechain";
 import { setupTokens } from "../fixtures";
-import { deployVault, toWei } from "../utils";
+import { toWei } from "../utils";
 
 const ONE_TOKEN = toWei("1");
 const MIN_WEIGHT = toWei("1");
@@ -63,16 +64,19 @@ describe("Mammon Vault v0", function () {
       log: true,
     });
 
-    vault = await deployVault(
-      admin,
-      DAI.address,
-      WETH.address,
-      manager.address,
-    );
+    await hre.run("deploy:Vault", {
+      token0: DAI.address,
+      token1: WETH.address,
+      manager: manager.address,
+    });
 
+    vault = MammonVaultV0__factory.connect(
+      (await deployments.get("MammonVaultV0")).address,
+      admin,
+    );
     bPool = IBPoolMock__factory.connect(await vault.pool(), admin);
     validator = WithdrawalValidatorMock__factory.connect(
-      await vault.validator(),
+      (await deployments.get("Validator")).address,
       admin,
     );
   });
