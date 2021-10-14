@@ -12,6 +12,7 @@ import {
 } from "../../typechain";
 import { setupTokens } from "../fixtures";
 import { toWei } from "../utils";
+import { DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
 
 const ONE_TOKEN = toWei("1");
 const MIN_WEIGHT = toWei("1");
@@ -69,7 +70,7 @@ describe("Mammon Vault v0", function () {
       token1: WETH.address,
       manager: manager.address,
       validator: (await deployments.get("Validator")).address,
-      noticePeriod: NOTICE_PERIOD,
+      noticePeriod: DEFAULT_NOTICE_PERIOD.toString(),
     });
 
     vault = MammonVaultV0__factory.connect(
