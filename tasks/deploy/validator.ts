@@ -4,6 +4,8 @@ task("deploy:Validator").setAction(
   async (taskArgs, { deployments, ethers }) => {
     const { admin } = await ethers.getNamedSigners();
 
+    console.log("Deploying Validator");
+
     await deployments.deploy("Validator", {
       contract: "PermissiveWithdrawalValidator",
       from: admin.address,

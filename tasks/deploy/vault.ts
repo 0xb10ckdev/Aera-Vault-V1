@@ -1,6 +1,5 @@
 import { DEFAULT_NOTICE_PERIOD, getConfig } from "../../scripts/config";
 import { task } from "hardhat/config";
-import { MammonVaultV0, MammonVaultV0__factory } from "../../typechain";
 
 task("deploy:Vault")
   .addOptionalParam("token0", "Token0's address")
@@ -27,31 +26,36 @@ task("deploy:Vault")
       return;
     }
 
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+    const config = getConfig(chainId);
+
+    const { admin } = await ethers.getNamedSigners();
+
     console.log("Deploying vault with");
     console.log(`Token0: ${token0}`);
     console.log(`Token1: ${token1}`);
     console.log(`Manager: ${manager}`);
     console.log(`Validator: ${validator}`);
 
-    const chainId = (await ethers.provider.getNetwork()).chainId;
-    const config = getConfig(chainId);
-
-    const VaultFactory: MammonVaultV0__factory =
-      await ethers.getContractFactory("MammonVaultV0", {
-        libraries: {
-          "contracts/libraries/SmartPoolManager.sol:SmartPoolManager":
-            config.poolManager,
-        },
-      });
-    const vault = <MammonVaultV0>(
-      await VaultFactory.deploy(
+    await deployments.deploy("MammonVaultV0", {
+      contract: "MammonVaultV0",
+      args: [
         config.bFactory,
         token0,
         token1,
         manager,
         validator,
         DEFAULT_NOTICE_PERIOD,
-      )
+      ],
+      libraries: {
+        SmartPoolManager: config.poolManager,
+      },
+      from: admin.address,
+      log: true,
+    });
+
+    console.log(
+      "Vault is deployed to: ",
+      (await deployments.get("MammonVaultV0")).address,
     );
-    console.log("Vault is deployed to: ", vault.address);
   });
