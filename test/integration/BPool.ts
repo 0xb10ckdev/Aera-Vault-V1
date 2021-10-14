@@ -15,7 +15,7 @@ const ONE_TOKEN = toWei("1");
 const MIN_WEIGHT = toWei("1");
 const MAX_IN_RATIO = toWei(1 / 2);
 const MAX_OUT_RATIO = toWei(1 / 3).add(1);
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const ZERO_ADDRESS = ethers.constants.AddressZero;
 
 describe("Swap on Balancer Pool", function () {
   let admin: SignerWithAddress;
