@@ -68,6 +68,8 @@ describe("Mammon Vault v0", function () {
       token0: DAI.address,
       token1: WETH.address,
       manager: manager.address,
+      validator: (await deployments.get("Validator")).address,
+      noticePeriod: NOTICE_PERIOD,
     });
 
     vault = MammonVaultV0__factory.connect(
