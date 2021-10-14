@@ -92,17 +92,39 @@ $ yarn clean
 
 ### Deploy
 
-Deploy the contracts to Hardhat Network:
+Deploy the Validator to a specific network:
 
 ```sh
-$ yarn deploy
+$ yarn deploy:Validator --network <NETWORK>
 ```
 
-Deploy the contracts to a specific network, such as the Ropsten testnet:
+Deploy the Vault to a specific network:
 
 ```sh
-$ yarn deploy:network --network <NETWORK> --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER>
+$ yarn deploy:Vault --network <NETWORK> --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR>
 ```
+
+If <VALIDATOR> is not specified, it uses previously deployed validator
+
+Deploy the Validator and Vault to Hardhat Network:
+
+```sh
+$ yarn deploy --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR>
+```
+
+Deploy the Validator and Vault to Kovan Network:
+
+```sh
+$ yarn deploy:kovan --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR>
+```
+
+Deploy the Validator and Vault to Mainnet Network:
+
+```sh
+$ yarn deploy:mainnet --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR>
+```
+
+If <VALIDATOR> is not specified, it uses just deployed validator
 
 ## Syntax Highlighting
 
