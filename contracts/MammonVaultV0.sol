@@ -70,6 +70,15 @@ contract MammonVaultV0 is
 
     SmartPoolManager.GradualUpdateParams private gradualUpdate;
 
+    event Created(
+        address indexed factory,
+        address indexed token0,
+        address indexed token1,
+        address manager,
+        address validator,
+        uint32 noticePeriod
+    );
+
     event Deposit(
         uint256 amount0,
         uint256 amount1,
@@ -146,6 +155,15 @@ contract MammonVaultV0 is
         manager = _manager;
         validator = IWithdrawalValidator(_validator);
         noticePeriod = _noticePeriod;
+
+        emit Created(
+            _factory,
+            _token0,
+            _token1,
+            _manager,
+            _validator,
+            _noticePeriod
+        );
         emit ManagerChanged(address(0), _manager);
     }
 
