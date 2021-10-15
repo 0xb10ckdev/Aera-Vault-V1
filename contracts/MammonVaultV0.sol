@@ -89,6 +89,8 @@ contract MammonVaultV0 is
     event Withdraw(
         uint256 amount0,
         uint256 amount1,
+        uint256 allowance0,
+        uint256 allowance1,
         uint256 weight0,
         uint256 weight1
     );
@@ -266,7 +268,14 @@ contract MammonVaultV0 is
         uint256 weight0 = getDenormalizedWeight(token0);
         uint256 weight1 = getDenormalizedWeight(token1);
 
-        emit Withdraw(amount0, amount1, weight0, weight1);
+        emit Withdraw(
+            amount0,
+            amount1,
+            allowance0,
+            allowance1,
+            weight0,
+            weight1
+        );
     }
 
     /**
