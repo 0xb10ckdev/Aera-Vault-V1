@@ -100,6 +100,13 @@ contract MammonVaultV0 is
         address indexed manager
     );
 
+    event UpdateWeightsGradually(
+        uint256 weight0,
+        uint256 weight1,
+        uint256 startBlock,
+        uint256 endBlock
+    );
+
     event FinalizationInitialized(uint64 noticeTimeoutAt);
     event Finalized(address indexed caller, uint256 amount0, uint256 amount1);
 
@@ -304,6 +311,8 @@ contract MammonVaultV0 is
             endBlock,
             0
         );
+
+        emit UpdateWeightsGradually(weight0, weight1, startBlock, endBlock);
     }
 
     /**
