@@ -101,7 +101,7 @@ contract MammonVaultV0 is
     );
 
     event FinalizationInitialized(uint64 noticeTimeoutAt);
-    event Finalized();
+    event Finalized(address indexed caller, uint256 amount0, uint256 amount1);
 
     error CallerIsNotOwnerOrManager();
     error NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
@@ -351,8 +351,9 @@ contract MammonVaultV0 is
         if (noticeTimeoutAt > block.timestamp) {
             revert NoticeTimeoutNotElapsed(noticeTimeoutAt);
         }
-        returnFunds();
-        emit Finalized();
+
+        (uint256 amount0, uint256 amount1) = returnFunds();
+        emit Finalized(msg.sender, amount0, amount1);
 
         selfdestruct(payable(owner()));
     }
@@ -451,15 +452,22 @@ contract MammonVaultV0 is
     /**
      * @dev Return all funds to owner. Will only be called by finalize()
      */
-    function returnFunds() internal {
-        returnTokenFunds(token0);
-        returnTokenFunds(token1);
+    function returnFunds()
+        internal
+        returns (uint256 amount0, uint256 amount1)
+    {
+        amount0 = returnTokenFunds(token0);
+        amount1 = returnTokenFunds(token1);
     }
 
-    function returnTokenFunds(address token) internal {
+    function returnTokenFunds(address token)
+        internal
+        returns (uint256 amount)
+    {
         pool.unbind(token);
 
         IERC20 erc20 = IERC20(token);
-        erc20.safeTransfer(owner(), erc20.balanceOf(address(this)));
+        amount = erc20.balanceOf(address(this));
+        erc20.safeTransfer(owner(), amount);
     }
 }
