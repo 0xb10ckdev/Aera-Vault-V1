@@ -244,9 +244,9 @@ contract MammonVaultV0 is
     function deposit(uint256 amount0, uint256 amount1)
         external
         override
+        nonReentrant
         onlyOwner
         onlyInitialized
-        nonReentrant
         nonFinalizing
     {
         if (amount0 > 0) {
@@ -268,9 +268,9 @@ contract MammonVaultV0 is
     function withdraw(uint256 amount0, uint256 amount1)
         external
         override
+        nonReentrant
         onlyOwner
         onlyInitialized
-        nonReentrant
         nonFinalizing
     {
         (uint256 allowance0, uint256 allowance1) = validator.allowance();
