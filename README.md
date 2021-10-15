@@ -62,10 +62,16 @@ $ yarn test
 
 ### Coverage
 
-Generate the code coverage report:
+Generate the code coverage report with env variables:
 
 ```sh
 $ yarn coverage
+```
+
+Generate the code coverage report on local with hardhat fork:
+
+```sh
+$ yarn coverage:local
 ```
 
 ### Report Gas
