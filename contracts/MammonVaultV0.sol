@@ -107,6 +107,8 @@ contract MammonVaultV0 is
         uint256 endBlock
     );
 
+    event PokeWeights();
+
     event FinalizationInitialized(uint64 noticeTimeoutAt);
     event Finalized(address indexed caller, uint256 amount0, uint256 amount1);
 
@@ -326,6 +328,8 @@ contract MammonVaultV0 is
         nonFinalizing
     {
         SmartPoolManager.pokeWeights(pool, gradualUpdate);
+
+        emit PokeWeights();
     }
 
     /**
