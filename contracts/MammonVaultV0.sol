@@ -314,7 +314,7 @@ contract MammonVaultV0 is
      *      Also could be called by manager in the event of an emergency
      *      (e.g., funds at risk).
      */
-    function finalize() external override {
+    function finalize() external override nonReentrant {
         if (msg.sender != owner() && msg.sender != manager) {
             revert CallerIsNotOwnerOrManager();
         }

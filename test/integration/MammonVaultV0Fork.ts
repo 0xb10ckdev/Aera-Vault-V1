@@ -691,7 +691,7 @@ describe("Mammon Vault v0", function () {
         const balance0 = await DAI.balanceOf(admin.address);
         const balance1 = await WETH.balanceOf(admin.address);
 
-        expect(await vault.estimateGas.finalize()).to.below(240000);
+        expect(await vault.estimateGas.finalize()).to.below(250000);
         await vault.finalize();
 
         expect(await DAI.balanceOf(admin.address)).to.equal(
