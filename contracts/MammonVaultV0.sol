@@ -162,6 +162,8 @@ contract MammonVaultV0 is
         if (initialized) {
             revert VaultIsAlreadyInitialized();
         }
+        initialized = true;
+
         uint256 poolMinWeight = pool.MIN_WEIGHT();
         if (weight0 < poolMinWeight) {
             revert WeightIsBelowMin(weight0, poolMinWeight);
@@ -184,7 +186,6 @@ contract MammonVaultV0 is
         if (amount1 < poolMinAmount) {
             revert AmountIsBelowMin(amount1, poolMinAmount);
         }
-        initialized = true;
 
         bindToken(token0, amount0, weight0);
         bindToken(token1, amount1, weight1);
