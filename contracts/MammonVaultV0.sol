@@ -110,6 +110,7 @@ contract MammonVaultV0 is
     event PokeWeights();
 
     event SetPublicSwap(bool publicSwap);
+    event SetSwapFee(uint256 swapFee);
 
     event FinalizationInitialized(uint64 noticeTimeoutAt);
     event Finalized(address indexed caller, uint256 amount0, uint256 amount1);
@@ -390,6 +391,7 @@ contract MammonVaultV0 is
 
     function setSwapFee(uint256 newSwapFee) external override onlyManager {
         pool.setSwapFee(newSwapFee);
+        emit SetSwapFee(newSwapFee);
     }
 
     function isPublicSwap() external view override returns (bool) {
