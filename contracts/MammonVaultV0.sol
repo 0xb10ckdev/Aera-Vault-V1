@@ -70,6 +70,8 @@ contract MammonVaultV0 is
 
     SmartPoolManager.GradualUpdateParams private gradualUpdate;
 
+    address public constant UNSET_MANAGER_ADDRESS = address(0);
+
     event Created(
         address indexed factory,
         address indexed token0,
@@ -178,7 +180,7 @@ contract MammonVaultV0 is
             _validator,
             _noticePeriod
         );
-        emit ManagerChanged(address(0), _manager);
+        emit ManagerChanged(UNSET_MANAGER_ADDRESS, _manager);
     }
 
     /**
