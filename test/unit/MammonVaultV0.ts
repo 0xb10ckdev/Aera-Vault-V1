@@ -162,6 +162,10 @@ describe("Mammon Vault v0", function () {
       await expect(vault.initializeFinalization()).to.be.revertedWith(
         "VaultNotInitialized",
       );
+
+      await expect(
+        vault.connect(manager).setPublicSwap(true),
+      ).to.be.revertedWith("VaultNotInitialized");
     });
 
     it("should be reverted to initialize the vault", async () => {
@@ -698,6 +702,17 @@ describe("Mammon Vault v0", function () {
     });
 
     describe("Set Public Swap", () => {
+      beforeEach(async () => {
+        await DAI.approve(vault.address, ONE_TOKEN);
+        await WETH.approve(vault.address, ONE_TOKEN);
+        await vault.initialDeposit(
+          ONE_TOKEN,
+          ONE_TOKEN,
+          MIN_WEIGHT,
+          MIN_WEIGHT,
+        );
+      });
+
       it("should be reverted to set public swap", async () => {
         await expect(vault.setPublicSwap(true)).to.be.revertedWith(
           "CallerIsNotManager()",

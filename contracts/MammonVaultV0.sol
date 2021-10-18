@@ -384,7 +384,12 @@ contract MammonVaultV0 is
         manager = newManager;
     }
 
-    function setPublicSwap(bool value) external override onlyManager {
+    function setPublicSwap(bool value)
+        external
+        override
+        onlyManager
+        onlyInitialized
+    {
         pool.setPublicSwap(value);
         emit SetPublicSwap(value);
     }
