@@ -52,8 +52,18 @@ describe("Mammon Vault v0", function () {
     const holdings1 = await vault.holdings1();
     const balance0 = await DAI.balanceOf(admin.address);
     const balance1 = await WETH.balanceOf(admin.address);
+    const [allowance0, allowance1] = await validator.allowance();
 
-    return { weight0, weight1, holdings0, holdings1, balance0, balance1 };
+    return {
+      weight0,
+      weight1,
+      holdings0,
+      holdings1,
+      balance0,
+      balance1,
+      allowance0,
+      allowance1,
+    };
   };
 
   beforeEach(async function () {
@@ -370,9 +380,20 @@ describe("Mammon Vault v0", function () {
             holdings1,
             balance0,
             balance1,
+            allowance0,
+            allowance1,
           } = await getStates();
 
-          await vault.withdraw(toWei(5), toWei(15));
+          await expect(vault.withdraw(toWei(5), toWei(15)))
+            .to.emit(vault, "Withdraw")
+            .withArgs(
+              toWei(5),
+              toWei(15),
+              allowance0,
+              allowance1,
+              weight0,
+              weight1,
+            );
 
           expect(await vault.holdings0()).to.equal(holdings0);
           expect(await vault.holdings1()).to.equal(holdings1);
@@ -410,15 +431,26 @@ describe("Mammon Vault v0", function () {
               holdings1,
               balance0,
               balance1,
+              allowance0,
+              allowance1,
             } = await getStates();
 
             const amount0 = toWei(testAmounts[i][0]);
             const amount1 = toWei(0);
 
-            await vault.withdraw(amount0, amount1);
-
             const newHoldings0 = holdings0.sub(amount0);
             const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+
+            await expect(vault.withdraw(amount0, amount1))
+              .to.emit(vault, "Withdraw")
+              .withArgs(
+                amount0,
+                amount1,
+                allowance0,
+                allowance1,
+                newWeight0,
+                weight1,
+              );
 
             expect(await vault.holdings0()).to.equal(newHoldings0);
             expect(await vault.holdings1()).to.equal(holdings1);
@@ -444,15 +476,26 @@ describe("Mammon Vault v0", function () {
               holdings1,
               balance0,
               balance1,
+              allowance0,
+              allowance1,
             } = await getStates();
 
             const amount0 = toWei(0);
             const amount1 = toWei(testAmounts[i][1]);
 
-            await vault.withdraw(amount0, amount1);
-
             const newHoldings1 = holdings1.sub(amount1);
             const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+            await expect(vault.withdraw(amount0, amount1))
+              .to.emit(vault, "Withdraw")
+              .withArgs(
+                amount0,
+                amount1,
+                allowance0,
+                allowance1,
+                weight0,
+                newWeight1,
+              );
 
             expect(await vault.holdings0()).to.equal(holdings0);
             expect(await vault.holdings1()).to.equal(newHoldings1);
@@ -478,17 +521,28 @@ describe("Mammon Vault v0", function () {
               holdings1,
               balance0,
               balance1,
+              allowance0,
+              allowance1,
             } = await getStates();
 
             const amount0 = toWei(testAmounts[i][0]);
             const amount1 = toWei(testAmounts[i][1]);
 
-            await vault.withdraw(amount0, amount1);
-
             const newHoldings0 = holdings0.sub(amount0);
             const newHoldings1 = holdings1.sub(amount1);
             const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
             const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+            await expect(vault.withdraw(amount0, amount1))
+              .to.emit(vault, "Withdraw")
+              .withArgs(
+                amount0,
+                amount1,
+                allowance0,
+                allowance1,
+                newWeight0,
+                newWeight1,
+              );
 
             expect(await vault.holdings0()).to.equal(newHoldings0);
             expect(await vault.holdings1()).to.equal(newHoldings1);
@@ -517,9 +571,13 @@ describe("Mammon Vault v0", function () {
       });
 
       it("should be possible to call updateWeightsGradually", async () => {
-        await vault
-          .connect(manager)
-          .updateWeightsGradually(toWei(2), toWei(3), 0, 0);
+        await expect(
+          vault
+            .connect(manager)
+            .updateWeightsGradually(toWei(2), toWei(3), 0, 0),
+        )
+          .to.emit(vault, "UpdateWeightsGradually")
+          .withArgs(toWei(2), toWei(3), 0, 0);
       });
     });
 
@@ -544,7 +602,10 @@ describe("Mammon Vault v0", function () {
       });
 
       it("should be possible to call pokeWeight", async () => {
-        await vault.connect(manager).pokeWeights();
+        await expect(vault.connect(manager).pokeWeights()).to.emit(
+          vault,
+          "PokeWeights",
+        );
       });
     });
 
@@ -601,9 +662,14 @@ describe("Mammon Vault v0", function () {
       });
 
       it("should be possible to finalize", async () => {
+        const { holdings0, holdings1 } = await getStates();
+
         await vault.initializeFinalization();
         await ethers.provider.send("evm_increaseTime", [NOTICE_PERIOD + 1]);
-        await vault.finalize();
+
+        await expect(vault.finalize())
+          .to.emit(vault, "Finalized")
+          .withArgs(admin.address, holdings0, holdings1);
 
         expect(await DAI.balanceOf(admin.address)).to.equal(toWei(10000000));
         expect(await WETH.balanceOf(admin.address)).to.equal(toWei(10000000));
@@ -639,7 +705,10 @@ describe("Mammon Vault v0", function () {
       });
 
       it("should be possible to set public swap", async () => {
-        await vault.connect(manager).setPublicSwap(true);
+        await expect(vault.connect(manager).setPublicSwap(true)).emit(
+          vault,
+          "SetPublicSwap",
+        );
         expect(await vault.isPublicSwap()).to.equal(true);
       });
     });
@@ -652,7 +721,10 @@ describe("Mammon Vault v0", function () {
       });
 
       it("should be possible to set swap fee", async () => {
-        await vault.connect(manager).setSwapFee(toWei(0.01));
+        await expect(vault.connect(manager).setSwapFee(toWei(0.01))).emit(
+          vault,
+          "SetSwapFee",
+        );
         expect(await vault.getSwapFee()).to.equal(toWei(0.01));
       });
     });
