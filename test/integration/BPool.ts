@@ -50,6 +50,14 @@ describe("Swap on Balancer Pool", function () {
     await vault.deposit(toWei(10), toWei(20));
   });
 
+  describe("bind", () => {
+    it("should be reverted to call bind", async () => {
+      await expect(
+        bPool.bind(DAI.address, ONE_TOKEN, MIN_WEIGHT),
+      ).to.be.revertedWith("ERR_NOT_CONTROLLER");
+    });
+  });
+
   describe("swapExactAmountIn", () => {
     it("should be reverted to call swapExactAmountIn", async () => {
       const holdings0 = await vault.holdings0();

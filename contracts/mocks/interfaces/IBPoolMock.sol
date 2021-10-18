@@ -8,6 +8,12 @@ interface IBPoolMock {
         view
         returns (uint256);
 
+    function bind(
+        address token,
+        uint256 balance,
+        uint256 denorm
+    ) external;
+
     function swapExactAmountIn(
         address tokenIn,
         uint256 tokenAmountIn,
