@@ -6,6 +6,7 @@ import "./dependencies/openzeppelin/IERC20.sol";
 import "./dependencies/openzeppelin/Ownable.sol";
 import "./dependencies/openzeppelin/ReentrancyGuard.sol";
 import "./dependencies/openzeppelin/Math.sol";
+import "./dependencies/openzeppelin/SafeCast.sol";
 import "./interfaces/IBFactory.sol";
 import "./interfaces/IBPool.sol";
 import "./interfaces/IMammonVaultV0.sol";
@@ -26,6 +27,7 @@ contract MammonVaultV0 is
 {
     using SafeERC20 for IERC20;
     using Math for uint256;
+    using SafeCast for uint256;
 
     /**
      * @dev Balancer pool. Owned by the vault.
@@ -347,7 +349,7 @@ contract MammonVaultV0 is
         onlyInitialized
         nonFinalizing
     {
-        noticeTimeoutAt = uint64(block.timestamp) + noticePeriod;
+        noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
         emit FinalizationInitialized(noticeTimeoutAt);
     }
 
