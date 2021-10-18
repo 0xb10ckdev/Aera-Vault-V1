@@ -391,10 +391,7 @@ contract MammonVaultV0 is
     }
 
     function sweep(address token, uint256 amount) external override onlyOwner {
-        if (token == token0) {
-            revert CanNotSweepVaultToken();
-        }
-        if (token == token1) {
+        if (token == token0 || token == token1) {
             revert CanNotSweepVaultToken();
         }
         IERC20(token).transfer(msg.sender, amount);
