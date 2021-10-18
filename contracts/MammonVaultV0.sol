@@ -394,7 +394,7 @@ contract MammonVaultV0 is
         if (token == token0 || token == token1) {
             revert CanNotSweepVaultToken();
         }
-        IERC20(token).transfer(msg.sender, amount);
+        IERC20(token).safeTransfer(msg.sender, amount);
     }
 
     function setPublicSwap(bool value)
