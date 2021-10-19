@@ -12,7 +12,7 @@ task("deploy:validator").setAction(
       log: true,
     });
     console.log(
-      "Validator is deployed to: ",
+      "Validator is deployed to:",
       (await deployments.get("Validator")).address,
     );
   },
