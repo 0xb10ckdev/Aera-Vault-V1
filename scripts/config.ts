@@ -26,4 +26,25 @@ export const getConfig = (
   }
 };
 
+export const getChainId = (network: string | undefined): number => {
+  switch (network) {
+    case "ganache":
+      return 1337;
+    case "goerli":
+      return 5;
+    case "hardhat":
+      return 31337;
+    case "kovan":
+      return 42;
+    case "mainnet":
+      return 1;
+    case "rinkeby":
+      return 4;
+    case "ropsten":
+      return 3;
+    default:
+      return 31337;
+  }
+};
+
 export const DEFAULT_NOTICE_PERIOD = 3600;
