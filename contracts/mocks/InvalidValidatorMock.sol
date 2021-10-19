@@ -5,6 +5,7 @@ import "../dependencies/openzeppelin/IERC165.sol";
 
 /// @notice A withdrawal validator that validates withdrawals of an arbitrary size.
 contract InvalidValidatorMock is IERC165 {
+    // solhint-disable-next-line no-unused-vars
     function supportsInterface(bytes4 interfaceID)
         external
         view
