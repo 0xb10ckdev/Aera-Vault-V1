@@ -98,7 +98,9 @@ contract MammonVaultV0 is
         uint256 allowance0,
         uint256 allowance1,
         uint256 weight0,
-        uint256 weight1
+        uint256 weight1,
+        uint256 withdrawAmount0,
+        uint256 withdrawAmount1
     );
 
     event ManagerChanged(
@@ -289,11 +291,14 @@ contract MammonVaultV0 is
         uint256 exactAmount0 = amount0.min(balance0).min(allowance0);
         uint256 exactAmount1 = amount1.min(balance1).min(allowance1);
 
+        uint256 withdrawAmount0;
+        uint256 withdrawAmount1;
+
         if (exactAmount0 > 0) {
-            withdrawToken(token0, exactAmount0, balance0);
+            withdrawAmount0 = withdrawToken(token0, exactAmount0, balance0);
         }
         if (exactAmount1 > 0) {
-            withdrawToken(token1, exactAmount1, balance1);
+            withdrawAmount1 = withdrawToken(token1, exactAmount1, balance1);
         }
 
         uint256 weight0 = getDenormalizedWeight(token0);
@@ -305,7 +310,9 @@ contract MammonVaultV0 is
             allowance0,
             allowance1,
             weight0,
-            weight1
+            weight1,
+            withdrawAmount0,
+            withdrawAmount1
         );
     }
 
@@ -482,7 +489,7 @@ contract MammonVaultV0 is
         address _token,
         uint256 _amount,
         uint256 _balance
-    ) internal {
+    ) internal returns (uint256 withdrawAmount) {
         uint256 tokenDenorm = getDenormalizedWeight(_token);
 
         uint256 newBalance = _balance - _amount;
@@ -491,7 +498,8 @@ contract MammonVaultV0 is
         pool.rebind(_token, newBalance, newDenorm);
 
         IERC20 token = IERC20(_token);
-        token.safeTransfer(msg.sender, token.balanceOf(address(this)));
+        withdrawAmount = token.balanceOf(address(this));
+        token.safeTransfer(msg.sender, withdrawAmount);
     }
 
     /**
