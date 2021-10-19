@@ -73,6 +73,7 @@ contract MammonVaultV0 is
     SmartPoolManager.GradualUpdateParams private gradualUpdate;
 
     address private constant UNSET_MANAGER_ADDRESS = address(0);
+    uint256 public constant MINIMUM_WEIGHT_CHANGE_BLOCK_PERIOD = 10000;
 
     event Created(
         address indexed factory,
@@ -318,7 +319,7 @@ contract MammonVaultV0 is
             newWeights,
             startBlock,
             endBlock,
-            0
+            MINIMUM_WEIGHT_CHANGE_BLOCK_PERIOD
         );
 
         emit UpdateWeightsGradually(weight0, weight1, startBlock, endBlock);
