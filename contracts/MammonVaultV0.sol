@@ -174,8 +174,11 @@ contract MammonVaultV0 is
         if (_token0 == _token1) {
             revert SameTokenAddresses();
         }
-        // 0xde242ff4 - selector of allowance function
-        if (!IERC165(_validator).supportsInterface(0xde242ff4)) {
+        if (
+            !IERC165(_validator).supportsInterface(
+                type(IWithdrawalValidator).interfaceId
+            )
+        ) {
             revert ValidatorIsNotValid();
         }
 

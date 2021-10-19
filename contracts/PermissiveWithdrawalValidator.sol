@@ -18,6 +18,6 @@ contract PermissiveWithdrawalValidator is IERC165, IWithdrawalValidator {
         override
         returns (bool)
     {
-        return interfaceID == this.allowance.selector;
+        return interfaceID == type(IWithdrawalValidator).interfaceId;
     }
 }
