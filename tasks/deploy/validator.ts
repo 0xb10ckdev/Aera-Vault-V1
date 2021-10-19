@@ -1,6 +1,6 @@
 import { task } from "hardhat/config";
 
-task("deploy:Validator").setAction(
+task("deploy:validator").setAction(
   async (taskArgs, { deployments, ethers }) => {
     const { admin } = await ethers.getNamedSigners();
 

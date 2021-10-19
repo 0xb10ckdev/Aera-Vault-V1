@@ -64,7 +64,7 @@ describe("Mammon Vault v0", function () {
       log: true,
     });
 
-    await hre.run("deploy:Vault", {
+    await hre.run("deploy:vault", {
       token0: DAI.address,
       token1: WETH.address,
       manager: manager.address,
