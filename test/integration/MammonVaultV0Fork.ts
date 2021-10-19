@@ -756,15 +756,6 @@ describe("Mammon Vault v0", function () {
         ({ TOKEN } = await deployToken());
       });
 
-      it("should be reverted to withdraw vault token", async () => {
-        await expect(vault.sweep(DAI.address, toWei(1000))).to.be.revertedWith(
-          "CanNotSweepVaultToken",
-        );
-        await expect(
-          vault.sweep(WETH.address, toWei(1000)),
-        ).to.be.revertedWith("CanNotSweepVaultToken");
-      });
-
       it("should be reverted to withdraw token", async () => {
         await TOKEN.transfer(vault.address, toWei(1000));
         await expect(
