@@ -101,7 +101,7 @@ $ yarn deploy
 Deploy the contracts to a specific network, such as the Ropsten testnet:
 
 ```sh
-$ yarn deploy:network ropsten
+$ yarn deploy:network --network <NETWORK> --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER>
 ```
 
 ## Syntax Highlighting

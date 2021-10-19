@@ -1,22 +1,25 @@
 // Addresses are taken from https://docs.balancer.fi/v/v1/smart-contracts/addresses
 export const getConfig = (
   chainId: number,
-): { vault: string; poolManager: string } => {
+): { vault: string; poolManager: string; bFactory: string } => {
   switch (chainId) {
     case 1:
       return {
         vault: "MammonVaultV0Mainnet",
         poolManager: "0xA3F9145CB0B50D907930840BB2dcfF4146df8Ab4",
+        bFactory: "0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd",
       };
     case 42:
       return {
         vault: "MammonVaultV0Kovan",
         poolManager: "0x8DBB8C9bFEb7689f16772c85136993cDA0c05eA4",
+        bFactory: "0x8f7F78080219d4066A8036ccD30D588B416a40DB",
       };
     case 31337:
       return {
         vault: "MammonVaultV0Mainnet",
         poolManager: "0xA3F9145CB0B50D907930840BB2dcfF4146df8Ab4",
+        bFactory: "0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd",
       };
     default:
       throw "unsupported chain ID";
