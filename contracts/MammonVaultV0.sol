@@ -300,28 +300,28 @@ contract MammonVaultV0 is
         uint256 exactAmount0 = amount0.min(balance0).min(allowance0);
         uint256 exactAmount1 = amount1.min(balance1).min(allowance1);
 
-        uint256 withdrawAmount0;
-        uint256 withdrawAmount1;
+        uint256 withdrawnAmount0;
+        uint256 withdrawnAmount1;
 
         if (exactAmount0 > 0) {
-            withdrawAmount0 = withdrawToken(token0, exactAmount0, balance0);
+            withdrawnAmount0 = withdrawToken(token0, exactAmount0, balance0);
         }
         if (exactAmount1 > 0) {
-            withdrawAmount1 = withdrawToken(token1, exactAmount1, balance1);
+            withdrawnAmount1 = withdrawToken(token1, exactAmount1, balance1);
         }
 
-        uint256 weight0 = getDenormalizedWeight(token0);
-        uint256 weight1 = getDenormalizedWeight(token1);
+        uint256 finalWeight0 = getDenormalizedWeight(token0);
+        uint256 finalWeight1 = getDenormalizedWeight(token1);
 
         emit Withdraw(
             amount0,
             amount1,
-            withdrawAmount0,
-            withdrawAmount1,
+            withdrawnAmount0,
+            withdrawnAmount1,
             allowance0,
             allowance1,
-            weight0,
-            weight1
+            finalWeight0,
+            finalWeight1
         );
     }
 
