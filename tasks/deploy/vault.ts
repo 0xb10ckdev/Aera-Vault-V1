@@ -1,4 +1,4 @@
-import { getConfig } from "../../scripts/config";
+import { getConfig, getChainId } from "../../scripts/config";
 import { task } from "hardhat/config";
 
 task("deploy:vault")
@@ -14,7 +14,7 @@ task("deploy:vault")
     const validator = taskArgs.validator;
     const noticePeriod = taskArgs.noticePeriod;
 
-    const chainId = (await ethers.provider.getNetwork()).chainId;
+    const chainId = getChainId(process.env.HARDHAT_FORK);
     const config = getConfig(chainId);
 
     const { admin } = await ethers.getNamedSigners();

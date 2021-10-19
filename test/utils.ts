@@ -1,6 +1,10 @@
 import { BigNumber, Signer } from "ethers";
 import { deployments, ethers } from "hardhat";
-import { DEFAULT_NOTICE_PERIOD, getConfig } from "../scripts/config";
+import {
+  DEFAULT_NOTICE_PERIOD,
+  getConfig,
+  getChainId,
+} from "../scripts/config";
 import {
   MammonVaultV0Mainnet,
   MammonVaultV0Mainnet__factory,
@@ -14,7 +18,7 @@ export const deployVault = async (
   validator?: string,
   noticePeriod: number = DEFAULT_NOTICE_PERIOD,
 ): Promise<MammonVaultV0Mainnet> => {
-  const chainId = (await ethers.provider.getNetwork()).chainId;
+  const chainId = getChainId(process.env.HARDHAT_FORK);
   const config = getConfig(chainId);
 
   const factory =

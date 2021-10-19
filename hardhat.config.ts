@@ -41,8 +41,8 @@ if (!infuraApiKey && !alchemyApiKey) {
 }
 
 const forkUrl = alchemyApiKey
-  ? `https://eth-mainnet.alchemyapi.io/v2/${alchemyApiKey}`
-  : `https://mainnet.infura.io/v3/${infuraApiKey}`;
+  ? `https://eth-${process.env.HARDHAT_FORK}.alchemyapi.io/v2/${alchemyApiKey}`
+  : `https://${process.env.HARDHAT_FORK}.infura.io/v3/${infuraApiKey}`;
 
 function createTestnetConfig(
   network: keyof typeof chainIds,
