@@ -95,13 +95,13 @@ $ yarn clean
 Deploy the Validator to a specific network:
 
 ```sh
-$ yarn deploy:Validator --network <NETWORK>
+$ yarn deploy:validator --network <NETWORK>
 ```
 
 Deploy the Vault to a specific network:
 
 ```sh
-$ yarn deploy:Vault --network <NETWORK> --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR>
+$ yarn deploy:vault --network <NETWORK> --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR>
 ```
 
 If <VALIDATOR> is not specified, it uses previously deployed validator

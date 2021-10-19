@@ -1,7 +1,7 @@
 import { DEFAULT_NOTICE_PERIOD, getConfig } from "../../scripts/config";
 import { task } from "hardhat/config";
 
-task("deploy:Vault")
+task("deploy:vault")
   .addOptionalParam("token0", "Token0's address")
   .addOptionalParam("token1", "Token1's address")
   .addOptionalParam("manager", "Manager's address")
