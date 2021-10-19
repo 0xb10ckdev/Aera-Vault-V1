@@ -1,7 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
-import hre, { ethers } from "hardhat";
-import deployValidator from "../../deploy/0_validator";
+import { deployments, ethers } from "hardhat";
 import {
   IBPoolMock,
   IBPoolMock__factory,
@@ -27,14 +26,23 @@ describe("Swap on Balancer Pool", function () {
 
   before(async function () {
     ({ admin, manager, user } = await ethers.getNamedSigners());
-    await deployValidator(hre);
+
     ({ DAI, WETH } = await setupTokens());
+
+    await deployments.deploy("Validator", {
+      contract: "PermissiveWithdrawalValidator",
+      from: admin.address,
+      log: true,
+    });
 
     vault = await deployVault(
       admin,
       DAI.address,
       WETH.address,
       manager.address,
+      (
+        await deployments.get("Validator")
+      ).address,
     );
 
     bPool = IBPoolMock__factory.connect(await vault.pool(), admin);
