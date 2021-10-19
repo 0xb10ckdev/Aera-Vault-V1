@@ -101,30 +101,32 @@ $ yarn deploy:validator --network <NETWORK>
 Deploy the Vault to a specific network:
 
 ```sh
-$ yarn deploy:vault --network <NETWORK> --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR>
+$ yarn deploy:vault --network <NETWORK> --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD>
 ```
 
-If <VALIDATOR> is not specified, it uses previously deployed validator
+Deploy the Vault to Kovan Network:
+
+```sh
+$ yarn deploy:kovan --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD>
+```
+
+Deploy the Vault to Mainnet Network:
+
+```sh
+$ yarn deploy:mainnet --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD>
+```
 
 Deploy the Validator and Vault to Hardhat Network:
 
 ```sh
-$ yarn deploy --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR>
+$ yarn deploy --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD>
 ```
 
-Deploy the Validator and Vault to Kovan Network:
-
-```sh
-$ yarn deploy:kovan --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR>
-```
-
-Deploy the Validator and Vault to Mainnet Network:
-
-```sh
-$ yarn deploy:mainnet --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR>
-```
-
-If <VALIDATOR> is not specified, it uses just deployed validator
+TOKEN0: Token0's address
+TOKEN1: Token1's address
+MANAGER: Manager's address
+VALIDATOR: Validator's address
+NOTICEPERIOD: Notice Period in second
 
 ## Syntax Highlighting
 
