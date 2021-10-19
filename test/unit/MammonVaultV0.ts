@@ -426,6 +426,8 @@ describe("Mammon Vault v0", function () {
             .withArgs(
               toWei(5),
               toWei(15),
+              toWei(0),
+              toWei(0),
               allowance0,
               allowance1,
               weight0,
@@ -451,6 +453,56 @@ describe("Mammon Vault v0", function () {
           await WETH.approve(vault.address, toWei(1000000));
           await vault.deposit(toWei(1000000), toWei(1000000));
           await validator.setAllowance(toWei(1000000), toWei(1000000));
+        });
+
+        it("should withdraw only allowed tokens", async () => {
+          await validator.setAllowance(toWei(3), toWei(5));
+          const {
+            weight0,
+            weight1,
+            holdings0,
+            holdings1,
+            balance0,
+            balance1,
+            allowance0,
+            allowance1,
+          } = await getStates();
+
+          const amount0 = toWei(5);
+          const amount1 = toWei(15);
+
+          const newHoldings0 = holdings0.sub(allowance0);
+          const newHoldings1 = holdings1.sub(allowance1);
+          const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+          const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+          await expect(vault.withdraw(amount0, amount1))
+            .to.emit(vault, "Withdraw")
+            .withArgs(
+              amount0,
+              amount1,
+              allowance0,
+              allowance1,
+              allowance0,
+              allowance1,
+              newWeight0,
+              newWeight1,
+            );
+
+          expect(await vault.holdings0()).to.equal(newHoldings0);
+          expect(await vault.holdings1()).to.equal(newHoldings1);
+          expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
+            newWeight0,
+          );
+          expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
+            newWeight1,
+          );
+          expect(await DAI.balanceOf(admin.address)).to.equal(
+            balance0.add(allowance0),
+          );
+          expect(await WETH.balanceOf(admin.address)).to.equal(
+            balance1.add(allowance1),
+          );
         });
 
         it("should be revert to withdraw tokens", async () => {
@@ -481,6 +533,8 @@ describe("Mammon Vault v0", function () {
             await expect(vault.withdraw(amount0, amount1))
               .to.emit(vault, "Withdraw")
               .withArgs(
+                amount0,
+                amount1,
                 amount0,
                 amount1,
                 allowance0,
@@ -528,6 +582,8 @@ describe("Mammon Vault v0", function () {
               .withArgs(
                 amount0,
                 amount1,
+                amount0,
+                amount1,
                 allowance0,
                 allowance1,
                 weight0,
@@ -573,6 +629,8 @@ describe("Mammon Vault v0", function () {
             await expect(vault.withdraw(amount0, amount1))
               .to.emit(vault, "Withdraw")
               .withArgs(
+                amount0,
+                amount1,
                 amount0,
                 amount1,
                 allowance0,
