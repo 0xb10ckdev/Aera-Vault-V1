@@ -98,14 +98,14 @@ contract MammonVaultV0 is
     );
 
     event Withdraw(
-        uint256 amount0,
-        uint256 amount1,
+        uint256 requestedAmount0,
+        uint256 requestedAmount1,
+        uint256 withdrawnAmount0,
+        uint256 withdrawnAmount1,
         uint256 allowance0,
         uint256 allowance1,
-        uint256 weight0,
-        uint256 weight1,
-        uint256 withdrawAmount0,
-        uint256 withdrawAmount1
+        uint256 finalWeight0,
+        uint256 finalWeight1
     );
 
     event ManagerChanged(
@@ -316,12 +316,12 @@ contract MammonVaultV0 is
         emit Withdraw(
             amount0,
             amount1,
+            withdrawAmount0,
+            withdrawAmount1,
             allowance0,
             allowance1,
             weight0,
-            weight1,
-            withdrawAmount0,
-            withdrawAmount1
+            weight1
         );
     }
 
