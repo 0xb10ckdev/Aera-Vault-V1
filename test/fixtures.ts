@@ -25,3 +25,20 @@ export const setupTokens = deployments.createFixture(
     };
   },
 );
+
+export const deployToken = deployments.createFixture(
+  async ({ deployments, ethers }) => {
+    const { deploy } = deployments;
+    const { admin } = await ethers.getNamedSigners();
+
+    const TOKEN = await deploy("TOKEN", {
+      contract: "ERC20Mock",
+      from: admin.address,
+      args: ["TOKEN Test", "TTOKEN", 18, parseEther("1000000000")],
+    });
+
+    return {
+      TOKEN: ERC20Mock__factory.connect(TOKEN.address, admin),
+    };
+  },
+);

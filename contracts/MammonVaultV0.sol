@@ -120,6 +120,7 @@ contract MammonVaultV0 is
     event FinalizationInitialized(uint64 noticeTimeoutAt);
     event Finalized(address indexed caller, uint256 amount0, uint256 amount1);
 
+    error CanNotSweepVaultToken();
     error CallerIsNotOwnerOrManager();
     error NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
     error ManagerIsZeroAddress();
@@ -387,6 +388,16 @@ contract MammonVaultV0 is
         }
         emit ManagerChanged(manager, newManager);
         manager = newManager;
+    }
+
+    function sweep(address token, uint256 amount) external override onlyOwner {
+        if (token == token0) {
+            revert CanNotSweepVaultToken();
+        }
+        if (token == token1) {
+            revert CanNotSweepVaultToken();
+        }
+        IERC20(token).transfer(msg.sender, amount);
     }
 
     function setPublicSwap(bool value)
