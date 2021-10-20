@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
-import "../dependencies/openzeppelin/IERC165.sol";
+import "../dependencies/openzeppelin/ERC165.sol";
 
 /// @notice A withdrawal validator that validates withdrawals of an arbitrary size.
-contract InvalidValidatorMock is IERC165 {
+contract InvalidValidatorMock is ERC165 {
     // solhint-disable-next-line no-unused-vars
-    function supportsInterface(bytes4 interfaceID)
-        external
+    function supportsInterface(bytes4 interfaceId)
+        public
         view
         override
         returns (bool)

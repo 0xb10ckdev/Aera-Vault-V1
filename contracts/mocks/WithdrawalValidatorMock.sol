@@ -2,11 +2,11 @@
 pragma solidity 0.8.7;
 
 import "../dependencies/openzeppelin/Ownable.sol";
-import "../dependencies/openzeppelin/IERC165.sol";
+import "../dependencies/openzeppelin/ERC165.sol";
 import "../interfaces/IWithdrawalValidator.sol";
 
 /// @notice A withdrawal validator that validates withdrawals of an arbitrary size.
-contract WithdrawalValidatorMock is IERC165, IWithdrawalValidator, Ownable {
+contract WithdrawalValidatorMock is ERC165, IWithdrawalValidator, Ownable {
     uint256 public allowance0;
     uint256 public allowance1;
 
@@ -22,12 +22,14 @@ contract WithdrawalValidatorMock is IERC165, IWithdrawalValidator, Ownable {
         return (allowance0, allowance1);
     }
 
-    function supportsInterface(bytes4 interfaceID)
-        external
+    function supportsInterface(bytes4 interfaceId)
+        public
         view
         override
         returns (bool)
     {
-        return interfaceID == type(IWithdrawalValidator).interfaceId;
+        return
+            interfaceId == type(IWithdrawalValidator).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 }
