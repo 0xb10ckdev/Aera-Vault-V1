@@ -121,8 +121,8 @@ contract MammonVaultV0 is
     event FinalizationInitialized(uint64 noticeTimeoutAt);
     event Finalized(address indexed caller, uint256 amount0, uint256 amount1);
 
-    error SameTokenAddresses();
-    error ValidatorIsNotValid();
+    error SameTokenAddresses(address token);
+    error ValidatorIsNotValid(address validator);
     error CallerIsNotOwnerOrManager();
     error NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
     error ManagerIsZeroAddress();
@@ -172,14 +172,14 @@ contract MammonVaultV0 is
         uint32 _noticePeriod
     ) {
         if (_token0 == _token1) {
-            revert SameTokenAddresses();
+            revert SameTokenAddresses(_token0);
         }
         if (
             !IERC165(_validator).supportsInterface(
                 type(IWithdrawalValidator).interfaceId
             )
         ) {
-            revert ValidatorIsNotValid();
+            revert ValidatorIsNotValid(_validator);
         }
 
         pool = IBPool(IBFactory(_factory).newBPool());
