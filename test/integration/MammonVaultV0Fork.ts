@@ -10,7 +10,7 @@ import {
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
 } from "../../typechain";
-import { setupTokens } from "../fixtures";
+import { deployToken, setupTokens } from "../fixtures";
 import { toWei } from "../utils";
 import { DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
 
