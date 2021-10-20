@@ -557,7 +557,7 @@ describe("Mammon Vault v0", function () {
               toWei(0.1),
               toWei(3),
               blocknumber + 1,
-              blocknumber + 1001,
+              blocknumber + 1000,
             ),
         ).to.be.revertedWith("ERR_WEIGHT_CHANGE_TIME_BELOW_MIN");
 
@@ -568,7 +568,7 @@ describe("Mammon Vault v0", function () {
               toWei(0.1),
               toWei(3),
               blocknumber + 1,
-              blocknumber + 1003,
+              blocknumber + 1001,
             ),
         ).to.be.revertedWith("ERR_WEIGHT_BELOW_MIN");
       });
