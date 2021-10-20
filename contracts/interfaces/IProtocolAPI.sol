@@ -19,4 +19,6 @@ interface IProtocolAPI {
     function finalize() external;
 
     function setManager(address newManager) external;
+
+    function sweep(address token, uint256 amount) external;
 }

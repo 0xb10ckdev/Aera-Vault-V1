@@ -750,6 +750,43 @@ describe("Mammon Vault v0", function () {
       });
     });
 
+    describe("Sweep", () => {
+      let TOKEN: IERC20;
+      beforeEach(async () => {
+        ({ TOKEN } = await deployToken());
+      });
+
+      it("should be reverted to withdraw vault token", async () => {
+        await expect(vault.sweep(DAI.address, toWei(1000))).to.be.revertedWith(
+          "CanNotSweepVaultToken",
+        );
+        await expect(
+          vault.sweep(WETH.address, toWei(1000)),
+        ).to.be.revertedWith("CanNotSweepVaultToken");
+      });
+
+      it("should be reverted to withdraw token", async () => {
+        await TOKEN.transfer(vault.address, toWei(1000));
+        await expect(
+          vault.sweep(TOKEN.address, toWei(1001)),
+        ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+      });
+
+      it("should be possible to withdraw token", async () => {
+        const balance = await TOKEN.balanceOf(admin.address);
+        await TOKEN.transfer(vault.address, toWei(1000));
+
+        expect(
+          await vault.estimateGas.sweep(TOKEN.address, toWei(1000)),
+        ).to.below(70000);
+        await vault.sweep(TOKEN.address, toWei(1000));
+
+        expect(await TOKEN.balanceOf(vault.address)).to.equal(toWei(0));
+
+        expect(await TOKEN.balanceOf(admin.address)).to.equal(balance);
+      });
+    });
+
     describe("Set Public Swap", () => {
       beforeEach(async () => {
         await DAI.approve(vault.address, ONE_TOKEN);
