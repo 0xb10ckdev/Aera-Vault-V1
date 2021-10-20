@@ -7574,15 +7574,6 @@ fsevents@~2.3.2:
   languageName: node
   linkType: hard
 
-"husky@npm:^6.0.0":
-  version: 6.0.0
-  resolution: "husky@npm:6.0.0"
-  bin:
-    husky: lib/bin.js
-  checksum: 61e1f7f53f3c969d361c2a1d4ed8018b9447406ea6cd644a2526d18b76877d135001d8cbd48a1d201fc1614d96995e691ecd2b82a8d8513a6b4a313da1188ccd
-  languageName: node
-  linkType: hard
-
 "iconv-lite@npm:0.4.24, iconv-lite@npm:^0.4.24":
   version: 0.4.24
   resolution: "iconv-lite@npm:0.4.24"
@@ -9350,7 +9341,6 @@ fsevents@~2.3.2:
     hardhat-contract-sizer: ^2.1.1
     hardhat-deploy: ^0.9.1
     hardhat-gas-reporter: ^1.0.4
-    husky: ^6.0.0
     lint-staged: ^11.0.0
     mocha: ^9.0.1
     prettier: ^2.3.2

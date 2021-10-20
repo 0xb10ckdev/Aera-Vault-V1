@@ -20,6 +20,12 @@ Before running any command, make sure to install dependencies:
 $ yarn install
 ```
 
+After that, copy the example environment file into an `.env` file like so:
+
+```sh
+$ cp .env.example .env
+```
+
 ### Compile
 
 Compile the smart contracts with Hardhat:
