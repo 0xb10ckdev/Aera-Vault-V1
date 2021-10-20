@@ -112,6 +112,28 @@ describe("Mammon Vault v0", function () {
           smartPoolManager.address,
       },
     });
+
+    await expect(
+      VaultFactory.connect(admin).deploy(
+        bFactory.address,
+        DAI.address,
+        DAI.address,
+        manager.address,
+        validator.address,
+        NOTICE_PERIOD,
+      ),
+    ).to.be.revertedWith("SameTokenAddresses");
+    await expect(
+      VaultFactory.connect(admin).deploy(
+        bFactory.address,
+        DAI.address,
+        WETH.address,
+        manager.address,
+        manager.address,
+        NOTICE_PERIOD,
+      ),
+    ).to.be.revertedWith("function call to a non-contract account");
+
     vault = <MammonVaultV0>(
       await VaultFactory.connect(admin).deploy(
         bFactory.address,
