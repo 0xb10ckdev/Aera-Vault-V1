@@ -3,6 +3,7 @@ import { Artifact } from "hardhat/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
 import { toWei } from "../utils";
+import { ONE_TOKEN } from "../constants";
 import {
   WithdrawalValidatorMock,
   BFactoryMock,
@@ -12,7 +13,6 @@ import {
 
 const { deployContract } = waffle;
 
-const ONE_TOKEN = toWei("1");
 const MIN_WEIGHT = toWei("1");
 const MAX_WEIGHT = toWei("50");
 const MIN_BALANCE = toWei("1").div(1e12);
