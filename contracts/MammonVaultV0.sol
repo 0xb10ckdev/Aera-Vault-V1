@@ -120,6 +120,7 @@ contract MammonVaultV0 is
     event FinalizationInitialized(uint64 noticeTimeoutAt);
     event Finalized(address indexed caller, uint256 amount0, uint256 amount1);
 
+    error SameTokenAddresses();
     error CallerIsNotOwnerOrManager();
     error NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
     error ManagerIsZeroAddress();
@@ -168,6 +169,11 @@ contract MammonVaultV0 is
         address _validator,
         uint32 _noticePeriod
     ) {
+        if (_token0 == _token1) {
+            revert SameTokenAddresses();
+        }
+        IWithdrawalValidator(_validator).allowance();
+
         pool = IBPool(IBFactory(_factory).newBPool());
         token0 = _token0;
         token1 = _token1;
