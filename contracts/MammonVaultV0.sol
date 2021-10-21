@@ -3,6 +3,7 @@ pragma solidity 0.8.7;
 
 import "./dependencies/openzeppelin/SafeERC20.sol";
 import "./dependencies/openzeppelin/IERC20.sol";
+import "./dependencies/openzeppelin/IERC165.sol";
 import "./dependencies/openzeppelin/Ownable.sol";
 import "./dependencies/openzeppelin/ReentrancyGuard.sol";
 import "./dependencies/openzeppelin/Math.sol";
@@ -121,6 +122,7 @@ contract MammonVaultV0 is
     event Finalized(address indexed caller, uint256 amount0, uint256 amount1);
 
     error SameTokenAddresses();
+    error ValidatorIsNotValid();
     error CallerIsNotOwnerOrManager();
     error NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
     error ManagerIsZeroAddress();
@@ -172,7 +174,10 @@ contract MammonVaultV0 is
         if (_token0 == _token1) {
             revert SameTokenAddresses();
         }
-        IWithdrawalValidator(_validator).allowance();
+        // 0xde242ff4 - selector of allowance function
+        if (!IERC165(_validator).supportsInterface(0xde242ff4)) {
+            revert ValidatorIsNotValid();
+        }
 
         pool = IBPool(IBFactory(_factory).newBPool());
         token0 = _token0;

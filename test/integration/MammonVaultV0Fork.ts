@@ -11,7 +11,7 @@ import {
   WithdrawalValidatorMock__factory,
 } from "../../typechain";
 import { deployToken, setupTokens } from "../fixtures";
-import { toWei } from "../utils";
+import { deployVault, toWei } from "../utils";
 import { DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
 
 const ONE_TOKEN = toWei("1");
@@ -65,6 +65,35 @@ describe("Mammon Vault v0", function () {
       log: true,
     });
 
+    await deployments.deploy("InvalidValidator", {
+      contract: "InvalidValidatorMock",
+      from: admin.address,
+      log: true,
+    });
+    await expect(
+      deployVault(admin, DAI.address, DAI.address, manager.address),
+    ).to.be.revertedWith("SameTokenAddresses");
+    await expect(
+      deployVault(
+        admin,
+        DAI.address,
+        WETH.address,
+        manager.address,
+        manager.address,
+      ),
+    ).to.be.revertedWith("function call to a non-contract account");
+    await expect(
+      deployVault(
+        admin,
+        DAI.address,
+        WETH.address,
+        manager.address,
+        (
+          await deployments.get("InvalidValidator")
+        ).address,
+      ),
+    ).to.be.revertedWith("ValidatorIsNotValid");
+
     await hre.run("deploy:vault", {
       token0: DAI.address,
       token1: WETH.address,
@@ -77,6 +106,7 @@ describe("Mammon Vault v0", function () {
       (await deployments.get("MammonVaultV0")).address,
       admin,
     );
+
     bPool = IBPoolMock__factory.connect(await vault.pool(), admin);
     validator = WithdrawalValidatorMock__factory.connect(
       (await deployments.get("Validator")).address,
