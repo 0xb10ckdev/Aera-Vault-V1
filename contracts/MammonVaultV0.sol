@@ -31,6 +31,11 @@ contract MammonVaultV0 is
     using SafeCast for uint256;
 
     /**
+     * @dev Maximum notice period for vault termination (2 months).
+     */
+    uint32 public constant MAX_NOTICE_PERIOD = 60 days;
+
+    /**
      * @dev Balancer pool. Owned by the vault.
      */
     IBPool public immutable pool;
@@ -125,6 +130,7 @@ contract MammonVaultV0 is
 
     error SameTokenAddresses(address token);
     error ValidatorIsNotValid(address validator);
+    error NoticePeriodIsAboveMax(uint256 actual, uint256 max);
     error CallerIsNotOwnerOrManager();
     error NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
     error ManagerIsZeroAddress();
@@ -182,6 +188,9 @@ contract MammonVaultV0 is
             )
         ) {
             revert ValidatorIsNotValid(_validator);
+        }
+        if (_noticePeriod > MAX_NOTICE_PERIOD) {
+            revert NoticePeriodIsAboveMax(_noticePeriod, MAX_NOTICE_PERIOD);
         }
 
         pool = IBPool(IBFactory(_factory).newBPool());

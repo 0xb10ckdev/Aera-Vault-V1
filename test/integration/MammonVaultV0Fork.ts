@@ -32,6 +32,7 @@ describe("Mammon Vault v0", function () {
   let snapshot: unknown;
 
   const NOTICE_PERIOD = 10000;
+  const MAX_NOTICE_PERIOD = 5184000; // 60 days in seconds
 
   const getStates = async () => {
     const weight0 = await vault.getDenormalizedWeight(DAI.address);
