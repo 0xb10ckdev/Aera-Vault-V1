@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
-import "./dependencies/openzeppelin/IERC165.sol";
-import { IWithdrawalValidator } from "./interfaces/IWithdrawalValidator.sol";
+import "../dependencies/openzeppelin/IERC165.sol";
+import { IWithdrawalValidator } from "../interfaces/IWithdrawalValidator.sol";
 
 /// @notice A withdrawal validator that validates withdrawals of an arbitrary size.
-contract PermissiveWithdrawalValidator is IERC165, IWithdrawalValidator {
+contract InvalidValidatorMock is IERC165, IWithdrawalValidator {
     uint256 public constant ANY_AMOUNT = type(uint256).max;
 
     function allowance() external pure override returns (uint256, uint256) {
@@ -18,6 +18,6 @@ contract PermissiveWithdrawalValidator is IERC165, IWithdrawalValidator {
         override
         returns (bool)
     {
-        return interfaceID == this.allowance.selector;
+        return interfaceID != this.allowance.selector;
     }
 }
