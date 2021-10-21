@@ -30,6 +30,7 @@ describe("Mammon Vault v0", function () {
   let snapshot: unknown;
 
   const NOTICE_PERIOD = 10000;
+  const MAX_NOTICE_PERIOD = 5184000; // 60 days in seconds
 
   const testAmounts = [
     [1, 10],
@@ -133,6 +134,16 @@ describe("Mammon Vault v0", function () {
         NOTICE_PERIOD,
       ),
     ).to.be.revertedWith("function call to a non-contract account");
+    await expect(
+      VaultFactory.connect(admin).deploy(
+        bFactory.address,
+        DAI.address,
+        WETH.address,
+        manager.address,
+        validator.address,
+        MAX_NOTICE_PERIOD + 1,
+      ),
+    ).to.be.revertedWith("NoticePeriodIsAboveMax");
 
     vault = <MammonVaultV0>(
       await VaultFactory.connect(admin).deploy(
