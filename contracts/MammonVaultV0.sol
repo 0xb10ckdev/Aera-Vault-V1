@@ -149,6 +149,13 @@ contract MammonVaultV0 is
         }
         _;
     }
+  
+    modifier onlyOwnerOrManager() {
+        if (msg.sender != owner() && msg.sender != manager) {
+            revert CallerIsNotOwnerOrManager();
+        }
+        _;
+    }
 
     modifier onlyInitialized() {
         if (!initialized) {
@@ -391,10 +398,7 @@ contract MammonVaultV0 is
      *      Also could be called by manager in the event of an emergency
      *      (e.g., funds at risk).
      */
-    function finalize() external override nonReentrant {
-        if (msg.sender != owner() && msg.sender != manager) {
-            revert CallerIsNotOwnerOrManager();
-        }
+    function finalize() external override nonReentrant onlyOwnerOrManager {
         if (noticeTimeoutAt == 0) {
             revert FinalizationNotInitialized();
         }
