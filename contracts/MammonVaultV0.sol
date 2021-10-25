@@ -165,50 +165,50 @@ contract MammonVaultV0 is
     }
 
     /// @dev Initializes the contract by deploying new Balancer pool by using the provided factory.
-    /// @param _factory - Balancer Pool Factory address
-    /// @param _token0 - First token address. This is immutable, cannot be changed later
-    /// @param _token1 - Second token address. This is immutable, cannot be changed later
-    /// @param _manager - Vault Manager address
-    /// @param _validator - Withdrawal validator contract address. This is immutable, cannot be changed later
-    /// @param _noticePeriod - Notice period in seconds. This is immutable, cannot be changed later
+    /// @param factory_ - Balancer Pool Factory address
+    /// @param token0_ - First token address. This is immutable, cannot be changed later
+    /// @param token1_ - Second token address. This is immutable, cannot be changed later
+    /// @param manager_ - Vault Manager address
+    /// @param validator_ - Withdrawal validator contract address. This is immutable, cannot be changed later
+    /// @param noticePeriod_ - Notice period in seconds. This is immutable, cannot be changed later
     constructor(
-        address _factory,
-        address _token0,
-        address _token1,
-        address _manager,
-        address _validator,
-        uint32 _noticePeriod
+        address factory_,
+        address token0_,
+        address token1_,
+        address manager_,
+        address validator_,
+        uint32 noticePeriod_
     ) {
-        if (_token0 == _token1) {
-            revert SameTokenAddresses(_token0);
+        if (token0_ == token1_) {
+            revert SameTokenAddresses(token0_);
         }
         if (
-            !IERC165(_validator).supportsInterface(
+            !IERC165(validator_).supportsInterface(
                 type(IWithdrawalValidator).interfaceId
             )
         ) {
-            revert ValidatorIsNotValid(_validator);
+            revert ValidatorIsNotValid(validator_);
         }
         if (_noticePeriod > MAX_NOTICE_PERIOD) {
             revert NoticePeriodIsAboveMax(_noticePeriod, MAX_NOTICE_PERIOD);
         }
 
-        pool = IBPool(IBFactory(_factory).newBPool());
-        token0 = _token0;
-        token1 = _token1;
-        manager = _manager;
-        validator = IWithdrawalValidator(_validator);
-        noticePeriod = _noticePeriod;
+        pool = IBPool(IBFactory(factory_).newBPool());
+        token0 = token0_;
+        token1 = token1_;
+        manager = manager_;
+        validator = IWithdrawalValidator(validator_);
+        noticePeriod = noticePeriod_;
 
         emit Created(
-            _factory,
-            _token0,
-            _token1,
-            _manager,
-            _validator,
-            _noticePeriod
+            factory_,
+            token0_,
+            token1_,
+            manager_,
+            validator_,
+            noticePeriod_
         );
-        emit ManagerChanged(UNSET_MANAGER_ADDRESS, _manager);
+        emit ManagerChanged(UNSET_MANAGER_ADDRESS, manager_);
     }
 
     /**
@@ -477,37 +477,37 @@ contract MammonVaultV0 is
     }
 
     function depositToken(
-        address _token,
-        uint256 _amount,
-        uint256 _balance
+        address token,
+        uint256 amount,
+        uint256 balance
     ) internal {
-        uint256 tokenDenorm = getDenormalizedWeight(_token);
-        uint256 newBalance = _balance + _amount;
+        uint256 tokenDenorm = getDenormalizedWeight(token);
+        uint256 newBalance = balance + amount;
 
-        uint256 newDenorm = (tokenDenorm * newBalance) / _balance;
+        uint256 newDenorm = (tokenDenorm * newBalance) / balance;
 
-        IERC20 token = IERC20(_token);
+        IERC20 erc20 = IERC20(token);
 
-        token.safeTransferFrom(msg.sender, address(this), _amount);
-        token.safeApprove(address(pool), _amount);
+        erc20.safeTransferFrom(msg.sender, address(this), amount);
+        erc20.safeApprove(address(pool), amount);
 
-        pool.rebind(_token, newBalance, newDenorm);
+        pool.rebind(token, newBalance, newDenorm);
     }
 
     function withdrawToken(
-        address _token,
-        uint256 _amount,
-        uint256 _balance
+        address token,
+        uint256 amount,
+        uint256 balance
     ) internal returns (uint256 withdrawAmount) {
-        uint256 tokenDenorm = getDenormalizedWeight(_token);
+        uint256 tokenDenorm = getDenormalizedWeight(token);
 
-        uint256 newBalance = _balance - _amount;
-        uint256 newDenorm = (tokenDenorm * newBalance) / _balance;
+        uint256 newBalance = balance - amount;
+        uint256 newDenorm = (tokenDenorm * newBalance) / balance;
 
-        pool.rebind(_token, newBalance, newDenorm);
+        pool.rebind(token, newBalance, newDenorm);
 
-        IERC20 token = IERC20(_token);
-        withdrawAmount = token.balanceOf(address(this));
+        IERC20 erc20 = IERC20(token);
+        withdrawAmount = erc20.balanceOf(address(this));
         token.safeTransfer(msg.sender, withdrawAmount);
     }
 
