@@ -420,7 +420,7 @@ contract MammonVaultV0 is
 
     /// @notice Initiate vault destruction and return all funds to treasury owner.
     /// @dev This is practically irreversible.Available only to the owner.
-    ///     Available only if the vault is initialized. Vault shouldn't be on finalizing.
+    ///      Available only if the vault is initialized. Vault shouldn't be on finalizing.
     function initializeFinalization()
         external
         override
