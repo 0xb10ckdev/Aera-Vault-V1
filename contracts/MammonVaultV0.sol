@@ -17,7 +17,6 @@ import "./libraries/SmartPoolManager.sol";
 /**
  * @dev Represents a treasury vault that is managed by Mammon.
  * Owner is original asset owner that can add and withdraw funds.
- * This code is not audited or tested. Please do not use in production.
  */
 contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -545,7 +544,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         erc20.safeTransfer(msg.sender, withdrawAmount);
     }
 
-    /// @notice Return all funds to owner.
+    /// @notice Return all funds to the owner.
     /// @dev Will only be called by finalize().
     /// @return amount0 The exact returned amount of first token.
     /// @return amount1 The exact returned amount of second token.
@@ -557,7 +556,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         amount1 = returnTokenFunds(token1);
     }
 
-    /// @notice Unbind token and return fund to owner.
+    /// @notice Return funds to the owner.
     /// @dev Will only be called by returnFunds().
     /// @param token The address of a token to unbind.
     /// @return amount The exact returned amount of a token.
