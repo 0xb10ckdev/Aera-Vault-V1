@@ -90,12 +90,14 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     );
 
     /// @notice Emitted when tokens are withdrawed.
-    /// @param amount0 The amount of the first token.
-    /// @param amount1 The amount of the second token.
+    /// @param requestedAmount0 The requested amount of the first token.
+    /// @param requestedAmount1 The requested amount of the second token.
+    /// @param withdrawnAmount0 The withdrawn amount of the first token.
+    /// @param withdrawnAmount1 The withdrawn amount of the second token.
     /// @param allowance0 The allowance of the first token.
     /// @param allowance1 The allowance of the second token.
-    /// @param weight0 The weight of the first token.
-    /// @param weight1 The weight of the second token.
+    /// @param finalWeight0 The weight of the first token.
+    /// @param finalWeight1 The weight of the second token.
     event Withdraw(
         uint256 requestedAmount0,
         uint256 requestedAmount1,
@@ -221,8 +223,11 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         ) {
             revert Mammon__ValidatorIsNotValid(validator_);
         }
-        if (_noticePeriod > MAX_NOTICE_PERIOD) {
-            revert Mammon__NoticePeriodIsAboveMax(_noticePeriod, MAX_NOTICE_PERIOD);
+        if (noticePeriod_ > MAX_NOTICE_PERIOD) {
+            revert Mammon__NoticePeriodIsAboveMax(
+                noticePeriod_,
+                MAX_NOTICE_PERIOD
+            );
         }
 
         pool = IBPool(IBFactory(factory_).newBPool());
@@ -571,7 +576,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
 
         IERC20 erc20 = IERC20(token);
         withdrawAmount = erc20.balanceOf(address(this));
-        token.safeTransfer(msg.sender, withdrawAmount);
+        erc20.safeTransfer(msg.sender, withdrawAmount);
     }
 
     /// @notice Return all funds to owner.
