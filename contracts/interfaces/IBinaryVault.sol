@@ -6,13 +6,9 @@ pragma solidity 0.8.7;
  *      This code is not audited or tested. Please do not use in production.
  */
 interface IBinaryVault {
-    /**
-     * @dev Return balance of token0 in the vault.
-     */
+    /// @notice The balance of first token on balancer pool.
     function holdings0() external view returns (uint256);
 
-    /**
-     * @dev Return balance of token1 in the vault.
-     */
+    /// @notice The balance of second token on balancer pool.
     function holdings1() external view returns (uint256);
 }
