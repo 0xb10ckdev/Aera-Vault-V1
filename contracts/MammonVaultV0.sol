@@ -30,57 +30,50 @@ contract MammonVaultV0 is
     using Math for uint256;
     using SafeCast for uint256;
 
-    /**
-     * @dev Maximum notice period for vault termination (2 months).
-     */
+    /// @dev Maximum notice period for vault termination (2 months).
     uint32 public constant MAX_NOTICE_PERIOD = 60 days;
 
-    /**
-     * @dev Balancer pool. Owned by the vault.
-     */
+    /// @dev Balancer pool. Owned by the vault.
     IBPool public immutable pool;
-    /**
-     * @dev First token address in vault
-     */
+
+    /// @dev First token address in vault
     address public immutable token0;
 
-    /**
-     * @dev Second token address in vault
-     */
+    /// @dev Second token address in vault
     address public immutable token1;
 
-    /**
-     * @dev Notice period for vault termination (in seconds).
-     */
+    /// @dev Notice period for vault termination (in seconds).
     uint32 public immutable noticePeriod;
 
-    /**
-     * @dev Verifies withdraw limits
-     */
+    /// @dev Verifies withdraw limits
     IWithdrawalValidator public immutable validator;
     // slot start
 
-    /**
-     * @dev Submits new balance parameters for the vault
-     */
+    /// @dev Submits new balance parameters for the vault
     address public manager;
 
-    /**
-     * @dev Timestamp when notice elapses or 0 if not yet set
-     */
+    /// @dev Timestamp when notice elapses or 0 if not yet set
     uint64 public noticeTimeoutAt;
 
-    /**
-     * @dev Indicates that the Vault has been initialized.
-     */
+    /// @dev Indicates that the Vault has been initialized
     bool public initialized;
     // slot end, 3 bytes left
 
     SmartPoolManager.GradualUpdateParams private gradualUpdate;
 
+    /// @dev The address for unset manager
     address private constant UNSET_MANAGER_ADDRESS = address(0);
+
+    /// @dev The minimum value of change block period for weights update
     uint256 private constant MINIMUM_WEIGHT_CHANGE_BLOCK_PERIOD = 1000;
 
+    /// @notice Emitted when the vault is created.
+    /// @param factory The address of balancer factory.
+    /// @param token0 The address of the first token.
+    /// @param token1 The address of the second token.
+    /// @param manager The address of a manager of the vault
+    /// @param validator The address of a withdrawal validator contract
+    /// @param noticePeriod Notice period in seconds.
     event Created(
         address indexed factory,
         address indexed token0,
@@ -90,6 +83,11 @@ contract MammonVaultV0 is
         uint32 noticePeriod
     );
 
+    /// @notice Emitted when tokens are deposited.
+    /// @param amount0 The amount of the first token.
+    /// @param amount1 The amount of the second token.
+    /// @param weight0 The weight of the first token.
+    /// @param weight1 The weight of the second token.
     event Deposit(
         uint256 amount0,
         uint256 amount1,
@@ -97,6 +95,13 @@ contract MammonVaultV0 is
         uint256 weight1
     );
 
+    /// @notice Emitted when tokens are withdrawed.
+    /// @param amount0 The amount of the first token.
+    /// @param amount1 The amount of the second token.
+    /// @param allowance0 The allowance of the first token.
+    /// @param allowance1 The allowance of the second token.
+    /// @param weight0 The weight of the first token.
+    /// @param weight1 The weight of the second token.
     event Withdraw(
         uint256 requestedAmount0,
         uint256 requestedAmount1,
@@ -108,11 +113,19 @@ contract MammonVaultV0 is
         uint256 finalWeight1
     );
 
+    /// @notice Emitted when the manager is changed.
+    /// @param previousManager The address of the previous manager.
+    /// @param manager The address of a new manager.
     event ManagerChanged(
         address indexed previousManager,
         address indexed manager
     );
 
+    /// @notice Emitted when updateWeightsGradually is called.
+    /// @param weight0 The target weight of the first token.
+    /// @param weight1 The target weight of the second token.
+    /// @param startBlock Start block number of updates.
+    /// @param endBlock End block number of updates.
     event UpdateWeightsGradually(
         uint256 weight0,
         uint256 weight1,
@@ -120,12 +133,25 @@ contract MammonVaultV0 is
         uint256 endBlock
     );
 
+    /// @notice Emitted when pokeWeights is called.
     event PokeWeights();
 
+    /// @notice Emitted when public swap is turned on/off.
+    /// @param publicSwap New state of public swap.
     event SetPublicSwap(bool publicSwap);
+
+    /// @notice Emitted when swap fee is updated.
+    /// @param swapFee New swap fee.
     event SetSwapFee(uint256 swapFee);
 
+    /// @notice Emitted when initializeFinalization is called.
+    /// @param noticeTimeoutAt The timestamp for notice timeout.
     event FinalizationInitialized(uint64 noticeTimeoutAt);
+
+    /// @notice Emitted when the vault is finalized.
+    /// @param caller The address a finalizer.
+    /// @param amount0 The returned amount of the first token.
+    /// @param amount1 The returned amount of the second token.
     event Finalized(address indexed caller, uint256 amount0, uint256 amount1);
 
     error Mammon__SameTokenAddresses(address token);
@@ -143,6 +169,7 @@ contract MammonVaultV0 is
     error Mammon__VaultIsAlreadyInitialized();
     error Mammon__VaultIsFinalizing();
 
+    /// @dev Throws if called by any account other than the manager.
     modifier onlyManager() {
         if (msg.sender != manager) {
             revert Mammon__CallerIsNotManager();
@@ -150,6 +177,7 @@ contract MammonVaultV0 is
         _;
     }
 
+    /// @dev Throws if called by any account other than the owner or manager.
     modifier onlyOwnerOrManager() {
         if (msg.sender != owner() && msg.sender != manager) {
             revert Mammon__CallerIsNotOwnerOrManager();
@@ -157,6 +185,7 @@ contract MammonVaultV0 is
         _;
     }
 
+    /// @dev Throws if called before vault is initialized.
     modifier onlyInitialized() {
         if (!initialized) {
             revert Mammon__VaultNotInitialized();
@@ -164,6 +193,7 @@ contract MammonVaultV0 is
         _;
     }
 
+    /// @dev Throws if called before finalization is initialized.
     modifier nonFinalizing() {
         if (noticeTimeoutAt != 0) {
             revert Mammon__VaultIsFinalizing();
@@ -171,13 +201,14 @@ contract MammonVaultV0 is
         _;
     }
 
-    /// @dev Initializes the contract by deploying new Balancer pool by using the provided factory.
-    /// @param factory_ - Balancer Pool Factory address
-    /// @param token0_ - First token address. This is immutable, cannot be changed later
-    /// @param token1_ - Second token address. This is immutable, cannot be changed later
-    /// @param manager_ - Vault Manager address
-    /// @param validator_ - Withdrawal validator contract address. This is immutable, cannot be changed later
-    /// @param noticePeriod_ - Notice period in seconds. This is immutable, cannot be changed later
+    /// @notice Initializes the contract by deploying new Balancer pool by using the provided factory.
+    /// @dev First token and second token shouldn't be same. Validator should be valid.
+    /// @param factory_ Balancer Pool Factory address
+    /// @param token0_ First token address. This is immutable, cannot be changed later
+    /// @param token1_ Second token address. This is immutable, cannot be changed later
+    /// @param manager_ Vault Manager address
+    /// @param validator_ Withdrawal validator contract address. This is immutable, cannot be changed later
+    /// @param noticePeriod_ Notice period in seconds. This is immutable, cannot be changed later
     constructor(
         address factory_,
         address token0_,
@@ -218,10 +249,14 @@ contract MammonVaultV0 is
         emit ManagerChanged(UNSET_MANAGER_ADDRESS, manager_);
     }
 
-    /**
-     * @dev Initializes the Vault. Vault initialization must be performed before
-     *      calling withdraw() or deposit() functions. Available only to the owner.
-     */
+    /// @notice Initializes the Vault.
+    /// @dev Vault initialization must be performed before
+    ///      calling withdraw() or deposit() functions. Available only to the owner.
+    ///      Vault can be initialized only once.
+    /// @param amount0 The amount of the first token.
+    /// @param amount1 The amount of the second token.
+    /// @param weight0 The weight of the first token.
+    /// @param weight1 The weight of the second token.
     function initialDeposit(
         uint256 amount0,
         uint256 amount1,
@@ -264,9 +299,11 @@ contract MammonVaultV0 is
         emit Deposit(amount0, amount1, weight0, weight1);
     }
 
-    /**
-     * @dev Deposit `amounts` of tokens.
-     */
+    /// @notice Deposit `amounts` of tokens.
+    /// @dev Available only to the owner. Available only if the vault is initialized.
+    ///      Vault shouldn't be on finalizing.
+    /// @param amount0 The amount of the first token.
+    /// @param amount1 The amount of the second token.
     function deposit(uint256 amount0, uint256 amount1)
         external
         override
@@ -288,9 +325,11 @@ contract MammonVaultV0 is
         emit Deposit(amount0, amount1, weight0, weight1);
     }
 
-    /**
-     * @dev Withdraw as much as possible up to each `amount`s of `token`s.
-     */
+    /// @notice Withdraw as much as possible up to each `amount`s of `token`s.
+    /// @dev Available only to the owner. Available only if the vault is initialized.
+    ///      Vault shouldn't be on finalizing.
+    /// @param amount0 The requested amount of the first token.
+    /// @param amount1 The requested amount of the second token.
     function withdraw(uint256 amount0, uint256 amount1)
         external
         override
@@ -332,10 +371,13 @@ contract MammonVaultV0 is
         );
     }
 
-    /**
-     * @dev  Update weights in a predetermined way, between startBlock and endBlock,
-     *       through external cals to pokeWeights
-     */
+    /// @notice Set target weights of tokens and update period.
+    /// @dev Available only to the manager. Available only if the vault is initialized.
+    ///      Vault shouldn't be on finalizing.
+    /// @param weight0 The target weight of the first token.
+    /// @param weight1 The target weight of the second token.
+    /// @param startBlock The block number that update starts.
+    /// @param endBlock The block number that weights reach out target.
     function updateWeightsGradually(
         uint256 weight0,
         uint256 weight1,
@@ -362,9 +404,9 @@ contract MammonVaultV0 is
         emit UpdateWeightsGradually(weight0, weight1, startBlock, endBlock);
     }
 
-    /**
-     * @dev Update weights according to plan
-     */
+    /// @notice Update weights according to plan.
+    /// @dev Available only to the manager. Available only if the vault is initialized.
+    ///      Vault shouldn't be on finalizing.
     function pokeWeights()
         external
         override
@@ -376,10 +418,9 @@ contract MammonVaultV0 is
         emit PokeWeights();
     }
 
-    /**
-     * @dev Initiate vault destruction and return all funds to treasury owner.
-     *      This is practically irreversible. Available only if the vault is initialized
-     */
+    /// @notice Initiate vault destruction and return all funds to treasury owner.
+    /// @dev This is practically irreversible.Available only to the owner.
+    ///     Available only if the vault is initialized. Vault shouldn't be on finalizing.
     function initializeFinalization()
         external
         override
@@ -391,13 +432,10 @@ contract MammonVaultV0 is
         emit FinalizationInitialized(noticeTimeoutAt);
     }
 
-    /**
-     * @dev Destroys vault and returns all funds to treasury owner. Only possible
-     *      if `noticePeriod` is set to 0 or `initiateFinalization` has been
-     *      called at least `noticePeriod` seconds before current timestamp.
-     *      Also could be called by manager in the event of an emergency
-     *      (e.g., funds at risk).
-     */
+    /// @notice Destroys vault and returns all funds to treasury owner.
+    /// @dev Only availble once `initializeFinalization()` is called and
+    ///      current timestamp is later than `noticeTimeoutAt`.
+    ///      Available only to the owner or the manager.
     function finalize() external override nonReentrant onlyOwnerOrManager {
         if (noticeTimeoutAt == 0) {
             revert Mammon__FinalizationNotInitialized();
@@ -412,9 +450,8 @@ contract MammonVaultV0 is
         selfdestruct(payable(owner()));
     }
 
-    /**
-     * @dev Changes manager. Only available to the owner.
-     */
+    /// @notice Changes manager.
+    /// @dev Available only to the owner.
     function setManager(address newManager) external override onlyOwner {
         if (newManager == address(0)) {
             revert Mammon__ManagerIsZeroAddress();
@@ -423,10 +460,14 @@ contract MammonVaultV0 is
         manager = newManager;
     }
 
+    /// @notice Withdraw any token which were sent to the Vault accidentally.
+    /// @dev Available only to the owner.
     function sweep(address token, uint256 amount) external override onlyOwner {
         IERC20(token).safeTransfer(msg.sender, amount);
     }
 
+    /// @notice Turn on/off public swap.
+    /// @dev Available only to the manager. Available only if the vault is initialized.
     function setPublicSwap(bool value)
         external
         override
@@ -437,27 +478,36 @@ contract MammonVaultV0 is
         emit SetPublicSwap(value);
     }
 
+    /// @notice Set swap fee.
+    /// @dev Available only to the manager.
     function setSwapFee(uint256 newSwapFee) external override onlyManager {
         pool.setSwapFee(newSwapFee);
         emit SetSwapFee(newSwapFee);
     }
 
+    /// @notice The state of public swap if it's turned on or off.
+    /// @return If public swap is turned on, returns true, otherwise false.
     function isPublicSwap() external view override returns (bool) {
         return pool.isPublicSwap();
     }
 
+    /// @notice The swap fee.
     function getSwapFee() external view override returns (uint256) {
         return pool.getSwapFee();
     }
 
+    /// @notice The balance of first token on balancer pool.
     function holdings0() public view override returns (uint256) {
         return pool.getBalance(token0);
     }
 
+    /// @notice The balance of second token on balancer pool.
     function holdings1() public view override returns (uint256) {
         return pool.getBalance(token1);
     }
 
+    /// @notice The weight of a token.
+    /// @return The weight of a given token on the pool.
     function getDenormalizedWeight(address token)
         public
         view
@@ -467,6 +517,11 @@ contract MammonVaultV0 is
         return pool.getDenormalizedWeight(token);
     }
 
+    /// @notice Bind token to the pool.
+    /// @dev Will only be called by initialDeposit().
+    /// @param token The address of a token to bind.
+    /// @param amount The amount of a token to bind.
+    /// @param weight The weight of a token to bind.
     function bindToken(
         address token,
         uint256 amount,
@@ -480,6 +535,11 @@ contract MammonVaultV0 is
         pool.bind(token, amount, weight);
     }
 
+    /// @notice Deposit token to the pool.
+    /// @dev Will only be called by deposit().
+    /// @param token The address of a token to deposit.
+    /// @param amount The deposit amount of a token.
+    /// @param balance The current balance of a token on the pool.
     function depositToken(
         address token,
         uint256 amount,
@@ -498,6 +558,11 @@ contract MammonVaultV0 is
         pool.rebind(token, newBalance, newDenorm);
     }
 
+    /// @notice Withdraw token from the pool.
+    /// @dev Will only be called by withdraw()
+    /// @param token The address of a token to withdraw.
+    /// @param amount The withdrawal amount of a token.
+    /// @param balance The current balance of a token on the pool.
     function withdrawToken(
         address token,
         uint256 amount,
@@ -515,9 +580,10 @@ contract MammonVaultV0 is
         token.safeTransfer(msg.sender, withdrawAmount);
     }
 
-    /**
-     * @dev Return all funds to owner. Will only be called by finalize()
-     */
+    /// @notice Return all funds to owner.
+    /// @dev Will only be called by finalize().
+    /// @return amount0 The exact returned amount of first token.
+    /// @return amount1 The exact returned amount of second token.
     function returnFunds()
         internal
         returns (uint256 amount0, uint256 amount1)
@@ -526,6 +592,10 @@ contract MammonVaultV0 is
         amount1 = returnTokenFunds(token1);
     }
 
+    /// @notice Unbind token and return fund to owner.
+    /// @dev Will only be called by returnFunds().
+    /// @param token The address of a token to unbind.
+    /// @return amount The exact returned amount of a token.
     function returnTokenFunds(address token)
         internal
         returns (uint256 amount)
