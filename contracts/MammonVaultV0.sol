@@ -248,14 +248,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         emit ManagerChanged(UNSET_MANAGER_ADDRESS, manager_);
     }
 
-    /// @notice Initializes the Vault.
-    /// @dev Vault initialization must be performed before
-    ///      calling withdraw() or deposit() functions. Available only to the owner.
-    ///      Vault can be initialized only once.
-    /// @param amount0 The amount of the first token.
-    /// @param amount1 The amount of the second token.
-    /// @param weight0 The weight of the first token.
-    /// @param weight1 The weight of the second token.
+    /// @inheritdoc IProtocolAPI
     function initialDeposit(
         uint256 amount0,
         uint256 amount1,
@@ -298,11 +291,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         emit Deposit(amount0, amount1, weight0, weight1);
     }
 
-    /// @notice Deposit `amounts` of tokens.
-    /// @dev Available only to the owner. Available only if the vault is initialized.
-    ///      Vault shouldn't be on finalizing.
-    /// @param amount0 The amount of the first token.
-    /// @param amount1 The amount of the second token.
+    /// @inheritdoc IProtocolAPI
     function deposit(uint256 amount0, uint256 amount1)
         external
         override
@@ -324,11 +313,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         emit Deposit(amount0, amount1, weight0, weight1);
     }
 
-    /// @notice Withdraw as much as possible up to each `amount`s of `token`s.
-    /// @dev Available only to the owner. Available only if the vault is initialized.
-    ///      Vault shouldn't be on finalizing.
-    /// @param amount0 The requested amount of the first token.
-    /// @param amount1 The requested amount of the second token.
+    /// @inheritdoc IProtocolAPI
     function withdraw(uint256 amount0, uint256 amount1)
         external
         override
@@ -370,13 +355,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         );
     }
 
-    /// @notice Set target weights of tokens and update period.
-    /// @dev Available only to the manager. Available only if the vault is initialized.
-    ///      Vault shouldn't be on finalizing.
-    /// @param weight0 The target weight of the first token.
-    /// @param weight1 The target weight of the second token.
-    /// @param startBlock The block number that update starts.
-    /// @param endBlock The block number that weights reach out target.
+    /// @inheritdoc IManagerAPI
     function updateWeightsGradually(
         uint256 weight0,
         uint256 weight1,
@@ -403,9 +382,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         emit UpdateWeightsGradually(weight0, weight1, startBlock, endBlock);
     }
 
-    /// @notice Update weights according to plan.
-    /// @dev Available only to the manager. Available only if the vault is initialized.
-    ///      Vault shouldn't be on finalizing.
+    /// @inheritdoc IManagerAPI
     function pokeWeights()
         external
         override
@@ -417,9 +394,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         emit PokeWeights();
     }
 
-    /// @notice Initiate vault destruction and return all funds to treasury owner.
-    /// @dev This is practically irreversible.Available only to the owner.
-    ///      Available only if the vault is initialized. Vault shouldn't be on finalizing.
+    /// @inheritdoc IProtocolAPI
     function initializeFinalization()
         external
         override
@@ -431,10 +406,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         emit FinalizationInitialized(noticeTimeoutAt);
     }
 
-    /// @notice Destroys vault and returns all funds to treasury owner.
-    /// @dev Only availble once `initializeFinalization()` is called and
-    ///      current timestamp is later than `noticeTimeoutAt`.
-    ///      Available only to the owner or the manager.
+    /// @inheritdoc IProtocolAPI
     function finalize() external override nonReentrant onlyOwnerOrManager {
         if (noticeTimeoutAt == 0) {
             revert Mammon__FinalizationNotInitialized();
@@ -449,8 +421,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         selfdestruct(payable(owner()));
     }
 
-    /// @notice Changes manager.
-    /// @dev Available only to the owner.
+    /// @inheritdoc IProtocolAPI
     function setManager(address newManager) external override onlyOwner {
         if (newManager == address(0)) {
             revert Mammon__ManagerIsZeroAddress();
@@ -459,14 +430,12 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         manager = newManager;
     }
 
-    /// @notice Withdraw any token which were sent to the Vault accidentally.
-    /// @dev Available only to the owner.
+    /// @inheritdoc IProtocolAPI
     function sweep(address token, uint256 amount) external override onlyOwner {
         IERC20(token).safeTransfer(msg.sender, amount);
     }
 
-    /// @notice Turn on/off public swap.
-    /// @dev Available only to the manager. Available only if the vault is initialized.
+    /// @inheritdoc IManagerAPI
     function setPublicSwap(bool value)
         external
         override
@@ -477,36 +446,33 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         emit SetPublicSwap(value);
     }
 
-    /// @notice Set swap fee.
-    /// @dev Available only to the manager.
+    /// @inheritdoc IManagerAPI
     function setSwapFee(uint256 newSwapFee) external override onlyManager {
         pool.setSwapFee(newSwapFee);
         emit SetSwapFee(newSwapFee);
     }
 
-    /// @notice The state of public swap if it's turned on or off.
-    /// @return If public swap is turned on, returns true, otherwise false.
+    /// @inheritdoc IUserAPI
     function isPublicSwap() external view override returns (bool) {
         return pool.isPublicSwap();
     }
 
-    /// @notice The swap fee.
+    /// @inheritdoc IUserAPI
     function getSwapFee() external view override returns (uint256) {
         return pool.getSwapFee();
     }
 
-    /// @notice The balance of first token on balancer pool.
+    /// @inheritdoc IBinaryVault
     function holdings0() public view override returns (uint256) {
         return pool.getBalance(token0);
     }
 
-    /// @notice The balance of second token on balancer pool.
+    /// @inheritdoc IBinaryVault
     function holdings1() public view override returns (uint256) {
         return pool.getBalance(token1);
     }
 
-    /// @notice The weight of a token.
-    /// @return The weight of a given token on the pool.
+    /// @inheritdoc IUserAPI
     function getDenormalizedWeight(address token)
         public
         view
