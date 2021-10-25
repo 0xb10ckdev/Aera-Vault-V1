@@ -3,7 +3,6 @@ pragma solidity 0.8.7;
 
 import "../dependencies/openzeppelin/IERC20.sol";
 
-/// @dev This code is not audited or tested. Please do not use in production.
 contract BPoolMock {
     bool public publicSwap;
     uint256 public swapFee;
