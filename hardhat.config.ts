@@ -32,6 +32,18 @@ if (!mnemonic) {
   throw new Error("Please set your MNEMONIC in a .env file");
 }
 
+// Collect testnet private key
+const testnetPrivateKey = process.env.TESTNET_PRIVATE_KEY;
+if (!testnetPrivateKey) {
+  throw new Error("Please set your TESTNET_PRIVATE_KEY in a .env file");
+}
+
+// Collect Etherscan API key (for contract verification)
+const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
+if (!etherscanApiKey) {
+  throw new Error("Please set your ETHERSCAN_API_KEY in a .env file");
+}
+
 const infuraApiKey = process.env.INFURA_API_KEY;
 const alchemyApiKey = process.env.ALCHEMY_API_KEY;
 if (!infuraApiKey && !alchemyApiKey) {
@@ -44,6 +56,7 @@ const forkUrl = alchemyApiKey
   ? `https://eth-${process.env.HARDHAT_FORK}.alchemyapi.io/v2/${alchemyApiKey}`
   : `https://${process.env.HARDHAT_FORK}.infura.io/v3/${infuraApiKey}`;
 
+// use mnemonic for deployment
 function createTestnetConfig(
   network: keyof typeof chainIds,
 ): NetworkUserConfig {
@@ -55,6 +68,19 @@ function createTestnetConfig(
       mnemonic,
       path: "m/44'/60'/0'/0",
     },
+    chainId: chainIds[network],
+    url,
+  };
+}
+
+// use private key for deployment rather than mnemonic
+function createTestnetPrivateKeyConfig(
+  network: keyof typeof chainIds,
+): NetworkUserConfig {
+  const url: string = "https://" + network + ".infura.io/v3/" + infuraApiKey;
+  return {
+    // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
+    accounts: [testnetPrivateKey!],
     chainId: chainIds[network],
     url,
   };
@@ -94,9 +120,12 @@ const config: HardhatUserConfig = {
       chainId: chainIds.hardhat,
     },
     goerli: createTestnetConfig("goerli"),
-    kovan: createTestnetConfig("kovan"),
+    kovan: createTestnetPrivateKeyConfig("kovan"),
     rinkeby: createTestnetConfig("rinkeby"),
     ropsten: createTestnetConfig("ropsten"),
+  },
+  etherscan: {
+    apiKey: etherscanApiKey,
   },
   paths: {
     artifacts: "./artifacts",

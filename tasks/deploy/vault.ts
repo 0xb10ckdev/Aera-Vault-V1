@@ -1,7 +1,7 @@
 import { getConfig, getChainId } from "../../scripts/config";
 import { task } from "hardhat/config";
 
-task("deploy:vault")
+task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   .addParam("token0", "Token0's address")
   .addParam("token1", "Token1's address")
   .addParam("manager", "Manager's address")
