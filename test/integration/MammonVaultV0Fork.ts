@@ -73,7 +73,7 @@ describe("Mammon Vault v0", function () {
     });
     await expect(
       deployVault(admin, DAI.address, DAI.address, manager.address),
-    ).to.be.revertedWith("SameTokenAddresses");
+    ).to.be.revertedWith("Mammon__SameTokenAddresses");
     await expect(
       deployVault(
         admin,
@@ -93,7 +93,7 @@ describe("Mammon Vault v0", function () {
           await deployments.get("InvalidValidator")
         ).address,
       ),
-    ).to.be.revertedWith("ValidatorIsNotValid");
+    ).to.be.revertedWith("Mammon__ValidatorIsNotValid");
 
     await hre.run("deploy:vault", {
       token0: DAI.address,
@@ -127,11 +127,11 @@ describe("Mammon Vault v0", function () {
 
     it("should be reverted to call functions", async () => {
       await expect(vault.deposit(ONE_TOKEN, ONE_TOKEN)).to.be.revertedWith(
-        "VaultNotInitialized",
+        "Mammon__VaultNotInitialized",
       );
 
       await expect(vault.withdraw(ONE_TOKEN, ONE_TOKEN)).to.be.revertedWith(
-        "VaultNotInitialized",
+        "Mammon__VaultNotInitialized",
       );
 
       const blocknumber = await ethers.provider.getBlockNumber();
@@ -144,14 +144,14 @@ describe("Mammon Vault v0", function () {
             blocknumber + 1,
             blocknumber + 1000,
           ),
-      ).to.be.revertedWith("VaultNotInitialized");
+      ).to.be.revertedWith("Mammon__VaultNotInitialized");
 
       await expect(vault.connect(manager).pokeWeights()).to.be.revertedWith(
-        "VaultNotInitialized",
+        "Mammon__VaultNotInitialized",
       );
 
       await expect(vault.initializeFinalization()).to.be.revertedWith(
-        "VaultNotInitialized",
+        "Mammon__VaultNotInitialized",
       );
 
       await expect(
@@ -561,7 +561,7 @@ describe("Mammon Vault v0", function () {
       it("should be reverted to call updateWeightsGradually", async () => {
         await expect(
           vault.updateWeightsGradually(toWei(2), toWei(3), 0, 0),
-        ).to.be.revertedWith("CallerIsNotManager");
+        ).to.be.revertedWith("Mammon__CallerIsNotManager");
 
         await expect(
           vault
@@ -645,7 +645,7 @@ describe("Mammon Vault v0", function () {
 
       it("should be reverted to call pokeWeights()", async () => {
         await expect(vault.pokeWeights()).to.be.revertedWith(
-          "CallerIsNotManager",
+          "Mammon__CallerIsNotManager",
         );
       });
 
@@ -683,10 +683,10 @@ describe("Mammon Vault v0", function () {
     describe("when finalizing", () => {
       it("should be reverted to call finalize", async () => {
         await expect(vault.connect(user).finalize()).to.be.revertedWith(
-          "CallerIsNotOwnerOrManager",
+          "Mammon__CallerIsNotOwnerOrManager",
         );
         await expect(vault.finalize()).to.be.revertedWith(
-          "FinalizationNotInitialized",
+          "Mammon__FinalizationNotInitialized",
         );
         await expect(
           vault.connect(manager).initializeFinalization(),
@@ -699,7 +699,7 @@ describe("Mammon Vault v0", function () {
         const noticeTimeoutAt = await vault.noticeTimeoutAt();
 
         await expect(vault.finalize()).to.be.revertedWith(
-          `NoticeTimeoutNotElapsed(${noticeTimeoutAt})`,
+          `Mammon__NoticeTimeoutNotElapsed(${noticeTimeoutAt})`,
         );
       });
 
@@ -707,11 +707,11 @@ describe("Mammon Vault v0", function () {
         await vault.initializeFinalization();
 
         await expect(vault.deposit(ONE_TOKEN, ONE_TOKEN)).to.be.revertedWith(
-          "VaultIsFinalizing",
+          "Mammon__VaultIsFinalizing",
         );
 
         await expect(vault.withdraw(ONE_TOKEN, ONE_TOKEN)).to.be.revertedWith(
-          "VaultIsFinalizing",
+          "Mammon__VaultIsFinalizing",
         );
 
         const blocknumber = await ethers.provider.getBlockNumber();
@@ -724,14 +724,14 @@ describe("Mammon Vault v0", function () {
               blocknumber + 1,
               blocknumber + 1000,
             ),
-        ).to.be.revertedWith("VaultIsFinalizing");
+        ).to.be.revertedWith("Mammon__VaultIsFinalizing");
 
         await expect(vault.connect(manager).pokeWeights()).to.be.revertedWith(
-          "VaultIsFinalizing",
+          "Mammon__VaultIsFinalizing",
         );
 
         await expect(vault.initializeFinalization()).to.be.revertedWith(
-          "VaultIsFinalizing",
+          "Mammon__VaultIsFinalizing",
         );
       });
 
@@ -763,7 +763,7 @@ describe("Mammon Vault v0", function () {
     describe("Update Manager", () => {
       it("should be reverted to change manager", async () => {
         await expect(vault.setManager(ZERO_ADDRESS)).to.be.revertedWith(
-          "ManagerIsZeroAddress",
+          "Mammon__ManagerIsZeroAddress",
         );
 
         await expect(
@@ -823,7 +823,7 @@ describe("Mammon Vault v0", function () {
 
       it("should be reverted to set public swap", async () => {
         await expect(vault.setPublicSwap(true)).to.be.revertedWith(
-          "CallerIsNotManager()",
+          "Mammon__CallerIsNotManager()",
         );
       });
 
@@ -840,7 +840,7 @@ describe("Mammon Vault v0", function () {
     describe("Set Swap Fee", () => {
       it("should be reverted to set swap fee", async () => {
         await expect(vault.setSwapFee(toWei(3))).to.be.revertedWith(
-          "CallerIsNotManager()",
+          "Mammon__CallerIsNotManager()",
         );
 
         await expect(

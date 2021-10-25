@@ -128,45 +128,45 @@ contract MammonVaultV0 is
     event FinalizationInitialized(uint64 noticeTimeoutAt);
     event Finalized(address indexed caller, uint256 amount0, uint256 amount1);
 
-    error SameTokenAddresses(address token);
-    error ValidatorIsNotValid(address validator);
-    error NoticePeriodIsAboveMax(uint256 actual, uint256 max);
-    error CallerIsNotOwnerOrManager();
-    error NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
-    error ManagerIsZeroAddress();
-    error CallerIsNotManager();
-    error WeightIsAboveMax(uint256 actual, uint256 max);
-    error WeightIsBelowMin(uint256 actual, uint256 min);
-    error AmountIsBelowMin(uint256 actual, uint256 min);
-    error FinalizationNotInitialized();
-    error VaultNotInitialized();
-    error VaultIsAlreadyInitialized();
-    error VaultIsFinalizing();
+    error Mammon__SameTokenAddresses(address token);
+    error Mammon__ValidatorIsNotValid(address validator);
+    error Mammon__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
+    error Mammon__CallerIsNotOwnerOrManager();
+    error Mammon__NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
+    error Mammon__ManagerIsZeroAddress();
+    error Mammon__CallerIsNotManager();
+    error Mammon__WeightIsAboveMax(uint256 actual, uint256 max);
+    error Mammon__WeightIsBelowMin(uint256 actual, uint256 min);
+    error Mammon__AmountIsBelowMin(uint256 actual, uint256 min);
+    error Mammon__FinalizationNotInitialized();
+    error Mammon__VaultNotInitialized();
+    error Mammon__VaultIsAlreadyInitialized();
+    error Mammon__VaultIsFinalizing();
 
     modifier onlyManager() {
         if (msg.sender != manager) {
-            revert CallerIsNotManager();
+            revert Mammon__CallerIsNotManager();
         }
         _;
     }
-  
+
     modifier onlyOwnerOrManager() {
         if (msg.sender != owner() && msg.sender != manager) {
-            revert CallerIsNotOwnerOrManager();
+            revert Mammon__CallerIsNotOwnerOrManager();
         }
         _;
     }
 
     modifier onlyInitialized() {
         if (!initialized) {
-            revert VaultNotInitialized();
+            revert Mammon__VaultNotInitialized();
         }
         _;
     }
 
     modifier nonFinalizing() {
         if (noticeTimeoutAt != 0) {
-            revert VaultIsFinalizing();
+            revert Mammon__VaultIsFinalizing();
         }
         _;
     }
@@ -187,17 +187,17 @@ contract MammonVaultV0 is
         uint32 noticePeriod_
     ) {
         if (token0_ == token1_) {
-            revert SameTokenAddresses(token0_);
+            revert Mammon__SameTokenAddresses(token0_);
         }
         if (
             !IERC165(validator_).supportsInterface(
                 type(IWithdrawalValidator).interfaceId
             )
         ) {
-            revert ValidatorIsNotValid(validator_);
+            revert Mammon__ValidatorIsNotValid(validator_);
         }
         if (_noticePeriod > MAX_NOTICE_PERIOD) {
-            revert NoticePeriodIsAboveMax(_noticePeriod, MAX_NOTICE_PERIOD);
+            revert Mammon__NoticePeriodIsAboveMax(_noticePeriod, MAX_NOTICE_PERIOD);
         }
 
         pool = IBPool(IBFactory(factory_).newBPool());
@@ -229,31 +229,31 @@ contract MammonVaultV0 is
         uint256 weight1
     ) external override onlyOwner {
         if (initialized) {
-            revert VaultIsAlreadyInitialized();
+            revert Mammon__VaultIsAlreadyInitialized();
         }
         initialized = true;
 
         uint256 poolMinWeight = pool.MIN_WEIGHT();
         if (weight0 < poolMinWeight) {
-            revert WeightIsBelowMin(weight0, poolMinWeight);
+            revert Mammon__WeightIsBelowMin(weight0, poolMinWeight);
         }
         uint256 poolMaxWeight = pool.MAX_WEIGHT();
         if (weight0 > poolMaxWeight) {
-            revert WeightIsAboveMax(weight0, poolMaxWeight);
+            revert Mammon__WeightIsAboveMax(weight0, poolMaxWeight);
         }
         uint256 poolMinAmount = pool.MIN_BALANCE();
         if (amount0 < poolMinAmount) {
-            revert AmountIsBelowMin(amount0, poolMinAmount);
+            revert Mammon__AmountIsBelowMin(amount0, poolMinAmount);
         }
 
         if (weight1 < poolMinWeight) {
-            revert WeightIsBelowMin(weight1, poolMinWeight);
+            revert Mammon__WeightIsBelowMin(weight1, poolMinWeight);
         }
         if (weight1 > poolMaxWeight) {
-            revert WeightIsAboveMax(weight1, poolMaxWeight);
+            revert Mammon__WeightIsAboveMax(weight1, poolMaxWeight);
         }
         if (amount1 < poolMinAmount) {
-            revert AmountIsBelowMin(amount1, poolMinAmount);
+            revert Mammon__AmountIsBelowMin(amount1, poolMinAmount);
         }
 
         bindToken(token0, amount0, weight0);
@@ -400,10 +400,10 @@ contract MammonVaultV0 is
      */
     function finalize() external override nonReentrant onlyOwnerOrManager {
         if (noticeTimeoutAt == 0) {
-            revert FinalizationNotInitialized();
+            revert Mammon__FinalizationNotInitialized();
         }
         if (noticeTimeoutAt > block.timestamp) {
-            revert NoticeTimeoutNotElapsed(noticeTimeoutAt);
+            revert Mammon__NoticeTimeoutNotElapsed(noticeTimeoutAt);
         }
 
         (uint256 amount0, uint256 amount1) = returnFunds();
@@ -417,7 +417,7 @@ contract MammonVaultV0 is
      */
     function setManager(address newManager) external override onlyOwner {
         if (newManager == address(0)) {
-            revert ManagerIsZeroAddress();
+            revert Mammon__ManagerIsZeroAddress();
         }
         emit ManagerChanged(manager, newManager);
         manager = newManager;
