@@ -8,6 +8,7 @@ import { IWithdrawalValidator } from "./interfaces/IWithdrawalValidator.sol";
 contract PermissiveWithdrawalValidator is ERC165, IWithdrawalValidator {
     uint256 public constant ANY_AMOUNT = type(uint256).max;
 
+    /// @inheritdoc IWithdrawalValidator
     function allowance() external pure override returns (uint256, uint256) {
         return (ANY_AMOUNT, ANY_AMOUNT);
     }
