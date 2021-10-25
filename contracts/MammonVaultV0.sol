@@ -11,7 +11,6 @@ import "./dependencies/openzeppelin/SafeCast.sol";
 import "./interfaces/IBFactory.sol";
 import "./interfaces/IBPool.sol";
 import "./interfaces/IMammonVaultV0.sol";
-import "./interfaces/IManagerAPI.sol";
 import "./interfaces/IWithdrawalValidator.sol";
 import "./libraries/SmartPoolManager.sol";
 
@@ -20,12 +19,7 @@ import "./libraries/SmartPoolManager.sol";
  * Owner is original asset owner that can add and withdraw funds.
  * This code is not audited or tested. Please do not use in production.
  */
-contract MammonVaultV0 is
-    IMammonVaultV0,
-    IManagerAPI,
-    Ownable,
-    ReentrancyGuard
-{
+contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using Math for uint256;
     using SafeCast for uint256;
