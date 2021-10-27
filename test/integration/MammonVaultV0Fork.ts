@@ -584,7 +584,7 @@ describe("Mammon Vault v0", function () {
               toWei(2),
               toWei(51),
               blocknumber + 1,
-              blocknumber + 1001,
+              blocknumber + 10000,
             ),
         ).to.be.revertedWith("ERR_WEIGHT_ABOVE_MAX");
 
@@ -592,7 +592,7 @@ describe("Mammon Vault v0", function () {
           vault
             .connect(manager)
             .updateWeightsGradually(
-              toWei(0.1),
+              toWei(2),
               toWei(3),
               blocknumber + 1,
               blocknumber + 1000,
@@ -606,7 +606,7 @@ describe("Mammon Vault v0", function () {
               toWei(0.1),
               toWei(3),
               blocknumber + 1,
-              blocknumber + 1001,
+              blocknumber + 10000,
             ),
         ).to.be.revertedWith("ERR_WEIGHT_BELOW_MIN");
       });
