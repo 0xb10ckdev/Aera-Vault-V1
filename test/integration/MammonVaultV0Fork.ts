@@ -573,18 +573,6 @@ describe("Mammon Vault v0", function () {
         await expect(
           vault
             .connect(manager)
-            .updateWeightsGradually(
-              toWei(2),
-              toWei(50),
-              blocknumber + 1,
-              blocknumber + 100,
-            ),
-        ).to.be.revertedWith("ERR_WEIGHT_ABOVE_MAX");
-
-        blocknumber = await ethers.provider.getBlockNumber();
-        await expect(
-          vault
-            .connect(manager)
             .updateWeightsGradually(toWei(2), toWei(3), 0, blocknumber),
         ).to.be.revertedWith("ERR_GRADUAL_UPDATE_TIME_TRAVEL");
 
