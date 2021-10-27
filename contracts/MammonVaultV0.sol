@@ -515,7 +515,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     function getWeightsChangeRatio(
         uint256 targetWeight0,
         uint256 targetWeight1
-    ) internal view returns (uint256) {
+    ) public view returns (uint256) {
         uint256 weight0 = getDenormalizedWeight(token0);
         uint256 weight1 = getDenormalizedWeight(token1);
 
