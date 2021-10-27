@@ -25,7 +25,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
 
     uint256 private constant ONE = 10**18;
 
-    /// @dev Maximum notice period for vault termination (2 months).
+    /// @dev The maximum notice period for vault termination (2 months).
     uint32 private constant MAX_NOTICE_PERIOD = 60 days;
 
     /// @dev The address for unset manager
