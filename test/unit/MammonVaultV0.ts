@@ -661,18 +661,30 @@ describe("Mammon Vault v0", function () {
     describe("when calling updateWeightsGradually()", () => {
       it("should be reverted to call updateWeightsGradually", async () => {
         await expect(
-          vault.updateWeightsGradually(toWei(2), toWei(3), 0, 0),
+          vault.updateWeightsGradually(toWei(2), toWei(3), 0, 1),
         ).to.be.revertedWith("Mammon__CallerIsNotManager()");
+
+        await expect(
+          vault
+            .connect(manager)
+            .updateWeightsGradually(toWei(2), toWei(50), 0, 10),
+        ).to.be.revertedWith("Mammon__RatioChangePerBlockIsAboveMax");
+
+        await expect(
+          vault
+            .connect(manager)
+            .updateWeightsGradually(toWei(50), toWei(2), 0, 10),
+        ).to.be.revertedWith("Mammon__RatioChangePerBlockIsAboveMax");
       });
 
       it("should be possible to call updateWeightsGradually", async () => {
         await expect(
           vault
             .connect(manager)
-            .updateWeightsGradually(toWei(2), toWei(3), 0, 0),
+            .updateWeightsGradually(toWei(2), toWei(3), 0, 1000),
         )
           .to.emit(vault, "UpdateWeightsGradually")
-          .withArgs(toWei(2), toWei(3), 0, 0);
+          .withArgs(toWei(2), toWei(3), 0, 1000);
       });
     });
 

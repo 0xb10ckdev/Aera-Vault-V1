@@ -23,8 +23,19 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     using Math for uint256;
     using SafeCast for uint256;
 
+    uint256 private constant ONE = 10**18;
+
     /// @dev Maximum notice period for vault termination (2 months).
-    uint32 public constant MAX_NOTICE_PERIOD = 60 days;
+    uint32 private constant MAX_NOTICE_PERIOD = 60 days;
+
+    /// @dev The address for unset manager
+    address private constant UNSET_MANAGER_ADDRESS = address(0);
+
+    /// @dev The minimum value of change block period for weights update
+    uint256 private constant MAX_WEIGHT_CHANGE_BLOCK_PERIOD = 1000;
+
+    /// @dev The maximum weight change ratio per one block
+    uint256 private constant MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK = 10**16;
 
     /// @dev Balancer pool. Owned by the vault.
     IBPool public immutable pool;
@@ -53,12 +64,6 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     // slot end, 3 bytes left
 
     SmartPoolManager.GradualUpdateParams private gradualUpdate;
-
-    /// @dev The address for unset manager
-    address private constant UNSET_MANAGER_ADDRESS = address(0);
-
-    /// @dev The minimum value of change block period for weights update
-    uint256 private constant MINIMUM_WEIGHT_CHANGE_BLOCK_PERIOD = 1000;
 
     /// @notice Emitted when the vault is created.
     /// @param factory The address of balancer factory.
@@ -156,6 +161,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     error Mammon__NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
     error Mammon__ManagerIsZeroAddress();
     error Mammon__CallerIsNotManager();
+    error Mammon__RatioChangePerBlockIsAboveMax(uint256 actual, uint256 max);
     error Mammon__WeightIsAboveMax(uint256 actual, uint256 max);
     error Mammon__WeightIsBelowMin(uint256 actual, uint256 min);
     error Mammon__AmountIsBelowMin(uint256 actual, uint256 min);
@@ -356,8 +362,8 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IManagerAPI
     function updateWeightsGradually(
-        uint256 weight0,
-        uint256 weight1,
+        uint256 targetWeight0,
+        uint256 targetWeight1,
         uint256 startBlock,
         uint256 endBlock
     ) external override onlyManager onlyInitialized nonFinalizing {
@@ -365,9 +371,30 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         /// computes startWeights as the current
         /// denormalized weights of the core pool tokens.
 
+        uint256 weight0 = getDenormalizedWeight(token0);
+        uint256 weight1 = getDenormalizedWeight(token1);
+
+        uint256 period = endBlock - startBlock;
+        uint256 ratio = (weight0 * ONE) / weight1;
+        uint256 targetRatio = (targetWeight0 * ONE) / targetWeight1;
+
+        uint256 ratioPerBlock;
+        if (ratio > targetRatio) {
+            ratioPerBlock = (ratio * ONE) / targetRatio / period;
+        } else {
+            ratioPerBlock = (targetRatio * ONE) / ratio / period;
+        }
+
+        if (ratioPerBlock > MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK) {
+            revert Mammon__RatioChangePerBlockIsAboveMax(
+                ratioPerBlock,
+                MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK
+            );
+        }
+
         uint256[] memory newWeights = new uint256[](2);
-        newWeights[0] = weight0;
-        newWeights[1] = weight1;
+        newWeights[0] = targetWeight0;
+        newWeights[1] = targetWeight1;
 
         SmartPoolManager.updateWeightsGradually(
             pool,
@@ -375,10 +402,15 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
             newWeights,
             startBlock,
             endBlock,
-            MINIMUM_WEIGHT_CHANGE_BLOCK_PERIOD
+            MAX_WEIGHT_CHANGE_BLOCK_PERIOD
         );
 
-        emit UpdateWeightsGradually(weight0, weight1, startBlock, endBlock);
+        emit UpdateWeightsGradually(
+            targetWeight0,
+            targetWeight1,
+            startBlock,
+            endBlock
+        );
     }
 
     /// @inheritdoc IManagerAPI
