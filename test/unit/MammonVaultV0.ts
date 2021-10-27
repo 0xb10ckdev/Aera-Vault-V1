@@ -1,4 +1,5 @@
 import { ethers, waffle, artifacts } from "hardhat";
+import { BigNumber } from "ethers";
 import { Artifact } from "hardhat/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
@@ -65,6 +66,21 @@ describe("Mammon Vault v0", function () {
       allowance0,
       allowance1,
     };
+  };
+
+  const getWeightsChangeRatio = (
+    weight0: BigNumber,
+    weight1: BigNumber,
+    targetWeight0: BigNumber,
+    targetWeight1: BigNumber,
+  ) => {
+    const factor1 = weight0.mul(targetWeight1);
+    const factor2 = targetWeight0.mul(weight1);
+    const change = factor1.gt(factor2)
+      ? factor1.mul(toWei(1)).div(factor2)
+      : factor2.mul(toWei(1)).div(factor1);
+
+    return change;
   };
 
   beforeEach(async function () {
@@ -328,6 +344,10 @@ describe("Mammon Vault v0", function () {
             balance0.sub(amount0),
           );
           expect(await WETH.balanceOf(admin.address)).to.equal(balance1);
+
+          expect(await vault.getWeightsChangeRatio(weight0, weight1)).to.equal(
+            getWeightsChangeRatio(newWeight0, weight1, weight0, weight1),
+          );
         }
       });
 
@@ -362,6 +382,10 @@ describe("Mammon Vault v0", function () {
           expect(await DAI.balanceOf(admin.address)).to.equal(balance0);
           expect(await WETH.balanceOf(admin.address)).to.equal(
             balance1.sub(amount1),
+          );
+
+          expect(await vault.getWeightsChangeRatio(weight0, weight1)).to.equal(
+            getWeightsChangeRatio(weight0, newWeight1, weight0, weight1),
           );
         }
       });
@@ -402,6 +426,10 @@ describe("Mammon Vault v0", function () {
           );
           expect(await WETH.balanceOf(admin.address)).to.equal(
             balance1.sub(amount1),
+          );
+
+          expect(await vault.getWeightsChangeRatio(weight0, weight1)).to.equal(
+            getWeightsChangeRatio(newWeight0, newWeight1, weight0, weight1),
           );
         }
       });
@@ -555,6 +583,12 @@ describe("Mammon Vault v0", function () {
               balance0.add(amount0),
             );
             expect(await WETH.balanceOf(admin.address)).to.equal(balance1);
+
+            expect(
+              await vault.getWeightsChangeRatio(weight0, weight1),
+            ).to.equal(
+              getWeightsChangeRatio(newWeight0, weight1, weight0, weight1),
+            );
           }
         });
 
@@ -601,6 +635,12 @@ describe("Mammon Vault v0", function () {
             expect(await DAI.balanceOf(admin.address)).to.equal(balance0);
             expect(await WETH.balanceOf(admin.address)).to.equal(
               balance1.add(amount1),
+            );
+
+            expect(
+              await vault.getWeightsChangeRatio(weight0, weight1),
+            ).to.equal(
+              getWeightsChangeRatio(weight0, newWeight1, weight0, weight1),
             );
           }
         });
@@ -652,6 +692,12 @@ describe("Mammon Vault v0", function () {
             );
             expect(await WETH.balanceOf(admin.address)).to.equal(
               balance1.add(amount1),
+            );
+
+            expect(
+              await vault.getWeightsChangeRatio(weight0, weight1),
+            ).to.equal(
+              getWeightsChangeRatio(newWeight0, newWeight1, weight0, weight1),
             );
           }
         });
