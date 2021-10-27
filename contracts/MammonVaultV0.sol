@@ -35,6 +35,11 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     uint256 private constant MAX_WEIGHT_CHANGE_BLOCK_PERIOD = 1000;
 
     /// @notice The maximum weight change ratio per one block
+    /// @dev It's the increment/decrement factor per one block
+    ///      increment/decrement factor per n blocks: Fn = f * n
+    ///      Spot price growth range for n blocks: [1 / Fn - 1, Fn - 1]
+    ///      E.g. increment/decrement factor per 200 blocks is 2
+    ///      Spot price growth range for 200 blocks is [-50%, 100%]
     uint256 private constant MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK = 10**16;
 
     /// @notice Balancer pool. Owned by the vault.
@@ -371,23 +376,12 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         /// computes startWeights as the current
         /// denormalized weights of the core pool tokens.
 
-        uint256 weight0 = getDenormalizedWeight(token0);
-        uint256 weight1 = getDenormalizedWeight(token1);
-
         uint256 period = endBlock - startBlock;
-        uint256 ratio = (weight0 * ONE) / weight1;
-        uint256 targetRatio = (targetWeight0 * ONE) / targetWeight1;
+        uint256 change = getWeightsChangeRatio(targetWeight0, targetWeight1);
 
-        uint256 ratioPerBlock;
-        if (ratio > targetRatio) {
-            ratioPerBlock = (ratio * ONE) / targetRatio / period;
-        } else {
-            ratioPerBlock = (targetRatio * ONE) / ratio / period;
-        }
-
-        if (ratioPerBlock > MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK) {
+        if (change > MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK * period) {
             revert Mammon__RatioChangePerBlockIsAboveMax(
-                ratioPerBlock,
+                change,
                 MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK
             );
         }
@@ -511,6 +505,27 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         returns (uint256)
     {
         return pool.getDenormalizedWeight(token);
+    }
+
+    /// @notice Calculate change ratio for weights upgrade.
+    /// @dev Will only be called by updateWeightsGradually()
+    /// @param targetWeight0 The target weight of the first token.
+    /// @param targetWeight1 The target weight of the second token.
+    /// @return The change ratio from current weights to target weights.
+    function getWeightsChangeRatio(
+        uint256 targetWeight0,
+        uint256 targetWeight1
+    ) internal view returns (uint256) {
+        uint256 weight0 = getDenormalizedWeight(token0);
+        uint256 weight1 = getDenormalizedWeight(token1);
+
+        uint256 factor1 = weight0 * targetWeight1;
+        uint256 factor2 = targetWeight0 * weight1;
+        uint256 change = factor1 > factor2
+            ? (ONE * factor1) / factor2
+            : (ONE * factor2) / factor1;
+
+        return change;
     }
 
     /// @notice Bind token to the pool.
