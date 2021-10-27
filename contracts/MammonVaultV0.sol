@@ -25,41 +25,41 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
 
     uint256 private constant ONE = 10**18;
 
-    /// @dev The maximum notice period for vault termination (2 months).
+    /// @notice The maximum notice period for vault termination (2 months).
     uint32 private constant MAX_NOTICE_PERIOD = 60 days;
 
-    /// @dev The address for unset manager
+    /// @notice The address for unset manager
     address private constant UNSET_MANAGER_ADDRESS = address(0);
 
-    /// @dev The minimum value of change block period for weights update
+    /// @notice The minimum value of change block period for weights update
     uint256 private constant MAX_WEIGHT_CHANGE_BLOCK_PERIOD = 1000;
 
-    /// @dev The maximum weight change ratio per one block
+    /// @notice The maximum weight change ratio per one block
     uint256 private constant MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK = 10**16;
 
-    /// @dev Balancer pool. Owned by the vault.
+    /// @notice Balancer pool. Owned by the vault.
     IBPool public immutable pool;
 
-    /// @dev First token address in vault
+    /// @notice First token address in vault
     address public immutable token0;
 
-    /// @dev Second token address in vault
+    /// @notice Second token address in vault
     address public immutable token1;
 
-    /// @dev Notice period for vault termination (in seconds).
+    /// @notice Notice period for vault termination (in seconds).
     uint32 public immutable noticePeriod;
 
-    /// @dev Verifies withdraw limits
+    /// @notice Verifies withdraw limits
     IWithdrawalValidator public immutable validator;
     // slot start
 
-    /// @dev Submits new balance parameters for the vault
+    /// @notice Submits new balance parameters for the vault
     address public manager;
 
-    /// @dev Timestamp when notice elapses or 0 if not yet set
+    /// @notice Timestamp when notice elapses or 0 if not yet set
     uint64 public noticeTimeoutAt;
 
-    /// @dev Indicates that the Vault has been initialized
+    /// @notice Indicates that the Vault has been initialized
     bool public initialized;
     // slot end, 3 bytes left
 
