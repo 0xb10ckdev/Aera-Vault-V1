@@ -88,16 +88,16 @@ describe("Mammon Vault v0", function () {
     );
     DAI = <ERC20Mock>(
       await deployContract(admin, erc20MockArtifact, [
+        "Wether",
         "WETH",
-        "WETH.address",
         18,
         toWei(10000000),
       ])
     );
     WETH = <ERC20Mock>(
       await deployContract(admin, erc20MockArtifact, [
+        "Dai",
         "DAI",
-        "DAI.address",
         18,
         toWei(10000000),
       ])
@@ -783,6 +783,47 @@ describe("Mammon Vault v0", function () {
 
         expect(await ethers.provider.getCode(vault.address)).to.equal("0x");
       });
+    });
+  });
+
+  describe("Sweep", () => {
+    let TOKEN: ERC20Mock;
+    beforeEach(async () => {
+      const erc20MockArtifact: Artifact = await artifacts.readArtifact(
+        "ERC20Mock",
+      );
+      TOKEN = <ERC20Mock>(
+        await deployContract(admin, erc20MockArtifact, [
+          "TOKEN Test",
+          "TTOKEN",
+          18,
+          toWei(10000000),
+        ])
+      );
+    });
+
+    it("should be reverted to withdraw token", async () => {
+      await TOKEN.transfer(vault.address, toWei(1000));
+      await expect(
+        vault.connect(manager).sweep(TOKEN.address, toWei(1001)),
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(vault.sweep(TOKEN.address, toWei(1001))).to.be.revertedWith(
+        "ERC20: transfer amount exceeds balance",
+      );
+    });
+
+    it("should be possible to withdraw token", async () => {
+      const balance = await TOKEN.balanceOf(admin.address);
+      await TOKEN.transfer(vault.address, toWei(1000));
+
+      expect(
+        await vault.estimateGas.sweep(TOKEN.address, toWei(1000)),
+      ).to.below(70000);
+      await vault.sweep(TOKEN.address, toWei(1000));
+
+      expect(await TOKEN.balanceOf(vault.address)).to.equal(toWei(0));
+
+      expect(await TOKEN.balanceOf(admin.address)).to.equal(balance);
     });
   });
 
