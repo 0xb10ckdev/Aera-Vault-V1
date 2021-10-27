@@ -560,16 +560,35 @@ describe("Mammon Vault v0", function () {
     describe("when calling updateWeightsGradually()", () => {
       it("should be reverted to call updateWeightsGradually", async () => {
         await expect(
-          vault.updateWeightsGradually(toWei(2), toWei(3), 0, 0),
+          vault.updateWeightsGradually(toWei(2), toWei(3), 0, 1),
         ).to.be.revertedWith("Mammon__CallerIsNotManager");
 
         await expect(
           vault
             .connect(manager)
-            .updateWeightsGradually(toWei(2), toWei(3), 0, 0),
+            .updateWeightsGradually(toWei(2), toWei(50), 0, 10),
+        ).to.be.revertedWith("Mammon__RatioChangePerBlockIsAboveMax");
+
+        let blocknumber = await ethers.provider.getBlockNumber();
+        await expect(
+          vault
+            .connect(manager)
+            .updateWeightsGradually(
+              toWei(2),
+              toWei(50),
+              blocknumber + 1,
+              blocknumber + 100,
+            ),
+        ).to.be.revertedWith("ERR_WEIGHT_ABOVE_MAX");
+
+        blocknumber = await ethers.provider.getBlockNumber();
+        await expect(
+          vault
+            .connect(manager)
+            .updateWeightsGradually(toWei(2), toWei(3), 0, blocknumber),
         ).to.be.revertedWith("ERR_GRADUAL_UPDATE_TIME_TRAVEL");
 
-        const blocknumber = await ethers.provider.getBlockNumber();
+        blocknumber = await ethers.provider.getBlockNumber();
         await expect(
           vault
             .connect(manager)

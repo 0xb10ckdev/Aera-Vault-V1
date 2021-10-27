@@ -9,13 +9,13 @@ interface IManagerAPI {
     /// @notice Set target weights of tokens and update period.
     /// @dev Available only to the manager. Available only if the vault is initialized.
     ///      Vault shouldn't be on finalizing.
-    /// @param weight0 The target weight of the first token.
-    /// @param weight1 The target weight of the second token.
+    /// @param targetWeight0 The target weight of the first token.
+    /// @param targetWeight1 The target weight of the second token.
     /// @param startBlock The block number that update starts.
     /// @param endBlock The block number that weights reach out target.
     function updateWeightsGradually(
-        uint256 weight0,
-        uint256 weight1,
+        uint256 targetWeight0,
+        uint256 targetWeight1,
         uint256 startBlock,
         uint256 endBlock
     ) external;
