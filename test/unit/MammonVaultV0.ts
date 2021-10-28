@@ -74,11 +74,11 @@ describe("Mammon Vault v0", function () {
     targetWeight0: BigNumber,
     targetWeight1: BigNumber,
   ) => {
-    const factor1 = weight0.mul(targetWeight1);
-    const factor2 = targetWeight0.mul(weight1);
-    const change = factor1.gt(factor2)
-      ? factor1.mul(toWei(1)).div(factor2)
-      : factor2.mul(toWei(1)).div(factor1);
+    const factor0 = weight0.mul(targetWeight1);
+    const factor1 = targetWeight0.mul(weight1);
+    const change = factor0.gt(factor1)
+      ? factor0.mul(toWei(1)).div(factor1)
+      : factor1.mul(toWei(1)).div(factor0);
 
     return change;
   };

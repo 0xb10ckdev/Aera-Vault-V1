@@ -377,9 +377,10 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         /// denormalized weights of the core pool tokens.
 
         uint256 period = endBlock - startBlock;
-        uint256 change = getWeightsChangeRatio(targetWeight0, targetWeight1);
+        uint256 change = getWeightsChangeRatio(targetWeight0, targetWeight1) /
+            period;
 
-        if (change > MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK * period) {
+        if (change > MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK) {
             revert Mammon__RatioChangePerBlockIsAboveMax(
                 change,
                 MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK
@@ -519,13 +520,13 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         uint256 weight0 = getDenormalizedWeight(token0);
         uint256 weight1 = getDenormalizedWeight(token1);
 
-        uint256 factor1 = weight0 * targetWeight1;
-        uint256 factor2 = targetWeight0 * weight1;
-        uint256 change = factor1 > factor2
-            ? (ONE * factor1) / factor2
-            : (ONE * factor2) / factor1;
+        uint256 factor0 = weight0 * targetWeight1;
+        uint256 factor1 = targetWeight0 * weight1;
 
-        return change;
+        return
+            factor0 > factor1
+                ? (ONE * factor0) / factor1
+                : (ONE * factor1) / factor0;
     }
 
     /// @notice Bind token to the pool.
