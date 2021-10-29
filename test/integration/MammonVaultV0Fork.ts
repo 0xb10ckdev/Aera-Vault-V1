@@ -2,8 +2,8 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
 import hre, { deployments, ethers } from "hardhat";
 import {
-  IBPoolMock,
-  IBPoolMock__factory,
+  IBPool,
+  IBPool__factory,
   IERC20,
   MammonVaultV0,
   MammonVaultV0__factory,
@@ -24,7 +24,7 @@ describe("Mammon Vault v0", function () {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
   let user: SignerWithAddress;
-  let bPool: IBPoolMock;
+  let bPool: IBPool;
   let vault: MammonVaultV0;
   let validator: WithdrawalValidatorMock;
   let DAI: IERC20;
@@ -108,7 +108,7 @@ describe("Mammon Vault v0", function () {
       admin,
     );
 
-    bPool = IBPoolMock__factory.connect(await vault.pool(), admin);
+    bPool = IBPool__factory.connect(await vault.pool(), admin);
     validator = WithdrawalValidatorMock__factory.connect(
       (await deployments.get("Validator")).address,
       admin,
