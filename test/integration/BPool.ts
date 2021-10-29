@@ -2,8 +2,8 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
 import { deployments, ethers } from "hardhat";
 import {
-  IBPoolMock,
-  IBPoolMock__factory,
+  IBPool,
+  IBPool__factory,
   IERC20,
   MammonVaultV0,
 } from "../../typechain";
@@ -20,7 +20,7 @@ describe("Swap on Balancer Pool", function () {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
   let user: SignerWithAddress;
-  let bPool: IBPoolMock;
+  let bPool: IBPool;
   let vault: MammonVaultV0;
   let DAI: IERC20, WETH: IERC20;
 
@@ -45,7 +45,7 @@ describe("Swap on Balancer Pool", function () {
       ).address,
     );
 
-    bPool = IBPoolMock__factory.connect(await vault.pool(), admin);
+    bPool = IBPool__factory.connect(await vault.pool(), admin);
 
     await DAI.approve(vault.address, ONE_TOKEN);
     await WETH.approve(vault.address, ONE_TOKEN);
