@@ -32,7 +32,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     address private constant UNSET_MANAGER_ADDRESS = address(0);
 
     /// @notice The minimum value of change block period for weights update
-    uint256 private constant MAX_WEIGHT_CHANGE_BLOCK_PERIOD = 1000;
+    uint256 private constant MIN_WEIGHT_CHANGE_BLOCK_PERIOD = 1000;
 
     /// @notice The maximum weight change ratio per one block
     /// @dev It's the increment/decrement factor per one block
@@ -397,7 +397,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
             newWeights,
             startBlock,
             endBlock,
-            MAX_WEIGHT_CHANGE_BLOCK_PERIOD
+            MIN_WEIGHT_CHANGE_BLOCK_PERIOD
         );
 
         emit UpdateWeightsGradually(
