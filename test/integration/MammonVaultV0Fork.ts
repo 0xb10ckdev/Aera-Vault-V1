@@ -566,6 +566,18 @@ describe("Mammon Vault v0", function () {
         await expect(
           vault
             .connect(manager)
+            .updateWeightsGradually(toWei(2), toWei(3), 3, 3),
+        ).to.be.revertedWith("reverted with panic code 0x12");
+
+        await expect(
+          vault
+            .connect(manager)
+            .updateWeightsGradually(toWei(2), toWei(3), 3, 2),
+        ).to.be.revertedWith("reverted with panic code 0x11");
+
+        await expect(
+          vault
+            .connect(manager)
             .updateWeightsGradually(toWei(2), toWei(50), 0, 10),
         ).to.be.revertedWith("Mammon__RatioChangePerBlockIsAboveMax");
 
