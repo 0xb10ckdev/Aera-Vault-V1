@@ -82,7 +82,7 @@ describe("Mammon Vault v0", function () {
         manager.address,
         manager.address,
       ),
-    ).to.be.revertedWith("function call to a non-contract account");
+    ).to.be.revertedWith("Mammon__ValidatorIsNotValid");
     await expect(
       deployVault(
         admin,

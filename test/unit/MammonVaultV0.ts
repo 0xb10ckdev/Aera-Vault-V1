@@ -149,7 +149,7 @@ describe("Mammon Vault v0", function () {
         manager.address,
         NOTICE_PERIOD,
       ),
-    ).to.be.revertedWith("function call to a non-contract account");
+    ).to.be.revertedWith("Mammon__ValidatorIsNotValid");
     await expect(
       VaultFactory.connect(admin).deploy(
         bFactory.address,
