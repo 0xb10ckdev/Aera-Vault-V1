@@ -473,6 +473,9 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         onlyInitialized
         nonFinalizing
     {
+        // IMPORTANT: This function currently privileges manager
+        // as an arbitrageur but will be unnecessary when we migrate
+        // to Balancer V2.
         SmartPoolManager.pokeWeights(pool, gradualUpdate);
         emit PokeWeights();
     }
