@@ -4,16 +4,19 @@ pragma solidity 0.8.7;
 import "./IProtocolAPI.sol";
 import "./IBinaryVault.sol";
 
+/// @title Vault public interface.
+/// @notice Interface for vault arbitrageurs and other observers.
 interface IUserAPI {
-    /// @notice The state of public swap if it's turned on or off.
+    /// @notice Check if vault trading is enabled.
     /// @return If public swap is turned on, returns true, otherwise false.
     function isPublicSwap() external view returns (bool);
 
-    /// @notice The swap fee.
+    /// @notice Get swap fee.
+    /// @return Swap fee from underlying Balancer pool.
     function getSwapFee() external view returns (uint256);
 
-    /// @notice The weight of a token.
-    /// @return The weight of a given token on the pool.
+    /// @notice Get token weight.
+    /// @return Denormalized weight value from underlying Balancer pool.
     function getDenormalizedWeight(address token)
         external
         view

@@ -14,27 +14,29 @@ import "./interfaces/IMammonVaultV0.sol";
 import "./interfaces/IWithdrawalValidator.sol";
 import "./libraries/SmartPoolManager.sol";
 
-/**
- * @dev Represents a treasury vault that is managed by Mammon.
- * Owner is original asset owner that can add and withdraw funds.
- */
+/// @title Risk-managed treasury vault.
+/// @notice Managed two-asset vault that supports withdrawals
+///         in line with a pre-defined validator contract.
+/// @dev Vault owner is the asset owner.
 contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using Math for uint256;
     using SafeCast for uint256;
 
+    /// STORAGE ///
+
     uint256 private constant ONE = 10**18;
 
-    /// @notice The maximum notice period for vault termination (2 months).
+    /// @notice Largest possible notice period for vault termination (2 months).
     uint32 private constant MAX_NOTICE_PERIOD = 60 days;
 
-    /// @notice The address for unset manager
+    /// @dev Address to represent unset manager in events.
     address private constant UNSET_MANAGER_ADDRESS = address(0);
 
-    /// @notice The minimum value of change block period for weights update
+    /// @notice Minimum duration (in blocks) for a weight update.
     uint256 private constant MIN_WEIGHT_CHANGE_BLOCK_PERIOD = 1000;
 
-    /// @notice The maximum weight change ratio per one block
+    /// @notice Largest possible weight change ratio per one block
     /// @dev It's the increment/decrement factor per one block
     ///      increment/decrement factor per n blocks: Fn = f * n
     ///      Spot price growth range for n blocks: [1 / Fn - 1, Fn - 1]
@@ -42,21 +44,22 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     ///      Spot price growth range for 200 blocks is [-50%, 100%]
     uint256 private constant MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK = 10**16;
 
-    /// @notice Balancer pool. Owned by the vault.
+    /// @notice Balancer pool. Controlled by the vault.
     IBPool public immutable pool;
 
-    /// @notice First token address in vault
+    /// @notice First token address in vault.
     address public immutable token0;
 
-    /// @notice Second token address in vault
+    /// @notice Second token address in vault.
     address public immutable token1;
 
     /// @notice Notice period for vault termination (in seconds).
     uint32 public immutable noticePeriod;
 
-    /// @notice Verifies withdraw limits
+    /// @notice Verifies withdraw limits.
     IWithdrawalValidator public immutable validator;
-    // slot start
+
+    /// STORAGE SLOT START ///
 
     /// @notice Submits new balance parameters for the vault
     address public manager;
@@ -66,16 +69,19 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
 
     /// @notice Indicates that the Vault has been initialized
     bool public initialized;
-    // slot end, 3 bytes left
+
+    // STORAGE SLOT END, 3 BYTES LEFT ///
 
     SmartPoolManager.GradualUpdateParams private gradualUpdate;
 
+    /// EVENTS ///
+
     /// @notice Emitted when the vault is created.
-    /// @param factory The address of balancer factory.
-    /// @param token0 The address of the first token.
-    /// @param token1 The address of the second token.
-    /// @param manager The address of a manager of the vault
-    /// @param validator The address of a withdrawal validator contract
+    /// @param factory Address of Balancer factory.
+    /// @param token0 Address of first token.
+    /// @param token1 Address of second token.
+    /// @param manager Address of vault manager.
+    /// @param validator Address of withdrawal validator contract
     /// @param noticePeriod Notice period in seconds.
     event Created(
         address indexed factory,
@@ -87,10 +93,10 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     );
 
     /// @notice Emitted when tokens are deposited.
-    /// @param amount0 The amount of the first token.
-    /// @param amount1 The amount of the second token.
-    /// @param weight0 The weight of the first token.
-    /// @param weight1 The weight of the second token.
+    /// @param amount0 Amount of first token.
+    /// @param amount1 Amount of second token.
+    /// @param weight0 Aeight of first token.
+    /// @param weight1 Weight of second token.
     event Deposit(
         uint256 amount0,
         uint256 amount1,
@@ -98,15 +104,15 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         uint256 weight1
     );
 
-    /// @notice Emitted when tokens are withdrawed.
-    /// @param requestedAmount0 The requested amount of the first token.
-    /// @param requestedAmount1 The requested amount of the second token.
-    /// @param withdrawnAmount0 The withdrawn amount of the first token.
-    /// @param withdrawnAmount1 The withdrawn amount of the second token.
-    /// @param allowance0 The allowance of the first token.
-    /// @param allowance1 The allowance of the second token.
-    /// @param finalWeight0 The weight of the first token.
-    /// @param finalWeight1 The weight of the second token.
+    /// @notice Emitted when tokens are withdrawn.
+    /// @param requestedAmount0 Requested amount of first token.
+    /// @param requestedAmount1 Requested amount of second token.
+    /// @param withdrawnAmount0 Withdrawn amount of first token.
+    /// @param withdrawnAmount1 Withdrawn amount of second token.
+    /// @param allowance0 Allowance of first token.
+    /// @param allowance1 Allowance of second token.
+    /// @param finalWeight0 Post-withdrawal weight of first token.
+    /// @param finalWeight1 Post-withdrawal weight of second token.
     event Withdraw(
         uint256 requestedAmount0,
         uint256 requestedAmount1,
@@ -118,9 +124,9 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         uint256 finalWeight1
     );
 
-    /// @notice Emitted when the manager is changed.
-    /// @param previousManager The address of the previous manager.
-    /// @param manager The address of a new manager.
+    /// @notice Emitted when manager is changed.
+    /// @param previousManager Address of previous manager.
+    /// @param manager Address of a new manager.
     event ManagerChanged(
         address indexed previousManager,
         address indexed manager
@@ -150,14 +156,16 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     event SetSwapFee(uint256 swapFee);
 
     /// @notice Emitted when initializeFinalization is called.
-    /// @param noticeTimeoutAt The timestamp for notice timeout.
+    /// @param noticeTimeoutAt Timestamp for notice timeout.
     event FinalizationInitialized(uint64 noticeTimeoutAt);
 
-    /// @notice Emitted when the vault is finalized.
-    /// @param caller The address a finalizer.
-    /// @param amount0 The returned amount of the first token.
-    /// @param amount1 The returned amount of the second token.
+    /// @notice Emitted when vault is finalized.
+    /// @param caller Address of finalizer.
+    /// @param amount0 Returned amount of first token.
+    /// @param amount1 Returned amount of second token.
     event Finalized(address indexed caller, uint256 amount0, uint256 amount1);
+
+    /// ERRORS ///
 
     error Mammon__SameTokenAddresses(address token);
     error Mammon__ValidatorIsNotValid(address validator);
@@ -174,6 +182,8 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     error Mammon__VaultNotInitialized();
     error Mammon__VaultIsAlreadyInitialized();
     error Mammon__VaultIsFinalizing();
+
+    /// MODIFIERS ///
 
     /// @dev Throws if called by any account other than the manager.
     modifier onlyManager() {
@@ -207,14 +217,16 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         _;
     }
 
-    /// @notice Initializes the contract by deploying new Balancer pool by using the provided factory.
-    /// @dev First token and second token shouldn't be same. Validator should be valid.
-    /// @param factory_ Balancer Pool Factory address
-    /// @param token0_ First token address. This is immutable, cannot be changed later
-    /// @param token1_ Second token address. This is immutable, cannot be changed later
-    /// @param manager_ Vault Manager address
-    /// @param validator_ Withdrawal validator contract address. This is immutable, cannot be changed later
-    /// @param noticePeriod_ Notice period in seconds. This is immutable, cannot be changed later
+    /// FUNCTIONS ///
+
+    /// @notice Initialize the contract by deploying new Balancer pool using the provided factory.
+    /// @dev First token and second token shouldn't be same. Validator should conform to interface.
+    /// @param factory_ Balancer Pool Factory address.
+    /// @param token0_ First token address.
+    /// @param token1_ Second token address.
+    /// @param manager_ Vault manager address.
+    /// @param validator_ Withdrawal validator contract address.
+    /// @param noticePeriod_ Notice period in seconds.
     constructor(
         address factory_,
         address token0_,
@@ -257,6 +269,8 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         );
         emit ManagerChanged(UNSET_MANAGER_ADDRESS, manager_);
     }
+
+    /// PROTOCOL API ///
 
     /// @inheritdoc IProtocolAPI
     function initialDeposit(
@@ -365,6 +379,49 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         );
     }
 
+    /// @inheritdoc IProtocolAPI
+    function initializeFinalization()
+        external
+        override
+        onlyOwner
+        onlyInitialized
+        nonFinalizing
+    {
+        noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
+        emit FinalizationInitialized(noticeTimeoutAt);
+    }
+
+    /// @inheritdoc IProtocolAPI
+    function finalize() external override nonReentrant onlyOwnerOrManager {
+        if (noticeTimeoutAt == 0) {
+            revert Mammon__FinalizationNotInitialized();
+        }
+        if (noticeTimeoutAt > block.timestamp) {
+            revert Mammon__NoticeTimeoutNotElapsed(noticeTimeoutAt);
+        }
+
+        (uint256 amount0, uint256 amount1) = returnFunds();
+        emit Finalized(msg.sender, amount0, amount1);
+
+        selfdestruct(payable(owner()));
+    }
+
+    /// @inheritdoc IProtocolAPI
+    function setManager(address newManager) external override onlyOwner {
+        if (newManager == address(0)) {
+            revert Mammon__ManagerIsZeroAddress();
+        }
+        emit ManagerChanged(manager, newManager);
+        manager = newManager;
+    }
+
+    /// @inheritdoc IProtocolAPI
+    function sweep(address token, uint256 amount) external override onlyOwner {
+        IERC20(token).safeTransfer(msg.sender, amount);
+    }
+
+    /// MANAGER API ///
+
     /// @inheritdoc IManagerAPI
     function updateWeightsGradually(
         uint256 targetWeight0,
@@ -420,47 +477,6 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         emit PokeWeights();
     }
 
-    /// @inheritdoc IProtocolAPI
-    function initializeFinalization()
-        external
-        override
-        onlyOwner
-        onlyInitialized
-        nonFinalizing
-    {
-        noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
-        emit FinalizationInitialized(noticeTimeoutAt);
-    }
-
-    /// @inheritdoc IProtocolAPI
-    function finalize() external override nonReentrant onlyOwnerOrManager {
-        if (noticeTimeoutAt == 0) {
-            revert Mammon__FinalizationNotInitialized();
-        }
-        if (noticeTimeoutAt > block.timestamp) {
-            revert Mammon__NoticeTimeoutNotElapsed(noticeTimeoutAt);
-        }
-
-        (uint256 amount0, uint256 amount1) = returnFunds();
-        emit Finalized(msg.sender, amount0, amount1);
-
-        selfdestruct(payable(owner()));
-    }
-
-    /// @inheritdoc IProtocolAPI
-    function setManager(address newManager) external override onlyOwner {
-        if (newManager == address(0)) {
-            revert Mammon__ManagerIsZeroAddress();
-        }
-        emit ManagerChanged(manager, newManager);
-        manager = newManager;
-    }
-
-    /// @inheritdoc IProtocolAPI
-    function sweep(address token, uint256 amount) external override onlyOwner {
-        IERC20(token).safeTransfer(msg.sender, amount);
-    }
-
     /// @inheritdoc IManagerAPI
     function setPublicSwap(bool value)
         external
@@ -478,15 +494,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         emit SetSwapFee(newSwapFee);
     }
 
-    /// @inheritdoc IUserAPI
-    function isPublicSwap() external view override returns (bool) {
-        return pool.isPublicSwap();
-    }
-
-    /// @inheritdoc IUserAPI
-    function getSwapFee() external view override returns (uint256) {
-        return pool.getSwapFee();
-    }
+    /// BINARY VAULT INTERFACE ///
 
     /// @inheritdoc IBinaryVault
     function holdings0() public view override returns (uint256) {
@@ -496,6 +504,18 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     /// @inheritdoc IBinaryVault
     function holdings1() public view override returns (uint256) {
         return pool.getBalance(token1);
+    }
+
+    /// USER API ///
+
+    /// @inheritdoc IUserAPI
+    function isPublicSwap() external view override returns (bool) {
+        return pool.isPublicSwap();
+    }
+
+    /// @inheritdoc IUserAPI
+    function getSwapFee() external view override returns (uint256) {
+        return pool.getSwapFee();
     }
 
     /// @inheritdoc IUserAPI
@@ -509,10 +529,10 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     }
 
     /// @notice Calculate change ratio for weights upgrade.
-    /// @dev Will only be called by updateWeightsGradually()
-    /// @param targetWeight0 The target weight of the first token.
-    /// @param targetWeight1 The target weight of the second token.
-    /// @return The change ratio from current weights to target weights.
+    /// @dev Will only be called by updateWeightsGradually().
+    /// @param targetWeight0 Target weight of first token.
+    /// @param targetWeight1 Target weight of second token.
+    /// @return Change ratio from current weights to target weights.
     function getWeightsChangeRatio(
         uint256 targetWeight0,
         uint256 targetWeight1
@@ -529,11 +549,13 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
                 : (ONE * factor1) / factor0;
     }
 
+    /// INTERNAL FUNCTIONS ///
+
     /// @notice Bind token to the pool.
     /// @dev Will only be called by initialDeposit().
-    /// @param token The address of a token to bind.
-    /// @param amount The amount of a token to bind.
-    /// @param weight The weight of a token to bind.
+    /// @param token Address of a token to bind.
+    /// @param amount Amount of a token to bind.
+    /// @param weight Weight of a token to bind.
     function bindToken(
         address token,
         uint256 amount,
@@ -549,9 +571,9 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
 
     /// @notice Deposit token to the pool.
     /// @dev Will only be called by deposit().
-    /// @param token The address of a token to deposit.
-    /// @param amount The deposit amount of a token.
-    /// @param balance The current balance of a token on the pool.
+    /// @param token Address of the token to deposit.
+    /// @param amount Amount to deposit.
+    /// @param balance Current balance of the token in the pool.
     function depositToken(
         address token,
         uint256 amount,
@@ -571,10 +593,10 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     }
 
     /// @notice Withdraw token from the pool.
-    /// @dev Will only be called by withdraw()
-    /// @param token The address of a token to withdraw.
-    /// @param amount The withdrawal amount of a token.
-    /// @param balance The current balance of a token on the pool.
+    /// @dev Will only be called by withdraw().
+    /// @param token Address of the token to withdraw.
+    /// @param amount Amount to withdraw.
+    /// @param balance The current balance of the token in the pool.
     function withdrawToken(
         address token,
         uint256 amount,
@@ -592,10 +614,10 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         erc20.safeTransfer(msg.sender, withdrawAmount);
     }
 
-    /// @notice Return all funds to the owner.
+    /// @notice Return all funds to owner.
     /// @dev Will only be called by finalize().
-    /// @return amount0 The exact returned amount of first token.
-    /// @return amount1 The exact returned amount of second token.
+    /// @return amount0 Exact returned amount of first token.
+    /// @return amount1 Exact returned amount of second token.
     function returnFunds()
         internal
         returns (uint256 amount0, uint256 amount1)
@@ -604,9 +626,9 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         amount1 = returnTokenFunds(token1);
     }
 
-    /// @notice Return funds to the owner.
+    /// @notice Return funds to owner.
     /// @dev Will only be called by returnFunds().
-    /// @param token The address of a token to unbind.
+    /// @param token Address of the token to unbind.
     /// @return amount The exact returned amount of a token.
     function returnTokenFunds(address token)
         internal

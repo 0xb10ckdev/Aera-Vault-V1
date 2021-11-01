@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
+/// @title Interface for protocol that owns treasury.
 interface IProtocolAPI {
-    /// @notice Initializes the Vault.
-    /// @dev Vault initialization must be performed before
-    ///      calling withdraw() or deposit() functions. Available only to the owner.
-    ///      Vault can be initialized only once.
-    /// @param amount0 The amount of the first token.
-    /// @param amount1 The amount of the second token.
-    /// @param weight0 The weight of the first token.
-    /// @param weight1 The weight of the second token.
+    /// @notice Initialize Vault with first deposit.
+    /// @dev Initial deposit must be performed before
+    ///      calling withdraw() or deposit() functions.
+    /// @param amount0 Deposited amount of first token.
+    /// @param amount1 Deposited amount of second token.
+    /// @param weight0 Initial weight of first token.
+    /// @param weight1 Initial weight of second token.
     function initialDeposit(
         uint256 amount0,
         uint256 amount1,
@@ -17,36 +17,25 @@ interface IProtocolAPI {
         uint256 weight1
     ) external;
 
-    /// @notice Deposit `amounts` of tokens.
-    /// @dev Available only to the owner. Available only if the vault is initialized.
-    ///      Vault shouldn't be on finalizing.
-    /// @param amount0 The amount of the first token.
-    /// @param amount1 The amount of the second token.
+    /// @notice Deposit tokens into vault.
+    /// @param amount0 Amount to deposit of first token.
+    /// @param amount1 Amount to deposit of second token.
     function deposit(uint256 amount0, uint256 amount1) external;
 
-    /// @notice Withdraw as much as possible up to each `amount`s of `token`s.
-    /// @dev Available only to the owner. Available only if the vault is initialized.
-    ///      Vault shouldn't be on finalizing.
-    /// @param amount0 The requested amount of the first token.
-    /// @param amount1 The requested amount of the second token.
+    /// @notice Withdraw tokens up to requested amounts.
+    /// @param amount0 Requested amount of first token.
+    /// @param amount1 Requested amount of second token.
     function withdraw(uint256 amount0, uint256 amount1) external;
 
     /// @notice Initiate vault destruction and return all funds to treasury owner.
-    /// @dev This is practically irreversible.Available only to the owner.
-    ///      Available only if the vault is initialized. Vault shouldn't be on finalizing.
     function initializeFinalization() external;
 
-    /// @notice Destroys vault and returns all funds to treasury owner.
-    /// @dev Only availble once `initializeFinalization()` is called and
-    ///      current timestamp is later than `noticeTimeoutAt`.
-    ///      Available only to the owner or the manager.
+    /// @notice Destroy vault and returns all funds to treasury owner.
     function finalize() external;
 
-    /// @notice Changes manager.
-    /// @dev Available only to the owner.
+    /// @notice Change manager.
     function setManager(address newManager) external;
 
-    /// @notice Withdraw any token which were sent to the Vault accidentally.
-    /// @dev Available only to the owner.
+    /// @notice Withdraw any tokens accidentally sent to vault.
     function sweep(address token, uint256 amount) external;
 }

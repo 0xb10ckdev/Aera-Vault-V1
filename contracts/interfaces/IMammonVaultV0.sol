@@ -6,11 +6,7 @@ import "./IManagerAPI.sol";
 import "./IProtocolAPI.sol";
 import "./IBinaryVault.sol";
 
-/**
- * @dev Interface for v0 vault. The minimum definition of a v0 mammon vault
- *      is that it supports the protocol API and two assets.
- *
- */
+/// @title Interface for v0 vault.
 // solhint-disable-next-line no-empty-blocks
 interface IMammonVaultV0 is IUserAPI, IManagerAPI, IProtocolAPI, IBinaryVault {
 
