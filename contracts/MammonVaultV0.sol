@@ -8,6 +8,7 @@ import "./dependencies/openzeppelin/Ownable.sol";
 import "./dependencies/openzeppelin/ReentrancyGuard.sol";
 import "./dependencies/openzeppelin/Math.sol";
 import "./dependencies/openzeppelin/SafeCast.sol";
+import "./dependencies/openzeppelin/ERC165Checker.sol";
 import "./interfaces/IBFactory.sol";
 import "./interfaces/IBPool.sol";
 import "./interfaces/IMammonVaultV0.sol";
@@ -239,7 +240,8 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
             revert Mammon__SameTokenAddresses(token0_);
         }
         if (
-            !IERC165(validator_).supportsInterface(
+            !ERC165Checker.supportsInterface(
+                validator_,
                 type(IWithdrawalValidator).interfaceId
             )
         ) {
