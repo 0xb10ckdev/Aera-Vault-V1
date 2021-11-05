@@ -1,43 +1,5 @@
-import { BigNumber, Signer } from "ethers";
-import { deployments, ethers } from "hardhat";
-import {
-  DEFAULT_NOTICE_PERIOD,
-  getConfig,
-  getChainId,
-} from "../scripts/config";
-import {
-  MammonVaultV0Mainnet,
-  MammonVaultV0Mainnet__factory,
-} from "../typechain";
-
-export const deployVault = async (
-  signer: Signer,
-  token0: string,
-  token1: string,
-  manager: string,
-  validator?: string,
-  noticePeriod: number = DEFAULT_NOTICE_PERIOD,
-): Promise<MammonVaultV0Mainnet> => {
-  const chainId = getChainId(process.env.HARDHAT_FORK);
-  const config = getConfig(chainId);
-
-  const factory =
-    await ethers.getContractFactory<MammonVaultV0Mainnet__factory>(
-      config.vault,
-      {
-        libraries: {
-          SmartPoolManager: config.poolManager,
-        },
-      },
-    );
-
-  if (!validator) {
-    validator = (await deployments.get("Validator")).address;
-  }
-  return await factory
-    .connect(signer)
-    .deploy(token0, token1, manager, validator, noticePeriod);
-};
+import { BigNumber } from "ethers";
+import { ethers } from "hardhat";
 
 export const toWei = (value: number | string): BigNumber => {
   return ethers.utils.parseEther(value.toString());
