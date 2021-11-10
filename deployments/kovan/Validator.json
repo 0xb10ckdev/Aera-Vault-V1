@@ -1,0 +1,105 @@
+{
+  "address": "0x97246142314dc1E20B03C3F9C12432D75425B95e",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "ANY_AMOUNT",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "allowance",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes4",
+          "name": "interfaceId",
+          "type": "bytes4"
+        }
+      ],
+      "name": "supportsInterface",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x33009da176c778f38f03b277e918b2c307a67a96dacd9e60b9ecab54f849895d",
+  "receipt": {
+    "to": null,
+    "from": "0xbA1A7CeD5c8d0B724782c4F6156DD79E8Cf91093",
+    "contractAddress": "0x97246142314dc1E20B03C3F9C12432D75425B95e",
+    "transactionIndex": 1,
+    "gasUsed": "108703",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x9300886a1533a15f7804f4d7425bd2a56380753d74eadb44202890b016e9b95d",
+    "transactionHash": "0x33009da176c778f38f03b277e918b2c307a67a96dacd9e60b9ecab54f849895d",
+    "logs": [],
+    "blockNumber": 28242487,
+    "cumulativeGasUsed": "129907",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "solcInputHash": "412f88d411f4c9b909904c184d2ce679",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.7+commit.e28d00a7\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"ANY_AMOUNT\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"allowance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"allowance()\":{\"details\":\"Token quantity value should be interpreted with the same      decimals as the token ERC20 balance.\",\"returns\":{\"_0\":\"token0Amount, token1Amount The quantity of each token that         can be withdrawn from the vault.\"}},\"supportsInterface(bytes4)\":{\"details\":\"See {IERC165-supportsInterface}.\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"allowance()\":{\"notice\":\"Determine how much of each token could be withdrawn under         current conditions.\"}},\"notice\":\"A withdrawal validator that validates withdrawals of an arbitrary size.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/PermissiveWithdrawalValidator.sol\":\"PermissiveWithdrawalValidator\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"none\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":800},\"remappings\":[]},\"sources\":{\"contracts/PermissiveWithdrawalValidator.sol\":{\"content\":\"// SPDX-License-Identifier: UNLICENSED\\npragma solidity 0.8.7;\\n\\nimport \\\"./dependencies/openzeppelin/ERC165.sol\\\";\\nimport { IWithdrawalValidator } from \\\"./interfaces/IWithdrawalValidator.sol\\\";\\n\\n/// @notice A withdrawal validator that validates withdrawals of an arbitrary size.\\ncontract PermissiveWithdrawalValidator is ERC165, IWithdrawalValidator {\\n    uint256 public constant ANY_AMOUNT = type(uint256).max;\\n\\n    /// @inheritdoc IWithdrawalValidator\\n    function allowance() external pure override returns (uint256, uint256) {\\n        return (ANY_AMOUNT, ANY_AMOUNT);\\n    }\\n\\n    function supportsInterface(bytes4 interfaceId)\\n        public\\n        view\\n        override\\n        returns (bool)\\n    {\\n        return\\n            interfaceId == type(IWithdrawalValidator).interfaceId ||\\n            super.supportsInterface(interfaceId);\\n    }\\n}\\n\",\"keccak256\":\"0x863deae61f46a73a18fb669f4d9cc57f54a335414944fb894de9456f090d99b6\",\"license\":\"UNLICENSED\"},\"contracts/dependencies/openzeppelin/ERC165.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts v4.3.2 (utils/introspection/ERC165.sol)\\n\\npragma solidity ^0.8.0;\\n\\nimport \\\"./IERC165.sol\\\";\\n\\n/**\\n * @dev Implementation of the {IERC165} interface.\\n *\\n * Contracts that want to implement ERC165 should inherit from this contract and override {supportsInterface} to check\\n * for the additional interface id that will be supported. For example:\\n *\\n * ```solidity\\n * function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {\\n *     return interfaceId == type(MyInterface).interfaceId || super.supportsInterface(interfaceId);\\n * }\\n * ```\\n *\\n * Alternatively, {ERC165Storage} provides an easier to use but more expensive implementation.\\n */\\nabstract contract ERC165 is IERC165 {\\n    /**\\n     * @dev See {IERC165-supportsInterface}.\\n     */\\n    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {\\n        return interfaceId == type(IERC165).interfaceId;\\n    }\\n}\",\"keccak256\":\"0xd074437ace695ba82ebbb3ab02bb4be8f4afe0e7467043c4c7c98d9d02deb8a8\",\"license\":\"MIT\"},\"contracts/dependencies/openzeppelin/IERC165.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts v4.3.2 (utils/introspection/IERC165.sol)\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev Interface of the ERC165 standard, as defined in the\\n * https://eips.ethereum.org/EIPS/eip-165[EIP].\\n *\\n * Implementers can declare support of contract interfaces, which can then be\\n * queried by others ({ERC165Checker}).\\n *\\n * For an implementation, see {ERC165}.\\n */\\ninterface IERC165 {\\n    /**\\n     * @dev Returns true if this contract implements the interface defined by\\n     * `interfaceId`. See the corresponding\\n     * https://eips.ethereum.org/EIPS/eip-165#how-interfaces-are-identified[EIP section]\\n     * to learn more about how these ids are created.\\n     *\\n     * This function call must use less than 30 000 gas.\\n     */\\n    function supportsInterface(bytes4 interfaceId) external view returns (bool);\\n}\",\"keccak256\":\"0x6e77518fa23344571e92f538413dd2f3e08bf80ed4b53f33983256a88d9044fb\",\"license\":\"MIT\"},\"contracts/interfaces/IWithdrawalValidator.sol\":{\"content\":\"// SPDX-License-Identifier: UNLICENSED\\npragma solidity 0.8.7;\\n\\n/// @title Withdrawal validation logic.\\n/// @notice Represents the withdrawal conditions for a vault.\\n/// @dev Should be extended by vault owner or manager, deployed and attached\\n///      to a vault instance. Withdrawal validator needs to respond to shortfall\\n///      shortfall conditions and provide an accurate allowance.\\ninterface IWithdrawalValidator {\\n    /// @notice Determine how much of each token could be withdrawn under\\n    ///         current conditions.\\n    /// @return token0Amount, token1Amount The quantity of each token that\\n    ///         can be withdrawn from the vault.\\n    /// @dev Token quantity value should be interpreted with the same\\n    ///      decimals as the token ERC20 balance.\\n    function allowance() external view returns (uint256, uint256);\\n}\\n\",\"keccak256\":\"0x2a7857354eb217bd733115a7e351b700728dd2204e12f35afc75cbe008767d7d\",\"license\":\"UNLICENSED\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b50610100806100206000396000f3fe6080604052348015600f57600080fd5b5060043610603c5760003560e01c806301ffc9a7146041578063b666bc5a146065578063de242ff414607a575b600080fd5b6050604c36600460c4565b608e565b60405190151581526020015b60405180910390f35b606d60001981565b604051908152602001605c565b60408051600019808252602082015201605c565b60006001600160e01b031982166337890bfd60e21b148060be57506301ffc9a760e01b6001600160e01b03198316145b92915050565b60006020828403121560d557600080fd5b81356001600160e01b03198116811460ec57600080fd5b939250505056fea164736f6c6343000807000a",
+  "deployedBytecode": "0x6080604052348015600f57600080fd5b5060043610603c5760003560e01c806301ffc9a7146041578063b666bc5a146065578063de242ff414607a575b600080fd5b6050604c36600460c4565b608e565b60405190151581526020015b60405180910390f35b606d60001981565b604051908152602001605c565b60408051600019808252602082015201605c565b60006001600160e01b031982166337890bfd60e21b148060be57506301ffc9a760e01b6001600160e01b03198316145b92915050565b60006020828403121560d557600080fd5b81356001600160e01b03198116811460ec57600080fd5b939250505056fea164736f6c6343000807000a",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {
+      "allowance()": {
+        "details": "Token quantity value should be interpreted with the same      decimals as the token ERC20 balance.",
+        "returns": {
+          "_0": "token0Amount, token1Amount The quantity of each token that         can be withdrawn from the vault."
+        }
+      },
+      "supportsInterface(bytes4)": {
+        "details": "See {IERC165-supportsInterface}."
+      }
+    },
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {
+      "allowance()": {
+        "notice": "Determine how much of each token could be withdrawn under         current conditions."
+      }
+    },
+    "notice": "A withdrawal validator that validates withdrawals of an arbitrary size.",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [],
+    "types": null
+  }
+}
