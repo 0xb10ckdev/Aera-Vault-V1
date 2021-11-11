@@ -5,8 +5,8 @@ import {
   IBPool,
   IBPool__factory,
   IERC20,
-  MammonVaultV0,
-  MammonVaultV0__factory,
+  MammonVaultV0Mainnet,
+  MammonVaultV0Mainnet__factory,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
 } from "../../typechain";
@@ -20,12 +20,12 @@ const MAX_WEIGHT = toWei("50");
 const MIN_BALANCE = toWei("1").div(1e12);
 const ZERO_ADDRESS = ethers.constants.AddressZero;
 
-describe("Mammon Vault v0", function () {
+describe("Mammon Vault v0 Mainnet", function () {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
   let user: SignerWithAddress;
   let bPool: IBPool;
-  let vault: MammonVaultV0;
+  let vault: MammonVaultV0Mainnet;
   let validator: WithdrawalValidatorMock;
   let DAI: IERC20;
   let WETH: IERC20;
@@ -103,8 +103,8 @@ describe("Mammon Vault v0", function () {
       noticePeriod: DEFAULT_NOTICE_PERIOD.toString(),
     });
 
-    vault = MammonVaultV0__factory.connect(
-      (await deployments.get("MammonVaultV0")).address,
+    vault = MammonVaultV0Mainnet__factory.connect(
+      (await deployments.get("MammonVaultV0Mainnet")).address,
       admin,
     );
 

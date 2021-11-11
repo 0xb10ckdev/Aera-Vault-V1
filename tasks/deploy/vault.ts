@@ -26,16 +26,9 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     console.log(`Validator: ${validator}`);
     console.log(`Notice Period: ${noticePeriod}`);
 
-    await deployments.deploy("MammonVaultV0", {
-      contract: "MammonVaultV0",
-      args: [
-        config.bFactory,
-        token0,
-        token1,
-        manager,
-        validator,
-        noticePeriod,
-      ],
+    await deployments.deploy(config.vault, {
+      contract: config.vault,
+      args: [token0, token1, manager, validator, noticePeriod],
       libraries: {
         SmartPoolManager: config.poolManager,
       },
@@ -45,6 +38,6 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
 
     console.log(
       "Vault is deployed to:",
-      (await deployments.get("MammonVaultV0")).address,
+      (await deployments.get(config.vault)).address,
     );
   });
