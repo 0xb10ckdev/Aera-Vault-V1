@@ -326,15 +326,26 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         onlyInitialized
         nonFinalizing
     {
-        if (amount0 > 0) {
-            depositToken(token0, amount0, holdings0());
-        }
-        if (amount1 > 0) {
-            depositToken(token1, amount1, holdings1());
-        }
-
+        uint256 balance0 = holdings0();
+        uint256 balance1 = holdings1();
         uint256 weight0 = getDenormalizedWeight(token0);
         uint256 weight1 = getDenormalizedWeight(token1);
+        uint256 newBalance0 = balance0;
+        uint256 newBalance1 = balance1;
+
+        if (amount0 > 0) {
+            newBalance0 += amount0;
+            weight0 = (weight0 * newBalance0) / balance0;
+        }
+        if (amount1 > 0) {
+            newBalance1 += amount1;
+            weight1 = (weight1 * newBalance1) / balance1;
+        }
+
+        (weight0, weight1) = recalibrateWeights(weight0, weight1);
+
+        depositToken(token0, amount0, weight0, newBalance0);
+        depositToken(token1, amount1, weight1, newBalance1);
 
         emit Deposit(amount0, amount1, weight0, weight1);
     }
@@ -350,24 +361,29 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     {
         (uint256 allowance0, uint256 allowance1) = validator.allowance();
 
-        uint256 balance0 = holdings0();
-        uint256 balance1 = holdings1();
-
-        uint256 exactAmount0 = amount0.min(balance0).min(allowance0);
-        uint256 exactAmount1 = amount1.min(balance1).min(allowance1);
-
-        uint256 withdrawnAmount0;
-        uint256 withdrawnAmount1;
+        uint256[] memory balances = new uint256[](2);
+        balances[0] = holdings0();
+        balances[1] = holdings1();
+        uint256 weight0 = getDenormalizedWeight(token0);
+        uint256 weight1 = getDenormalizedWeight(token1);
+        uint256 newBalance0 = balances[0];
+        uint256 newBalance1 = balances[1];
+        uint256 exactAmount0 = amount0.min(balances[0]).min(allowance0);
+        uint256 exactAmount1 = amount1.min(balances[1]).min(allowance1);
 
         if (exactAmount0 > 0) {
-            withdrawnAmount0 = withdrawToken(token0, exactAmount0, balance0);
+            newBalance0 -= exactAmount0;
+            weight0 = (weight0 * newBalance0) / balances[0];
         }
         if (exactAmount1 > 0) {
-            withdrawnAmount1 = withdrawToken(token1, exactAmount1, balance1);
+            newBalance1 -= exactAmount1;
+            weight1 = (weight1 * newBalance1) / balances[1];
         }
 
-        uint256 finalWeight0 = getDenormalizedWeight(token0);
-        uint256 finalWeight1 = getDenormalizedWeight(token1);
+        (weight0, weight1) = recalibrateWeights(weight0, weight1);
+
+        uint256 withdrawnAmount0 = withdrawToken(token0, weight0, newBalance0);
+        uint256 withdrawnAmount1 = withdrawToken(token1, weight1, newBalance1);
 
         emit Withdraw(
             amount0,
@@ -376,8 +392,8 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
             withdrawnAmount1,
             allowance0,
             allowance1,
-            finalWeight0,
-            finalWeight1
+            weight0,
+            weight1
         );
     }
 
@@ -574,45 +590,55 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         pool.bind(token, amount, weight);
     }
 
+    /// @notice Recalibrate weights of tokens to be in range.
+    /// @dev Will make minimum weights of tokens is pool.MIN_WEIGHT().
+    /// @param weight0 Weight of first token.
+    /// @param weight1 Weight of second token.
+    /// @param newWeight0 New Weight of first token in the pool.
+    /// @param newWeight1 New Weight of second token in the pool.
+    function recalibrateWeights(uint256 weight0, uint256 weight1)
+        internal
+        returns (uint256 newWeight0, uint256 newWeight1)
+    {
+        uint256 recalibrateRatio = (pool.MIN_WEIGHT() * ONE).ceilDiv(
+            weight0.min(weight1)
+        );
+
+        newWeight0 = (weight0 * recalibrateRatio) / ONE;
+        newWeight1 = (weight1 * recalibrateRatio) / ONE;
+    }
+
     /// @notice Deposit token to the pool.
     /// @dev Will only be called by deposit().
     /// @param token Address of the token to deposit.
     /// @param amount Amount to deposit.
-    /// @param balance Current balance of the token in the pool.
+    /// @param weight New Weight of the token in the pool.
+    /// @param balance New balance of the token in the pool.
     function depositToken(
         address token,
         uint256 amount,
+        uint256 weight,
         uint256 balance
     ) internal {
-        uint256 tokenDenorm = getDenormalizedWeight(token);
-        uint256 newBalance = balance + amount;
-
-        uint256 newDenorm = (tokenDenorm * newBalance) / balance;
-
         IERC20 erc20 = IERC20(token);
 
         erc20.safeTransferFrom(msg.sender, address(this), amount);
         erc20.safeApprove(address(pool), amount);
 
-        pool.rebind(token, newBalance, newDenorm);
+        pool.rebind(token, balance, weight);
     }
 
     /// @notice Withdraw token from the pool.
     /// @dev Will only be called by withdraw().
     /// @param token Address of the token to withdraw.
-    /// @param amount Amount to withdraw.
-    /// @param balance The current balance of the token in the pool.
+    /// @param weight New Weight of the token in the pool.
+    /// @param balance New balance of the token in the pool.
     function withdrawToken(
         address token,
-        uint256 amount,
+        uint256 weight,
         uint256 balance
     ) internal returns (uint256 withdrawAmount) {
-        uint256 tokenDenorm = getDenormalizedWeight(token);
-
-        uint256 newBalance = balance - amount;
-        uint256 newDenorm = (tokenDenorm * newBalance) / balance;
-
-        pool.rebind(token, newBalance, newDenorm);
+        pool.rebind(token, balance, weight);
 
         IERC20 erc20 = IERC20(token);
         withdrawAmount = erc20.balanceOf(address(this));

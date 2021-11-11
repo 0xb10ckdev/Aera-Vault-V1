@@ -11,7 +11,7 @@ import {
   WithdrawalValidatorMock__factory,
 } from "../../typechain";
 import { deployToken, setupTokens } from "../fixtures";
-import { deployVault, toWei } from "../utils";
+import { deployVault, toWei, recalibrateWeights } from "../utils";
 import { DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
 
 const ONE_TOKEN = toWei("1");
@@ -249,7 +249,12 @@ describe("Mammon Vault v0 Mainnet", function () {
     beforeEach(async () => {
       await DAI.approve(vault.address, toWei(100));
       await WETH.approve(vault.address, toWei(100));
-      await vault.initialDeposit(ONE_TOKEN, ONE_TOKEN, MIN_WEIGHT, MIN_WEIGHT);
+      await vault.initialDeposit(
+        ONE_TOKEN,
+        ONE_TOKEN,
+        MIN_WEIGHT,
+        MIN_WEIGHT.mul(2),
+      );
     });
 
     describe("when depositing to Vault", () => {
@@ -260,18 +265,6 @@ describe("Mammon Vault v0 Mainnet", function () {
 
         await expect(vault.deposit(toWei(100), toWei(0))).to.be.revertedWith(
           "ERC20: transfer amount exceeds allowance",
-        );
-
-        await expect(vault.deposit(toWei(50), toWei(20))).to.be.revertedWith(
-          "ERR_MAX_WEIGHT",
-        );
-
-        await expect(vault.deposit(toWei(10), toWei(80))).to.be.revertedWith(
-          "ERR_MAX_WEIGHT",
-        );
-
-        await expect(vault.deposit(toWei(20), toWei(40))).to.be.revertedWith(
-          "ERR_MAX_TOTAL_WEIGHT",
         );
       });
 
@@ -292,7 +285,14 @@ describe("Mammon Vault v0 Mainnet", function () {
         await vault.deposit(toWei(5), toWei(0));
 
         const newHoldings0 = holdings0.add(toWei(5));
-        const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+        let newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+        let newWeight1 = weight1;
+
+        [newWeight0, newWeight1] = recalibrateWeights(
+          MIN_WEIGHT,
+          newWeight0,
+          newWeight1,
+        );
 
         expect(await vault.holdings0()).to.equal(newHoldings0);
         expect(await vault.holdings1()).to.equal(holdings1);
@@ -300,7 +300,7 @@ describe("Mammon Vault v0 Mainnet", function () {
           newWeight0,
         );
         expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
-          weight1,
+          newWeight1,
         );
         expect(await DAI.balanceOf(admin.address)).to.equal(
           balance0.sub(toWei(5)),
@@ -328,12 +328,19 @@ describe("Mammon Vault v0 Mainnet", function () {
         await vault.deposit(toWei(0), toWei(5));
 
         const newHoldings1 = holdings1.add(toWei(5));
-        const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+        let newWeight0 = weight0;
+        let newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+        [newWeight0, newWeight1] = recalibrateWeights(
+          MIN_WEIGHT,
+          newWeight0,
+          newWeight1,
+        );
 
         expect(await vault.holdings0()).to.equal(holdings0);
         expect(await vault.holdings1()).to.equal(newHoldings1);
         expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
-          weight0,
+          newWeight0,
         );
         expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
           newWeight1,
@@ -365,8 +372,14 @@ describe("Mammon Vault v0 Mainnet", function () {
 
         const newHoldings0 = holdings0.add(toWei(5));
         const newHoldings1 = holdings1.add(toWei(15));
-        const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
-        const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+        let newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+        let newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+        [newWeight0, newWeight1] = recalibrateWeights(
+          MIN_WEIGHT,
+          newWeight0,
+          newWeight1,
+        );
 
         expect(await vault.holdings0()).to.equal(newHoldings0);
         expect(await vault.holdings1()).to.equal(newHoldings1);
@@ -403,13 +416,19 @@ describe("Mammon Vault v0 Mainnet", function () {
 
           await vault.withdraw(toWei(5), toWei(15));
 
+          const [newWeight0, newWeight1] = recalibrateWeights(
+            MIN_WEIGHT,
+            weight0,
+            weight1,
+          );
+
           expect(await vault.holdings0()).to.equal(holdings0);
           expect(await vault.holdings1()).to.equal(holdings1);
           expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
-            weight0,
+            newWeight0,
           );
           expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
-            weight1,
+            newWeight1,
           );
           expect(await DAI.balanceOf(admin.address)).to.equal(balance0);
           expect(await WETH.balanceOf(admin.address)).to.equal(balance1);
@@ -456,7 +475,14 @@ describe("Mammon Vault v0 Mainnet", function () {
           await vault.withdraw(toWei(5), toWei(0));
 
           const newHoldings0 = holdings0.sub(toWei(5));
-          const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+          let newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+          let newWeight1 = weight1;
+
+          [newWeight0, newWeight1] = recalibrateWeights(
+            MIN_WEIGHT,
+            newWeight0,
+            newWeight1,
+          );
 
           expect(await vault.holdings0()).to.equal(newHoldings0);
           expect(await vault.holdings1()).to.equal(holdings1);
@@ -464,7 +490,7 @@ describe("Mammon Vault v0 Mainnet", function () {
             newWeight0,
           );
           expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
-            weight1,
+            newWeight1,
           );
           expect(await DAI.balanceOf(admin.address)).to.equal(
             balance0.add(toWei(5)),
@@ -494,12 +520,19 @@ describe("Mammon Vault v0 Mainnet", function () {
           await vault.withdraw(toWei(0), toWei(5));
 
           const newHoldings1 = holdings1.sub(toWei(5));
-          const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+          let newWeight0 = weight0;
+          let newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+          [newWeight0, newWeight1] = recalibrateWeights(
+            MIN_WEIGHT,
+            newWeight0,
+            newWeight1,
+          );
 
           expect(await vault.holdings0()).to.equal(holdings0);
           expect(await vault.holdings1()).to.equal(newHoldings1);
           expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
-            weight0,
+            newWeight0,
           );
           expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
             newWeight1,
@@ -533,8 +566,14 @@ describe("Mammon Vault v0 Mainnet", function () {
 
           const newHoldings0 = holdings0.sub(toWei(5));
           const newHoldings1 = holdings1.sub(toWei(10));
-          const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
-          const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+          let newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+          let newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+          [newWeight0, newWeight1] = recalibrateWeights(
+            MIN_WEIGHT,
+            newWeight0,
+            newWeight1,
+          );
 
           expect(await vault.holdings0()).to.equal(newHoldings0);
           expect(await vault.holdings1()).to.equal(newHoldings1);

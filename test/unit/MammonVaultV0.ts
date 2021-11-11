@@ -3,7 +3,7 @@ import { BigNumber } from "ethers";
 import { Artifact } from "hardhat/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
-import { toWei } from "../utils";
+import { toWei, recalibrateWeights } from "../utils";
 import { ONE_TOKEN } from "../constants";
 import {
   WithdrawalValidatorMock,
@@ -298,7 +298,12 @@ describe("Mammon Vault v0", function () {
     beforeEach(async () => {
       await DAI.approve(vault.address, toWei(100));
       await WETH.approve(vault.address, toWei(100));
-      await vault.initialDeposit(ONE_TOKEN, ONE_TOKEN, MIN_WEIGHT, MIN_WEIGHT);
+      await vault.initialDeposit(
+        ONE_TOKEN,
+        ONE_TOKEN,
+        MIN_WEIGHT,
+        MIN_WEIGHT.mul(2),
+      );
     });
 
     describe("when depositing to vault", () => {
@@ -330,7 +335,14 @@ describe("Mammon Vault v0", function () {
           await vault.deposit(amount0, amount1);
 
           const newHoldings0 = holdings0.add(amount0);
-          const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+          let newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+          let newWeight1 = weight1;
+
+          [newWeight0, newWeight1] = recalibrateWeights(
+            MIN_WEIGHT,
+            newWeight0,
+            newWeight1,
+          );
 
           expect(await vault.holdings0()).to.equal(newHoldings0);
           expect(await vault.holdings1()).to.equal(holdings1);
@@ -338,7 +350,7 @@ describe("Mammon Vault v0", function () {
             newWeight0,
           );
           expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
-            weight1,
+            newWeight1,
           );
           expect(await DAI.balanceOf(admin.address)).to.equal(
             balance0.sub(amount0),
@@ -346,7 +358,7 @@ describe("Mammon Vault v0", function () {
           expect(await WETH.balanceOf(admin.address)).to.equal(balance1);
 
           expect(await vault.getWeightsChangeRatio(weight0, weight1)).to.equal(
-            getWeightsChangeRatio(newWeight0, weight1, weight0, weight1),
+            getWeightsChangeRatio(newWeight0, newWeight1, weight0, weight1),
           );
         }
       });
@@ -369,12 +381,19 @@ describe("Mammon Vault v0", function () {
           await vault.deposit(amount0, amount1);
 
           const newHoldings1 = holdings1.add(amount1);
-          const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+          let newWeight0 = weight0;
+          let newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+          [newWeight0, newWeight1] = recalibrateWeights(
+            MIN_WEIGHT,
+            newWeight0,
+            newWeight1,
+          );
 
           expect(await vault.holdings0()).to.equal(holdings0);
           expect(await vault.holdings1()).to.equal(newHoldings1);
           expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
-            weight0,
+            newWeight0,
           );
           expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
             newWeight1,
@@ -385,7 +404,7 @@ describe("Mammon Vault v0", function () {
           );
 
           expect(await vault.getWeightsChangeRatio(weight0, weight1)).to.equal(
-            getWeightsChangeRatio(weight0, newWeight1, weight0, weight1),
+            getWeightsChangeRatio(newWeight0, newWeight1, weight0, weight1),
           );
         }
       });
@@ -410,8 +429,14 @@ describe("Mammon Vault v0", function () {
 
           const newHoldings0 = holdings0.add(amount0);
           const newHoldings1 = holdings1.add(amount1);
-          const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
-          const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+          let newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+          let newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+          [newWeight0, newWeight1] = recalibrateWeights(
+            MIN_WEIGHT,
+            newWeight0,
+            newWeight1,
+          );
 
           expect(await vault.holdings0()).to.equal(newHoldings0);
           expect(await vault.holdings1()).to.equal(newHoldings1);
@@ -462,13 +487,19 @@ describe("Mammon Vault v0", function () {
               weight1,
             );
 
+          const [newWeight0, newWeight1] = recalibrateWeights(
+            MIN_WEIGHT,
+            weight0,
+            weight1,
+          );
+
           expect(await vault.holdings0()).to.equal(holdings0);
           expect(await vault.holdings1()).to.equal(holdings1);
           expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
-            weight0,
+            newWeight0,
           );
           expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
-            weight1,
+            newWeight1,
           );
           expect(await DAI.balanceOf(admin.address)).to.equal(balance0);
           expect(await WETH.balanceOf(admin.address)).to.equal(balance1);
@@ -501,8 +532,14 @@ describe("Mammon Vault v0", function () {
 
           const newHoldings0 = holdings0.sub(allowance0);
           const newHoldings1 = holdings1.sub(allowance1);
-          const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
-          const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+          let newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+          let newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+          [newWeight0, newWeight1] = recalibrateWeights(
+            MIN_WEIGHT,
+            newWeight0,
+            newWeight1,
+          );
 
           await expect(vault.withdraw(amount0, amount1))
             .to.emit(vault, "Withdraw")
@@ -556,7 +593,14 @@ describe("Mammon Vault v0", function () {
             const amount1 = toWei(0);
 
             const newHoldings0 = holdings0.sub(amount0);
-            const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+            let newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+            let newWeight1 = weight1;
+
+            [newWeight0, newWeight1] = recalibrateWeights(
+              MIN_WEIGHT,
+              newWeight0,
+              newWeight1,
+            );
 
             await expect(vault.withdraw(amount0, amount1))
               .to.emit(vault, "Withdraw")
@@ -568,7 +612,7 @@ describe("Mammon Vault v0", function () {
                 allowance0,
                 allowance1,
                 newWeight0,
-                weight1,
+                newWeight1,
               );
 
             expect(await vault.holdings0()).to.equal(newHoldings0);
@@ -577,7 +621,7 @@ describe("Mammon Vault v0", function () {
               newWeight0,
             );
             expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
-              weight1,
+              newWeight1,
             );
             expect(await DAI.balanceOf(admin.address)).to.equal(
               balance0.add(amount0),
@@ -587,7 +631,7 @@ describe("Mammon Vault v0", function () {
             expect(
               await vault.getWeightsChangeRatio(weight0, weight1),
             ).to.equal(
-              getWeightsChangeRatio(newWeight0, weight1, weight0, weight1),
+              getWeightsChangeRatio(newWeight0, newWeight1, weight0, weight1),
             );
           }
         });
@@ -609,7 +653,14 @@ describe("Mammon Vault v0", function () {
             const amount1 = toWei(testAmounts[i][1]);
 
             const newHoldings1 = holdings1.sub(amount1);
-            const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+            let newWeight0 = weight0;
+            let newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+            [newWeight0, newWeight1] = recalibrateWeights(
+              MIN_WEIGHT,
+              newWeight0,
+              newWeight1,
+            );
 
             await expect(vault.withdraw(amount0, amount1))
               .to.emit(vault, "Withdraw")
@@ -620,14 +671,14 @@ describe("Mammon Vault v0", function () {
                 amount1,
                 allowance0,
                 allowance1,
-                weight0,
+                newWeight0,
                 newWeight1,
               );
 
             expect(await vault.holdings0()).to.equal(holdings0);
             expect(await vault.holdings1()).to.equal(newHoldings1);
             expect(await vault.getDenormalizedWeight(DAI.address)).to.equal(
-              weight0,
+              newWeight0,
             );
             expect(await vault.getDenormalizedWeight(WETH.address)).to.equal(
               newWeight1,
@@ -640,7 +691,7 @@ describe("Mammon Vault v0", function () {
             expect(
               await vault.getWeightsChangeRatio(weight0, weight1),
             ).to.equal(
-              getWeightsChangeRatio(weight0, newWeight1, weight0, weight1),
+              getWeightsChangeRatio(newWeight0, newWeight1, weight0, weight1),
             );
           }
         });
@@ -663,8 +714,14 @@ describe("Mammon Vault v0", function () {
 
             const newHoldings0 = holdings0.sub(amount0);
             const newHoldings1 = holdings1.sub(amount1);
-            const newWeight0 = weight0.mul(newHoldings0).div(holdings0);
-            const newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+            let newWeight0 = weight0.mul(newHoldings0).div(holdings0);
+            let newWeight1 = weight1.mul(newHoldings1).div(holdings1);
+
+            [newWeight0, newWeight1] = recalibrateWeights(
+              MIN_WEIGHT,
+              newWeight0,
+              newWeight1,
+            );
 
             await expect(vault.withdraw(amount0, amount1))
               .to.emit(vault, "Withdraw")
