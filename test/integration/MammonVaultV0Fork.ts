@@ -280,7 +280,7 @@ describe("Mammon Vault v0 Mainnet", function () {
         } = await getStates();
 
         expect(await vault.estimateGas.deposit(toWei(5), toWei(0))).to.below(
-          180000,
+          230000,
         );
         await vault.deposit(toWei(5), toWei(0));
 
@@ -323,7 +323,7 @@ describe("Mammon Vault v0 Mainnet", function () {
         } = await getStates();
 
         expect(await vault.estimateGas.deposit(toWei(0), toWei(5))).to.below(
-          180000,
+          230000,
         );
         await vault.deposit(toWei(0), toWei(5));
 
@@ -444,20 +444,6 @@ describe("Mammon Vault v0 Mainnet", function () {
           await validator.setAllowance(toWei(100), toWei(100));
         });
 
-        it("should be reverted to withdraw tokens", async () => {
-          await expect(vault.withdraw(toWei(0), toWei(60))).to.be.revertedWith(
-            "ERR_MIN_WEIGHT",
-          );
-
-          await expect(vault.withdraw(toWei(11), toWei(0))).to.be.revertedWith(
-            "ERR_MIN_WEIGHT",
-          );
-
-          await expect(
-            vault.withdraw(toWei(11), toWei(20)),
-          ).to.be.revertedWith("ERR_MIN_WEIGHT");
-        });
-
         it("should be possible to withdraw token0", async () => {
           const {
             weight0,
@@ -471,7 +457,7 @@ describe("Mammon Vault v0 Mainnet", function () {
 
           expect(
             await vault.estimateGas.withdraw(toWei(5), toWei(0)),
-          ).to.below(160000);
+          ).to.below(200000);
           await vault.withdraw(toWei(5), toWei(0));
 
           const newHoldings0 = holdings0.sub(toWei(5));
@@ -516,7 +502,7 @@ describe("Mammon Vault v0 Mainnet", function () {
 
           expect(
             await vault.estimateGas.withdraw(toWei(0), toWei(5)),
-          ).to.below(160000);
+          ).to.below(200000);
           await vault.withdraw(toWei(0), toWei(5));
 
           const newHoldings1 = holdings1.sub(toWei(5));
