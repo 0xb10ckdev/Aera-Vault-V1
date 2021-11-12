@@ -62,6 +62,8 @@ interface IBPool {
 
     function getSwapFee() external view returns (uint256);
 
+    function getController() external view returns (address);
+
     function getSpotPrice(address tokenIn, address tokenOut)
         external
         view
