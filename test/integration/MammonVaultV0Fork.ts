@@ -307,7 +307,8 @@ describe("Mammon Vault v0 Mainnet", function () {
         );
         expect(await WETH.balanceOf(admin.address)).to.equal(balance1);
         expect(await bPool.getSpotPrice(DAI.address, WETH.address)).to.closeTo(
-          spotPrice, 1
+          spotPrice,
+          1,
         );
       });
 
@@ -350,7 +351,8 @@ describe("Mammon Vault v0 Mainnet", function () {
           balance1.sub(toWei(5)),
         );
         expect(await bPool.getSpotPrice(DAI.address, WETH.address)).to.closeTo(
-          spotPrice, 1
+          spotPrice,
+          1,
         );
       });
 
@@ -396,7 +398,8 @@ describe("Mammon Vault v0 Mainnet", function () {
           balance1.sub(toWei(15)),
         );
         expect(await bPool.getSpotPrice(DAI.address, WETH.address)).to.closeTo(
-          spotPrice, 1
+          spotPrice,
+          1,
         );
       });
     });
@@ -432,9 +435,9 @@ describe("Mammon Vault v0 Mainnet", function () {
           );
           expect(await DAI.balanceOf(admin.address)).to.equal(balance0);
           expect(await WETH.balanceOf(admin.address)).to.equal(balance1);
-          expect(await bPool.getSpotPrice(DAI.address, WETH.address)).to.closeTo(
-            spotPrice, 1
-          );
+          expect(
+            await bPool.getSpotPrice(DAI.address, WETH.address),
+          ).to.closeTo(spotPrice, 1);
         });
       });
 
@@ -484,9 +487,9 @@ describe("Mammon Vault v0 Mainnet", function () {
           expect(await WETH.balanceOf(admin.address)).to.equal(
             balance1.add(toWei(0)),
           );
-          expect(await bPool.getSpotPrice(DAI.address, WETH.address)).to.closeTo(
-            spotPrice, 1
-          );
+          expect(
+            await bPool.getSpotPrice(DAI.address, WETH.address),
+          ).to.closeTo(spotPrice, 1);
         });
 
         it("should be possible to withdraw token1", async () => {
@@ -529,9 +532,9 @@ describe("Mammon Vault v0 Mainnet", function () {
           expect(await WETH.balanceOf(admin.address)).to.equal(
             balance1.add(toWei(5)),
           );
-          expect(await bPool.getSpotPrice(DAI.address, WETH.address)).to.closeTo(
-            spotPrice, 1
-          );
+          expect(
+            await bPool.getSpotPrice(DAI.address, WETH.address),
+          ).to.closeTo(spotPrice, 1);
         });
 
         it("should be possible to withdraw tokens", async () => {
@@ -575,9 +578,9 @@ describe("Mammon Vault v0 Mainnet", function () {
           expect(await WETH.balanceOf(admin.address)).to.equal(
             balance1.add(toWei(10)),
           );
-          expect(await bPool.getSpotPrice(DAI.address, WETH.address)).to.closeTo(
-            spotPrice, 1
-          );
+          expect(
+            await bPool.getSpotPrice(DAI.address, WETH.address),
+          ).to.closeTo(spotPrice, 1);
         });
       });
     });
