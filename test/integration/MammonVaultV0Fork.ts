@@ -17,6 +17,7 @@ import { DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
 const ONE_TOKEN = toWei("1");
 const MIN_WEIGHT = toWei("1");
 const MAX_WEIGHT = toWei("50");
+const MAX_TOTAL_WEIGHT = toWei("50");
 const MIN_BALANCE = toWei("1").div(1e12);
 const ZERO_ADDRESS = ethers.constants.AddressZero;
 
@@ -290,6 +291,7 @@ describe("Mammon Vault v0 Mainnet", function () {
 
         [newWeight0, newWeight1] = recalibrateWeights(
           MIN_WEIGHT,
+          MAX_TOTAL_WEIGHT,
           newWeight0,
           newWeight1,
         );
@@ -334,6 +336,7 @@ describe("Mammon Vault v0 Mainnet", function () {
 
         [newWeight0, newWeight1] = recalibrateWeights(
           MIN_WEIGHT,
+          MAX_TOTAL_WEIGHT,
           newWeight0,
           newWeight1,
         );
@@ -379,6 +382,7 @@ describe("Mammon Vault v0 Mainnet", function () {
 
         [newWeight0, newWeight1] = recalibrateWeights(
           MIN_WEIGHT,
+          MAX_TOTAL_WEIGHT,
           newWeight0,
           newWeight1,
         );
@@ -421,6 +425,7 @@ describe("Mammon Vault v0 Mainnet", function () {
 
           const [newWeight0, newWeight1] = recalibrateWeights(
             MIN_WEIGHT,
+            MAX_TOTAL_WEIGHT,
             weight0,
             weight1,
           );
@@ -469,6 +474,7 @@ describe("Mammon Vault v0 Mainnet", function () {
 
           [newWeight0, newWeight1] = recalibrateWeights(
             MIN_WEIGHT,
+            MAX_TOTAL_WEIGHT,
             newWeight0,
             newWeight1,
           );
@@ -514,6 +520,7 @@ describe("Mammon Vault v0 Mainnet", function () {
 
           [newWeight0, newWeight1] = recalibrateWeights(
             MIN_WEIGHT,
+            MAX_TOTAL_WEIGHT,
             newWeight0,
             newWeight1,
           );
@@ -560,6 +567,7 @@ describe("Mammon Vault v0 Mainnet", function () {
 
           [newWeight0, newWeight1] = recalibrateWeights(
             MIN_WEIGHT,
+            MAX_TOTAL_WEIGHT,
             newWeight0,
             newWeight1,
           );

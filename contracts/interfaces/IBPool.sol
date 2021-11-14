@@ -83,5 +83,8 @@ interface IBPool {
     function MAX_WEIGHT() external view returns (uint256);
 
     // solhint-disable-next-line func-name-mixedcase
+    function MAX_TOTAL_WEIGHT() external view returns (uint256);
+
+    // solhint-disable-next-line func-name-mixedcase
     function MIN_BALANCE() external view returns (uint256);
 }

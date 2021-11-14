@@ -85,6 +85,11 @@ contract BPoolMock {
     }
 
     // solhint-disable-next-line func-name-mixedcase
+    function MAX_TOTAL_WEIGHT() external pure returns (uint256) {
+        return 10**18 * 50;
+    }
+
+    // solhint-disable-next-line func-name-mixedcase
     function MIN_BALANCE() external pure returns (uint256) {
         return 10**6;
     }
