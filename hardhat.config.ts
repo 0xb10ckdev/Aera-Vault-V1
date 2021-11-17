@@ -119,6 +119,7 @@ const config: HardhatUserConfig = {
       allowUnlimitedContractSize: true,
       chainId: chainIds.hardhat,
     },
+    mainnet: createTestnetConfig("mainnet"),
     goerli: createTestnetConfig("goerli"),
     kovan: createTestnetPrivateKeyConfig("kovan"),
     rinkeby: createTestnetConfig("rinkeby"),
