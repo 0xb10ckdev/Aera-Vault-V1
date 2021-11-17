@@ -1,4 +1,4 @@
-import { getConfig, getChainId } from "../../scripts/config";
+import { getConfig } from "../../scripts/config";
 import { task } from "hardhat/config";
 
 task("deploy:vault", "Deploys a Mammon vault with the given parameters")
