@@ -7,15 +7,14 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   .addParam("manager", "Manager's address")
   .addParam("validator", "Validator's address")
   .addParam("noticePeriod", "Notice period in seconds")
-  .setAction(async (taskArgs, { deployments, ethers }) => {
+  .setAction(async (taskArgs, { deployments, ethers, network }) => {
     const token0 = taskArgs.token0;
     const token1 = taskArgs.token1;
     const manager = taskArgs.manager;
     const validator = taskArgs.validator;
     const noticePeriod = taskArgs.noticePeriod;
-
-    const chainId = getChainId(taskArgs.network);
-    const config = getConfig(chainId);
+    
+    const config = getConfig(network.config.chainId || 1);
 
     const { admin } = await ethers.getNamedSigners();
 
