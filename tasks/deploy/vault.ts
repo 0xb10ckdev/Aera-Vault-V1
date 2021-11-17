@@ -13,7 +13,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     const manager = taskArgs.manager;
     const validator = taskArgs.validator;
     const noticePeriod = taskArgs.noticePeriod;
-    
+
     const config = getConfig(network.config.chainId || 1);
 
     const { admin } = await ethers.getNamedSigners();
