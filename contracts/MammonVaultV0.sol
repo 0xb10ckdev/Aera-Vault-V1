@@ -345,7 +345,12 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         bool outOfBound = isOutOfBound(weight0, weight1);
 
         if (outOfBound) {
-            (weight0, weight1) = recalibrateWeights(weight0, weight1);
+            (weight0, weight1) = recalibrateWeights(
+                weight0,
+                weight1,
+                newBalance0,
+                newBalance1
+            );
         }
 
         if (outOfBound || amount0 > 0) {
@@ -394,7 +399,9 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         if (outOfBound) {
             (weights[0], weights[1]) = recalibrateWeights(
                 weights[0],
-                weights[1]
+                weights[1],
+                newBalance0,
+                newBalance1
             );
         }
 
@@ -637,16 +644,29 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     /// @param weight1 Weight of second token.
     /// @return newWeight0 New Weight of first token in the pool.
     /// @return newWeight1 New Weight of second token in the pool.
-    function recalibrateWeights(uint256 weight0, uint256 weight1)
-        internal
-        returns (uint256 newWeight0, uint256 newWeight1)
-    {
+    function recalibrateWeights(
+        uint256 weight0,
+        uint256 weight1,
+        uint256 newBalance0,
+        uint256 newBalance1
+    ) internal returns (uint256 newWeight0, uint256 newWeight1) {
+        uint256 balance0 = holdings0();
+        uint256 balance1 = holdings1();
+        uint256 denorm0 = getDenormalizedWeight(token0);
+        uint256 denorm1 = getDenormalizedWeight(token1);
+
         uint256 recalibrateRatio = (pool.MIN_WEIGHT() * ONE).ceilDiv(
             weight0.min(weight1)
         );
 
-        newWeight0 = (weight0 * recalibrateRatio) / ONE;
-        newWeight1 = (weight1 * recalibrateRatio) / ONE;
+        newWeight0 =
+            (denorm0 * newBalance0 * recalibrateRatio) /
+            balance0 /
+            ONE;
+        newWeight1 =
+            (denorm1 * newBalance1 * recalibrateRatio) /
+            balance1 /
+            ONE;
     }
 
     /// @notice Deposit token to the pool.

@@ -292,8 +292,14 @@ describe("Mammon Vault v0 Mainnet", function () {
         [newWeight0, newWeight1] = recalibrateWeights(
           MIN_WEIGHT,
           MAX_TOTAL_WEIGHT,
+          weight0,
+          weight1,
+          holdings0,
+          holdings1,
           newWeight0,
           newWeight1,
+          newHoldings0,
+          holdings1,
         );
 
         expect(await vault.holdings0()).to.equal(newHoldings0);
@@ -337,8 +343,14 @@ describe("Mammon Vault v0 Mainnet", function () {
         [newWeight0, newWeight1] = recalibrateWeights(
           MIN_WEIGHT,
           MAX_TOTAL_WEIGHT,
+          weight0,
+          weight1,
+          holdings0,
+          holdings1,
           newWeight0,
           newWeight1,
+          holdings0,
+          newHoldings1,
         );
 
         expect(await vault.holdings0()).to.equal(holdings0);
@@ -383,8 +395,14 @@ describe("Mammon Vault v0 Mainnet", function () {
         [newWeight0, newWeight1] = recalibrateWeights(
           MIN_WEIGHT,
           MAX_TOTAL_WEIGHT,
+          weight0,
+          weight1,
+          holdings0,
+          holdings1,
           newWeight0,
           newWeight1,
+          newHoldings0,
+          newHoldings1,
         );
 
         expect(await vault.holdings0()).to.equal(newHoldings0);
@@ -428,6 +446,12 @@ describe("Mammon Vault v0 Mainnet", function () {
             MAX_TOTAL_WEIGHT,
             weight0,
             weight1,
+            holdings0,
+            holdings1,
+            weight0,
+            weight1,
+            holdings0,
+            holdings1,
           );
 
           expect(await vault.holdings0()).to.equal(holdings0);
@@ -465,7 +489,7 @@ describe("Mammon Vault v0 Mainnet", function () {
 
           expect(
             await vault.estimateGas.withdraw(toWei(5), toWei(0)),
-          ).to.below(200000);
+          ).to.below(210000);
           await vault.withdraw(toWei(5), toWei(0));
 
           const newHoldings0 = holdings0.sub(toWei(5));
@@ -475,8 +499,14 @@ describe("Mammon Vault v0 Mainnet", function () {
           [newWeight0, newWeight1] = recalibrateWeights(
             MIN_WEIGHT,
             MAX_TOTAL_WEIGHT,
+            weight0,
+            weight1,
+            holdings0,
+            holdings1,
             newWeight0,
             newWeight1,
+            newHoldings0,
+            holdings1,
           );
 
           expect(await vault.holdings0()).to.equal(newHoldings0);
@@ -521,8 +551,14 @@ describe("Mammon Vault v0 Mainnet", function () {
           [newWeight0, newWeight1] = recalibrateWeights(
             MIN_WEIGHT,
             MAX_TOTAL_WEIGHT,
+            weight0,
+            weight1,
+            holdings0,
+            holdings1,
             newWeight0,
             newWeight1,
+            holdings0,
+            newHoldings1,
           );
 
           expect(await vault.holdings0()).to.equal(holdings0);
@@ -557,7 +593,7 @@ describe("Mammon Vault v0 Mainnet", function () {
 
           expect(
             await vault.estimateGas.withdraw(toWei(5), toWei(10)),
-          ).to.below(240000);
+          ).to.below(255000);
           await vault.withdraw(toWei(5), toWei(10));
 
           const newHoldings0 = holdings0.sub(toWei(5));
@@ -568,8 +604,14 @@ describe("Mammon Vault v0 Mainnet", function () {
           [newWeight0, newWeight1] = recalibrateWeights(
             MIN_WEIGHT,
             MAX_TOTAL_WEIGHT,
+            weight0,
+            weight1,
+            holdings0,
+            holdings1,
             newWeight0,
             newWeight1,
+            newHoldings0,
+            newHoldings1,
           );
 
           expect(await vault.holdings0()).to.equal(newHoldings0);

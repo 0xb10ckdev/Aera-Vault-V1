@@ -342,8 +342,14 @@ describe("Mammon Vault v0", function () {
           [newWeight0, newWeight1] = recalibrateWeights(
             MIN_WEIGHT,
             MAX_TOTAL_WEIGHT,
+            weight0,
+            weight1,
+            holdings0,
+            holdings1,
             newWeight0,
             newWeight1,
+            newHoldings0,
+            holdings1,
           );
 
           expect(await vault.holdings0()).to.equal(newHoldings0);
@@ -389,8 +395,14 @@ describe("Mammon Vault v0", function () {
           [newWeight0, newWeight1] = recalibrateWeights(
             MIN_WEIGHT,
             MAX_TOTAL_WEIGHT,
+            weight0,
+            weight1,
+            holdings0,
+            holdings1,
             newWeight0,
             newWeight1,
+            holdings0,
+            newHoldings1,
           );
 
           expect(await vault.holdings0()).to.equal(holdings0);
@@ -438,8 +450,14 @@ describe("Mammon Vault v0", function () {
           [newWeight0, newWeight1] = recalibrateWeights(
             MIN_WEIGHT,
             MAX_TOTAL_WEIGHT,
+            weight0,
+            weight1,
+            holdings0,
+            holdings1,
             newWeight0,
             newWeight1,
+            newHoldings0,
+            newHoldings1,
           );
 
           expect(await vault.holdings0()).to.equal(newHoldings0);
@@ -496,6 +514,12 @@ describe("Mammon Vault v0", function () {
             MAX_TOTAL_WEIGHT,
             weight0,
             weight1,
+            holdings0,
+            holdings1,
+            weight0,
+            weight1,
+            holdings0,
+            holdings1,
           );
 
           expect(await vault.holdings0()).to.equal(holdings0);
@@ -543,8 +567,14 @@ describe("Mammon Vault v0", function () {
           [newWeight0, newWeight1] = recalibrateWeights(
             MIN_WEIGHT,
             MAX_TOTAL_WEIGHT,
+            weight0,
+            weight1,
+            holdings0,
+            holdings1,
             newWeight0,
             newWeight1,
+            newHoldings0,
+            newHoldings1,
           );
 
           await expect(vault.withdraw(amount0, amount1))
@@ -605,8 +635,14 @@ describe("Mammon Vault v0", function () {
             [newWeight0, newWeight1] = recalibrateWeights(
               MIN_WEIGHT,
               MAX_TOTAL_WEIGHT,
+              weight0,
+              weight1,
+              holdings0,
+              holdings1,
               newWeight0,
               newWeight1,
+              newHoldings0,
+              holdings1,
             );
 
             await expect(vault.withdraw(amount0, amount1))
@@ -666,8 +702,14 @@ describe("Mammon Vault v0", function () {
             [newWeight0, newWeight1] = recalibrateWeights(
               MIN_WEIGHT,
               MAX_TOTAL_WEIGHT,
+              weight0,
+              weight1,
+              holdings0,
+              holdings1,
               newWeight0,
               newWeight1,
+              holdings0,
+              newHoldings1,
             );
 
             await expect(vault.withdraw(amount0, amount1))
@@ -728,8 +770,14 @@ describe("Mammon Vault v0", function () {
             [newWeight0, newWeight1] = recalibrateWeights(
               MIN_WEIGHT,
               MAX_TOTAL_WEIGHT,
+              weight0,
+              weight1,
+              holdings0,
+              holdings1,
               newWeight0,
               newWeight1,
+              newHoldings0,
+              newHoldings1,
             );
 
             await expect(vault.withdraw(amount0, amount1))

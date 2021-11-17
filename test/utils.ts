@@ -66,15 +66,29 @@ export const recalibrateWeights = (
   maxTotalWeight: BigNumber,
   weight0: BigNumber,
   weight1: BigNumber,
+  balance0: BigNumber,
+  balance1: BigNumber,
+  newWeight0: BigNumber,
+  newWeight1: BigNumber,
+  newBalance0: BigNumber,
+  newBalance1: BigNumber,
 ): [BigNumber, BigNumber] => {
-  if (!isOutOfBound(minTokenWeight, maxTotalWeight, weight0, weight1)) {
-    return [weight0, weight1];
+  if (!isOutOfBound(minTokenWeight, maxTotalWeight, newWeight0, newWeight1)) {
+    return [newWeight0, newWeight1];
   }
 
-  const minWeight = weight0.gt(weight1) ? weight1 : weight0;
+  const minWeight = newWeight0.gt(newWeight1) ? newWeight1 : newWeight0;
   const recalibrateRatio = ceilDiv(minTokenWeight.mul(ONE_TOKEN), minWeight);
-  const newWeight0 = weight0.mul(recalibrateRatio).div(ONE_TOKEN);
-  const newWeight1 = weight1.mul(recalibrateRatio).div(ONE_TOKEN);
-
-  return [newWeight0, newWeight1];
+  return [
+    weight0
+      .mul(newBalance0)
+      .mul(recalibrateRatio)
+      .div(balance0)
+      .div(ONE_TOKEN),
+    weight1
+      .mul(newBalance1)
+      .mul(recalibrateRatio)
+      .div(balance1)
+      .div(ONE_TOKEN),
+  ];
 };
