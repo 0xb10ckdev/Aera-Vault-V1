@@ -14,7 +14,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     const validator = taskArgs.validator;
     const noticePeriod = taskArgs.noticePeriod;
 
-    const chainId = getChainId(process.env.HARDHAT_FORK);
+    const chainId = getChainId(taskArgs.network);
     const config = getConfig(chainId);
 
     const { admin } = await ethers.getNamedSigners();
