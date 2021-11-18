@@ -18,6 +18,7 @@ const ONE_TOKEN = toWei("1");
 const MIN_WEIGHT = toWei("1");
 const MAX_WEIGHT = toWei("50");
 const MAX_TOTAL_WEIGHT = toWei("50");
+const MAX_BALANCE = toWei("1").mul(ONE_TOKEN).mul(1e6);
 const MIN_BALANCE = toWei("1").div(1e12);
 const ZERO_ADDRESS = ethers.constants.AddressZero;
 
@@ -214,6 +215,24 @@ describe("Mammon Vault v0 Mainnet", function () {
           MIN_WEIGHT,
         ),
       ).to.be.revertedWith("AmountIsBelowMin");
+
+      await expect(
+        vault.initialDeposit(
+          MAX_BALANCE.add(1),
+          ONE_TOKEN,
+          MIN_WEIGHT,
+          MIN_WEIGHT,
+        ),
+      ).to.be.revertedWith("AmountIsAboveMax");
+
+      await expect(
+        vault.initialDeposit(
+          ONE_TOKEN,
+          MAX_BALANCE.add(1),
+          MIN_WEIGHT,
+          MIN_WEIGHT,
+        ),
+      ).to.be.revertedWith("AmountIsAboveMax");
     });
 
     it("should be possible to initialize the vault", async () => {
@@ -266,6 +285,14 @@ describe("Mammon Vault v0 Mainnet", function () {
 
         await expect(vault.deposit(toWei(100), toWei(0))).to.be.revertedWith(
           "ERC20: transfer amount exceeds allowance",
+        );
+
+        await expect(vault.deposit(MAX_BALANCE, toWei(0))).to.be.revertedWith(
+          "AmountIsAboveMax",
+        );
+
+        await expect(vault.deposit(toWei(0), MAX_BALANCE)).to.be.revertedWith(
+          "AmountIsAboveMax",
         );
       });
 

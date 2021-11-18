@@ -45,6 +45,9 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     ///      Spot price growth range for 200 blocks is [-50%, 100%]
     uint256 private constant MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK = 10**16;
 
+    /// @notice Maximum holdable balance for each token.
+    uint256 private constant MAX_BALANCE = ONE * (10**24);
+
     /// @notice Balancer pool. Controlled by the vault.
     IBPool public immutable pool;
 
@@ -178,6 +181,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     error Mammon__RatioChangePerBlockIsAboveMax(uint256 actual, uint256 max);
     error Mammon__WeightIsAboveMax(uint256 actual, uint256 max);
     error Mammon__WeightIsBelowMin(uint256 actual, uint256 min);
+    error Mammon__AmountIsAboveMax(uint256 actual, uint256 min);
     error Mammon__AmountIsBelowMin(uint256 actual, uint256 min);
     error Mammon__FinalizationNotInitialized();
     error Mammon__VaultNotInitialized();
@@ -286,29 +290,6 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         }
         initialized = true;
 
-        uint256 poolMinWeight = pool.MIN_WEIGHT();
-        if (weight0 < poolMinWeight) {
-            revert Mammon__WeightIsBelowMin(weight0, poolMinWeight);
-        }
-        uint256 poolMaxWeight = pool.MAX_WEIGHT();
-        if (weight0 > poolMaxWeight) {
-            revert Mammon__WeightIsAboveMax(weight0, poolMaxWeight);
-        }
-        uint256 poolMinAmount = pool.MIN_BALANCE();
-        if (amount0 < poolMinAmount) {
-            revert Mammon__AmountIsBelowMin(amount0, poolMinAmount);
-        }
-
-        if (weight1 < poolMinWeight) {
-            revert Mammon__WeightIsBelowMin(weight1, poolMinWeight);
-        }
-        if (weight1 > poolMaxWeight) {
-            revert Mammon__WeightIsAboveMax(weight1, poolMaxWeight);
-        }
-        if (amount1 < poolMinAmount) {
-            revert Mammon__AmountIsBelowMin(amount1, poolMinAmount);
-        }
-
         bindToken(token0, amount0, weight0);
         bindToken(token1, amount1, weight1);
 
@@ -335,10 +316,16 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
 
         if (amount0 > 0) {
             newBalance0 += amount0;
+            if (newBalance0 > MAX_BALANCE) {
+                revert Mammon__AmountIsAboveMax(newBalance0, MAX_BALANCE);
+            }
             weight0 = (weight0 * newBalance0) / balance0;
         }
         if (amount1 > 0) {
             newBalance1 += amount1;
+            if (newBalance1 > MAX_BALANCE) {
+                revert Mammon__AmountIsAboveMax(newBalance1, MAX_BALANCE);
+            }
             weight1 = (weight1 * newBalance1) / balance1;
         }
 
@@ -612,6 +599,22 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         uint256 amount,
         uint256 weight
     ) internal {
+        uint256 poolMinWeight = pool.MIN_WEIGHT();
+        if (weight < poolMinWeight) {
+            revert Mammon__WeightIsBelowMin(weight, poolMinWeight);
+        }
+        uint256 poolMaxWeight = pool.MAX_WEIGHT();
+        if (weight > poolMaxWeight) {
+            revert Mammon__WeightIsAboveMax(weight, poolMaxWeight);
+        }
+        uint256 poolMinAmount = pool.MIN_BALANCE();
+        if (amount < poolMinAmount) {
+            revert Mammon__AmountIsBelowMin(amount, poolMinAmount);
+        }
+        if (amount > MAX_BALANCE) {
+            revert Mammon__AmountIsAboveMax(amount, MAX_BALANCE);
+        }
+
         /// Transfer token to this contract
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         /// Approve the balancer pool
