@@ -3,6 +3,14 @@ pragma solidity 0.8.7;
 
 /// @title Interface for protocol that owns treasury.
 interface IProtocolAPI {
+    struct TokenData {
+        uint256 balance;
+        uint256 weight;
+        uint256 newWeight;
+        uint256 newBalance;
+        uint256 exactAmount;
+    }
+
     /// @notice Initialize Vault with first deposit.
     /// @dev Initial deposit must be performed before
     ///      calling withdraw() or deposit() functions.

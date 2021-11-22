@@ -77,18 +77,30 @@ export const recalibrateWeights = (
     return [newWeight0, newWeight1];
   }
 
-  const minWeight = newWeight0.gt(newWeight1) ? newWeight1 : newWeight0;
-  const recalibrateRatio = ceilDiv(minTokenWeight.mul(ONE_TOKEN), minWeight);
+  const boostedBalance0 = balance0.mul(minTokenWeight);
+  const boostedBalance1 = balance1.mul(minTokenWeight);
+
+  let recalibrationFactor = ceilDiv(
+    boostedBalance0.mul(ONE_TOKEN),
+    weight0.mul(newBalance0),
+  );
+  const newRecalibrationFactor = ceilDiv(
+    boostedBalance1.mul(ONE_TOKEN),
+    weight1.mul(newBalance1),
+  );
+
+  if (newRecalibrationFactor.gt(recalibrationFactor)) {
+    recalibrationFactor = newRecalibrationFactor;
+  }
+
   return [
     weight0
       .mul(newBalance0)
-      .mul(recalibrateRatio)
-      .div(balance0)
-      .div(ONE_TOKEN),
+      .mul(recalibrationFactor)
+      .div(balance0.mul(ONE_TOKEN)),
     weight1
       .mul(newBalance1)
-      .mul(recalibrateRatio)
-      .div(balance1)
-      .div(ONE_TOKEN),
+      .mul(recalibrationFactor)
+      .div(balance1.mul(ONE_TOKEN)),
   ];
 };

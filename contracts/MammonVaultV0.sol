@@ -307,47 +307,102 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         onlyInitialized
         nonFinalizing
     {
-        uint256 balance0 = holdings0();
-        uint256 balance1 = holdings1();
-        uint256 weight0 = getDenormalizedWeight(token0);
-        uint256 weight1 = getDenormalizedWeight(token1);
-        uint256 newBalance0 = balance0;
-        uint256 newBalance1 = balance1;
+        TokenData[] memory tokenData = getTokenData();
+        uint256 maxWeight = pool.MAX_WEIGHT();
+        uint256 minWeight = pool.MIN_WEIGHT();
 
         if (amount0 > 0) {
-            newBalance0 += amount0;
-            if (newBalance0 > MAX_BALANCE) {
-                revert Mammon__AmountIsAboveMax(newBalance0, MAX_BALANCE);
+            tokenData[0].newBalance += amount0;
+            if (tokenData[0].newBalance > MAX_BALANCE) {
+                revert Mammon__AmountIsAboveMax(
+                    tokenData[0].newBalance,
+                    MAX_BALANCE
+                );
             }
-            weight0 = (weight0 * newBalance0) / balance0;
         }
         if (amount1 > 0) {
-            newBalance1 += amount1;
-            if (newBalance1 > MAX_BALANCE) {
-                revert Mammon__AmountIsAboveMax(newBalance1, MAX_BALANCE);
+            tokenData[1].newBalance += amount1;
+            if (tokenData[1].newBalance > MAX_BALANCE) {
+                revert Mammon__AmountIsAboveMax(
+                    tokenData[1].newBalance,
+                    MAX_BALANCE
+                );
             }
-            weight1 = (weight1 * newBalance1) / balance1;
         }
 
-        bool outOfBound = isOutOfBound(weight0, weight1);
+        bool isOutOfBound;
 
-        if (outOfBound) {
-            (weight0, weight1) = recalibrateWeights(
-                weight0,
-                weight1,
-                newBalance0,
-                newBalance1
+        if (
+            tokenData[0].weight * tokenData[0].newBalance >
+            tokenData[0].balance * maxWeight ||
+            tokenData[1].weight * tokenData[1].newBalance >
+            tokenData[1].balance * maxWeight
+        ) {
+            isOutOfBound = true;
+            uint256 boostedBalance0 = tokenData[0].balance * minWeight;
+            uint256 boostedBalance1 = tokenData[1].balance * minWeight;
+            uint256 recalibrationFactor = (boostedBalance0 * ONE).ceilDiv(
+                tokenData[0].weight * tokenData[0].newBalance
             );
+            uint256 newRecalibrationFactor = (boostedBalance1 * ONE).ceilDiv(
+                tokenData[1].weight * tokenData[1].newBalance
+            );
+            recalibrationFactor = recalibrationFactor.max(
+                newRecalibrationFactor
+            );
+
+            (
+                tokenData[0].newWeight,
+                tokenData[1].newWeight
+            ) = recalibrateWeights(
+                tokenData[0].newBalance,
+                tokenData[1].newBalance,
+                recalibrationFactor
+            );
+
+            depositToken(
+                token0,
+                amount0,
+                tokenData[0].newWeight,
+                tokenData[0].newBalance
+            );
+            depositToken(
+                token1,
+                amount1,
+                tokenData[1].newWeight,
+                tokenData[1].newBalance
+            );
+        } else {
+            if (amount0 > 0) {
+                tokenData[0].newWeight =
+                    (tokenData[0].weight * tokenData[0].newBalance) /
+                    tokenData[0].balance;
+                depositToken(
+                    token0,
+                    amount0,
+                    tokenData[0].newWeight,
+                    tokenData[0].newBalance
+                );
+            }
+            if (amount1 > 0) {
+                tokenData[1].newWeight =
+                    (tokenData[1].weight * tokenData[1].newBalance) /
+                    tokenData[1].balance;
+                depositToken(
+                    token1,
+                    amount1,
+                    tokenData[1].newWeight,
+                    tokenData[1].newBalance
+                );
+            }
         }
 
-        if (outOfBound || amount0 > 0) {
-            depositToken(token0, amount0, weight0, newBalance0);
-        }
-        if (outOfBound || amount1 > 0) {
-            depositToken(token1, amount1, weight1, newBalance1);
-        }
-
-        emit Deposit(amount0, amount1, weight0, weight1);
+        emit Deposit(
+            amount0,
+            amount1,
+            tokenData[0].newWeight,
+            tokenData[1].newWeight
+        );
     }
 
     /// @inheritdoc IProtocolAPI
@@ -359,47 +414,93 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         onlyInitialized
         nonFinalizing
     {
-        (uint256 allowance0, uint256 allowance1) = validator.allowance();
+        TokenData[] memory tokenData = getTokenData();
+        uint256 minWeight = pool.MIN_WEIGHT();
+        (uint256 allowances0, uint256 allowances1) = validator.allowance();
+        tokenData[0].exactAmount = amount0.min(tokenData[0].balance).min(
+            allowances0
+        );
+        tokenData[1].exactAmount = amount1.min(tokenData[1].balance).min(
+            allowances1
+        );
 
-        uint256[] memory balances = new uint256[](2);
-        balances[0] = holdings0();
-        balances[1] = holdings1();
-        uint256[] memory weights = new uint256[](2);
-        weights[0] = getDenormalizedWeight(token0);
-        weights[1] = getDenormalizedWeight(token1);
-        uint256 newBalance0 = balances[0];
-        uint256 newBalance1 = balances[1];
-        uint256 exactAmount0 = amount0.min(balances[0]).min(allowance0);
-        uint256 exactAmount1 = amount1.min(balances[1]).min(allowance1);
-
-        if (exactAmount0 > 0) {
-            newBalance0 -= exactAmount0;
-            weights[0] = (weights[0] * newBalance0) / balances[0];
+        if (tokenData[0].exactAmount > 0) {
+            tokenData[0].newBalance -= tokenData[0].exactAmount;
         }
-        if (exactAmount1 > 0) {
-            newBalance1 -= exactAmount1;
-            weights[1] = (weights[1] * newBalance1) / balances[1];
+        if (tokenData[1].exactAmount > 0) {
+            tokenData[1].newBalance -= tokenData[1].exactAmount;
         }
 
-        bool outOfBound = isOutOfBound(weights[0], weights[1]);
+        uint256 recalibrationFactor;
+        bool isOutOfBound;
 
-        if (outOfBound) {
-            (weights[0], weights[1]) = recalibrateWeights(
-                weights[0],
-                weights[1],
-                newBalance0,
-                newBalance1
+        if (
+            tokenData[0].weight * tokenData[0].newBalance <
+            tokenData[0].balance * minWeight
+        ) {
+            isOutOfBound = true;
+            uint256 boostedBalance0 = (tokenData[0].balance * minWeight);
+            recalibrationFactor = (boostedBalance0 * ONE).ceilDiv(
+                tokenData[0].weight * tokenData[0].newBalance
+            );
+        }
+        if (
+            tokenData[1].weight * tokenData[1].newBalance <
+            tokenData[1].balance * minWeight
+        ) {
+            isOutOfBound = true;
+            uint256 boostedBalance1 = (tokenData[1].balance * minWeight);
+            uint256 newRecalibrationFactor = (boostedBalance1 * ONE).ceilDiv(
+                tokenData[1].weight * tokenData[1].newBalance
+            );
+            recalibrationFactor = recalibrationFactor.max(
+                newRecalibrationFactor
             );
         }
 
         uint256 withdrawnAmount0;
         uint256 withdrawnAmount1;
 
-        if (outOfBound || exactAmount0 > 0) {
-            withdrawnAmount0 = withdrawToken(token0, weights[0], newBalance0);
-        }
-        if (outOfBound || exactAmount1 > 0) {
-            withdrawnAmount1 = withdrawToken(token1, weights[1], newBalance1);
+        if (isOutOfBound) {
+            (
+                tokenData[0].newWeight,
+                tokenData[1].newWeight
+            ) = recalibrateWeights(
+                tokenData[0].newBalance,
+                tokenData[1].newBalance,
+                recalibrationFactor
+            );
+            withdrawnAmount0 = withdrawToken(
+                token0,
+                tokenData[0].newWeight,
+                tokenData[0].newBalance
+            );
+            withdrawnAmount1 = withdrawToken(
+                token1,
+                tokenData[1].newWeight,
+                tokenData[1].newBalance
+            );
+        } else {
+            if (tokenData[0].exactAmount > 0) {
+                tokenData[0].newWeight =
+                    (tokenData[0].weight * tokenData[0].newBalance) /
+                    tokenData[0].balance;
+                withdrawnAmount0 = withdrawToken(
+                    token0,
+                    tokenData[0].newWeight,
+                    tokenData[0].newBalance
+                );
+            }
+            if (tokenData[1].exactAmount > 0) {
+                tokenData[1].newWeight =
+                    (tokenData[1].weight * tokenData[1].newBalance) /
+                    tokenData[1].balance;
+                withdrawnAmount1 = withdrawToken(
+                    token1,
+                    tokenData[1].newWeight,
+                    tokenData[1].newBalance
+                );
+            }
         }
 
         emit Withdraw(
@@ -407,10 +508,10 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
             amount1,
             withdrawnAmount0,
             withdrawnAmount1,
-            allowance0,
-            allowance1,
-            weights[0],
-            weights[1]
+            allowances0,
+            allowances1,
+            tokenData[0].newWeight,
+            tokenData[1].newWeight
         );
     }
 
@@ -623,53 +724,42 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         pool.bind(token, amount, weight);
     }
 
-    /// @notice Check if weights are below pool.MIN_WEIGHT()
-    ///         or total weight is above pool.MAX_TOTAL_WEIGHT()
-    /// @dev Will returns true if weights are out of bound
-    /// @param weight0 Weight of first token.
-    /// @param weight1 Weight of second token.
-    /// @return If weights are out of bounds, returns true, otherwise false.
-    function isOutOfBound(uint256 weight0, uint256 weight1)
-        internal
-        returns (bool)
-    {
-        uint256 minWeight = pool.MIN_WEIGHT();
-        uint256 maxTotalWeight = pool.MAX_TOTAL_WEIGHT();
-        return
-            weight0 < minWeight ||
-            weight1 < minWeight ||
-            (weight0 + weight1) > maxTotalWeight;
+    /// @notice Get details of tokens in TokenData struct.
+    /// @return tokenData Details of tokens.
+    function getTokenData() internal returns (TokenData[] memory tokenData) {
+        tokenData = new TokenData[](2);
+        tokenData[0].balance = holdings0();
+        tokenData[1].balance = holdings1();
+        tokenData[0].weight = getDenormalizedWeight(token0);
+        tokenData[1].weight = getDenormalizedWeight(token1);
+        tokenData[0].newWeight = tokenData[0].weight;
+        tokenData[1].newWeight = tokenData[1].weight;
+        tokenData[0].newBalance = tokenData[0].balance;
+        tokenData[1].newBalance = tokenData[1].balance;
     }
 
     /// @notice Recalibrate weights of tokens to be in range.
     /// @dev Will make minimum weights of tokens is pool.MIN_WEIGHT().
-    /// @param weight0 Weight of first token.
-    /// @param weight1 Weight of second token.
+    /// @param newBalance0 New balance of first token.
+    /// @param newBalance1 New balance of second token.
     /// @return newWeight0 New Weight of first token in the pool.
     /// @return newWeight1 New Weight of second token in the pool.
     function recalibrateWeights(
-        uint256 weight0,
-        uint256 weight1,
         uint256 newBalance0,
-        uint256 newBalance1
+        uint256 newBalance1,
+        uint256 recalibrationFactor
     ) internal returns (uint256 newWeight0, uint256 newWeight1) {
         uint256 balance0 = holdings0();
         uint256 balance1 = holdings1();
         uint256 denorm0 = getDenormalizedWeight(token0);
         uint256 denorm1 = getDenormalizedWeight(token1);
 
-        uint256 recalibrateRatio = (pool.MIN_WEIGHT() * ONE).ceilDiv(
-            weight0.min(weight1)
-        );
-
         newWeight0 =
-            (denorm0 * newBalance0 * recalibrateRatio) /
-            balance0 /
-            ONE;
+            (denorm0 * newBalance0 * recalibrationFactor) /
+            (balance0 * ONE);
         newWeight1 =
-            (denorm1 * newBalance1 * recalibrateRatio) /
-            balance1 /
-            ONE;
+            (denorm1 * newBalance1 * recalibrationFactor) /
+            (balance1 * ONE);
     }
 
     /// @notice Deposit token to the pool.
