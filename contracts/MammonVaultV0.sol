@@ -330,15 +330,12 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
             }
         }
 
-        bool isOutOfBound;
-
         if (
             tokenData[0].weight * tokenData[0].newBalance >
             tokenData[0].balance * maxWeight ||
             tokenData[1].weight * tokenData[1].newBalance >
             tokenData[1].balance * maxWeight
         ) {
-            isOutOfBound = true;
             uint256 boostedBalance0 = tokenData[0].balance * minWeight;
             uint256 boostedBalance1 = tokenData[1].balance * minWeight;
             uint256 recalibrationFactor = (boostedBalance0 * ONE).ceilDiv(
