@@ -543,23 +543,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         return pool.getNormalizedWeights();
     }
 
-    /// @notice Calculate change ratio for weights upgrade.
-    /// @dev Will only be called by updateWeightsGradually().
-    /// @param targetWeight0 Target weight of first token.
-    /// @param targetWeight1 Target weight of second token.
-    /// @return Change ratio from current weights to target weights.
-    function getWeightsChangeRatio(
-        uint256 targetWeight0,
-        uint256 targetWeight1
-    )
-        public
-        view
-        returns (uint256)
-    // solhint-disable-next-line no-empty-blocks
-    {
-        // Should be implemented, updated or removed
-    }
-
     /// INTERNAL FUNCTIONS ///
     /// @dev PoolBalanceOpKind has three kinds
     /// Withdrawal - decrease the Pool's cash, but increase its managed balance,
