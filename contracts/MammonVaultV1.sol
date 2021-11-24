@@ -536,19 +536,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         vault.managePoolBalance(ops);
     }
 
-    /// @notice Bind token to the pool.
-    /// @dev Will only be called by initialDeposit().
-    /// @param token Address of a token to bind.
-    /// @param amount Amount of a token to bind.
-    /// @param weight Weight of a token to bind.
-    function bindToken(
-        address token,
-        uint256 amount,
-        uint256 weight // solhint-disable-next-line no-empty-blocks
-    ) internal {
-        // Should be implemented, updated or removed
-    }
-
     /// @notice Deposit token to the pool.
     /// @dev Will only be called by deposit().
     /// @param token Address of the token to deposit.
