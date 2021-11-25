@@ -8,7 +8,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   .addParam("validator", "Validator's address")
   .addParam("noticePeriod", "Notice period in seconds")
   .addOptionalParam(
-    "silence",
+    "silent",
     "Disable console log on deployment",
     false,
     types.boolean,
@@ -24,7 +24,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
 
     const { admin } = await ethers.getNamedSigners();
 
-    if (!taskArgs.silence) {
+    if (!taskArgs.silent) {
       console.log("Deploying vault with");
       console.log(`Token0: ${token0}`);
       console.log(`Token1: ${token1}`);
@@ -43,7 +43,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
       log: true,
     });
 
-    if (!taskArgs.silence) {
+    if (!taskArgs.silent) {
       console.log(
         "Vault is deployed to:",
         (await deployments.get(config.vault)).address,

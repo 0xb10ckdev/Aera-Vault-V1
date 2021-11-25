@@ -101,7 +101,7 @@ describe("Mammon Vault v0 Mainnet", function () {
       manager: manager.address,
       validator: (await deployments.get("Validator")).address,
       noticePeriod: DEFAULT_NOTICE_PERIOD.toString(),
-      silence: true,
+      silent: true,
     });
 
     vault = MammonVaultV0Mainnet__factory.connect(
