@@ -1,5 +1,5 @@
 import { getConfig } from "../../scripts/config";
-import { task } from "hardhat/config";
+import { task, types } from "hardhat/config";
 
 task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   .addParam("token0", "Token0's address")
@@ -7,7 +7,12 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   .addParam("manager", "Manager's address")
   .addParam("validator", "Validator's address")
   .addParam("noticePeriod", "Notice period in seconds")
-  .addOptionalParam("silence", "Disable console log on deployment")
+  .addOptionalParam(
+    "silence",
+    "Disable console log on deployment",
+    false,
+    types.boolean,
+  )
   .setAction(async (taskArgs, { deployments, ethers, network }) => {
     const token0 = taskArgs.token0;
     const token1 = taskArgs.token1;
