@@ -7,6 +7,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   .addParam("manager", "Manager's address")
   .addParam("validator", "Validator's address")
   .addParam("noticePeriod", "Notice period in seconds")
+  .addOptionalParam("silence", "Disable console log on deployment")
   .setAction(async (taskArgs, { deployments, ethers, network }) => {
     const token0 = taskArgs.token0;
     const token1 = taskArgs.token1;
@@ -18,12 +19,14 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
 
     const { admin } = await ethers.getNamedSigners();
 
-    console.log("Deploying vault with");
-    console.log(`Token0: ${token0}`);
-    console.log(`Token1: ${token1}`);
-    console.log(`Manager: ${manager}`);
-    console.log(`Validator: ${validator}`);
-    console.log(`Notice Period: ${noticePeriod}`);
+    if (!taskArgs.silence) {
+      console.log("Deploying vault with");
+      console.log(`Token0: ${token0}`);
+      console.log(`Token1: ${token1}`);
+      console.log(`Manager: ${manager}`);
+      console.log(`Validator: ${validator}`);
+      console.log(`Notice Period: ${noticePeriod}`);
+    }
 
     await deployments.deploy(config.vault, {
       contract: config.vault,
@@ -35,8 +38,10 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
       log: true,
     });
 
-    console.log(
-      "Vault is deployed to:",
-      (await deployments.get(config.vault)).address,
-    );
+    if (!taskArgs.silence) {
+      console.log(
+        "Vault is deployed to:",
+        (await deployments.get(config.vault)).address,
+      );
+    }
   });
