@@ -345,11 +345,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
             (
                 tokenData[0].newWeight,
                 tokenData[1].newWeight
-            ) = recalibrateWeights(
-                tokenData[0].newBalance,
-                tokenData[1].newBalance,
-                recalibrationFactor
-            );
+            ) = recalibrateWeights(tokenData, recalibrationFactor);
 
             depositToken(
                 token0,
@@ -456,11 +452,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
             (
                 tokenData[0].newWeight,
                 tokenData[1].newWeight
-            ) = recalibrateWeights(
-                tokenData[0].newBalance,
-                tokenData[1].newBalance,
-                recalibrationFactor
-            );
+            ) = recalibrateWeights(tokenData, recalibrationFactor);
             withdrawnAmount0 = withdrawToken(
                 token0,
                 tokenData[0].newWeight,
@@ -731,26 +723,23 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
 
     /// @notice Recalibrate weights of tokens to be in range.
     /// @dev Will make minimum weights of tokens is pool.MIN_WEIGHT().
-    /// @param newBalance0 New balance of first token.
-    /// @param newBalance1 New balance of second token.
+    /// @param tokenData Details of tokens.
     /// @return newWeight0 New Weight of first token in the pool.
     /// @return newWeight1 New Weight of second token in the pool.
     function recalibrateWeights(
-        uint256 newBalance0,
-        uint256 newBalance1,
+        TokenData[] memory tokenData,
         uint256 recalibrationFactor
     ) internal returns (uint256 newWeight0, uint256 newWeight1) {
-        uint256 balance0 = holdings0();
-        uint256 balance1 = holdings1();
-        uint256 denorm0 = getDenormalizedWeight(token0);
-        uint256 denorm1 = getDenormalizedWeight(token1);
-
         newWeight0 =
-            (denorm0 * newBalance0 * recalibrationFactor) /
-            (balance0 * ONE);
+            (tokenData[0].weight *
+                tokenData[0].newBalance *
+                recalibrationFactor) /
+            (tokenData[0].balance * ONE);
         newWeight1 =
-            (denorm1 * newBalance1 * recalibrationFactor) /
-            (balance1 * ONE);
+            (tokenData[1].weight *
+                tokenData[1].newBalance *
+                recalibrationFactor) /
+            (tokenData[1].balance * ONE);
     }
 
     /// @notice Check if weights should be recalibrated.
