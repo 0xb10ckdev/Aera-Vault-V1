@@ -308,7 +308,6 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         nonFinalizing
     {
         TokenData[] memory tokenData = getTokenData();
-        uint256 maxTotalWeight = pool.MAX_TOTAL_WEIGHT();
         uint256 minWeight = pool.MIN_WEIGHT();
 
         if (amount0 > 0) {
@@ -330,15 +329,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
             }
         }
 
-        if (
-            tokenData[0].weight *
-                tokenData[0].newBalance *
-                tokenData[1].balance +
-                tokenData[1].weight *
-                tokenData[1].newBalance *
-                tokenData[0].balance >
-            tokenData[0].balance * tokenData[1].balance * maxTotalWeight
-        ) {
+        if (needsRecalibration(tokenData)) {
             uint256 boostedBalance0 = tokenData[0].balance * minWeight;
             uint256 boostedBalance1 = tokenData[1].balance * minWeight;
             uint256 recalibrationFactor = (boostedBalance0 * ONE).ceilDiv(
@@ -760,6 +751,26 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         newWeight1 =
             (denorm1 * newBalance1 * recalibrationFactor) /
             (balance1 * ONE);
+    }
+
+    /// @notice Check if weights should be recalibrated.
+    /// @dev Will only be called by deposit().
+    /// @param tokenData Details of tokens.
+    /// @return Returns true if it needs recalibration, otherwise false.
+    function needsRecalibration(TokenData[] memory tokenData)
+        internal
+        returns (bool)
+    {
+        return
+            tokenData[0].weight *
+                tokenData[0].newBalance *
+                tokenData[1].balance +
+                tokenData[1].weight *
+                tokenData[1].newBalance *
+                tokenData[0].balance >
+            tokenData[0].balance *
+                tokenData[1].balance *
+                pool.MAX_TOTAL_WEIGHT();
     }
 
     /// @notice Deposit token to the pool.
