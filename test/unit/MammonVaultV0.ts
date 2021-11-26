@@ -45,8 +45,7 @@ describe("Mammon Vault v0", function () {
     [88964, 4346],
     [27891, 637],
     [2865, 13788],
-    [77568, 37812],
-    [4566543, 889778],
+    [756653, 889778],
   ];
 
   const getStates = async () => {
@@ -109,7 +108,7 @@ describe("Mammon Vault v0", function () {
         "Wether",
         "WETH",
         18,
-        toWei(10000000),
+        toWei(1e7),
       ])
     );
     WETH = <ERC20Mock>(
@@ -117,7 +116,7 @@ describe("Mammon Vault v0", function () {
         "Dai",
         "DAI",
         18,
-        toWei(10000000),
+        toWei(1e7),
       ])
     );
 
@@ -316,17 +315,22 @@ describe("Mammon Vault v0", function () {
 
   describe("when Vault is initialized", () => {
     beforeEach(async () => {
-      await DAI.approve(vault.address, toWei(100));
-      await WETH.approve(vault.address, toWei(100));
-      await vault.initialDeposit(
-        ONE_TOKEN,
-        ONE_TOKEN,
-        MIN_WEIGHT,
-        MIN_WEIGHT.mul(2),
-      );
+      await DAI.approve(vault.address, toWei(1e6));
+      await WETH.approve(vault.address, toWei(1e6));
     });
 
     describe("when depositing to vault", () => {
+      beforeEach(async () => {
+        await DAI.approve(vault.address, ONE_TOKEN);
+        await WETH.approve(vault.address, ONE_TOKEN);
+        await vault.initialDeposit(
+          ONE_TOKEN,
+          ONE_TOKEN,
+          MIN_WEIGHT,
+          MIN_WEIGHT,
+        );
+      });
+
       it("should be reverted to deposit tokens", async () => {
         await expect(vault.deposit(toWei(0), toWei(100))).to.be.revertedWith(
           "ERC20: transfer amount exceeds allowance",
@@ -510,6 +514,15 @@ describe("Mammon Vault v0", function () {
     });
 
     describe("when withdrawing from Vault", () => {
+      beforeEach(async () => {
+        await vault.initialDeposit(
+          toWei(1e6),
+          toWei(1e6),
+          MIN_WEIGHT.mul(5),
+          MIN_WEIGHT.mul(5),
+        );
+      });
+
       describe("when allowance on validator is invalid", () => {
         it("should withdraw no tokens", async () => {
           const {
@@ -564,10 +577,7 @@ describe("Mammon Vault v0", function () {
 
       describe("when allowance on validator is valid", () => {
         beforeEach(async () => {
-          await DAI.approve(vault.address, toWei(1000000));
-          await WETH.approve(vault.address, toWei(1000000));
-          await vault.deposit(toWei(1000000), toWei(1000000));
-          await validator.setAllowance(toWei(1000000), toWei(1000000));
+          await validator.setAllowance(toWei(1e6), toWei(1e6));
         });
 
         it("should withdraw only allowed tokens", async () => {
@@ -846,6 +856,15 @@ describe("Mammon Vault v0", function () {
     });
 
     describe("when calling updateWeightsGradually()", () => {
+      beforeEach(async () => {
+        await vault.initialDeposit(
+          ONE_TOKEN,
+          ONE_TOKEN,
+          MIN_WEIGHT,
+          MIN_WEIGHT,
+        );
+      });
+
       it("should be reverted to call updateWeightsGradually", async () => {
         await expect(
           vault.updateWeightsGradually(toWei(2), toWei(3), 0, 1),
@@ -889,6 +908,13 @@ describe("Mammon Vault v0", function () {
 
     describe("when calling pokeWeights()", () => {
       beforeEach(async () => {
+        await vault.initialDeposit(
+          ONE_TOKEN,
+          ONE_TOKEN,
+          MIN_WEIGHT,
+          MIN_WEIGHT,
+        );
+
         const blockNumber = await ethers.provider.getBlockNumber();
 
         await vault
@@ -916,6 +942,15 @@ describe("Mammon Vault v0", function () {
     });
 
     describe("when finalizing", () => {
+      beforeEach(async () => {
+        await vault.initialDeposit(
+          ONE_TOKEN,
+          ONE_TOKEN,
+          MIN_WEIGHT,
+          MIN_WEIGHT,
+        );
+      });
+
       it("should be reverted to call finalize", async () => {
         await expect(vault.connect(user).finalize()).to.be.revertedWith(
           "Mammon__CallerIsNotOwnerOrManager",
@@ -977,8 +1012,8 @@ describe("Mammon Vault v0", function () {
           .to.emit(vault, "Finalized")
           .withArgs(admin.address, holdings0, holdings1);
 
-        expect(await DAI.balanceOf(admin.address)).to.equal(toWei(10000000));
-        expect(await WETH.balanceOf(admin.address)).to.equal(toWei(10000000));
+        expect(await DAI.balanceOf(admin.address)).to.equal(toWei(1e7));
+        expect(await WETH.balanceOf(admin.address)).to.equal(toWei(1e7));
 
         expect(await ethers.provider.getCode(vault.address)).to.equal("0x");
       });
@@ -996,7 +1031,7 @@ describe("Mammon Vault v0", function () {
           "TOKEN Test",
           "TTOKEN",
           18,
-          toWei(10000000),
+          toWei(1e7),
         ])
       );
     });

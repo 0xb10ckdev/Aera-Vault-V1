@@ -73,6 +73,9 @@ export const recalibrateWeights = (
   newBalance0: BigNumber,
   newBalance1: BigNumber,
 ): [BigNumber, BigNumber] => {
+  if (newBalance0.eq(balance0) && newBalance1.eq(balance1)) {
+    return [newWeight0, newWeight1];
+  }
   if (!isOutOfBound(minTokenWeight, maxTotalWeight, newWeight0, newWeight1)) {
     return [newWeight0, newWeight1];
   }
