@@ -709,7 +709,11 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
 
     /// @notice Get details of tokens in TokenData struct.
     /// @return tokenData Details of tokens.
-    function getTokenData() internal returns (TokenData[] memory tokenData) {
+    function getTokenData()
+        internal
+        view
+        returns (TokenData[] memory tokenData)
+    {
         tokenData = new TokenData[](2);
         tokenData[0].balance = holdings0();
         tokenData[1].balance = holdings1();
@@ -729,7 +733,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     function recalibrateWeights(
         TokenData[] memory tokenData,
         uint256 recalibrationFactor
-    ) internal returns (uint256 newWeight0, uint256 newWeight1) {
+    ) internal pure returns (uint256 newWeight0, uint256 newWeight1) {
         newWeight0 =
             (tokenData[0].weight *
                 tokenData[0].newBalance *
@@ -748,6 +752,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     /// @return Returns true if it needs recalibration, otherwise false.
     function needsRecalibration(TokenData[] memory tokenData)
         internal
+        view
         returns (bool)
     {
         return
