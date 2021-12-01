@@ -1,50 +1,63 @@
-import { getConfig, getChainId } from "../../scripts/config";
+import { getConfig } from "../../scripts/config";
 import { task } from "hardhat/config";
 
 task("deploy:vault", "Deploys a Mammon vault with the given parameters")
-  .addParam("token0", "Token0's address")
-  .addParam("token1", "Token1's address")
+  .addParam("name", "Pool Token's name")
+  .addParam("symbol", "Pool Token's symbol")
+  .addParam("tokens", "Tokens' addresses")
+  .addParam("weights", "Tokens' weights")
+  .addParam("swapFee", "Swap Fee Percentage")
+  .addParam("managementSwapFee", "Management Swap Fee Percentage")
   .addParam("manager", "Manager's address")
   .addParam("validator", "Validator's address")
   .addParam("noticePeriod", "Notice period in seconds")
-  .setAction(async (taskArgs, { deployments, ethers }) => {
-    const token0 = taskArgs.token0;
-    const token1 = taskArgs.token1;
+  .setAction(async (taskArgs, { deployments, ethers, network }) => {
+    const name = taskArgs.name;
+    const symbol = taskArgs.symbol;
+    const tokens = taskArgs.tokens.split(",");
+    const weights = taskArgs.weights.split(",");
+    const swapFee = taskArgs.swapFee;
+    const managementSwapFee = taskArgs.managementSwapFee;
     const manager = taskArgs.manager;
     const validator = taskArgs.validator;
     const noticePeriod = taskArgs.noticePeriod;
 
-    const chainId = getChainId(process.env.HARDHAT_FORK);
-    const config = getConfig(chainId);
+    const config = getConfig(network.config.chainId || 1);
 
     const { admin } = await ethers.getNamedSigners();
 
     console.log("Deploying vault with");
-    console.log(`Token0: ${token0}`);
-    console.log(`Token1: ${token1}`);
+    console.log(`Name: ${name}`);
+    console.log(`Symbol: ${symbol}`);
+    console.log("Tokens:");
+    console.log(tokens.join("\n"));
+    console.log("Weights");
+    console.log(weights.join("\n"));
+    console.log(`Swap Fee: ${swapFee}`);
+    console.log(`Management Swap Fee: ${managementSwapFee}`);
     console.log(`Manager: ${manager}`);
     console.log(`Validator: ${validator}`);
     console.log(`Notice Period: ${noticePeriod}`);
 
-    await deployments.deploy("MammonVaultV0", {
-      contract: "MammonVaultV0",
+    await deployments.deploy(config.vault, {
+      contract: config.vault,
       args: [
-        config.bFactory,
-        token0,
-        token1,
+        name,
+        symbol,
+        tokens,
+        weights,
+        swapFee,
+        managementSwapFee,
         manager,
         validator,
         noticePeriod,
       ],
-      libraries: {
-        SmartPoolManager: config.poolManager,
-      },
       from: admin.address,
       log: true,
     });
 
     console.log(
       "Vault is deployed to:",
-      (await deployments.get("MammonVaultV0")).address,
+      (await deployments.get(config.vault)).address,
     );
   });

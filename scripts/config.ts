@@ -1,25 +1,22 @@
 // Addresses are taken from https://docs.balancer.fi/v/v1/smart-contracts/addresses
 export const getConfig = (
   chainId: number,
-): { vault: string; poolManager: string; bFactory: string } => {
+): { vault: string; bFactory: string } => {
   switch (chainId) {
     case 1:
       return {
-        vault: "MammonVaultV0Mainnet",
-        poolManager: "0xA3F9145CB0B50D907930840BB2dcfF4146df8Ab4",
-        bFactory: "0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd",
+        vault: "MammonVaultV1Mainnet",
+        bFactory: "0x48767F9F868a4A7b86A90736632F6E44C2df7fa9",
       };
     case 42:
       return {
-        vault: "MammonVaultV0Kovan",
-        poolManager: "0x8DBB8C9bFEb7689f16772c85136993cDA0c05eA4",
-        bFactory: "0x8f7F78080219d4066A8036ccD30D588B416a40DB",
+        vault: "MammonVaultV1Kovan",
+        bFactory: "0xb08E16cFc07C684dAA2f93C70323BAdb2A6CBFd2",
       };
     case 31337:
       return {
-        vault: "MammonVaultV0Mainnet",
-        poolManager: "0xA3F9145CB0B50D907930840BB2dcfF4146df8Ab4",
-        bFactory: "0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd",
+        vault: "MammonVaultV1Mainnet",
+        bFactory: "0x48767F9F868a4A7b86A90736632F6E44C2df7fa9",
       };
     default:
       throw "unsupported chain ID";
