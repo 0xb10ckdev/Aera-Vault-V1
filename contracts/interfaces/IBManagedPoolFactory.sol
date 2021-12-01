@@ -9,10 +9,11 @@ interface IBManagedPoolFactory {
         string memory symbol,
         IERC20[] memory tokens,
         uint256[] memory weights,
-        address[] memory assetManagers,
         uint256 swapFeePercentage,
         address owner,
         bool swapEnabledOnStart,
         uint256 managementSwapFeePercentage
     ) external returns (address);
+
+    function getVault() external view returns (address);
 }

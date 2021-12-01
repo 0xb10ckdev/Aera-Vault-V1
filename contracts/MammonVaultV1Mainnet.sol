@@ -9,11 +9,10 @@ contract MammonVaultV1Mainnet is MammonVaultV1 {
      * @dev Balancer addresses taken from https://docs.balancer.fi/v/v1/smart-contracts/addresses#mainnet
      */
     address private constant __bfactory =
-        address(0x9424B1412450D0f8Fc2255FAf6046b98213B76Bd);
+        address(0x48767F9F868a4A7b86A90736632F6E44C2df7fa9);
 
     // solhint-disable no-empty-blocks
     constructor(
-        address factory_,
         string memory name,
         string memory symbol,
         IERC20[] memory tokens_,
@@ -25,7 +24,7 @@ contract MammonVaultV1Mainnet is MammonVaultV1 {
         uint32 noticePeriod_
     )
         MammonVaultV1(
-            factory_,
+            __bfactory,
             name,
             symbol,
             tokens_,
