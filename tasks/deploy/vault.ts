@@ -31,7 +31,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     console.log(`Symbol: ${symbol}`);
     console.log("Tokens:");
     console.log(tokens.join("\n"));
-    console.log("Weights");
+    console.log("Weights:");
     console.log(weights.join("\n"));
     console.log(`Swap Fee: ${swapFee}`);
     console.log(`Management Swap Fee: ${managementSwapFee}`);
