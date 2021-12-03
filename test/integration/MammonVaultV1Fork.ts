@@ -250,11 +250,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     });
 
     it("should be reverted to call functions", async () => {
-      await expect(vault.deposit(ONE, ONE)).to.be.revertedWith(
+      await expect(vault.deposit([ONE, ONE])).to.be.revertedWith(
         "Mammon__VaultNotInitialized",
       );
 
-      await expect(vault.withdraw(ONE, ONE)).to.be.revertedWith(
+      await expect(vault.withdraw([ONE, ONE])).to.be.revertedWith(
         "Mammon__VaultNotInitialized",
       );
 
@@ -269,10 +269,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             blocknumber + 1000,
           ),
       ).to.be.revertedWith("Mammon__VaultNotInitialized");
-
-      await expect(vault.connect(manager).pokeWeights()).to.be.revertedWith(
-        "Mammon__VaultNotInitialized",
-      );
 
       await expect(vault.initializeFinalization()).to.be.revertedWith(
         "Mammon__VaultNotInitialized",
