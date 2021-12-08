@@ -135,7 +135,14 @@ const config: HardhatUserConfig = {
     tests: process.env.TEST_PATH || "./test",
   },
   solidity: {
-    version: "0.8.7",
+    compilers: [
+      {
+        version: "0.7.5",
+      },
+      {
+        version: "0.8.7",
+      },
+    ],
     settings: {
       metadata: {
         // Not including the metadata hash
