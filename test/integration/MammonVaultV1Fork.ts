@@ -3,13 +3,15 @@ import { expect } from "chai";
 import hre, { deployments, ethers } from "hardhat";
 import {
   IERC20,
+  MammonPoolFactoryV1,
+  MammonPoolFactoryV1__factory,
   MammonVaultV1Mainnet,
   MammonVaultV1Mainnet__factory,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
 } from "../../typechain";
 import { setupTokens } from "../fixtures";
-import { deployVault, toWei } from "../utils";
+import { deployFactory, deployVault, toWei } from "../utils";
 import { DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
 
 const ONE = toWei("1");
@@ -24,13 +26,16 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
   let validator: WithdrawalValidatorMock;
+  let factory: MammonPoolFactoryV1;
   let DAI: IERC20;
   let WETH: IERC20;
+  let sortedTokens: string[];
+  let unsortedTokens: string[];
 
   it("should be reverted to deploy vault", async () => {
     ({ admin, manager } = await ethers.getNamedSigners());
 
-    ({ DAI, WETH } = await setupTokens());
+    ({ DAI, WETH, sortedTokens, unsortedTokens } = await setupTokens());
 
     await deployments.deploy("Validator", {
       contract: "WithdrawalValidatorMock",
@@ -48,12 +53,15 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
       log: true,
     });
 
+    factory = await deployFactory(admin);
+
     await expect(
       deployVault(
         admin,
+        factory.address,
         "Test",
         "TEST",
-        [DAI.address, WETH.address, WETH.address],
+        [...sortedTokens, WETH.address],
         [MIN_WEIGHTx50.toString(), MIN_WEIGHTx50.toString()],
         MIN_SWAP_FEE.toString(),
         ONE.toString(),
@@ -63,9 +71,10 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
     await expect(
       deployVault(
         admin,
+        factory.address,
         "Test",
         "TEST",
-        [DAI.address, WETH.address],
+        sortedTokens,
         [MIN_WEIGHTx50.toString(), MIN_WEIGHTx50.toString()],
         MIN_SWAP_FEE.toString(),
         ONE.toString(),
@@ -77,9 +86,10 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
     await expect(
       deployVault(
         admin,
+        factory.address,
         "Test",
         "TEST",
-        [DAI.address, WETH.address],
+        sortedTokens,
         [MIN_WEIGHTx50.toString(), MIN_WEIGHTx50.toString()],
         MIN_SWAP_FEE.toString(),
         ONE.toString(),
@@ -90,9 +100,10 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
     await expect(
       deployVault(
         admin,
+        factory.address,
         "Test",
         "TEST",
-        [DAI.address, WETH.address],
+        sortedTokens,
         [MIN_WEIGHTx50.toString(), MIN_WEIGHTx50.toString()],
         MIN_SWAP_FEE.toString(),
         ONE.toString(),
@@ -105,11 +116,26 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
     await expect(
       deployVault(
         admin,
+        factory.address,
         "Test",
         "TEST",
-        [DAI.address, WETH.address],
+        unsortedTokens,
         [MIN_WEIGHTx50.toString(), MIN_WEIGHTx50.toString()],
+        MIN_SWAP_FEE.toString(),
         ONE.toString(),
+        manager.address,
+        validator.address,
+      ),
+    ).to.be.revertedWith("BAL#101"); // UNSORTED_ARRAY
+    await expect(
+      deployVault(
+        admin,
+        factory.address,
+        "Test",
+        "TEST",
+        sortedTokens,
+        [MIN_WEIGHTx50.toString(), MIN_WEIGHTx50.toString()],
+        MAX_SWAP_FEE.add(1).toString(),
         ONE.toString(),
         manager.address,
         validator.address,
@@ -118,11 +144,12 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
     await expect(
       deployVault(
         admin,
+        factory.address,
         "Test",
         "TEST",
-        [DAI.address, WETH.address],
+        sortedTokens,
         [MIN_WEIGHTx50.toString(), MIN_WEIGHTx50.toString()],
-        MIN_SWAP_FEE.div(2).toString(),
+        MIN_SWAP_FEE.sub(1).toString(),
         ONE.toString(),
         manager.address,
         validator.address,
@@ -131,9 +158,10 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
     await expect(
       deployVault(
         admin,
+        factory.address,
         "Test",
         "TEST",
-        [DAI.address, WETH.address],
+        sortedTokens,
         [MIN_WEIGHT.toString(), MIN_WEIGHT.toString()],
         MIN_SWAP_FEE.toString(),
         ONE.toString(),
@@ -144,9 +172,10 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
     await expect(
       deployVault(
         admin,
+        factory.address,
         "Test",
         "TEST",
-        [DAI.address, WETH.address],
+        sortedTokens,
         [MIN_WEIGHTx50.toString(), MIN_WEIGHTx50.toString()],
         MIN_SWAP_FEE.toString(),
         ONE.add(1).toString(),
@@ -162,15 +191,17 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
   let manager: SignerWithAddress;
   let vault: MammonVaultV1Mainnet;
   let validator: WithdrawalValidatorMock;
+  let factory: MammonPoolFactoryV1;
   let DAI: IERC20;
   let WETH: IERC20;
+  let sortedTokens: string[];
   let snapshot: unknown;
 
   beforeEach(async function () {
     snapshot = await ethers.provider.send("evm_snapshot", []);
     ({ admin, manager } = await ethers.getNamedSigners());
 
-    ({ DAI, WETH } = await setupTokens());
+    ({ DAI, WETH, sortedTokens } = await setupTokens());
 
     await deployments.deploy("Validator", {
       contract: "WithdrawalValidatorMock",
@@ -182,10 +213,17 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       admin,
     );
 
+    await hre.run("deploy:factory");
+    factory = MammonPoolFactoryV1__factory.connect(
+      (await deployments.get("MammonPoolFactoryV1")).address,
+      admin,
+    );
+
     await hre.run("deploy:vault", {
+      factory: factory.address,
       name: "Test",
       symbol: "TEST",
-      tokens: [DAI.address, WETH.address].join(","),
+      tokens: sortedTokens.join(","),
       weights: [
         MIN_WEIGHT.mul(40).toString(),
         MIN_WEIGHT.mul(60).toString(),

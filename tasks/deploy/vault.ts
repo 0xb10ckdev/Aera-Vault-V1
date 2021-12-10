@@ -2,6 +2,7 @@ import { getConfig } from "../../scripts/config";
 import { task } from "hardhat/config";
 
 task("deploy:vault", "Deploys a Mammon vault with the given parameters")
+  .addParam("factory", "Mammon Pool Factory's address")
   .addParam("name", "Pool Token's name")
   .addParam("symbol", "Pool Token's symbol")
   .addParam("tokens", "Tokens' addresses")
@@ -12,6 +13,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   .addParam("validator", "Validator's address")
   .addParam("noticePeriod", "Notice period in seconds")
   .setAction(async (taskArgs, { deployments, ethers, network }) => {
+    const factory = taskArgs.factory;
     const name = taskArgs.name;
     const symbol = taskArgs.symbol;
     const tokens = taskArgs.tokens.split(",");
@@ -27,6 +29,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     const { admin } = await ethers.getNamedSigners();
 
     console.log("Deploying vault with");
+    console.log(`Factory: ${factory}`);
     console.log(`Name: ${name}`);
     console.log(`Symbol: ${symbol}`);
     console.log("Tokens:");
@@ -42,6 +45,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     await deployments.deploy(config.vault, {
       contract: config.vault,
       args: [
+        factory,
         name,
         symbol,
         tokens,
