@@ -9,7 +9,7 @@ import "./dependencies/openzeppelin/ReentrancyGuard.sol";
 import "./dependencies/openzeppelin/Math.sol";
 import "./dependencies/openzeppelin/SafeCast.sol";
 import "./dependencies/openzeppelin/ERC165Checker.sol";
-import "./interfaces/IBManagedPoolFactory.sol";
+import "./interfaces/IMammonPoolFactoryV1.sol";
 import "./interfaces/IBManagedPool.sol";
 import "./interfaces/IMammonVaultV1.sol";
 import "./interfaces/IWithdrawalValidator.sol";
@@ -253,17 +253,20 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             );
         }
 
-        address[] memory managers = new address[](1);
-        managers[0] = msg.sender;
+        address[] memory managers = new address[](tokens_.length);
+        for (uint256 i = 0; i < tokens_.length; i++) {
+          managers[i] = address(this);
+        }
 
         pool = IBManagedPool(
-            IBManagedPoolFactory(factory_).create(
+            IMammonPoolFactoryV1(factory_).create(
                 name,
                 symbol,
                 tokens_,
                 weights_,
+                managers,
                 swapFeePercentage,
-                msg.sender,
+                address(this),
                 false,
                 managementSwapFeePercentage
             )
