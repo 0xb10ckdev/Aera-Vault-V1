@@ -13,6 +13,7 @@ contract MammonVaultV1Mainnet is MammonVaultV1 {
 
     // solhint-disable no-empty-blocks
     constructor(
+        address factory,
         string memory name,
         string memory symbol,
         IERC20[] memory tokens_,
@@ -24,7 +25,7 @@ contract MammonVaultV1Mainnet is MammonVaultV1 {
         uint32 noticePeriod_
     )
         MammonVaultV1(
-            __bfactory,
+            factory,
             name,
             symbol,
             tokens_,

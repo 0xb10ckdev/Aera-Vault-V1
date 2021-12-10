@@ -6,12 +6,15 @@ import {
   getChainId,
 } from "../scripts/config";
 import {
+  MammonPoolFactoryV1,
+  MammonPoolFactoryV1__factory,
   MammonVaultV1Mainnet,
   MammonVaultV1Mainnet__factory,
 } from "../typechain";
 
 export const deployVault = async (
   signer: Signer,
+  factory: string,
   name: string,
   symbol: string,
   tokens: string[],
@@ -25,17 +28,17 @@ export const deployVault = async (
   const chainId = getChainId(process.env.HARDHAT_FORK);
   const config = getConfig(chainId);
 
-  const factory =
-    await ethers.getContractFactory<MammonVaultV1Mainnet__factory>(
-      config.vault,
-    );
+  const vault = await ethers.getContractFactory<MammonVaultV1Mainnet__factory>(
+    config.vault,
+  );
 
   if (!validator) {
     validator = (await deployments.get("Validator")).address;
   }
-  return await factory
+  return await vault
     .connect(signer)
     .deploy(
+      factory,
       name,
       symbol,
       tokens,
@@ -46,6 +49,20 @@ export const deployVault = async (
       validator,
       noticePeriod,
     );
+};
+
+export const deployFactory = async (
+  signer: Signer,
+): Promise<MammonPoolFactoryV1> => {
+  const chainId = getChainId(process.env.HARDHAT_FORK);
+  const config = getConfig(chainId);
+
+  const factory =
+    await ethers.getContractFactory<MammonPoolFactoryV1__factory>(
+      "MammonPoolFactoryV1",
+    );
+
+  return await factory.connect(signer).deploy(config.bVault);
 };
 
 export const toWei = (value: number | string): BigNumber => {

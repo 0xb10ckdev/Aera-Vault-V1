@@ -78,6 +78,7 @@
     "coverage": "hardhat coverage --solcoverjs ./.solcover.js --temp artifacts --testfiles \"./test/**/*.ts\"",
     "coverage:local": "cross-env HARDHAT_FORK=mainnet HARDHAT_FORK_NUMBER=13000000 hardhat coverage --solcoverjs ./.solcover.js --temp artifacts --testfiles \"./test/**/*.ts\"",
     "deploy:validator": "hardhat deploy:validator",
+    "deploy:factory": "hardhat deploy:factory",
     "deploy:vault": "hardhat deploy:vault",
     "deploy": "yarn deploy:validator && yarn deploy:vault",
     "deploy:kovan": "yarn deploy:vault --network kovan",
