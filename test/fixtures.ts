@@ -19,9 +19,21 @@ export const setupTokens = deployments.createFixture(
       args: ["WETH Test", "TWETH", 18, parseEther("1000000000")],
     });
 
+    let sortedTokens = [];
+    let unsortedTokens = [];
+    if (DAI.address < WETH.address) {
+      sortedTokens = [DAI.address, WETH.address];
+      unsortedTokens = [WETH.address, DAI.address];
+    } else {
+      sortedTokens = [WETH.address, DAI.address];
+      unsortedTokens = [DAI.address, WETH.address];
+    }
+
     return {
       DAI: ERC20Mock__factory.connect(DAI.address, admin),
       WETH: ERC20Mock__factory.connect(WETH.address, admin),
+      sortedTokens,
+      unsortedTokens,
     };
   },
 );
