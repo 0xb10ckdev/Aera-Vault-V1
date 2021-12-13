@@ -4,7 +4,7 @@
   "solidity.defaultCompiler": "remote",
   "[solidity]": {
     "editor.defaultFormatter": "JuanBlanco.solidity",
-    "editor.formatOnSave": true,
+    "editor.formatOnSave": true
   },
-  "npm.packageManager": "yarn",
+  "npm.packageManager": "yarn"
 }
