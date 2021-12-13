@@ -19,6 +19,7 @@ const MIN_WEIGHT = toWei("0.01");
 const MIN_WEIGHTx50 = toWei("0.5");
 const MIN_SWAP_FEE = toWei("0.000001");
 const MAX_SWAP_FEE = toWei("0.1");
+const ZERO_ADDRESS = ethers.constants.AddressZero;
 const MAX_NOTICE_PERIOD = 5184000; // 60 days in seconds
 
 describe("Mammon Vault V1 Mainnet Deployment", function () {
@@ -277,6 +278,29 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       await expect(
         vault.connect(manager).setPublicSwap(true),
       ).to.be.revertedWith("VaultNotInitialized");
+    });
+  });
+
+  describe("Update Elements", () => {
+    describe("Update Manager", () => {
+      it("should be reverted to change manager", async () => {
+        await expect(vault.setManager(ZERO_ADDRESS)).to.be.revertedWith(
+          "Mammon__ManagerIsZeroAddress",
+        );
+
+        await expect(
+          vault.connect(manager).setManager(ZERO_ADDRESS),
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+      });
+
+      it("should be possible to change manager", async () => {
+        expect(await vault.estimateGas.setManager(manager.address)).to.below(
+          35000,
+        );
+        await vault.setManager(manager.address);
+
+        expect(await vault.manager()).to.equal(manager.address);
+      });
     });
   });
 });
