@@ -19,7 +19,6 @@ const MIN_WEIGHT = toWei("0.01");
 const MIN_WEIGHTx50 = toWei("0.5");
 const MIN_SWAP_FEE = toWei("0.000001");
 const MAX_SWAP_FEE = toWei("0.1");
-const NOTICE_PERIOD = 10000;
 const MAX_NOTICE_PERIOD = 5184000; // 60 days in seconds
 
 describe("Mammon Vault V1 Mainnet Deployment", function () {
@@ -27,7 +26,6 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
   let manager: SignerWithAddress;
   let validator: WithdrawalValidatorMock;
   let factory: MammonPoolFactoryV1;
-  let DAI: IERC20;
   let WETH: IERC20;
   let sortedTokens: string[];
   let unsortedTokens: string[];
@@ -35,7 +33,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
   it("should be reverted to deploy vault", async () => {
     ({ admin, manager } = await ethers.getNamedSigners());
 
-    ({ DAI, WETH, sortedTokens, unsortedTokens } = await setupTokens());
+    ({ WETH, sortedTokens, unsortedTokens } = await setupTokens());
 
     await deployments.deploy("Validator", {
       contract: "WithdrawalValidatorMock",
