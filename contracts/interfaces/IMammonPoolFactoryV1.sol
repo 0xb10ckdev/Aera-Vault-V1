@@ -2,6 +2,7 @@
 pragma solidity 0.8.7;
 
 import "../dependencies/openzeppelin/IERC20.sol";
+import "./IBVault.sol";
 
 interface IMammonPoolFactoryV1 {
     function create(
@@ -16,5 +17,5 @@ interface IMammonPoolFactoryV1 {
         uint256 managementSwapFeePercentage
     ) external returns (address);
 
-    function getVault() external view returns (address);
+    function getVault() external view returns (IBVault);
 }
