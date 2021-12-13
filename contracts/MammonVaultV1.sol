@@ -278,6 +278,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
         initialized = true;
 
+        IERC20[] memory tokens = getTokens();
+        address[] memory managers = new address[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            managers[i] = msg.sender;
+        }
+        vault.registerTokens(getPoolId(), tokens, managers);
+
         deposit(amounts);
     }
 
