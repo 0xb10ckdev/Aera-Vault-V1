@@ -57,6 +57,8 @@ interface IBManagedPool {
 
     function getRate() external view returns (uint256);
 
+    function getPoolId() external view returns (bytes32);
+
     function onSwap(
         SwapRequest memory swapRequest,
         uint256 currentBalanceTokenIn,
