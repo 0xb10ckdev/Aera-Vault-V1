@@ -10,12 +10,13 @@ import "./dependencies/openzeppelin/Math.sol";
 import "./dependencies/openzeppelin/SafeCast.sol";
 import "./dependencies/openzeppelin/ERC165Checker.sol";
 import "./interfaces/IMammonPoolFactoryV1.sol";
+import "./interfaces/IBVault.sol";
 import "./interfaces/IBManagedPool.sol";
 import "./interfaces/IMammonVaultV1.sol";
 import "./interfaces/IWithdrawalValidator.sol";
 
 /// @title Risk-managed treasury vault.
-/// @notice Managed two-asset vault that supports withdrawals
+/// @notice Managed n-asset vault that supports withdrawals
 ///         in line with a pre-defined validator contract.
 /// @dev Vault owner is the asset owner.
 contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
@@ -44,7 +45,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     ///      Spot price growth range for 200 blocks is [-50%, 100%]
     uint256 private constant MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK = 10**16;
 
-    /// @notice Balancer pool. Controlled by the vault.
+    /// @notice Balancer Vault. Controlled by vault.
+    IBVault public immutable vault;
+
+    /// @notice Balancer pool. Controlled by the Balancer Vault.
     IBManagedPool public immutable pool;
 
     /// @notice Notice period for vault termination (in seconds).
@@ -83,36 +87,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     );
 
     /// @notice Emitted when tokens are deposited.
-    /// @param amount0 Amount of first token.
-    /// @param amount1 Amount of second token.
-    /// @param weight0 Aeight of first token.
-    /// @param weight1 Weight of second token.
-    event Deposit(
-        uint256 amount0,
-        uint256 amount1,
-        uint256 weight0,
-        uint256 weight1
-    );
+    /// @param amounts Amounts of tokens.
+    event Deposit(uint256[] amounts);
 
     /// @notice Emitted when tokens are withdrawn.
-    /// @param requestedAmount0 Requested amount of first token.
-    /// @param requestedAmount1 Requested amount of second token.
-    /// @param withdrawnAmount0 Withdrawn amount of first token.
-    /// @param withdrawnAmount1 Withdrawn amount of second token.
-    /// @param allowance0 Allowance of first token.
-    /// @param allowance1 Allowance of second token.
-    /// @param finalWeight0 Post-withdrawal weight of first token.
-    /// @param finalWeight1 Post-withdrawal weight of second token.
-    event Withdraw(
-        uint256 requestedAmount0,
-        uint256 requestedAmount1,
-        uint256 withdrawnAmount0,
-        uint256 withdrawnAmount1,
-        uint256 allowance0,
-        uint256 allowance1,
-        uint256 finalWeight0,
-        uint256 finalWeight1
-    );
+    /// @param amounts Requested amount of tokens.
+    /// @param withdrawnAmounts Withdrawn amount of tokens.
+    event Withdraw(uint256[] amounts, uint256[] withdrawnAmounts);
 
     /// @notice Emitted when manager is changed.
     /// @param previousManager Address of previous manager.
@@ -151,9 +132,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Emitted when vault is finalized.
     /// @param caller Address of finalizer.
-    /// @param amount0 Returned amount of first token.
-    /// @param amount1 Returned amount of second token.
-    event Finalized(address indexed caller, uint256 amount0, uint256 amount1);
+    /// @param amounts Returned amount of tokens.
+    event Finalized(address indexed caller, uint256[] amounts);
 
     /// ERRORS ///
 
@@ -269,6 +249,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             )
         );
 
+        vault = IMammonPoolFactoryV1(factory).getVault();
         manager = manager_;
         validator = IWithdrawalValidator(validator_);
         noticePeriod = noticePeriod_;
@@ -287,43 +268,56 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// PROTOCOL API ///
 
     /// @inheritdoc IProtocolAPI
-    function initialDeposit(
-        uint256 amount0,
-        uint256 amount1,
-        uint256 weight0,
-        uint256 weight1
-    )
+    function initialDeposit(uint256[] memory amounts)
         external
         override
-        onlyOwner // solhint-disable-next-line no-empty-blocks
+        onlyOwner
     {
-        // Should be implemented, updated or removed
+        if (initialized) {
+            revert Mammon__VaultIsAlreadyInitialized();
+        }
+        initialized = true;
+
+        deposit(amounts);
     }
 
     /// @inheritdoc IProtocolAPI
-    function deposit(uint256 amount0, uint256 amount1)
-        external
+    function deposit(uint256[] memory amounts)
+        public
         override
         nonReentrant
         onlyOwner
         onlyInitialized
         nonFinalizing
-    // solhint-disable-next-line no-empty-blocks
     {
-        // Should be implemented, updated or removed
+        IERC20[] memory tokens = getTokens();
+        for (uint256 i = 0; i < amounts.length; i++) {
+            depositToken(tokens[i], amounts[i]);
+        }
+
+        update(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
+
+        emit Deposit(amounts);
     }
 
     /// @inheritdoc IProtocolAPI
-    function withdraw(uint256 amount0, uint256 amount1)
-        external
+    function withdraw(uint256[] memory amounts)
+        public
         override
         nonReentrant
         onlyOwner
         onlyInitialized
         nonFinalizing
-    // solhint-disable-next-line no-empty-blocks
     {
-        // Should be implemented, updated or removed
+        update(amounts, IBVault.PoolBalanceOpKind.WITHDRAW);
+
+        uint256[] memory withdrawnAmounts = new uint256[](amounts.length);
+        IERC20[] memory tokens = getTokens();
+        for (uint256 i = 0; i < amounts.length; i++) {
+            withdrawnAmounts[i] = withdrawToken(tokens[i]);
+        }
+
+        emit Withdraw(amounts, withdrawnAmounts);
     }
 
     /// @inheritdoc IProtocolAPI
@@ -333,40 +327,41 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         onlyOwner
         onlyInitialized
         nonFinalizing
-    // solhint-disable-next-line no-empty-blocks
     {
-        // Should be implemented, updated or removed
+        noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
+        emit FinalizationInitialized(noticeTimeoutAt);
     }
 
     /// @inheritdoc IProtocolAPI
-    function finalize()
-        external
-        override
-        nonReentrant
-        onlyOwnerOrManager
-    // solhint-disable-next-line no-empty-blocks
-    {
-        // Should be implemented, updated or removed
+    function finalize() external override nonReentrant onlyOwnerOrManager {
+        if (noticeTimeoutAt == 0) {
+            revert Mammon__FinalizationNotInitialized();
+        }
+        if (noticeTimeoutAt > block.timestamp) {
+            revert Mammon__NoticeTimeoutNotElapsed(noticeTimeoutAt);
+        }
+
+        uint256[] memory holdings = getHoldings();
+        withdraw(holdings);
+
+        uint256[] memory amounts = returnFunds();
+        emit Finalized(msg.sender, amounts);
+
+        selfdestruct(payable(owner()));
     }
 
     /// @inheritdoc IProtocolAPI
-    function setManager(address newManager)
-        external
-        override
-        onlyOwner
-    // solhint-disable-next-line no-empty-blocks
-    {
-        // Should be implemented, updated or removed
+    function setManager(address newManager) external override onlyOwner {
+        if (newManager == address(0)) {
+            revert Mammon__ManagerIsZeroAddress();
+        }
+        emit ManagerChanged(manager, newManager);
+        manager = newManager;
     }
 
     /// @inheritdoc IProtocolAPI
-    function sweep(address token, uint256 amount)
-        external
-        override
-        onlyOwner
-    // solhint-disable-next-line no-empty-blocks
-    {
-        // Should be implemented, updated or removed
+    function sweep(address token, uint256 amount) external override onlyOwner {
+        IERC20(token).safeTransfer(msg.sender, amount);
     }
 
     /// MANAGER API ///
@@ -424,25 +419,19 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// BINARY VAULT INTERFACE ///
 
     /// @inheritdoc IBinaryVault
-    function holdings0()
-        public
-        view
-        override
-        returns (uint256)
-    // solhint-disable-next-line no-empty-blocks
-    {
-        // Should be implemented, updated or removed
+    function holding(uint256 index) public view override returns (uint256) {
+        uint256[] memory amounts = getHoldings();
+        return amounts[index];
     }
 
     /// @inheritdoc IBinaryVault
-    function holdings1()
+    function getHoldings()
         public
         view
         override
-        returns (uint256)
-    // solhint-disable-next-line no-empty-blocks
+        returns (uint256[] memory amounts)
     {
-        // Should be implemented, updated or removed
+        (, amounts, ) = getTokensData();
     }
 
     /// USER API ///
@@ -467,6 +456,35 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     // solhint-disable-next-line no-empty-blocks
     {
         // Should be implemented, updated or removed
+    }
+
+    /// @inheritdoc IUserAPI
+    function getPoolId() public view override returns (bytes32) {
+        return pool.getPoolId();
+    }
+
+    /// @inheritdoc IUserAPI
+    function getTokensData()
+        public
+        view
+        override
+        returns (
+            IERC20[] memory,
+            uint256[] memory,
+            uint256
+        )
+    {
+        return vault.getPoolTokens(getPoolId());
+    }
+
+    /// @inheritdoc IUserAPI
+    function getTokens()
+        public
+        view
+        override
+        returns (IERC20[] memory tokens)
+    {
+        (tokens, , ) = getTokensData();
     }
 
     /// @inheritdoc IUserAPI
@@ -499,6 +517,25 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// INTERNAL FUNCTIONS ///
 
+    function update(uint256[] memory amounts, IBVault.PoolBalanceOpKind kind)
+        internal
+    {
+        IBVault.PoolBalanceOp[] memory ops = new IBVault.PoolBalanceOp[](
+            amounts.length
+        );
+        bytes32 poolId = getPoolId();
+        IERC20[] memory tokens = getTokens();
+
+        for (uint256 i = 0; i < ops.length; i++) {
+            ops[i].kind = kind;
+            ops[i].poolId = poolId;
+            ops[i].token = tokens[i];
+            ops[i].amount = amounts[i];
+        }
+
+        vault.managePoolBalance(ops);
+    }
+
     /// @notice Bind token to the pool.
     /// @dev Will only be called by initialDeposit().
     /// @param token Address of a token to bind.
@@ -516,53 +553,37 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @dev Will only be called by deposit().
     /// @param token Address of the token to deposit.
     /// @param amount Amount to deposit.
-    /// @param balance Current balance of the token in the pool.
-    function depositToken(
-        address token,
-        uint256 amount,
-        uint256 balance // solhint-disable-next-line no-empty-blocks
-    ) internal {
-        // Should be implemented, updated or removed
+    function depositToken(IERC20 token, uint256 amount) internal {
+        token.safeTransferFrom(msg.sender, address(this), amount);
+        token.safeApprove(address(pool), amount);
     }
 
     /// @notice Withdraw token from the pool.
     /// @dev Will only be called by withdraw().
     /// @param token Address of the token to withdraw.
     /// @param amount Amount to withdraw.
-    /// @param balance The current balance of the token in the pool.
-    function withdrawToken(
-        address token,
-        uint256 amount,
-        uint256 balance
-    )
-        internal
-        returns (uint256 withdrawAmount)
-    // solhint-disable-next-line no-empty-blocks
-    {
-        // Should be implemented, updated or removed
+    function withdrawToken(IERC20 token) internal returns (uint256 amount) {
+        amount = token.balanceOf(address(this));
+        token.safeTransfer(msg.sender, amount);
     }
 
     /// @notice Return all funds to owner.
     /// @dev Will only be called by finalize().
-    /// @return amount0 Exact returned amount of first token.
-    /// @return amount1 Exact returned amount of second token.
-    function returnFunds()
-        internal
-        returns (uint256 amount0, uint256 amount1)
-    // solhint-disable-next-line no-empty-blocks
-    {
-        // Should be implemented, updated or removed
+    /// @return amounts Exact returned amount of tokens.
+    function returnFunds() internal returns (uint256[] memory amounts) {
+        IERC20[] memory tokens = getTokens();
+        amounts = new uint256[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            amounts[i] = returnTokenFunds(tokens[i]);
+        }
     }
 
     /// @notice Return funds to owner.
     /// @dev Will only be called by returnFunds().
-    /// @param token Address of the token to unbind.
+    /// @param token IERC20 of the token to unbind.
     /// @return amount The exact returned amount of a token.
-    function returnTokenFunds(address token)
-        internal
-        returns (uint256 amount)
-    // solhint-disable-next-line no-empty-blocks
-    {
-        // Should be implemented, updated or removed
+    function returnTokenFunds(IERC20 token) internal returns (uint256 amount) {
+        amount = token.balanceOf(address(this));
+        token.safeTransfer(owner(), amount);
     }
 }
