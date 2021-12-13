@@ -55,9 +55,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// STORAGE SLOT START ///
 
-    /// @notice Token addresses in vault.
-    IERC20[] public tokens;
-
     /// @notice Submits new balance parameters for the vault
     address public manager;
 
@@ -214,29 +211,29 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Initialize the contract by deploying new Balancer pool using the provided factory.
     /// @dev First token and second token shouldn't be same. Validator should conform to interface.
-    /// @param factory_ Balancer Managed Pool Factory address.
+    /// @param factory Balancer Managed Pool Factory address.
     /// @param name Name of a Pool Token.
     /// @param symbol Symbol of a Pool Token.
-    /// @param tokens_ Address of tokens.
+    /// @param tokens Address of tokens.
     /// @param swapFeePercentage Swap fee of the pool.
     /// @param managementSwapFeePercentage Management swap fee of the pool.
     /// @param manager_ Vault manager address.
     /// @param validator_ Withdrawal validator contract address.
     /// @param noticePeriod_ Notice period in seconds.
     constructor(
-        address factory_,
+        address factory,
         string memory name,
         string memory symbol,
-        IERC20[] memory tokens_,
-        uint256[] memory weights_,
+        IERC20[] memory tokens,
+        uint256[] memory weights,
         uint256 swapFeePercentage,
         uint256 managementSwapFeePercentage,
         address manager_,
         address validator_,
         uint32 noticePeriod_
     ) {
-        if (tokens_.length != weights_.length) {
-            revert Mammon__LengthIsNotSame(tokens_.length, weights_.length);
+        if (tokens.length != weights.length) {
+            revert Mammon__LengthIsNotSame(tokens.length, weights.length);
         }
         if (
             !ERC165Checker.supportsInterface(
@@ -253,17 +250,17 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             );
         }
 
-        address[] memory managers = new address[](tokens_.length);
-        for (uint256 i = 0; i < tokens_.length; i++) {
+        address[] memory managers = new address[](tokens.length);
+        for (uint256 i = 0; i < tokens.length; i++) {
             managers[i] = address(this);
         }
 
         pool = IBManagedPool(
-            IMammonPoolFactoryV1(factory_).create(
+            IMammonPoolFactoryV1(factory).create(
                 name,
                 symbol,
-                tokens_,
-                weights_,
+                tokens,
+                weights,
                 managers,
                 swapFeePercentage,
                 address(this),
@@ -272,15 +269,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             )
         );
 
-        tokens = tokens_;
         manager = manager_;
         validator = IWithdrawalValidator(validator_);
         noticePeriod = noticePeriod_;
 
         emit Created(
-            factory_,
-            tokens_,
-            weights_,
+            factory,
+            tokens,
+            weights,
             manager_,
             validator_,
             noticePeriod_
