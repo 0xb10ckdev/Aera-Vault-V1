@@ -255,7 +255,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         address[] memory managers = new address[](tokens_.length);
         for (uint256 i = 0; i < tokens_.length; i++) {
-          managers[i] = address(this);
+            managers[i] = address(this);
         }
 
         pool = IBManagedPool(
