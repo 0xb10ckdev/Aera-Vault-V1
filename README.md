@@ -26,6 +26,8 @@ After that, copy the example environment file into an `.env` file like so:
 $ cp .env.example .env
 ```
 
+Team secrets are managed in [GCP secret manager](https://console.cloud.google.com/security/secret-manager?project=gauntlet-sim). If you don't have access, you need to be added to engineering@gauntlet.network
+
 ### Compile
 
 Compile the smart contracts with Hardhat:
@@ -65,6 +67,8 @@ Run the Mocha tests:
 ```sh
 $ yarn test
 ```
+
+Tests run against hardhat forks of target environments (ie Kovan, Mainnet) and require a node provider to be authenticated in your [.env](./.env).
 
 ### Coverage
 
