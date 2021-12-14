@@ -46,7 +46,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     uint256 private constant MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK = 10**16;
 
     /// @notice Balancer Vault. Controlled by vault.
-    IBVault public immutable vault;
+    IBVault public immutable bVault;
 
     /// @notice Balancer pool. Controlled by the Balancer Vault.
     IBManagedPool public immutable pool;
@@ -249,7 +249,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             )
         );
 
-        vault = IMammonPoolFactoryV1(factory).getVault();
+        bVault = IMammonPoolFactoryV1(factory).getVault();
         manager = manager_;
         validator = IWithdrawalValidator(validator_);
         noticePeriod = noticePeriod_;
@@ -279,13 +279,27 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         initialized = true;
 
         IERC20[] memory tokens = getTokens();
-        address[] memory managers = new address[](tokens.length);
-        for (uint256 i = 0; i < tokens.length; i++) {
-            managers[i] = msg.sender;
-        }
-        vault.registerTokens(getPoolId(), tokens, managers);
+        bytes memory initUserData = abi.encode(0, amounts);
 
-        deposit(amounts);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (amounts[i] > 0) {
+                depositToken(tokens[i], amounts[i]);
+            }
+        }
+
+        IBVault.JoinPoolRequest memory joinPoolRequest = IBVault
+            .JoinPoolRequest({
+                assets: tokens,
+                maxAmountsIn: amounts,
+                userData: initUserData,
+                fromInternalBalance: false
+            });
+        bVault.joinPool(
+            getPoolId(),
+            address(this),
+            address(this),
+            joinPoolRequest
+        );
     }
 
     /// @inheritdoc IProtocolAPI
@@ -481,7 +495,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             uint256
         )
     {
-        return vault.getPoolTokens(getPoolId());
+        return bVault.getPoolTokens(getPoolId());
     }
 
     /// @inheritdoc IUserAPI
@@ -540,7 +554,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             ops[i].amount = amounts[i];
         }
 
-        vault.managePoolBalance(ops);
+        bVault.managePoolBalance(ops);
     }
 
     /// @notice Deposit token to the pool.
@@ -549,7 +563,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param amount Amount to deposit.
     function depositToken(IERC20 token, uint256 amount) internal {
         token.safeTransferFrom(msg.sender, address(this), amount);
-        token.safeApprove(address(pool), amount);
+        token.safeApprove(address(bVault), amount);
     }
 
     /// @notice Withdraw token from the pool.
