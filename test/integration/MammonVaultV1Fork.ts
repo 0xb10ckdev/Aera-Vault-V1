@@ -251,6 +251,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     });
 
     it("should be reverted to call functions", async () => {
+      await expect(vault.initialDeposit([ONE, ONE])).to.be.revertedWith(
+        "Mammon__VaultNotInitialized",
+      );
+
       await expect(vault.deposit([ONE, ONE])).to.be.revertedWith(
         "Mammon__VaultNotInitialized",
       );
@@ -278,6 +282,20 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       await expect(
         vault.connect(manager).setPublicSwap(true),
       ).to.be.revertedWith("VaultNotInitialized");
+    });
+  });
+
+  describe("when Vault is initialized", () => {
+    beforeEach(async () => {
+      await DAI.approve(vault.address, toWei(100));
+      await WETH.approve(vault.address, toWei(100));
+      await vault.initialDeposit([toWei(0.00001), ONE]);
+    });
+
+    describe("when depositing to Vault", () => {
+      it("should be reverted to deposit tokens", async () => {});
+
+      it("should be possible to deposit token0", async () => {});
     });
   });
 
