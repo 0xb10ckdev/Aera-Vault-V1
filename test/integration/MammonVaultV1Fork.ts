@@ -196,6 +196,20 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
   let sortedTokens: string[];
   let snapshot: unknown;
 
+  const getStates = async () => {
+    const holdings0 = await vault.holding(0);
+    const holdings1 = await vault.holding(1);
+    const balance0 = await DAI.balanceOf(admin.address);
+    const balance1 = await WETH.balanceOf(admin.address);
+
+    return {
+      holdings0,
+      holdings1,
+      balance0,
+      balance1,
+    };
+  };
+
   beforeEach(async function () {
     snapshot = await ethers.provider.send("evm_snapshot", []);
     ({ admin, manager } = await ethers.getNamedSigners());
@@ -251,10 +265,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     });
 
     it("should be reverted to call functions", async () => {
-      await expect(vault.initialDeposit([ONE, ONE])).to.be.revertedWith(
-        "Mammon__VaultNotInitialized",
-      );
-
       await expect(vault.deposit([ONE, ONE])).to.be.revertedWith(
         "Mammon__VaultNotInitialized",
       );
@@ -283,19 +293,65 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         vault.connect(manager).setPublicSwap(true),
       ).to.be.revertedWith("VaultNotInitialized");
     });
+
+    it("should be reverted to initialize the vault", async () => {
+      await expect(vault.initialDeposit([ONE.add(1), ONE])).to.be.revertedWith(
+        "ERC20: transfer amount exceeds allowance",
+      );
+
+      await expect(vault.initialDeposit([ONE, ONE.add(1)])).to.be.revertedWith(
+        "ERC20: transfer amount exceeds allowance",
+      );
+
+      await expect(vault.initialDeposit([0, ONE])).to.be.revertedWith(
+        "BAL#311",
+      ); // ZERO_INVARIANT
+
+      await expect(vault.initialDeposit([ONE, 0])).to.be.revertedWith(
+        "BAL#311",
+      ); // ZERO_INVARIANT
+    });
+
+    it("should be possible to initialize the vault", async () => {
+      const { balance0, balance1 } = await getStates();
+
+      expect(await vault.estimateGas.initialDeposit([ONE, ONE])).to.below(
+        500000,
+      );
+      await vault.initialDeposit([ONE, ONE]);
+
+      expect(await DAI.balanceOf(admin.address)).to.equal(balance0.sub(ONE));
+      expect(await WETH.balanceOf(admin.address)).to.equal(balance1.sub(ONE));
+      expect(await DAI.balanceOf(await vault.bVault())).to.equal(ONE);
+      expect(await WETH.balanceOf(await vault.bVault())).to.equal(ONE);
+    });
+
+    it("should be reverted to initialize the vault again", async () => {
+      await vault.initialDeposit([ONE, ONE]);
+
+      await expect(vault.initialDeposit([ONE, ONE])).to.be.revertedWith(
+        "Mammon__VaultIsAlreadyInitialized",
+      );
+    });
   });
 
   describe("when Vault is initialized", () => {
     beforeEach(async () => {
       await DAI.approve(vault.address, toWei(100));
       await WETH.approve(vault.address, toWei(100));
-      await vault.initialDeposit([toWei(0.00001), ONE]);
+      await vault.initialDeposit([ONE, ONE]);
     });
 
     describe("when depositing to Vault", () => {
-      it("should be reverted to deposit tokens", async () => {});
+      it("should be reverted to deposit tokens", async () => {
+        await expect(vault.deposit([toWei(0), toWei(100)])).to.be.revertedWith(
+          "ERC20: transfer amount exceeds allowance",
+        );
 
-      it("should be possible to deposit token0", async () => {});
+        await expect(
+          vault.deposit([toWei(100), toWei(100)]),
+        ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
+      });
     });
   });
 
