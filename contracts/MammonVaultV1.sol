@@ -316,7 +316,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             depositToken(tokens[i], amounts[i]);
         }
 
-        update(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
+        updateVaultBalance(
+            amounts,
+            IBVault.UserBalanceOpKind.DEPOSIT_INTERNAL
+        );
+        updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
 
         emit Deposit(amounts);
     }
@@ -330,7 +334,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         onlyInitialized
         nonFinalizing
     {
-        update(amounts, IBVault.PoolBalanceOpKind.WITHDRAW);
+        updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.WITHDRAW);
+        updateVaultBalance(
+            amounts,
+            IBVault.UserBalanceOpKind.WITHDRAW_INTERNAL
+        );
 
         uint256[] memory withdrawnAmounts = new uint256[](amounts.length);
         IERC20[] memory tokens = getTokens();
@@ -538,9 +546,30 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// INTERNAL FUNCTIONS ///
 
-    function update(uint256[] memory amounts, IBVault.PoolBalanceOpKind kind)
-        internal
-    {
+    function updateVaultBalance(
+        uint256[] memory amounts,
+        IBVault.UserBalanceOpKind kind
+    ) internal {
+        IBVault.UserBalanceOp[] memory ops = new IBVault.UserBalanceOp[](
+            amounts.length
+        );
+        IERC20[] memory tokens = getTokens();
+
+        for (uint256 i = 0; i < ops.length; i++) {
+            ops[i].kind = kind;
+            ops[i].asset = tokens[i];
+            ops[i].amount = amounts[i];
+            ops[i].sender = msg.sender;
+            ops[i].recipient = payable(msg.sender);
+        }
+
+        bVault.manageUserBalance(ops);
+    }
+
+    function updatePoolBalance(
+        uint256[] memory amounts,
+        IBVault.PoolBalanceOpKind kind
+    ) internal {
         IBVault.PoolBalanceOp[] memory ops = new IBVault.PoolBalanceOp[](
             amounts.length
         );
@@ -589,7 +618,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Return funds to owner.
     /// @dev Will only be called by returnFunds().
     /// @param token IERC20 of the token to unbind.
-    /// @return amount The exact returned amount of a token.
+    /// @return amount T000he exact returned amount of a token.
     function returnTokenFunds(IERC20 token) internal returns (uint256 amount) {
         amount = token.balanceOf(address(this));
         token.safeTransfer(owner(), amount);
