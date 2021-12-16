@@ -344,13 +344,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
     describe("when depositing to Vault", () => {
       it("should be reverted to deposit tokens", async () => {
-        await expect(vault.deposit([toWei(0), toWei(100)])).to.be.revertedWith(
-          "ERC20: transfer amount exceeds allowance",
-        );
-
         await expect(
           vault.deposit([toWei(100), toWei(100)]),
         ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
+      });
+
+      it("should be possible to deposit tokens", async () => {
+        await vault.deposit([ONE, ONE]);
       });
     });
   });
