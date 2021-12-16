@@ -14,6 +14,7 @@ import "./interfaces/IBVault.sol";
 import "./interfaces/IBManagedPool.sol";
 import "./interfaces/IMammonVaultV1.sol";
 import "./interfaces/IWithdrawalValidator.sol";
+import "hardhat/console.sol";
 
 /// @title Risk-managed treasury vault.
 /// @notice Managed n-asset vault that supports withdrawals
@@ -268,7 +269,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// PROTOCOL API ///
 
     /// @inheritdoc IProtocolAPI
-    function initialDeposit(uint256[] memory amounts)
+    function initialDeposit(uint256[] calldata amounts)
         external
         override
         onlyOwner
@@ -303,7 +304,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IProtocolAPI
-    function deposit(uint256[] memory amounts)
+    function deposit(uint256[] calldata amounts)
         external
         override
         nonReentrant
@@ -326,7 +327,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IProtocolAPI
-    function withdraw(uint256[] memory amounts)
+    function withdraw(uint256[] calldata amounts)
         external
         override
         nonReentrant
