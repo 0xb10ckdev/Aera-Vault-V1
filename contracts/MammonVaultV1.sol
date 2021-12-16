@@ -312,21 +312,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         nonFinalizing
     {
         IERC20[] memory tokens = getTokens();
-        uint256[] memory managed = new uint256[](tokens.length);
-        bytes32 poolId = getPoolId();
 
         for (uint256 i = 0; i < amounts.length; i++) {
             if (amounts[i] > 0) {
                 depositToken(tokens[i], amounts[i]);
-                (, managed[i], , ) = bVault.getPoolTokenInfo(
-                    poolId,
-                    tokens[i]
-                );
-                managed[i] += amounts[i];
             }
         }
 
-        updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
+        updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.UPDATE);
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
 
         emit Deposit(amounts);
@@ -343,17 +336,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     {
         IERC20[] memory tokens = getTokens();
         uint256[] memory managed = new uint256[](tokens.length);
-        bytes32 poolId = getPoolId();
-
-        for (uint256 i = 0; i < amounts.length; i++) {
-            if (amounts[i] > 0) {
-                (, managed[i], , ) = bVault.getPoolTokenInfo(
-                    poolId,
-                    tokens[i]
-                );
-                managed[i] -= amounts[i];
-            }
-        }
 
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.WITHDRAW);
         updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
