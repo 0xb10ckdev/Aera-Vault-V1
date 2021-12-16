@@ -7,31 +7,25 @@ export const setupTokens = deployments.createFixture(
     const { deploy } = deployments;
     const { admin } = await ethers.getNamedSigners();
 
-    const DAI = await deploy("DAI", {
-      contract: "ERC20Mock",
-      from: admin.address,
-      args: ["DAI Test", "TDAI", 18, parseEther("1000000000")],
-    });
+    const tokenDeploys = [];
 
-    const WETH = await deploy("WETH", {
-      contract: "ERC20Mock",
-      from: admin.address,
-      args: ["WETH Test", "TWETH", 18, parseEther("1000000000")],
-    });
-
-    let sortedTokens = [];
-    let unsortedTokens = [];
-    if (DAI.address < WETH.address) {
-      sortedTokens = [DAI.address, WETH.address];
-      unsortedTokens = [WETH.address, DAI.address];
-    } else {
-      sortedTokens = [WETH.address, DAI.address];
-      unsortedTokens = [DAI.address, WETH.address];
+    for (let i = 0; i < 4; i++) {
+      const token = await deploy(`TOKEN${i}`, {
+        contract: "ERC20Mock",
+        from: admin.address,
+        args: [`TOKEN${i} Test`, `TTOKEN${i}`, 18, parseEther("1000000000")],
+      });
+      tokenDeploys.push(token);
     }
 
+    const tokens = tokenDeploys
+      .map(token => ERC20Mock__factory.connect(token.address, admin))
+      .sort((a, b) => (a.address < b.address ? -1 : 1));
+    const sortedTokens = tokens.map(token => token.address);
+    const unsortedTokens = [...sortedTokens].reverse();
+
     return {
-      DAI: ERC20Mock__factory.connect(DAI.address, admin),
-      WETH: ERC20Mock__factory.connect(WETH.address, admin),
+      tokens,
       sortedTokens,
       unsortedTokens,
     };
