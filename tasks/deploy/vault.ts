@@ -24,6 +24,13 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     const validator = taskArgs.validator;
     const noticePeriod = taskArgs.noticePeriod;
 
+    for (let i = 0; i < tokens.length - 1; i++) {
+      if (tokens[i] >= tokens[i + 1]) {
+        console.log("Tokens should be sorted by address");
+        return;
+      }
+    }
+
     const config = getConfig(network.config.chainId || 1);
 
     const { admin } = await ethers.getNamedSigners();
