@@ -68,3 +68,10 @@ export const deployFactory = async (
 export const toWei = (value: number | string): BigNumber => {
   return ethers.utils.parseEther(value.toString());
 };
+
+export const valueArray = (
+  value: number | string | BigNumber,
+  length: number,
+): string[] => {
+  return Array.from({ length }, _ => value.toString());
+};
