@@ -304,7 +304,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IProtocolAPI
     function deposit(uint256[] memory amounts)
-        public
+        external
         override
         nonReentrant
         onlyOwner
@@ -312,14 +312,21 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         nonFinalizing
     {
         IERC20[] memory tokens = getTokens();
+        uint256[] memory managed = new uint256[](tokens.length);
+        bytes32 poolId = getPoolId();
+
         for (uint256 i = 0; i < amounts.length; i++) {
-            depositToken(tokens[i], amounts[i]);
+            if (amounts[i] > 0) {
+                depositToken(tokens[i], amounts[i]);
+                (, managed[i], , ) = bVault.getPoolTokenInfo(
+                    poolId,
+                    tokens[i]
+                );
+                managed[i] += amounts[i];
+            }
         }
 
-        updateVaultBalance(
-            amounts,
-            IBVault.UserBalanceOpKind.DEPOSIT_INTERNAL
-        );
+        updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
 
         emit Deposit(amounts);
@@ -327,21 +334,31 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IProtocolAPI
     function withdraw(uint256[] memory amounts)
-        public
+        external
         override
         nonReentrant
         onlyOwner
         onlyInitialized
         nonFinalizing
     {
+        IERC20[] memory tokens = getTokens();
+        uint256[] memory managed = new uint256[](tokens.length);
+        bytes32 poolId = getPoolId();
+
+        for (uint256 i = 0; i < amounts.length; i++) {
+            if (amounts[i] > 0) {
+                (, managed[i], , ) = bVault.getPoolTokenInfo(
+                    poolId,
+                    tokens[i]
+                );
+                managed[i] -= amounts[i];
+            }
+        }
+
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.WITHDRAW);
-        updateVaultBalance(
-            amounts,
-            IBVault.UserBalanceOpKind.WITHDRAW_INTERNAL
-        );
+        updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
 
         uint256[] memory withdrawnAmounts = new uint256[](amounts.length);
-        IERC20[] memory tokens = getTokens();
         for (uint256 i = 0; i < amounts.length; i++) {
             withdrawnAmounts[i] = withdrawToken(tokens[i]);
         }
@@ -369,9 +386,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         if (noticeTimeoutAt > block.timestamp) {
             revert Mammon__NoticeTimeoutNotElapsed(noticeTimeoutAt);
         }
-
-        uint256[] memory holdings = getHoldings();
-        withdraw(holdings);
 
         uint256[] memory amounts = returnFunds();
         emit Finalized(msg.sender, amounts);
@@ -546,26 +560,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// INTERNAL FUNCTIONS ///
 
-    function updateVaultBalance(
-        uint256[] memory amounts,
-        IBVault.UserBalanceOpKind kind
-    ) internal {
-        IBVault.UserBalanceOp[] memory ops = new IBVault.UserBalanceOp[](
-            amounts.length
-        );
-        IERC20[] memory tokens = getTokens();
-
-        for (uint256 i = 0; i < ops.length; i++) {
-            ops[i].kind = kind;
-            ops[i].asset = tokens[i];
-            ops[i].amount = amounts[i];
-            ops[i].sender = msg.sender;
-            ops[i].recipient = payable(msg.sender);
-        }
-
-        bVault.manageUserBalance(ops);
-    }
-
     function updatePoolBalance(
         uint256[] memory amounts,
         IBVault.PoolBalanceOpKind kind
@@ -608,7 +602,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @dev Will only be called by finalize().
     /// @return amounts Exact returned amount of tokens.
     function returnFunds() internal returns (uint256[] memory amounts) {
+        uint256[] memory holdings = getHoldings();
+
         IERC20[] memory tokens = getTokens();
+        uint256[] memory managed = new uint256[](tokens.length);
+
+        updatePoolBalance(holdings, IBVault.PoolBalanceOpKind.WITHDRAW);
+        updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
+
         amounts = new uint256[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
             amounts[i] = returnTokenFunds(tokens[i]);
