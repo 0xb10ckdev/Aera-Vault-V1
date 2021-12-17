@@ -69,6 +69,11 @@ interface IBPool {
         view
         returns (uint256);
 
+    function getSpotPriceSansFee(address tokenIn, address tokenOut)
+        external
+        view
+        returns (uint256);
+
     function getBalance(address token) external view returns (uint256);
 
     function getDenormalizedWeight(address token)
