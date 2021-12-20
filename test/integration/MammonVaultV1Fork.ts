@@ -319,10 +319,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       ).to.below(800000);
       await vault.initialDeposit(valueArray(ONE, tokens.length));
 
+      const { balances: newBalances } = await getStates();
       for (let i = 0; i < tokens.length; i++) {
-        expect(await tokens[i].balanceOf(admin.address)).to.equal(
-          balances[i].sub(ONE),
-        );
+        expect(newBalances[i]).to.equal(balances[i].sub(ONE));
         expect(await tokens[i].balanceOf(await vault.bVault())).to.equal(ONE);
       }
     });
@@ -364,13 +363,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           );
           await vault.deposit(amounts);
 
+          const { holdings: newHoldings, balances: newBalances } =
+            await getStates();
           for (let j = 0; j < tokens.length; j++) {
-            expect(await vault.holding(j)).to.equal(
-              holdings[j].add(amounts[j]),
-            );
-            expect(await tokens[j].balanceOf(admin.address)).to.equal(
-              balances[j].sub(amounts[j]),
-            );
+            expect(newHoldings[j]).to.equal(holdings[j].add(amounts[j]));
+            expect(newBalances[j]).to.equal(balances[j].sub(amounts[j]));
           }
         }
       });
@@ -386,11 +383,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         }
         await vault.deposit(amounts);
 
+        const { holdings: newHoldings, balances: newBalances } =
+          await getStates();
         for (let i = 0; i < tokens.length; i++) {
-          expect(await vault.holding(i)).to.equal(holdings[i].add(amounts[i]));
-          expect(await tokens[i].balanceOf(admin.address)).to.equal(
-            balances[i].sub(amounts[i]),
-          );
+          expect(newHoldings[i]).to.equal(holdings[i].add(amounts[i]));
+          expect(newBalances[i]).to.equal(balances[i].sub(amounts[i]));
         }
       });
 
@@ -405,13 +402,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           );
           await vault.withdraw(amounts);
 
+          const { holdings: newHoldings, balances: newBalances } =
+            await getStates();
           for (let j = 0; j < tokens.length; j++) {
-            expect(await vault.holding(j)).to.equal(
-              holdings[j].sub(amounts[j]),
-            );
-            expect(await tokens[j].balanceOf(admin.address)).to.equal(
-              balances[j].add(amounts[j]),
-            );
+            expect(newHoldings[j]).to.equal(holdings[j].sub(amounts[j]));
+            expect(newBalances[j]).to.equal(balances[j].add(amounts[j]));
           }
         }
       });
@@ -432,11 +427,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         }
         await vault.withdraw(amounts);
 
+        const { holdings: newHoldings, balances: newBalances } =
+          await getStates();
         for (let i = 0; i < tokens.length; i++) {
-          expect(await vault.holding(i)).to.equal(holdings[i].sub(amounts[i]));
-          expect(await tokens[i].balanceOf(admin.address)).to.equal(
-            balances[i].add(amounts[i]),
-          );
+          expect(newHoldings[i]).to.equal(holdings[i].sub(amounts[i]));
+          expect(newBalances[i]).to.equal(balances[i].add(amounts[i]));
         }
       });
     });
