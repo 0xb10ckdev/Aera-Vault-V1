@@ -355,12 +355,89 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
       });
 
+      it("should be possible to deposit one token", async () => {
+        for (let i = 0; i < tokens.length; i++) {
+          const { holdings, balances } = await getStates();
+
+          const amounts = tokens.map((_, index) =>
+            index == i ? toWei(5) : toWei(0),
+          );
+          await vault.deposit(amounts);
+
+          for (let j = 0; j < tokens.length; j++) {
+            expect(await vault.holding(j)).to.equal(
+              holdings[j].add(amounts[j]),
+            );
+            expect(await tokens[j].balanceOf(admin.address)).to.equal(
+              balances[j].sub(amounts[j]),
+            );
+          }
+        }
+      });
+
       it("should be possible to deposit tokens", async () => {
-        await vault.deposit(valueArray(ONE, tokens.length));
+        const { holdings, balances } = await getStates();
+
+        const amounts = tokens.map(_ =>
+          toWei(Math.floor(Math.random() * 100000)),
+        );
+        for (let i = 0; i < tokens.length; i++) {
+          await tokens[i].approve(vault.address, amounts[i]);
+        }
+        await vault.deposit(amounts);
+
+        for (let i = 0; i < tokens.length; i++) {
+          expect(await vault.holding(i)).to.equal(holdings[i].add(amounts[i]));
+          expect(await tokens[i].balanceOf(admin.address)).to.equal(
+            balances[i].sub(amounts[i]),
+          );
+        }
+      });
+
+      it("should be possible to withdraw one token", async () => {
+        await vault.deposit(valueArray(toWei(5), tokens.length));
+
+        for (let i = 0; i < tokens.length; i++) {
+          const { holdings, balances } = await getStates();
+
+          const amounts = tokens.map((_, index) =>
+            index == i ? toWei(5) : toWei(0),
+          );
+          await vault.withdraw(amounts);
+
+          for (let j = 0; j < tokens.length; j++) {
+            expect(await vault.holding(j)).to.equal(
+              holdings[j].sub(amounts[j]),
+            );
+            expect(await tokens[j].balanceOf(admin.address)).to.equal(
+              balances[j].add(amounts[j]),
+            );
+          }
+        }
       });
 
       it("should be possible to withdraw tokens", async () => {
-        await vault.withdraw(valueArray(ONE, tokens.length));
+        for (let i = 0; i < tokens.length; i++) {
+          await tokens[i].approve(vault.address, toWei(100000));
+        }
+        await vault.deposit(valueArray(toWei(100000), tokens.length));
+
+        const { holdings, balances } = await getStates();
+
+        const amounts = tokens.map(_ =>
+          toWei(Math.floor(Math.random() * 100000)),
+        );
+        for (let i = 0; i < tokens.length; i++) {
+          await tokens[i].approve(vault.address, amounts[i]);
+        }
+        await vault.withdraw(amounts);
+
+        for (let i = 0; i < tokens.length; i++) {
+          expect(await vault.holding(i)).to.equal(holdings[i].sub(amounts[i]));
+          expect(await tokens[i].balanceOf(admin.address)).to.equal(
+            balances[i].add(amounts[i]),
+          );
+        }
       });
     });
   });
