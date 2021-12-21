@@ -275,7 +275,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
   describe("when Vault not initialized", () => {
     beforeEach(async () => {
       for (let i = 0; i < tokens.length; i++) {
-        tokens[i].approve(vault.address, ONE);
+        await tokens[i].approve(vault.address, toWei(2));
       }
     });
 
@@ -313,11 +313,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       const validAmounts = valueArray(ONE, tokens.length - 1);
 
       await expect(
-        vault.initialDeposit([ONE.add(1), ...validAmounts]),
+        vault.initialDeposit([toWei(3), ...validAmounts]),
       ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
 
       await expect(
-        vault.initialDeposit([...validAmounts, ONE.add(1)]),
+        vault.initialDeposit([...validAmounts, toWei(3)]),
       ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
 
       await expect(
@@ -337,10 +337,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       ).to.below(800000);
       await vault.initialDeposit(valueArray(ONE, tokens.length));
 
-      const newBalances = await getBalances();
+      const { holdings, balances: newBalances } = await getStates();
       for (let i = 0; i < tokens.length; i++) {
         expect(newBalances[i]).to.equal(balances[i].sub(ONE));
-        expect(await tokens[i].balanceOf(await vault.bVault())).to.equal(ONE);
+        expect(holdings[i]).to.equal(ONE);
       }
     });
 
