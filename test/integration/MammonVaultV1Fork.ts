@@ -363,6 +363,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           const amounts = tokens.map((_, index) =>
             index == i ? toWei(5) : toWei(0),
           );
+          expect(await vault.estimateGas.deposit(amounts)).to.below(320000);
           await vault.deposit(amounts);
 
           const { holdings: newHoldings, balances: newBalances } =
@@ -383,6 +384,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         for (let i = 0; i < tokens.length; i++) {
           await tokens[i].approve(vault.address, amounts[i]);
         }
+
+        expect(await vault.estimateGas.deposit(amounts)).to.below(580000);
         await vault.deposit(amounts);
 
         const { holdings: newHoldings, balances: newBalances } =
@@ -402,6 +405,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           const amounts = tokens.map((_, index) =>
             index == i ? toWei(5) : toWei(0),
           );
+
+          expect(await vault.estimateGas.withdraw(amounts)).to.below(280000);
           await vault.withdraw(amounts);
 
           const { holdings: newHoldings, balances: newBalances } =
@@ -427,6 +432,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         for (let i = 0; i < tokens.length; i++) {
           await tokens[i].approve(vault.address, amounts[i]);
         }
+
+        expect(await vault.estimateGas.withdraw(amounts)).to.below(430000);
         await vault.withdraw(amounts);
 
         const { holdings: newHoldings, balances: newBalances } =
