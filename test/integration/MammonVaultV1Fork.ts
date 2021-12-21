@@ -20,6 +20,7 @@ import {
   MAX_SWAP_FEE,
   ZERO_ADDRESS,
   MAX_NOTICE_PERIOD,
+  BALANCER_ERRORS,
 } from "../constants";
 
 describe("Mammon Vault V1 Mainnet Deployment", function () {
@@ -126,7 +127,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
         manager.address,
         validator.address,
       ),
-    ).to.be.revertedWith("BAL#101"); // UNSORTED_ARRAY
+    ).to.be.revertedWith(BALANCER_ERRORS.UNSORTED_ARRAY);
     await expect(
       deployVault(
         admin,
@@ -140,7 +141,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
         manager.address,
         validator.address,
       ),
-    ).to.be.revertedWith("BAL#202"); // MAX_SWAP_FEE_PERCENTAGE
+    ).to.be.revertedWith(BALANCER_ERRORS.MAX_SWAP_FEE_PERCENTAGE);
     await expect(
       deployVault(
         admin,
@@ -154,7 +155,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
         manager.address,
         validator.address,
       ),
-    ).to.be.revertedWith("BAL#203"); // MIN_SWAP_FEE_PERCENTAGE
+    ).to.be.revertedWith(BALANCER_ERRORS.MIN_SWAP_FEE_PERCENTAGE);
     await expect(
       deployVault(
         admin,
@@ -168,7 +169,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
         manager.address,
         validator.address,
       ),
-    ).to.be.revertedWith("BAL#308"); // NORMALIZED_WEIGHT_INVARIANT
+    ).to.be.revertedWith(BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT);
     await expect(
       deployVault(
         admin,
@@ -182,7 +183,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
         manager.address,
         validator.address,
       ),
-    ).to.be.revertedWith("BAL#338"); // MAX_MANAGEMENT_SWAP_FEE_PERCENTAGE
+    ).to.be.revertedWith(BALANCER_ERRORS.MAX_MANAGEMENT_SWAP_FEE_PERCENTAGE);
   });
 });
 
@@ -305,11 +306,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
       await expect(
         vault.initialDeposit([0, ...validAmounts]),
-      ).to.be.revertedWith("BAL#311"); // ZERO_INVARIANT
+      ).to.be.revertedWith(BALANCER_ERRORS.ZERO_INVARIANT);
 
       await expect(
         vault.initialDeposit([...validAmounts, 0]),
-      ).to.be.revertedWith("BAL#311"); // ZERO_INVARIANT
+      ).to.be.revertedWith(BALANCER_ERRORS.ZERO_INVARIANT);
     });
 
     it("should be possible to initialize the vault", async () => {
