@@ -102,6 +102,8 @@ $ yarn clean
 
 ### Deploy
 
+Prior to deployment, make sure you have provided Infura keys by setting `INFURA_API_KEY` in your environment. Alchemy keys are only used for forking at the moment.
+
 Deploy the Validator to a specific network:
 
 ```sh
@@ -132,11 +134,13 @@ Deploy the Validator and Vault to Hardhat Network:
 $ yarn deploy --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD>
 ```
 
-TOKEN0: Token0's address
-TOKEN1: Token1's address
-MANAGER: Manager's address
-VALIDATOR: Validator's address
-NOTICEPERIOD: Notice Period in second
+**Legend**:
+
+- TOKEN0: First token address
+- TOKEN1: Second token address
+- MANAGER: Manager's address
+- VALIDATOR: Address of withdrawal validator contract
+- NOTICE_PERIOD: Finalization notice period in seconds
 
 ## Syntax Highlighting
 
