@@ -373,12 +373,12 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       it("should be possible to deposit one token", async () => {
+        let { holdings, balances } = await getStates();
         for (let i = 0; i < tokens.length; i++) {
-          const { holdings, balances } = await getStates();
-
           const amounts = tokens.map((_, index) =>
             index == i ? toWei(5) : toWei(0),
           );
+
           expect(await vault.estimateGas.deposit(amounts)).to.below(320000);
           await vault.deposit(amounts);
 
@@ -388,6 +388,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             expect(newHoldings[j]).to.equal(holdings[j].add(amounts[j]));
             expect(newBalances[j]).to.equal(balances[j].sub(amounts[j]));
           }
+
+          holdings = newHoldings;
+          balances = newBalances;
         }
       });
 
@@ -426,10 +429,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
       it("should be possible to withdraw one token", async () => {
         await vault.deposit(valueArray(toWei(5), tokens.length));
+        let { holdings, balances } = await getStates();
 
         for (let i = 0; i < tokens.length; i++) {
-          const { holdings, balances } = await getStates();
-
           const amounts = tokens.map((_, index) =>
             index == i ? toWei(5) : toWei(0),
           );
@@ -443,6 +445,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             expect(newHoldings[j]).to.equal(holdings[j].sub(amounts[j]));
             expect(newBalances[j]).to.equal(balances[j].add(amounts[j]));
           }
+
+          holdings = newHoldings;
+          balances = newBalances;
         }
       });
 
