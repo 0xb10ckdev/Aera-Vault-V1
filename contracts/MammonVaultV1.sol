@@ -342,7 +342,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         uint256[] memory withdrawnAmounts = new uint256[](amounts.length);
         for (uint256 i = 0; i < amounts.length; i++) {
-            withdrawnAmounts[i] = withdrawToken(tokens[i]);
+            if (amounts[i] > 0) {
+                withdrawnAmounts[i] = withdrawToken(tokens[i]);
+            }
         }
 
         emit Withdraw(amounts, withdrawnAmounts);
@@ -604,6 +606,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @return amount T000he exact returned amount of a token.
     function returnTokenFunds(IERC20 token) internal returns (uint256 amount) {
         amount = token.balanceOf(address(this));
-        token.safeTransfer(owner(), amount);
+        if (amount > 0) {
+            token.safeTransfer(owner(), amount);
+        }
     }
 }
