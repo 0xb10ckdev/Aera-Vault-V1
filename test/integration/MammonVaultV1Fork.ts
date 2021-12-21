@@ -10,7 +10,7 @@ import {
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
 } from "../../typechain";
-import { setupTokens } from "../fixtures";
+import { setupTokens, deployToken } from "../fixtures";
 import { deployFactory, deployVault, toWei, valueArray } from "../utils";
 import { DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
 import {
@@ -19,6 +19,7 @@ import {
   MIN_SWAP_FEE,
   MAX_SWAP_FEE,
   ZERO_ADDRESS,
+  NOTICE_PERIOD,
   MAX_NOTICE_PERIOD,
   BALANCER_ERRORS,
 } from "../constants";
@@ -198,11 +199,21 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
   let sortedTokens: string[];
   let snapshot: unknown;
 
-  const getStates = async () => {
+  const getHoldings = async () => {
     const holdings = await Promise.all(tokens.map((_, i) => vault.holding(i)));
+    return holdings;
+  };
+
+  const getBalances = async () => {
     const balances = await Promise.all(
       tokens.map(token => token.balanceOf(admin.address)),
     );
+    return balances;
+  };
+
+  const getStates = async () => {
+    const holdings = await getHoldings();
+    const balances = await getBalances();
 
     return {
       holdings,
@@ -314,14 +325,14 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     });
 
     it("should be possible to initialize the vault", async () => {
-      const { balances } = await getStates();
+      const balances = await getBalances();
 
       expect(
         await vault.estimateGas.initialDeposit(valueArray(ONE, tokens.length)),
       ).to.below(800000);
       await vault.initialDeposit(valueArray(ONE, tokens.length));
 
-      const { balances: newBalances } = await getStates();
+      const newBalances = await getBalances();
       for (let i = 0; i < tokens.length; i++) {
         expect(newBalances[i]).to.equal(balances[i].sub(ONE));
         expect(await tokens[i].balanceOf(await vault.bVault())).to.equal(ONE);
@@ -443,6 +454,111 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           expect(newBalances[i]).to.equal(balances[i].add(amounts[i]));
         }
       });
+    });
+
+    describe("when finalizing", () => {
+      it("should be reverted to call finalize", async () => {
+        await expect(vault.connect(user).finalize()).to.be.revertedWith(
+          "Mammon__CallerIsNotOwnerOrManager",
+        );
+        await expect(vault.finalize()).to.be.revertedWith(
+          "Mammon__FinalizationNotInitialized",
+        );
+        await expect(
+          vault.connect(manager).initializeFinalization(),
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+
+        expect(await vault.estimateGas.initializeFinalization()).to.below(
+          32000,
+        );
+        await vault.initializeFinalization();
+        const noticeTimeoutAt = await vault.noticeTimeoutAt();
+
+        await expect(vault.finalize()).to.be.revertedWith(
+          `Mammon__NoticeTimeoutNotElapsed(${noticeTimeoutAt})`,
+        );
+      });
+
+      it("should be reverted to call functions when finalizing", async () => {
+        await vault.initializeFinalization();
+
+        await expect(
+          vault.deposit(valueArray(ONE, tokens.length)),
+        ).to.be.revertedWith("Mammon__VaultIsFinalizing");
+
+        await expect(
+          vault.withdraw(valueArray(ONE, tokens.length)),
+        ).to.be.revertedWith("Mammon__VaultIsFinalizing");
+
+        const blocknumber = await ethers.provider.getBlockNumber();
+        await expect(
+          vault
+            .connect(manager)
+            .updateWeightsGradually(
+              MIN_WEIGHT,
+              MIN_WEIGHT,
+              blocknumber + 1,
+              blocknumber + 1000,
+            ),
+        ).to.be.revertedWith("Mammon__VaultIsFinalizing");
+
+        await expect(vault.connect(manager).pokeWeights()).to.be.revertedWith(
+          "Mammon__VaultIsFinalizing",
+        );
+
+        await expect(vault.initializeFinalization()).to.be.revertedWith(
+          "Mammon__VaultIsFinalizing",
+        );
+      });
+
+      it("should be possible to finalize", async () => {
+        await vault.initializeFinalization();
+        await ethers.provider.send("evm_increaseTime", [NOTICE_PERIOD + 1]);
+
+        const { holdings, balances } = await getStates();
+
+        expect(await vault.estimateGas.finalize()).to.below(440000);
+        await vault.finalize();
+
+        const newBalances = await getBalances();
+
+        for (let i = 0; i < tokens.length; i++) {
+          expect(newBalances[i]).to.equal(balances[i].add(holdings[i]));
+        }
+
+        expect(await ethers.provider.getCode(vault.address)).to.equal("0x");
+      });
+    });
+  });
+
+  describe("Sweep", () => {
+    let TOKEN: IERC20;
+    beforeEach(async () => {
+      ({ TOKEN } = await deployToken());
+    });
+
+    it("should be reverted to withdraw token", async () => {
+      await TOKEN.transfer(vault.address, toWei(1000));
+      await expect(
+        vault.connect(manager).sweep(TOKEN.address, toWei(1001)),
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+      await expect(vault.sweep(TOKEN.address, toWei(1001))).to.be.revertedWith(
+        "ERC20: transfer amount exceeds balance",
+      );
+    });
+
+    it("should be possible to withdraw token", async () => {
+      const balance = await TOKEN.balanceOf(admin.address);
+      await TOKEN.transfer(vault.address, toWei(1000));
+
+      expect(
+        await vault.estimateGas.sweep(TOKEN.address, toWei(1000)),
+      ).to.below(70000);
+      await vault.sweep(TOKEN.address, toWei(1000));
+
+      expect(await TOKEN.balanceOf(vault.address)).to.equal(toWei(0));
+
+      expect(await TOKEN.balanceOf(admin.address)).to.equal(balance);
     });
   });
 
