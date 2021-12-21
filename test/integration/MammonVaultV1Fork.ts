@@ -406,6 +406,18 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           expect(newBalances[i]).to.equal(balances[i].sub(amounts[i]));
         }
       });
+    });
+
+    describe("when withdrawing to Vault", () => {
+      it("should be reverted to withdraw tokens", async () => {
+        await expect(
+          vault.connect(user).withdraw(valueArray(ONE, tokens.length)),
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+
+        await expect(
+          vault.withdraw(valueArray(toWei(100), tokens.length)),
+        ).to.be.revertedWith(BALANCER_ERRORS.SUB_OVERFLOW);
+      });
 
       it("should be possible to withdraw one token", async () => {
         await vault.deposit(valueArray(toWei(5), tokens.length));
