@@ -30,11 +30,17 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     const validator = taskArgs.validator;
     const noticePeriod = taskArgs.noticePeriod;
 
+    if (tokens.length < 2) {
+      console.error("Number of Tokens should be at least two");
+      return;
+    }
+
     for (let i = 0; i < tokens.length - 1; i++) {
-      if (tokens[i] >= tokens[i + 1]) {
-        console.error("Tokens should be sorted by address in ascending order");
-        return;
+      if (tokens[i] < tokens[i + 1]) {
+        continue;
       }
+      console.error("Tokens should be sorted by address in ascending order");
+      return;
     }
 
     const config = getConfig(network.config.chainId || 1);
