@@ -212,8 +212,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
   };
 
   const getStates = async () => {
-    const holdings = await getHoldings();
-    const balances = await getBalances();
+    const [holdings, balances] = await Promise.all([
+      getHoldings(),
+      getBalances(),
+    ]);
 
     return {
       holdings,
@@ -255,6 +257,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       manager: manager.address,
       validator: validator.address,
       noticePeriod: DEFAULT_NOTICE_PERIOD.toString(),
+      silent: true,
     });
 
     vault = MammonVaultV1Mainnet__factory.connect(
