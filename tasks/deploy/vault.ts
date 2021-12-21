@@ -26,7 +26,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
 
     for (let i = 0; i < tokens.length - 1; i++) {
       if (tokens[i] >= tokens[i + 1]) {
-        console.log("Tokens should be sorted by address");
+        console.error("Tokens should be sorted by address in ascending order");
         return;
       }
     }
