@@ -13,13 +13,14 @@ import {
 import { setupTokens } from "../fixtures";
 import { deployFactory, deployVault, toWei, valueArray } from "../utils";
 import { DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
-
-const ONE = toWei("1");
-const MIN_WEIGHT = toWei("0.01");
-const MIN_SWAP_FEE = toWei("0.000001");
-const MAX_SWAP_FEE = toWei("0.1");
-const ZERO_ADDRESS = ethers.constants.AddressZero;
-const MAX_NOTICE_PERIOD = 5184000; // 60 days in seconds
+import {
+  ONE,
+  MIN_WEIGHT,
+  MIN_SWAP_FEE,
+  MAX_SWAP_FEE,
+  ZERO_ADDRESS,
+  MAX_NOTICE_PERIOD,
+} from "../constants";
 
 describe("Mammon Vault V1 Mainnet Deployment", function () {
   let admin: SignerWithAddress;
