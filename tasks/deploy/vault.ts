@@ -1,5 +1,5 @@
 import { getConfig } from "../../scripts/config";
-import { task } from "hardhat/config";
+import { task, types } from "hardhat/config";
 
 task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   .addParam("factory", "Mammon Pool Factory's address")
@@ -12,6 +12,12 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   .addParam("manager", "Manager's address")
   .addParam("validator", "Validator's address")
   .addParam("noticePeriod", "Notice period in seconds")
+  .addOptionalParam(
+    "silent",
+    "Disable console log on deployment",
+    false,
+    types.boolean,
+  )
   .setAction(async (taskArgs, { deployments, ethers, network }) => {
     const factory = taskArgs.factory;
     const name = taskArgs.name;
@@ -35,19 +41,21 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
 
     const { admin } = await ethers.getNamedSigners();
 
-    console.log("Deploying vault with");
-    console.log(`Factory: ${factory}`);
-    console.log(`Name: ${name}`);
-    console.log(`Symbol: ${symbol}`);
-    console.log("Tokens:");
-    console.log(tokens.join("\n"));
-    console.log("Weights:");
-    console.log(weights.join("\n"));
-    console.log(`Swap Fee: ${swapFee}`);
-    console.log(`Management Swap Fee: ${managementSwapFee}`);
-    console.log(`Manager: ${manager}`);
-    console.log(`Validator: ${validator}`);
-    console.log(`Notice Period: ${noticePeriod}`);
+    if (!taskArgs.silent) {
+      console.log("Deploying vault with");
+      console.log(`Factory: ${factory}`);
+      console.log(`Name: ${name}`);
+      console.log(`Symbol: ${symbol}`);
+      console.log("Tokens:");
+      console.log(tokens.join("\n"));
+      console.log("Weights:");
+      console.log(weights.join("\n"));
+      console.log(`Swap Fee: ${swapFee}`);
+      console.log(`Management Swap Fee: ${managementSwapFee}`);
+      console.log(`Manager: ${manager}`);
+      console.log(`Validator: ${validator}`);
+      console.log(`Notice Period: ${noticePeriod}`);
+    }
 
     await deployments.deploy(config.vault, {
       contract: config.vault,
@@ -67,8 +75,10 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
       log: true,
     });
 
-    console.log(
-      "Vault is deployed to:",
-      (await deployments.get(config.vault)).address,
-    );
+    if (!taskArgs.silent) {
+      console.log(
+        "Vault is deployed to:",
+        (await deployments.get(config.vault)).address,
+      );
+    }
   });

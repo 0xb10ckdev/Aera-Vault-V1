@@ -239,7 +239,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       admin,
     );
 
-    await hre.run("deploy:factory");
+    await hre.run("deploy:factory", {
+      silent: true,
+    });
     factory = MammonPoolFactoryV1__factory.connect(
       (await deployments.get("MammonPoolFactoryV1")).address,
       admin,
