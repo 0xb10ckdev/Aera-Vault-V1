@@ -1,14 +1,22 @@
 import { getConfig } from "../../scripts/config";
-import { task } from "hardhat/config";
+import { task, types } from "hardhat/config";
 
-task("deploy:factory", "Deploys a Mammon Pool Factory").setAction(
-  async (taskArgs, { deployments, ethers, network }) => {
+task("deploy:factory", "Deploys a Mammon Pool Factory")
+  .addOptionalParam(
+    "silent",
+    "Disable console log on deployment",
+    false,
+    types.boolean,
+  )
+  .setAction(async (taskArgs, { deployments, ethers, network }) => {
     const config = getConfig(network.config.chainId || 1);
 
     const { admin } = await ethers.getNamedSigners();
 
-    console.log("Deploying factory with");
-    console.log(`Balancer Vault: ${config.bVault}`);
+    if (!taskArgs.silent) {
+      console.log("Deploying factory with");
+      console.log(`Balancer Vault: ${config.bVault}`);
+    }
 
     await deployments.deploy("MammonPoolFactoryV1", {
       contract: "MammonPoolFactoryV1",
@@ -17,9 +25,10 @@ task("deploy:factory", "Deploys a Mammon Pool Factory").setAction(
       log: true,
     });
 
-    console.log(
-      "Factory is deployed to:",
-      (await deployments.get("MammonPoolFactoryV1")).address,
-    );
-  },
-);
+    if (!taskArgs.silent) {
+      console.log(
+        "Factory is deployed to:",
+        (await deployments.get("MammonPoolFactoryV1")).address,
+      );
+    }
+  });
