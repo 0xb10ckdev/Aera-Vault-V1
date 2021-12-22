@@ -60,7 +60,7 @@ const forkUrl = alchemyApiKey
 function createTestnetConfig(
   network: keyof typeof chainIds,
 ): NetworkUserConfig {
-  const url: string = "https://" + network + ".infura.io/v3/" + infuraApiKey;
+  const url = createInfuraUrl(network, infuraApiKey);
   return {
     accounts: {
       count: 10,
@@ -73,11 +73,21 @@ function createTestnetConfig(
   };
 }
 
+// validate Infura API key and create access URL
+function createInfuraUrl(network: string, infuraApiKey: string | undefined) {
+  if (!infuraApiKey || infuraApiKey.includes("zzzz")) {
+    console.log(
+      "Warning: Please set your INFURA_API_KEY in the env file if doing a deployment",
+    );
+  }
+  return "https://" + network + ".infura.io/v3/" + infuraApiKey;
+}
+
 // use private key for deployment rather than mnemonic
 function createTestnetPrivateKeyConfig(
   network: keyof typeof chainIds,
 ): NetworkUserConfig {
-  const url: string = "https://" + network + ".infura.io/v3/" + infuraApiKey;
+  const url = createInfuraUrl(network, infuraApiKey);
   return {
     // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
     accounts: [testnetPrivateKey!],
