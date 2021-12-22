@@ -704,6 +704,15 @@ describe("Mammon Vault v0", function () {
       });
     });
 
+    describe("when gradualUpdate has been set", () => {
+      it("should be possible to read gradualUpdate", async () => {
+        const gradualUpdate = await vault.gradualUpdate();
+
+        expect(gradualUpdate.startBlock).to.equal(0);
+        expect(gradualUpdate.endBlock).to.equal(0);
+      });
+    });
+
     describe("when calling updateWeightsGradually()", () => {
       it("should be reverted to call updateWeightsGradually", async () => {
         await expect(

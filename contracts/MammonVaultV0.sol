@@ -73,7 +73,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
 
     // STORAGE SLOT END, 3 BYTES LEFT ///
 
-    SmartPoolManager.GradualUpdateParams private gradualUpdate;
+    SmartPoolManager.GradualUpdateParams public gradualUpdate;
 
     /// EVENTS ///
 
