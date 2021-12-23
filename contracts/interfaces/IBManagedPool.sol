@@ -49,10 +49,6 @@ interface IBManagedPool {
 
     function setSwapEnabled(bool swapEnabled) external;
 
-    function getLastInvariant() external pure returns (uint256);
-
-    function getInvariant() external view returns (uint256);
-
     function getNormalizedWeights() external view returns (uint256[] memory);
 
     function getRate() external view returns (uint256);
