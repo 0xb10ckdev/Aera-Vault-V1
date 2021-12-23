@@ -613,7 +613,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Return funds to owner.
     /// @dev Will only be called by returnFunds().
     /// @param token IERC20 of the token to unbind.
-    /// @return amount T000he exact returned amount of a token.
+    /// @return amount The exact returned amount of a token.
     function returnTokenFunds(IERC20 token) internal returns (uint256 amount) {
         amount = token.balanceOf(address(this));
         if (amount > 0) {
