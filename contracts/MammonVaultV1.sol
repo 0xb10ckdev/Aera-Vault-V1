@@ -45,7 +45,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     ///      Spot price growth range for 200 blocks is [-50%, 100%]
     uint256 private constant MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK = 10**16;
 
-    /// @notice Balancer Vault. Controlled by vault.
+    /// @notice Balancer Vault. Controlled by Mammon Vault.
     IBVault public immutable bVault;
 
     /// @notice Balancer pool. Controlled by the Balancer Vault.
