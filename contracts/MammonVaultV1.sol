@@ -279,6 +279,16 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         initialized = true;
 
         IERC20[] memory tokens = getTokens();
+
+        /// must encode the userData for join as below
+        /// abi.encode(JoinKind.INIT, initBalances)
+        /// InvestmentPool JoinKinds:
+        /// enum JoinKind {
+        ///     INIT,
+        ///     EXACT_TOKENS_IN_FOR_BPT_OUT,
+        ///     TOKEN_IN_FOR_EXACT_BPT_OUT,
+        ///     ALL_TOKENS_IN_FOR_EXACT_BPT_OUT
+        /// }
         bytes memory initUserData = abi.encode(0, amounts);
 
         for (uint256 i = 0; i < tokens.length; i++) {
