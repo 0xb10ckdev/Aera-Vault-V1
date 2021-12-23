@@ -199,11 +199,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
   let sortedTokens: string[];
   let snapshot: unknown;
 
-  const getHoldings = async () => {
-    const holdings = await Promise.all(tokens.map((_, i) => vault.holding(i)));
-    return holdings;
-  };
-
   const getBalances = async () => {
     const balances = await Promise.all(
       tokens.map(token => token.balanceOf(admin.address)),
@@ -213,7 +208,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
   const getStates = async () => {
     const [holdings, balances] = await Promise.all([
-      getHoldings(),
+      vault.getHoldings(),
       getBalances(),
     ]);
 
