@@ -21,8 +21,18 @@ export const setupTokens = deployments.createFixture(
     const tokens = tokenDeploys
       .map(token => ERC20Mock__factory.connect(token.address, admin))
       .sort((a, b) => (a.address < b.address ? -1 : 1));
-    const sortedTokens = tokens.map(token => token.address);
-    const unsortedTokens = [...sortedTokens].reverse();
+
+    const sortedTokens = [];
+    const unsortedTokens = [];
+
+    for (let i = 0; i < tokens.length; i += 2) {
+      sortedTokens.push(tokens[i].address);
+      if (i + 1 < tokens.length) {
+        sortedTokens.push(tokens[i + 1].address);
+        unsortedTokens.push(tokens[i + 1].address);
+      }
+      unsortedTokens.push(tokens[i].address);
+    }
 
     return {
       tokens,
