@@ -589,7 +589,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param amount Amount to withdraw.
     function withdrawToken(IERC20 token) internal returns (uint256 amount) {
         amount = token.balanceOf(address(this));
-        token.safeTransfer(msg.sender, amount);
+        if (amount > 0) {
+            token.safeTransfer(owner(), amount);
+        }
     }
 
     /// @notice Return all funds to owner.
@@ -606,18 +608,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         amounts = new uint256[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
-            amounts[i] = returnTokenFunds(tokens[i]);
-        }
-    }
-
-    /// @notice Return funds to owner.
-    /// @dev Will only be called by returnFunds().
-    /// @param token IERC20 of the token to unbind.
-    /// @return amount The exact returned amount of a token.
-    function returnTokenFunds(IERC20 token) internal returns (uint256 amount) {
-        amount = token.balanceOf(address(this));
-        if (amount > 0) {
-            token.safeTransfer(owner(), amount);
+            amounts[i] = withdrawToken(tokens[i]);
         }
     }
 }
