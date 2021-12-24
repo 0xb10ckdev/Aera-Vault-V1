@@ -256,15 +256,12 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
     ({ tokens, sortedTokens } = await setupTokens());
 
-    await deployments.deploy("Validator", {
-      contract: "WithdrawalValidatorMock",
-      from: admin.address,
-      log: true,
-    });
-    validator = WithdrawalValidatorMock__factory.connect(
-      (await deployments.get("Validator")).address,
-      admin,
-    );
+    const validatorMock =
+      await ethers.getContractFactory<WithdrawalValidatorMock__factory>(
+        "WithdrawalValidatorMock",
+      );
+
+    validator = await validatorMock.connect(admin).deploy();
 
     await hre.run("deploy:factory", {
       silent: true,
