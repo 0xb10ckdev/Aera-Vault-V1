@@ -69,7 +69,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
         ONE.toString(),
         manager.address,
       ),
-    ).to.be.revertedWith("Mammon__LengthIsNotSame");
+    ).to.be.revertedWith("Mammon__WeightLengthIsNotSame");
     await expect(
       deployVault(
         admin,
@@ -308,6 +308,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       const validAmounts = valueArray(ONE, tokens.length - 1);
 
       await expect(
+        vault.initialDeposit(valueArray(ONE, tokens.length + 1)),
+      ).to.be.revertedWith("Mammon__AmountLengthIsNotSame");
+
+      await expect(
         vault.initialDeposit([toWei(3), ...validAmounts]),
       ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
 
@@ -363,6 +367,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         ).to.be.revertedWith("Ownable: caller is not the owner");
 
         await expect(
+          vault.deposit(valueArray(ONE, tokens.length + 1)),
+        ).to.be.revertedWith("Mammon__AmountLengthIsNotSame");
+
+        await expect(
           vault.deposit(valueArray(toWei(100), tokens.length)),
         ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
       });
@@ -416,6 +424,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         await expect(
           vault.connect(user).withdraw(valueArray(ONE, tokens.length)),
         ).to.be.revertedWith("Ownable: caller is not the owner");
+
+        await expect(
+          vault.withdraw(valueArray(ONE, tokens.length + 1)),
+        ).to.be.revertedWith("Mammon__AmountLengthIsNotSame");
 
         await expect(
           vault.withdraw(valueArray(toWei(100), tokens.length)),
