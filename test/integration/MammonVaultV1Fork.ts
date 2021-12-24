@@ -12,7 +12,7 @@ import {
 } from "../../typechain";
 import { setupTokens, deployToken } from "../fixtures";
 import { deployFactory, deployVault, toWei, valueArray } from "../utils";
-import { DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
+import { getConfig, DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
 import {
   ONE,
   MIN_WEIGHT,
@@ -252,8 +252,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
   beforeEach(async function () {
     snapshot = await ethers.provider.send("evm_snapshot", []);
-    ({ admin, manager, user } = await ethers.getNamedSigners());
 
+    const config = getConfig(hre.network.config.chainId || 1);
+
+    ({ admin, manager, user } = await ethers.getNamedSigners());
     ({ tokens, sortedTokens } = await setupTokens());
 
     const validatorMock =
@@ -263,31 +265,36 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
     validator = await validatorMock.connect(admin).deploy();
 
-    await hre.run("deploy:factory", {
-      silent: true,
-    });
+    const factoryV1Factory = await ethers.getContractFactory(
+      "MammonPoolFactoryV1",
+    );
+    const factoryContract = await factoryV1Factory
+      .connect(admin)
+      .deploy(config.bVault);
     factory = MammonPoolFactoryV1__factory.connect(
-      (await deployments.get("MammonPoolFactoryV1")).address,
+      factoryContract.address,
       admin,
     );
 
     const validWeights = valueArray(ONE.div(tokens.length), tokens.length);
-    await hre.run("deploy:vault", {
-      factory: factory.address,
-      name: "Test",
-      symbol: "TEST",
-      tokens: sortedTokens.join(","),
-      weights: validWeights.join(","),
-      swapFee: MIN_SWAP_FEE.toString(),
-      managementSwapFee: ONE.toString(),
-      manager: manager.address,
-      validator: validator.address,
-      noticePeriod: DEFAULT_NOTICE_PERIOD.toString(),
-      silent: true,
-    });
 
+    const vaultFactory = await ethers.getContractFactory(config.vault);
+    const vaultCaontract = await vaultFactory
+      .connect(admin)
+      .deploy(
+        factory.address,
+        "Test",
+        "TEST",
+        sortedTokens,
+        validWeights,
+        MIN_SWAP_FEE,
+        ONE,
+        manager.address,
+        validator.address,
+        DEFAULT_NOTICE_PERIOD,
+      );
     vault = MammonVaultV1Mainnet__factory.connect(
-      (await deployments.get("MammonVaultV1Mainnet")).address,
+      vaultCaontract.address,
       admin,
     );
   });
