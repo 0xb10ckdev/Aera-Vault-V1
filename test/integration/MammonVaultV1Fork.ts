@@ -331,9 +331,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     it("should be possible to initialize the vault", async () => {
       const balances = await getBalances();
 
-      expect(
-        await vault.estimateGas.initialDeposit(valueArray(ONE, tokens.length)),
-      ).to.below(800000);
       await vault.initialDeposit(valueArray(ONE, tokens.length));
 
       const { holdings, balances: newBalances } = await getState();
@@ -382,7 +379,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             index == i ? toWei(5) : toWei(0),
           );
 
-          expect(await vault.estimateGas.deposit(amounts)).to.below(320000);
           await vault.deposit(amounts);
 
           const { holdings: newHoldings, balances: newBalances } =
@@ -407,7 +403,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           await tokens[i].approve(vault.address, amounts[i]);
         }
 
-        expect(await vault.estimateGas.deposit(amounts)).to.below(580000);
         await vault.deposit(amounts);
 
         const { holdings: newHoldings, balances: newBalances } =
@@ -443,7 +438,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             index == i ? toWei(5) : toWei(0),
           );
 
-          expect(await vault.estimateGas.withdraw(amounts)).to.below(280000);
           await vault.withdraw(amounts);
 
           const { holdings: newHoldings, balances: newBalances } =
@@ -473,7 +467,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           await tokens[i].approve(vault.address, amounts[i]);
         }
 
-        expect(await vault.estimateGas.withdraw(amounts)).to.below(430000);
         await vault.withdraw(amounts);
 
         const { holdings: newHoldings, balances: newBalances } =
@@ -497,9 +490,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           vault.connect(manager).initializeFinalization(),
         ).to.be.revertedWith("Ownable: caller is not the owner");
 
-        expect(await vault.estimateGas.initializeFinalization()).to.below(
-          32000,
-        );
         await vault.initializeFinalization();
         const noticeTimeoutAt = await vault.noticeTimeoutAt();
 
@@ -546,7 +536,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
         const { holdings, balances } = await getState();
 
-        expect(await vault.estimateGas.finalize()).to.below(440000);
         await vault.finalize();
 
         const newBalances = await getBalances();
