@@ -137,7 +137,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// ERRORS ///
 
-    error Mammon__LengthIsNotSame(uint256 tokenLength, uint256 weightLength);
+    error Mammon__WeightLengthIsNotSame(
+        uint256 tokenLength,
+        uint256 weightLength
+    );
+    error Mammon__AmountLengthIsNotSame(
+        uint256 tokenLength,
+        uint256 amountLength
+    );
     error Mammon__ValidatorIsNotValid(address validator);
     error Mammon__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
     error Mammon__CallerIsNotOwnerOrManager();
@@ -213,7 +220,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint32 noticePeriod_
     ) {
         if (tokens.length != weights.length) {
-            revert Mammon__LengthIsNotSame(tokens.length, weights.length);
+            revert Mammon__WeightLengthIsNotSame(
+                tokens.length,
+                weights.length
+            );
         }
         if (
             !ERC165Checker.supportsInterface(
@@ -280,6 +290,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         IERC20[] memory tokens = getTokens();
 
+        if (tokens.length != amounts.length) {
+            revert Mammon__AmountLengthIsNotSame(
+                tokens.length,
+                amounts.length
+            );
+        }
+
         /// must encode the userData for join as below
         /// abi.encode(JoinKind.INIT, initBalances)
         /// InvestmentPool JoinKinds:
@@ -323,6 +340,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     {
         IERC20[] memory tokens = getTokens();
 
+        if (tokens.length != amounts.length) {
+            revert Mammon__AmountLengthIsNotSame(
+                tokens.length,
+                amounts.length
+            );
+        }
+
         for (uint256 i = 0; i < amounts.length; i++) {
             if (amounts[i] > 0) {
                 depositToken(tokens[i], amounts[i]);
@@ -345,6 +369,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         nonFinalizing
     {
         IERC20[] memory tokens = getTokens();
+
+        if (tokens.length != amounts.length) {
+            revert Mammon__AmountLengthIsNotSame(
+                tokens.length,
+                amounts.length
+            );
+        }
+
         uint256[] memory managed = new uint256[](tokens.length);
 
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.WITHDRAW);
