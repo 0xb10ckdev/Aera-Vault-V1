@@ -585,7 +585,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// INTERNAL FUNCTIONS ///
-
+    /// @dev PoolBalanceOpKind has three kinds
+    /// Withdrawal - decrease the Pool's cash, but increase its managed balance,
+    ///              leaving the total balance unchanged.
+    /// Deposit - increase the Pool's cash, but decrease its managed balance,
+    ///           leaving the total balance unchanged.
+    /// Update - don't affect the Pool's cash balance, but change the managed balance,
+    ///          so it does alter the total. The external amount can be either
+    ///          increased or decreased by this call (i.e., reporting a gain or a loss).
     function updatePoolBalance(
         uint256[] memory amounts,
         IBVault.PoolBalanceOpKind kind
