@@ -35,7 +35,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     address private constant UNSET_MANAGER_ADDRESS = address(0);
 
     /// @notice Minimum duration (in blocks) for a weight update.
-    uint256 private constant MIN_WEIGHT_CHANGE_BLOCK_PERIOD = 1000;
+    uint256 private constant MIN_WEIGHT_CHANGE_BLOCK_PERIOD = 40;
 
     /// @notice Largest possible weight change ratio per one block
     /// @dev It's the increment/decrement factor per one block
@@ -43,7 +43,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     ///      Spot price growth range for n blocks: [1 / Fn - 1, Fn - 1]
     ///      E.g. increment/decrement factor per 200 blocks is 2
     ///      Spot price growth range for 200 blocks is [-50%, 100%]
-    uint256 private constant MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK = 10**16;
+    uint256 private constant MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK = 10**18;
 
     /// @notice Balancer pool. Controlled by the vault.
     IBPool public immutable pool;
