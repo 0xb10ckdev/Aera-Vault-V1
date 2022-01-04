@@ -353,7 +353,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             }
         }
 
+        /// Set managed balance of pool as amounts
+        /// i.e. Deposit amounts of tokens to pool from Mammon Vault
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.UPDATE);
+        /// Decrease managed balance and increase cash balance of pool
+        /// i.e. Move amounts from managed balance to cash balance
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
 
         emit Deposit(amounts);
@@ -379,7 +383,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         uint256[] memory managed = new uint256[](tokens.length);
 
+        /// Decrease cash balance and increase managed balance of pool
+        /// i.e. Move amounts from cash balance to managed balance
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.WITHDRAW);
+        /// Set managed balance of pool as zero array
+        /// i.e. Withdraw amounts of tokens from pool to Mammon Vault
         updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
 
         uint256[] memory withdrawnAmounts = new uint256[](amounts.length);
