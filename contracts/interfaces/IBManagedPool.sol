@@ -21,6 +21,24 @@ interface IBManagedPool {
         bytes userData;
     }
 
+    function onSwap(
+        SwapRequest memory swapRequest,
+        uint256 currentBalanceTokenIn,
+        uint256 currentBalanceTokenOut
+    ) external returns (uint256);
+
+    function updateWeightsGradually(
+        uint256 startTime,
+        uint256 endTime,
+        uint256[] memory endWeights
+    ) external;
+
+    function withdrawCollectedManagementFees(address recipient) external;
+
+    function setSwapFeePercentage(uint256 swapFeePercentage) external;
+
+    function setSwapEnabled(bool swapEnabled) external;
+
     function getSwapEnabled() external view returns (bool);
 
     function getManagementSwapFeePercentage() external view returns (uint256);
@@ -34,20 +52,12 @@ interface IBManagedPool {
             uint256[] memory endWeights
         );
 
-    function updateWeightsGradually(
-        uint256 startTime,
-        uint256 endTime,
-        uint256[] memory endWeights
-    ) external;
-
     function getCollectedManagementFees()
         external
         view
         returns (IERC20[] memory tokens, uint256[] memory collectedFees);
 
-    function withdrawCollectedManagementFees(address recipient) external;
-
-    function setSwapEnabled(bool swapEnabled) external;
+    function getSwapFeePercentage() external view returns (uint256);
 
     function getNormalizedWeights() external view returns (uint256[] memory);
 
