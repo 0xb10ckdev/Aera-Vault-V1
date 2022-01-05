@@ -11,7 +11,7 @@ import {
   WithdrawalValidatorMock__factory,
 } from "../../typechain";
 import { setupTokens, deployToken } from "../fixtures";
-import { deployFactory, deployVault, toWei, valueArray } from "../utils";
+import { deployFactory, deployVault, toWei, valueArray, getCurrentTime } from "../utils";
 import { getConfig, DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
 import {
   ONE,
@@ -22,6 +22,7 @@ import {
   NOTICE_PERIOD,
   MAX_NOTICE_PERIOD,
   BALANCER_ERRORS,
+  MINIMUM_WEIGHT_CHANGE_DURATION,
 } from "../constants";
 
 describe("Mammon Vault V1 Mainnet Deployment", function () {
@@ -725,7 +726,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
 
         it("when duration is less than minimum", async () => {
-          const timestamp = await getTimeStamp();
+          const timestamp = await getCurrentTime();
           await expect(
             vault
               .connect(manager)
@@ -738,7 +739,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
 
         it("when time travel is invalid", async () => {
-          const timestamp = await getTimeStamp();
+          const timestamp = await getCurrentTime();
           await expect(
             vault
               .connect(manager)
@@ -751,7 +752,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
 
         it("when total sum of weight is not one", async () => {
-          const timestamp = await getTimeStamp();
+          const timestamp = await getCurrentTime();
           await expect(
             vault
               .connect(manager)
@@ -764,7 +765,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
 
         it("when weight is less than minimum", async () => {
-          const timestamp = await getTimeStamp();
+          const timestamp = await getCurrentTime();
           await expect(
             vault
               .connect(manager)
@@ -780,7 +781,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       it("should be possible to call updateWeightsGradually", async () => {
         const startWeights = await vault.getNormalizedWeights();
         const endWeights = [MIN_WEIGHT.mul(60), MIN_WEIGHT.mul(40)];
-        const timestamp = await getTimeStamp();
+        const timestamp = await getCurrentTime();
 
         await vault
           .connect(manager)
@@ -789,13 +790,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             timestamp,
             timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
           );
-        const startTime = await getTimeStamp();
+        const startTime = await getCurrentTime();
 
         for (let i = 0; i < 1000; i += 1) {
           await ethers.provider.send("evm_mine", []);
         }
 
-        const currentTime = await getTimeStamp();
+        const currentTime = await getCurrentTime();
         const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1;
         const ptcProgress = ONE.mul(currentTime - startTime).div(
           endTime - startTime,
