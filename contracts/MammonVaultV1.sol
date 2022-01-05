@@ -34,10 +34,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @dev Address to represent unset manager in events.
     address private constant UNSET_MANAGER_ADDRESS = address(0);
 
-    /// @notice Minimum duration (in blocks) for a weight update.
-    uint256 private constant MIN_WEIGHT_CHANGE_BLOCK_PERIOD = 1000;
+    /// @notice Balancer Vault. Controlled by Mammon Vault.
+    IBVault public immutable bVault;
 
-    /// @notice Balancer pool. Controlled by the vault.
+    /// @notice Balancer pool. Controlled by the Balancer vault.
     IBManagedPool public immutable pool;
 
     /// @notice Notice period for vault termination (in seconds).
