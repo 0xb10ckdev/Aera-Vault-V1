@@ -77,3 +77,9 @@ export const valueArray = (
 ): string[] => {
   return Array.from({ length }, _ => value.toString());
 };
+
+export const getTimeStamp = async (): Promise<number> => {
+  const blockNumber = await ethers.provider.getBlockNumber();
+  const block = await ethers.provider.getBlock(blockNumber);
+  return block.timestamp;
+};
