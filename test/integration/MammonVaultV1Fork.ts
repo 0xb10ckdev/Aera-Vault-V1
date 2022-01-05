@@ -547,6 +547,103 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
     });
 
+    describe("when calling updateWeightsGradually()", () => {
+      describe("should be reverted to call updateWeightsGradually", async () => {
+        it("when called from non-manager", async () => {
+          await expect(
+            vault.updateWeightsGradually(
+              [MIN_WEIGHT.mul(60), MIN_WEIGHT.mul(40)],
+              0,
+              1,
+            ),
+          ).to.be.revertedWith("Mammon__CallerIsNotManager");
+        });
+
+        it("when duration is less than minimum", async () => {
+          const timestamp = await getCurrentTime();
+          await expect(
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                [MIN_WEIGHT.mul(60), MIN_WEIGHT.mul(40)],
+                timestamp,
+                timestamp + 1,
+              ),
+          ).to.be.revertedWith("BAL#331"); // WEIGHT_CHANGE_TOO_FAST
+        });
+
+        it("when time travel is invalid", async () => {
+          const timestamp = await getCurrentTime();
+          await expect(
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                [MIN_WEIGHT.mul(60), MIN_WEIGHT.mul(40)],
+                timestamp,
+                timestamp - 1,
+              ),
+          ).to.be.revertedWith("BAL#326"); // GRADUAL_UPDATE_TIME_TRAVEL
+        });
+
+        it("when total sum of weight is not one", async () => {
+          const timestamp = await getCurrentTime();
+          await expect(
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                [MIN_WEIGHT.mul(40), MIN_WEIGHT.mul(50)],
+                timestamp,
+                timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
+              ),
+          ).to.be.revertedWith("BAL#308"); // NORMALIZED_WEIGHT_INVARIANT
+        });
+
+        it("when weight is less than minimum", async () => {
+          const timestamp = await getCurrentTime();
+          await expect(
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                [toWei(0.009), toWei(0.991)],
+                timestamp,
+                timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
+              ),
+          ).to.be.revertedWith("BAL#302"); // MIN_WEIGHT
+        });
+      });
+
+      it("should be possible to call updateWeightsGradually", async () => {
+        const startWeights = await vault.getNormalizedWeights();
+        const endWeights = [MIN_WEIGHT.mul(60), MIN_WEIGHT.mul(40)];
+        const timestamp = await getCurrentTime();
+
+        await vault
+          .connect(manager)
+          .updateWeightsGradually(
+            endWeights,
+            timestamp,
+            timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
+          );
+        const startTime = await getCurrentTime();
+
+        for (let i = 0; i < 1000; i += 1) {
+          await ethers.provider.send("evm_mine", []);
+        }
+
+        const currentTime = await getCurrentTime();
+        const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1;
+        const ptcProgress = ONE.mul(currentTime - startTime).div(
+          endTime - startTime,
+        );
+        const weightDelta = MIN_WEIGHT.mul(20).mul(ptcProgress).div(ONE);
+
+        const currentWeights = await vault.getNormalizedWeights();
+
+        expect(startWeights[0].add(weightDelta)).to.equal(currentWeights[0]);
+        expect(startWeights[1].sub(weightDelta)).to.equal(currentWeights[1]);
+      });
+    });
+
     describe("when finalizing", () => {
       describe("should be reverted to call initializeFinalization", async () => {
         it("when called from non-owner", async () => {
@@ -706,118 +803,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         expect(await vault.manager()).to.equal(manager.address);
       });
     });
-  });
 
-  describe("when Vault is initialized", () => {
-    beforeEach(async () => {
-      await vault.initialDeposit(ONE, ONE, ONE, ONE);
-    });
-
-    describe("when calling updateWeightsGradually()", () => {
-      describe("should be reverted to call updateWeightsGradually", async () => {
-        it("when called from non-manager", async () => {
-          await expect(
-            vault.updateWeightsGradually(
-              [MIN_WEIGHT.mul(60), MIN_WEIGHT.mul(40)],
-              0,
-              1,
-            ),
-          ).to.be.revertedWith("Mammon__CallerIsNotManager");
-        });
-
-        it("when duration is less than minimum", async () => {
-          const timestamp = await getCurrentTime();
-          await expect(
-            vault
-              .connect(manager)
-              .updateWeightsGradually(
-                [MIN_WEIGHT.mul(60), MIN_WEIGHT.mul(40)],
-                timestamp,
-                timestamp + 1,
-              ),
-          ).to.be.revertedWith("BAL#331"); // WEIGHT_CHANGE_TOO_FAST
-        });
-
-        it("when time travel is invalid", async () => {
-          const timestamp = await getCurrentTime();
-          await expect(
-            vault
-              .connect(manager)
-              .updateWeightsGradually(
-                [MIN_WEIGHT.mul(60), MIN_WEIGHT.mul(40)],
-                timestamp,
-                timestamp - 1,
-              ),
-          ).to.be.revertedWith("BAL#326"); // GRADUAL_UPDATE_TIME_TRAVEL
-        });
-
-        it("when total sum of weight is not one", async () => {
-          const timestamp = await getCurrentTime();
-          await expect(
-            vault
-              .connect(manager)
-              .updateWeightsGradually(
-                [MIN_WEIGHT.mul(40), MIN_WEIGHT.mul(50)],
-                timestamp,
-                timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
-              ),
-          ).to.be.revertedWith("BAL#308"); // NORMALIZED_WEIGHT_INVARIANT
-        });
-
-        it("when weight is less than minimum", async () => {
-          const timestamp = await getCurrentTime();
-          await expect(
-            vault
-              .connect(manager)
-              .updateWeightsGradually(
-                [toWei(0.009), toWei(0.991)],
-                timestamp,
-                timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
-              ),
-          ).to.be.revertedWith("BAL#302"); // MIN_WEIGHT
-        });
-      });
-
-      it("should be possible to call updateWeightsGradually", async () => {
-        const startWeights = await vault.getNormalizedWeights();
-        const endWeights = [MIN_WEIGHT.mul(60), MIN_WEIGHT.mul(40)];
-        const timestamp = await getCurrentTime();
-
-        await vault
-          .connect(manager)
-          .updateWeightsGradually(
-            endWeights,
-            timestamp,
-            timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
-          );
-        const startTime = await getCurrentTime();
-
-        for (let i = 0; i < 1000; i += 1) {
-          await ethers.provider.send("evm_mine", []);
-        }
-
-        const currentTime = await getCurrentTime();
-        const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1;
-        const ptcProgress = ONE.mul(currentTime - startTime).div(
-          endTime - startTime,
-        );
-        const weightDelta = MIN_WEIGHT.mul(20).mul(ptcProgress).div(ONE);
-
-        const currentWeights = await vault.getNormalizedWeights();
-
-        expect(startWeights[0].add(weightDelta)).to.equal(currentWeights[0]);
-        expect(startWeights[1].sub(weightDelta)).to.equal(currentWeights[1]);
-      });
-    });
-  });
-
-  describe("Update Elements", () => {
     describe("Set Swap Enabled", () => {
       beforeEach(async () => {
         for (let i = 0; i < tokens.length; i++) {
           await tokens[i].approve(vault.address, ONE);
         }
-        await vault.initialDeposit(ONE, ONE, MIN_WEIGHT, MIN_WEIGHT);
+        await vault.initialDeposit(valueArray(ONE, tokens.length));
       });
 
       it("should be reverted to set public swap", async () => {
