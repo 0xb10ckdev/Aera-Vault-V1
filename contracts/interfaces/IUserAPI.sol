@@ -10,7 +10,7 @@ import "./IMultiAssetVault.sol";
 interface IUserAPI {
     /// @notice Check if vault trading is enabled.
     /// @return If public swap is turned on, returns true, otherwise false.
-    function isPublicSwap() external view returns (bool);
+    function isSwapEnabled() external view returns (bool);
 
     /// @notice Get swap fee.
     /// @return Swap fee from underlying Balancer pool.
@@ -37,10 +37,7 @@ interface IUserAPI {
     /// @return tokens IERC20 tokens of Balancer pool.
     function getTokens() external view returns (IERC20[] memory);
 
-    /// @notice Get token weight.
-    /// @return Denormalized weight value from underlying Balancer pool.
-    function getDenormalizedWeight(address token)
-        external
-        view
-        returns (uint256);
+    /// @notice Get token weights.
+    /// @return Normalized weights of tokens on Balancer pool.
+    function getNormalizedWeights() external view returns (uint256[] memory);
 }
