@@ -37,18 +37,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Minimum duration (in blocks) for a weight update.
     uint256 private constant MIN_WEIGHT_CHANGE_BLOCK_PERIOD = 1000;
 
-    /// @notice Largest possible weight change ratio per one block
-    /// @dev It's the increment/decrement factor per one block
-    ///      increment/decrement factor per n blocks: Fn = f * n
-    ///      Spot price growth range for n blocks: [1 / Fn - 1, Fn - 1]
-    ///      E.g. increment/decrement factor per 200 blocks is 2
-    ///      Spot price growth range for 200 blocks is [-50%, 100%]
-    uint256 private constant MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK = 10**16;
-
-    /// @notice Balancer Vault. Controlled by Mammon Vault.
-    IBVault public immutable bVault;
-
-    /// @notice Balancer pool. Controlled by the Balancer Vault.
+    /// @notice Balancer pool. Controlled by the vault.
     IBManagedPool public immutable pool;
 
     /// @notice Notice period for vault termination (in seconds).
@@ -112,23 +101,18 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     );
 
     /// @notice Emitted when updateWeightsGradually is called.
-    /// @param weight0 The target weight of the first token.
-    /// @param weight1 The target weight of the second token.
-    /// @param startBlock Start block number of updates.
-    /// @param endBlock End block number of updates.
+    /// @param weights The target weights of the tokens.
+    /// @param startTime Start timestamp of updates.
+    /// @param endTime End timestamp of updates.
     event UpdateWeightsGradually(
-        uint256 weight0,
-        uint256 weight1,
-        uint256 startBlock,
-        uint256 endBlock
+        uint256[] weights,
+        uint256 startTime,
+        uint256 endTime
     );
 
-    /// @notice Emitted when pokeWeights is called.
-    event PokeWeights();
-
-    /// @notice Emitted when public swap is turned on/off.
-    /// @param publicSwap New state of public swap.
-    event SetPublicSwap(bool publicSwap);
+    /// @notice Emitted when swap is enabled/disabled.
+    /// @param swapEnabled New state of swap.
+    event SetSwapEnabled(bool swapEnabled);
 
     /// @notice Emitted when swap fee is updated.
     /// @param swapFee New swap fee.
@@ -464,52 +448,30 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IManagerAPI
     function updateWeightsGradually(
-        uint256 targetWeight0,
-        uint256 targetWeight1,
-        uint256 startBlock,
-        uint256 endBlock
-    )
+        uint256[] memory targetWeights,
+        uint256 startTime,
+        uint256 endTime
+    ) external override onlyManager onlyInitialized nonFinalizing {
+        pool.updateWeightsGradually(startTime, endTime, targetWeights);
+
+        emit UpdateWeightsGradually(targetWeights, startTime, endTime);
+    }
+
+    /// @inheritdoc IManagerAPI
+    function setSwapEnabled(bool value)
         external
         override
         onlyManager
         onlyInitialized
-        nonFinalizing
-    // solhint-disable-next-line no-empty-blocks
     {
-        // Should be implemented, updated or removed
+        pool.setSwapEnabled(value);
+        emit SetSwapEnabled(value);
     }
 
     /// @inheritdoc IManagerAPI
-    function pokeWeights()
-        external
-        override
-        onlyManager
-        onlyInitialized
-        nonFinalizing
-    // solhint-disable-next-line no-empty-blocks
-    {
-        // Should be implemented, updated or removed
-    }
-
-    /// @inheritdoc IManagerAPI
-    function setPublicSwap(bool value)
-        external
-        override
-        onlyManager
-        onlyInitialized
-    // solhint-disable-next-line no-empty-blocks
-    {
-        // Should be implemented, updated or removed
-    }
-
-    /// @inheritdoc IManagerAPI
-    function setSwapFee(uint256 newSwapFee)
-        external
-        override
-        onlyManager
-    // solhint-disable-next-line no-empty-blocks
-    {
-        // Should be implemented, updated or removed
+    function setSwapFee(uint256 newSwapFee) external override onlyManager {
+        pool.setSwapFeePercentage(newSwapFee);
+        emit SetSwapFee(newSwapFee);
     }
 
     /// BINARY VAULT INTERFACE ///
@@ -533,25 +495,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// USER API ///
 
     /// @inheritdoc IUserAPI
-    function isPublicSwap()
-        external
-        view
-        override
-        returns (bool)
-    // solhint-disable-next-line no-empty-blocks
-    {
-        // Should be implemented, updated or removed
+    function isSwapEnabled() external view override returns (bool) {
+        return pool.getSwapEnabled();
     }
 
     /// @inheritdoc IUserAPI
-    function getSwapFee()
-        external
-        view
-        override
-        returns (uint256)
-    // solhint-disable-next-line no-empty-blocks
-    {
-        // Should be implemented, updated or removed
+    function getSwapFee() external view override returns (uint256) {
+        return pool.getSwapFeePercentage();
     }
 
     /// @inheritdoc IUserAPI
@@ -584,14 +534,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IUserAPI
-    function getDenormalizedWeight(address token)
+    function getNormalizedWeights()
         public
         view
         override
-        returns (uint256)
-    // solhint-disable-next-line no-empty-blocks
+        returns (uint256[] memory)
     {
-        // Should be implemented, updated or removed
+        return pool.getNormalizedWeights();
     }
 
     /// @notice Calculate change ratio for weights upgrade.
