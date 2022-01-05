@@ -551,7 +551,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         it("when called from non-manager", async () => {
           await expect(
             vault.updateWeightsGradually(
-              [MIN_WEIGHT.mul(60), MIN_WEIGHT.mul(40)],
+              valueArray(ONE.div(tokens.length), tokens.length),
               0,
               1,
             ),
@@ -564,7 +564,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                [MIN_WEIGHT.mul(60), MIN_WEIGHT.mul(40)],
+                valueArray(ONE.div(tokens.length), tokens.length),
                 timestamp,
                 timestamp + 1,
               ),
@@ -577,7 +577,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                [MIN_WEIGHT.mul(60), MIN_WEIGHT.mul(40)],
+                valueArray(ONE.div(tokens.length), tokens.length),
                 timestamp,
                 timestamp - 1,
               ),
@@ -590,7 +590,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                [MIN_WEIGHT.mul(40), MIN_WEIGHT.mul(50)],
+                valueArray(ONE.div(tokens.length).sub(1), tokens.length),
                 timestamp,
                 timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
               ),
@@ -603,7 +603,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                [toWei(0.009), toWei(0.991)],
+                [
+                  toWei(0.009),
+                  ...valueArray(
+                    ONE.sub(toWei(0.009)).div(tokens.length - 1),
+                    tokens.length - 1,
+                  ),
+                ],
                 timestamp,
                 timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
               ),
@@ -613,33 +619,44 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
       it("should be possible to call updateWeightsGradually", async () => {
         const startWeights = await vault.getNormalizedWeights();
-        const endWeights = [MIN_WEIGHT.mul(60), MIN_WEIGHT.mul(40)];
         const timestamp = await getCurrentTime();
+        const endWeights = [];
+        const avgWeights = ONE.div(tokens.length);
+        const startTime = timestamp + 10;
+        const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
+        for (let i = 0; i < tokens.length; i += 2) {
+          if (i < tokens.length - 1) {
+            endWeights.push(avgWeights.add(toWei((i + 1) / 100)));
+            endWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
+          } else {
+            endWeights.push(avgWeights);
+          }
+        }
 
         await vault
           .connect(manager)
-          .updateWeightsGradually(
-            endWeights,
-            timestamp,
-            timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
-          );
-        const startTime = await getCurrentTime();
+          .updateWeightsGradually(endWeights, startTime, endTime);
 
-        for (let i = 0; i < 1000; i += 1) {
+        for (let i = 0; i < 1000; i++) {
           await ethers.provider.send("evm_mine", []);
         }
 
+        const currentWeights = await vault.getNormalizedWeights();
+
         const currentTime = await getCurrentTime();
-        const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1;
         const ptcProgress = ONE.mul(currentTime - startTime).div(
           endTime - startTime,
         );
-        const weightDelta = MIN_WEIGHT.mul(20).mul(ptcProgress).div(ONE);
 
-        const currentWeights = await vault.getNormalizedWeights();
-
-        expect(startWeights[0].add(weightDelta)).to.equal(currentWeights[0]);
-        expect(startWeights[1].sub(weightDelta)).to.equal(currentWeights[1]);
+        for (let i = 0; i < tokens.length; i++) {
+          const weightDelta = endWeights[i]
+            .sub(startWeights[i])
+            .mul(ptcProgress)
+            .div(ONE);
+          expect(startWeights[i].add(weightDelta)).to.be.at.most(
+            currentWeights[i],
+          );
+        }
       });
     });
 
