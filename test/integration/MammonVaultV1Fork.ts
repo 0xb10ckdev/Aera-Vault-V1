@@ -11,7 +11,13 @@ import {
   WithdrawalValidatorMock__factory,
 } from "../../typechain";
 import { setupTokens, deployToken } from "../fixtures";
-import { deployFactory, deployVault, toWei, valueArray, getCurrentTime } from "../utils";
+import {
+  deployFactory,
+  deployVault,
+  toWei,
+  valueArray,
+  getCurrentTime,
+} from "../utils";
 import { getConfig, DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
 import {
   ONE,
