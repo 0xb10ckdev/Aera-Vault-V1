@@ -330,8 +330,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           vault
             .connect(manager)
             .updateWeightsGradually(
-              MIN_WEIGHT,
-              MIN_WEIGHT,
+              [MIN_WEIGHT, MIN_WEIGHT],
               blocknumber + 1,
               blocknumber + 1000,
             ),
@@ -704,6 +703,78 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         await vault.setManager(manager.address);
 
         expect(await vault.manager()).to.equal(manager.address);
+      });
+    });
+  });
+
+  describe("Update Elements", () => {
+    describe("Update Manager", () => {
+      it("should be reverted to change manager", async () => {
+        await expect(vault.setManager(ZERO_ADDRESS)).to.be.revertedWith(
+          "Mammon__ManagerIsZeroAddress",
+        );
+
+        await expect(
+          vault.connect(manager).setManager(ZERO_ADDRESS),
+        ).to.be.revertedWith("Ownable: caller is not the owner");
+      });
+
+      it("should be possible to change manager", async () => {
+        expect(await vault.estimateGas.setManager(manager.address)).to.below(
+          35000,
+        );
+        await vault.setManager(manager.address);
+
+        expect(await vault.manager()).to.equal(manager.address);
+      });
+    });
+
+    describe("Set Swap Enabled", () => {
+      beforeEach(async () => {
+        for (let i = 0; i < tokens.length; i++) {
+          await tokens[i].approve(vault.address, ONE);
+        }
+        await vault.initialDeposit(ONE, ONE, MIN_WEIGHT, MIN_WEIGHT);
+      });
+
+      it("should be reverted to set public swap", async () => {
+        await expect(vault.setSwapEnabled(true)).to.be.revertedWith(
+          "Mammon__CallerIsNotManager()",
+        );
+      });
+
+      it("should be possible to set public swap", async () => {
+        expect(
+          await vault.connect(manager).estimateGas.setSwapEnabled(true),
+        ).to.below(46000);
+        await vault.connect(manager).setSwapEnabled(true);
+
+        expect(await vault.isSwapEnabled()).to.equal(true);
+      });
+    });
+
+    describe("Set Swap Fee", () => {
+      it("should be reverted to set swap fee", async () => {
+        await expect(vault.setSwapFee(toWei(3))).to.be.revertedWith(
+          "Mammon__CallerIsNotManager()",
+        );
+
+        await expect(
+          vault.connect(manager).setSwapFee(toWei(0.3)),
+        ).to.be.revertedWith("ERR_MAX_FEE");
+
+        await expect(
+          vault.connect(manager).setSwapFee(toWei(1).div(1e7)),
+        ).to.be.revertedWith("ERR_MIN_FEE");
+      });
+
+      it("should be possible to set swap fee", async () => {
+        expect(
+          await vault.connect(manager).estimateGas.setSwapFee(toWei(0.01)),
+        ).to.below(50000);
+        await vault.connect(manager).setSwapFee(toWei(0.01));
+
+        expect(await vault.getSwapFee()).to.equal(toWei(0.01));
       });
     });
   });
