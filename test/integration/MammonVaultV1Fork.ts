@@ -740,11 +740,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
         await expect(
           vault.connect(manager).setSwapFee(toWei(0.3)),
-        ).to.be.revertedWith("BAL#202");  // MAX_SWAP_FEE_PERCENTAGE
+        ).to.be.revertedWith("BAL#202"); // MAX_SWAP_FEE_PERCENTAGE
 
         await expect(
           vault.connect(manager).setSwapFee(toWei(1).div(1e7)),
-        ).to.be.revertedWith("BAL#203");  // MIN_SWAP_FEE_PERCENTAGE
+        ).to.be.revertedWith("BAL#203"); // MIN_SWAP_FEE_PERCENTAGE
       });
 
       it("should be possible to set swap fee", async () => {
