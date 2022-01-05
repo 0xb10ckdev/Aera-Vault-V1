@@ -343,12 +343,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           "Mammon__VaultNotInitialized",
         );
       });
-
-      it("when call setPublicSwap", async () => {
-        await expect(
-          vault.connect(manager).setPublicSwap(true),
-        ).to.be.revertedWith("VaultNotInitialized");
-      });
     });
 
     describe("should be reverted to initialize the vault", async () => {
@@ -699,17 +693,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                MIN_WEIGHT,
-                MIN_WEIGHT,
+                valueArray(MIN_WEIGHT, tokens.length),
                 blocknumber + 1,
                 blocknumber + 1000,
               ),
-          ).to.be.revertedWith("Mammon__VaultIsFinalizing");
-        });
-
-        it("when call pokeWeights", async () => {
-          await expect(
-            vault.connect(manager).pokeWeights(),
           ).to.be.revertedWith("Mammon__VaultIsFinalizing");
         });
 
