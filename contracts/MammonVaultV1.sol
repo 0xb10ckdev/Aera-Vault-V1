@@ -495,13 +495,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// BINARY VAULT INTERFACE ///
 
-    /// @inheritdoc IBinaryVault
+    /// @inheritdoc IMultiAssetVault
     function holding(uint256 index) public view override returns (uint256) {
         uint256[] memory amounts = getHoldings();
         return amounts[index];
     }
 
-    /// @inheritdoc IBinaryVault
+    /// @inheritdoc IMultiAssetVault
     function getHoldings()
         public
         view
