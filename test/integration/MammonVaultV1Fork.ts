@@ -708,27 +708,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
   });
 
   describe("Update Elements", () => {
-    describe("Update Manager", () => {
-      it("should be reverted to change manager", async () => {
-        await expect(vault.setManager(ZERO_ADDRESS)).to.be.revertedWith(
-          "Mammon__ManagerIsZeroAddress",
-        );
-
-        await expect(
-          vault.connect(manager).setManager(ZERO_ADDRESS),
-        ).to.be.revertedWith("Ownable: caller is not the owner");
-      });
-
-      it("should be possible to change manager", async () => {
-        expect(await vault.estimateGas.setManager(manager.address)).to.below(
-          35000,
-        );
-        await vault.setManager(manager.address);
-
-        expect(await vault.manager()).to.equal(manager.address);
-      });
-    });
-
     describe("Set Swap Enabled", () => {
       beforeEach(async () => {
         for (let i = 0; i < tokens.length; i++) {
@@ -761,11 +740,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
         await expect(
           vault.connect(manager).setSwapFee(toWei(0.3)),
-        ).to.be.revertedWith("ERR_MAX_FEE");
+        ).to.be.revertedWith("BAL#202");  // MAX_SWAP_FEE_PERCENTAGE
 
         await expect(
           vault.connect(manager).setSwapFee(toWei(1).div(1e7)),
-        ).to.be.revertedWith("ERR_MIN_FEE");
+        ).to.be.revertedWith("BAL#203");  // MIN_SWAP_FEE_PERCENTAGE
       });
 
       it("should be possible to set swap fee", async () => {
