@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.7;
 
-/// @title Two-asset vault interface.
-interface IBinaryVault {
+/// @title Multi-asset vault interface.
+interface IMultiAssetVault {
     /// @notice Balance of the token with index
     /// @return Token balance in underlying pool
     function holding(uint256 index) external view returns (uint256);
