@@ -5,6 +5,8 @@ import "solidity-coverage";
 import "hardhat-contract-sizer";
 import "hardhat-deploy";
 import "@nomiclabs/hardhat-ethers";
+import "@primitivefi/hardhat-dodoc";
+
 import "./tasks/clean";
 import "./tasks/deploy";
 
@@ -174,6 +176,39 @@ const config: HardhatUserConfig = {
         },
       }
     : undefined,
+  dodoc: {
+    runOnCompile: false,
+    exclude: [
+      "AccessControl",
+      "AccessControlEnumerable",
+      "Address",
+      "BFactoryMock",
+      "BPoolMock",
+      "Context",
+      "EnumerableSet",
+      "ERC20",
+      "ERC20Burnable",
+      "ERC20Mock",
+      "ERC20Pausable",
+      "ERC20PresetMinterPauser",
+      "ERC165",
+      "ERC165Checker",
+      "IAccessControl",
+      "IAccessControlEnumerable",
+      "IBFactory",
+      "IBPool",
+      "IERC20",
+      "IERC20Metadata",
+      "IERC165",
+      "Math",
+      "Ownable",
+      "Pausable",
+      "ReentrancyGuard",
+      "SafeCast",
+      "SafeERC20",
+      "Strings",
+    ],
+  },
 };
 
 export default config;
