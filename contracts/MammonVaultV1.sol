@@ -85,12 +85,18 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Emitted when tokens are deposited.
     /// @param amounts Amounts of tokens.
-    event Deposit(uint256[] amounts);
+    /// @param weights Weights of tokens.
+    event Deposit(uint256[] amounts, uint256[] weights);
 
     /// @notice Emitted when tokens are withdrawn.
     /// @param amounts Requested amount of tokens.
     /// @param withdrawnAmounts Withdrawn amount of tokens.
-    event Withdraw(uint256[] amounts, uint256[] withdrawnAmounts);
+    /// @param weights Weights of tokens.
+    event Withdraw(
+        uint256[] amounts,
+        uint256[] withdrawnAmounts,
+        uint256[] weights
+    );
 
     /// @notice Emitted when manager is changed.
     /// @param previousManager Address of previous manager.
@@ -356,7 +362,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         /// i.e. Move amounts from managed balance to cash balance
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
 
-        emit Deposit(amounts);
+        emit Deposit(amounts, getNormalizedWeights());
     }
 
     /// @inheritdoc IProtocolAPI
@@ -394,7 +400,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             }
         }
 
-        emit Withdraw(amounts, withdrawnAmounts);
+        emit Withdraw(amounts, withdrawnAmounts, getNormalizedWeights());
     }
 
     /// @inheritdoc IProtocolAPI
