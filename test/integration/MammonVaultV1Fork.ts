@@ -731,6 +731,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       it("should be possible to finalize", async () => {
+        const holding = await vault.holding(0);
+        await vault.withdraw([holding, ...valueArray(0, tokens.length - 1)]);
+
         await vault.initializeFinalization();
         await ethers.provider.send("evm_increaseTime", [NOTICE_PERIOD + 1]);
 
