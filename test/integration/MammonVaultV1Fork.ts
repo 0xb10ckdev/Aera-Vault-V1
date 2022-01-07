@@ -270,7 +270,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         "WithdrawalValidatorMock",
       );
 
-    validator = await validatorMock.connect(admin).deploy();
+    validator = await validatorMock.connect(admin).deploy(tokens.length);
 
     const factoryV1Factory = await ethers.getContractFactory(
       "MammonPoolFactoryV1",

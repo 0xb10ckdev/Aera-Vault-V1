@@ -7,19 +7,24 @@ import "../interfaces/IWithdrawalValidator.sol";
 
 /// @notice A withdrawal validator that validates withdrawals of an arbitrary size.
 contract WithdrawalValidatorMock is ERC165, IWithdrawalValidator, Ownable {
-    uint256 public allowance0;
-    uint256 public allowance1;
+    uint256[] public allowances;
+    uint8 public immutable count;
 
-    function setAllowance(uint256 amount0, uint256 amount1)
-        external
-        onlyOwner
-    {
-        allowance0 = amount0;
-        allowance1 = amount1;
+    constructor(uint8 tokenCount) {
+        count = tokenCount;
+        allowances = new uint256[](tokenCount);
     }
 
-    function allowance() external view override returns (uint256, uint256) {
-        return (allowance0, allowance1);
+    function setAllowance(uint256 index, uint256 amount) external onlyOwner {
+        allowances[index] = amount;
+    }
+
+    function setAllowances(uint256[] calldata amounts) external onlyOwner {
+        allowances = amounts;
+    }
+
+    function allowance() external view override returns (uint256[] memory) {
+        return allowances;
     }
 
     function supportsInterface(bytes4 interfaceId)
