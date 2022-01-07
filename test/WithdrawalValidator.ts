@@ -19,16 +19,16 @@ describe("Withdrawal Validator", function () {
         "PermissiveWithdrawalValidator",
       );
       this.validator = <PermissiveWithdrawalValidator>(
-        await deployContract(this.signers.admin, validatorArtifact)
+        await deployContract(this.signers.admin, validatorArtifact, [4])
       );
     });
 
     it("should return the full withdrawal allowance", async function () {
       const uint256_max: BigNumber = BigNumber.from(2).pow(256).sub(1);
-      const tokenAllowance: [BigNumber, BigNumber] =
-        await this.validator.allowance();
-      expect(tokenAllowance[0]).to.equal(uint256_max);
-      expect(tokenAllowance[1]).to.equal(uint256_max);
+      const tokenAllowances: BigNumber[] = await this.validator.allowance();
+      for (let i = 0; i < tokenAllowances.length; i++) {
+        expect(tokenAllowances[i]).to.equal(uint256_max);
+      }
     });
   });
 });
