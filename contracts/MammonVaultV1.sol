@@ -89,12 +89,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     event Deposit(uint256[] amounts, uint256[] weights);
 
     /// @notice Emitted when tokens are withdrawn.
-    /// @param amounts Requested amount of tokens.
+    /// @param requestedAmounts Requested amount of tokens.
     /// @param withdrawnAmounts Withdrawn amount of tokens.
-    /// @param weights Weights of tokens.
+    /// @param allowances Allowance of tokens.
+    /// @param weights Weight of tokens.
     event Withdraw(
-        uint256[] amounts,
+        uint256[] requestedAmounts,
         uint256[] withdrawnAmounts,
+        uint256[] allowances,
         uint256[] weights
     );
 
@@ -377,6 +379,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     {
         IERC20[] memory tokens = getTokens();
 
+        uint256[] memory allowances = validator.allowance();
+        uint256[] memory holdings = getHoldings();
+        uint256[] memory exactAmounts = new uint256[](tokens.length);
+
+        for (uint256 i = 0; i < tokens.length; i++) {
+            exactAmounts[i] = amounts[i].min(holdings[i]).min(allowances[i]);
+        }
+
         if (tokens.length != amounts.length) {
             revert Mammon__AmountLengthIsNotSame(
                 tokens.length,
@@ -388,19 +398,24 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         /// Decrease cash balance and increase managed balance of pool
         /// i.e. Move amounts from cash balance to managed balance
-        updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.WITHDRAW);
+        updatePoolBalance(exactAmounts, IBVault.PoolBalanceOpKind.WITHDRAW);
         /// Set managed balance of pool as zero array
         /// i.e. Withdraw amounts of tokens from pool to Mammon Vault
         updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
 
         uint256[] memory withdrawnAmounts = new uint256[](amounts.length);
         for (uint256 i = 0; i < amounts.length; i++) {
-            if (amounts[i] > 0) {
+            if (exactAmounts[i] > 0) {
                 withdrawnAmounts[i] = withdrawToken(tokens[i]);
             }
         }
 
-        emit Withdraw(amounts, withdrawnAmounts, getNormalizedWeights());
+        emit Withdraw(
+            amounts,
+            withdrawnAmounts,
+            allowances,
+            getNormalizedWeights()
+        );
     }
 
     /// @inheritdoc IProtocolAPI
