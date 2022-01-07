@@ -52,6 +52,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
 
       await deployments.deploy("Validator", {
         contract: "WithdrawalValidatorMock",
+        args: [tokens.length],
         from: admin.address,
         log: true,
       });
@@ -476,73 +477,91 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     });
 
     describe("when withdrawing to Vault", () => {
-      describe("should be reverted to withdraw tokens", async () => {
-        it("when called from non-owner", async () => {
-          await expect(
-            vault.connect(user).withdraw(valueArray(ONE, tokens.length)),
-          ).to.be.revertedWith("Ownable: caller is not the owner");
-        });
+      describe("when allowance on validator is invalid", () => {
+        it("should withdraw no tokens", async () => {
+          const { holdings, balances } = await getState();
 
-        it("when token and amount length is not same", async () => {
-          await expect(
-            vault.withdraw(valueArray(ONE, tokens.length + 1)),
-          ).to.be.revertedWith("Mammon__AmountLengthIsNotSame");
-        });
+          await vault.withdraw(valueArray(toWei(5), tokens.length));
 
-        it("when amount exceeds balance in pool", async () => {
-          await expect(
-            vault.withdraw(valueArray(toWei(100), tokens.length)),
-          ).to.be.revertedWith(BALANCER_ERRORS.SUB_OVERFLOW);
+          const { holdings: newHoldings, balances: newBalances } =
+            await getState();
+
+          for (let i = 0; i < tokens.length; i++) {
+            expect(newHoldings[i]).to.equal(holdings[i]);
+            expect(newBalances[i]).to.equal(balances[i]);
+          }
         });
       });
 
-      describe("should be possible to withdraw ", async () => {
-        it("when withdraw one token", async () => {
-          await vault.deposit(valueArray(toWei(5), tokens.length));
-          let { holdings, balances } = await getState();
+      describe("when allowance on validator is valid", () => {
+        beforeEach(async () => {
+          await validator.setAllowances(
+            valueArray(toWei(100000), tokens.length),
+          );
+        });
 
-          for (let i = 0; i < tokens.length; i++) {
-            const amounts = tokens.map((_, index) =>
-              index == i ? toWei(5) : toWei(0),
+        describe("should be reverted to withdraw tokens", async () => {
+          it("when called from non-owner", async () => {
+            await expect(
+              vault.connect(user).withdraw(valueArray(ONE, tokens.length)),
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+          });
+
+          it("when token and amount length is not same", async () => {
+            await expect(
+              vault.withdraw(valueArray(ONE, tokens.length + 1)),
+            ).to.be.revertedWith("Mammon__AmountLengthIsNotSame");
+          });
+        });
+
+        describe("should be possible to withdraw ", async () => {
+          it("when withdraw one token", async () => {
+            await vault.deposit(valueArray(toWei(5), tokens.length));
+            let { holdings, balances } = await getState();
+
+            for (let i = 0; i < tokens.length; i++) {
+              const amounts = tokens.map((_, index) =>
+                index == i ? toWei(5) : toWei(0),
+              );
+
+              await vault.withdraw(amounts);
+
+              const { holdings: newHoldings, balances: newBalances } =
+                await getState();
+              for (let j = 0; j < tokens.length; j++) {
+                expect(newHoldings[j]).to.equal(holdings[j].sub(amounts[j]));
+                expect(newBalances[j]).to.equal(balances[j].add(amounts[j]));
+              }
+
+              holdings = newHoldings;
+              balances = newBalances;
+            }
+          });
+
+          it("when withdraw tokens", async () => {
+            for (let i = 0; i < tokens.length; i++) {
+              await tokens[i].approve(vault.address, toWei(100000));
+            }
+            await vault.deposit(valueArray(toWei(100000), tokens.length));
+
+            const { holdings, balances } = await getState();
+
+            const amounts = tokens.map(_ =>
+              toWei(Math.floor(Math.random() * 100000)),
             );
+            for (let i = 0; i < tokens.length; i++) {
+              await tokens[i].approve(vault.address, amounts[i]);
+            }
 
             await vault.withdraw(amounts);
 
             const { holdings: newHoldings, balances: newBalances } =
               await getState();
-            for (let j = 0; j < tokens.length; j++) {
-              expect(newHoldings[j]).to.equal(holdings[j].sub(amounts[j]));
-              expect(newBalances[j]).to.equal(balances[j].add(amounts[j]));
+            for (let i = 0; i < tokens.length; i++) {
+              expect(newHoldings[i]).to.equal(holdings[i].sub(amounts[i]));
+              expect(newBalances[i]).to.equal(balances[i].add(amounts[i]));
             }
-
-            holdings = newHoldings;
-            balances = newBalances;
-          }
-        });
-
-        it("when withdraw tokens", async () => {
-          for (let i = 0; i < tokens.length; i++) {
-            await tokens[i].approve(vault.address, toWei(100000));
-          }
-          await vault.deposit(valueArray(toWei(100000), tokens.length));
-
-          const { holdings, balances } = await getState();
-
-          const amounts = tokens.map(_ =>
-            toWei(Math.floor(Math.random() * 100000)),
-          );
-          for (let i = 0; i < tokens.length; i++) {
-            await tokens[i].approve(vault.address, amounts[i]);
-          }
-
-          await vault.withdraw(amounts);
-
-          const { holdings: newHoldings, balances: newBalances } =
-            await getState();
-          for (let i = 0; i < tokens.length; i++) {
-            expect(newHoldings[i]).to.equal(holdings[i].sub(amounts[i]));
-            expect(newBalances[i]).to.equal(balances[i].add(amounts[i]));
-          }
+          });
         });
       });
     });
