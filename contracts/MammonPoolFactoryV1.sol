@@ -21,20 +21,20 @@ import "./dependencies/balancer-labs/vault/contracts/interfaces/IVault.sol";
 import "./dependencies/balancer-labs/pool-utils/contracts/factories/BasePoolSplitCodeFactory.sol";
 import "./dependencies/balancer-labs/pool-utils/contracts/factories/FactoryWidePauseWindow.sol";
 
-import "./dependencies/balancer-labs/pool-weighted/contracts/smart/InvestmentPool.sol";
+import "./dependencies/balancer-labs/pool-weighted/contracts/smart/ManagedPool.sol";
 
 contract MammonPoolFactoryV1 is
     BasePoolSplitCodeFactory,
     FactoryWidePauseWindow
 {
     constructor(IVault vault)
-        BasePoolSplitCodeFactory(vault, type(InvestmentPool).creationCode)
+        BasePoolSplitCodeFactory(vault, type(ManagedPool).creationCode)
     {
         // solhint-disable-previous-line no-empty-blocks
     }
 
     /**
-     * @dev Deploys a new `InvestmentPool`.
+     * @dev Deploys a new `ManagedPool`.
      */
     function create(
         string memory name,
@@ -45,6 +45,7 @@ contract MammonPoolFactoryV1 is
         uint256 swapFeePercentage,
         address owner,
         bool swapEnabledOnStart,
+        bool mustAllowlistLPs,
         uint256 managementSwapFeePercentage
     ) external returns (address) {
         (
@@ -55,7 +56,7 @@ contract MammonPoolFactoryV1 is
         return
             _create(
                 abi.encode(
-                    InvestmentPool.NewPoolParams({
+                    ManagedPool.NewPoolParams({
                         vault: getVault(),
                         name: name,
                         symbol: symbol,
@@ -67,6 +68,7 @@ contract MammonPoolFactoryV1 is
                         bufferPeriodDuration: bufferPeriodDuration,
                         owner: owner,
                         swapEnabledOnStart: swapEnabledOnStart,
+                        mustAllowlistLPs: mustAllowlistLPs,
                         managementSwapFeePercentage: managementSwapFeePercentage
                     })
                 )
