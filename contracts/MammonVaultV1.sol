@@ -256,6 +256,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 swapFeePercentage,
                 address(this),
                 false,
+                true,
                 managementSwapFeePercentage
             )
         );
