@@ -14,6 +14,7 @@ interface IMammonPoolFactoryV1 {
         uint256 swapFeePercentage,
         address owner,
         bool swapEnabledOnStart,
+        bool mustAllowlistLPs,
         uint256 managementSwapFeePercentage
     ) external returns (address);
 

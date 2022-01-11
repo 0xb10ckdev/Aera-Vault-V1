@@ -578,19 +578,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           ).to.be.revertedWith("Mammon__CallerIsNotManager");
         });
 
-        it("when duration is less than minimum", async () => {
-          const timestamp = await getCurrentTime();
-          await expect(
-            vault
-              .connect(manager)
-              .updateWeightsGradually(
-                valueArray(ONE.div(tokens.length), tokens.length),
-                timestamp,
-                timestamp + 1,
-              ),
-          ).to.be.revertedWith("BAL#331"); // WEIGHT_CHANGE_TOO_FAST
-        });
-
         it("when time travel is invalid", async () => {
           const timestamp = await getCurrentTime();
           await expect(
