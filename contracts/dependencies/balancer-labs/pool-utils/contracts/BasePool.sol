@@ -52,7 +52,7 @@ abstract contract BasePool is IBasePool, BasePoolAuthorization, BalancerPoolToke
 
     uint256 private constant _MIN_TOKENS = 2;
 
-    uint256 private constant _MINIMUM_BPT = 1e6;
+    uint256 private constant _DEFAULT_MINIMUM_BPT = 1e6;
 
     // 1e18 corresponds to 1.0, or a 100% fee
     uint256 private constant _MIN_SWAP_FEE_PERCENTAGE = 1e12; // 0.0001%
@@ -65,7 +65,6 @@ abstract contract BasePool is IBasePool, BasePoolAuthorization, BalancerPoolToke
     bytes32 private _miscData;
     uint256 private constant _SWAP_FEE_PERCENTAGE_OFFSET = 192;
 
-    IVault private immutable _vault;
     bytes32 private immutable _poolId;
 
     event SwapFeePercentageChanged(uint256 swapFeePercentage);
@@ -88,7 +87,7 @@ abstract contract BasePool is IBasePool, BasePoolAuthorization, BalancerPoolToke
         // any Pool created by the same factory), while still making action identifiers unique among different factories
         // if the selectors match, preventing accidental errors.
         Authentication(bytes32(uint256(msg.sender)))
-        BalancerPoolToken(name, symbol)
+        BalancerPoolToken(name, symbol, vault)
         BasePoolAuthorization(owner)
         TemporarilyPausable(pauseWindowDuration, bufferPeriodDuration)
     {
@@ -109,15 +108,10 @@ abstract contract BasePool is IBasePool, BasePoolAuthorization, BalancerPoolToke
         vault.registerTokens(poolId, tokens, assetManagers);
 
         // Set immutable state variables - these cannot be read from during construction
-        _vault = vault;
         _poolId = poolId;
     }
 
     // Getters / Setters
-
-    function getVault() public view returns (IVault) {
-        return _vault;
-    }
 
     function getPoolId() public view override returns (bytes32) {
         return _poolId;
@@ -127,15 +121,22 @@ abstract contract BasePool is IBasePool, BasePoolAuthorization, BalancerPoolToke
 
     function _getMaxTokens() internal pure virtual returns (uint256);
 
+    /**
+     * @dev Returns the minimum BPT supply. This amount is minted to the zero address during initialization, effectively
+     * locking it.
+     *
+     * This is useful to make sure Pool initialization happens only once, but derived Pools can change this value (even
+     * to zero) by overriding this function.
+     */
     function _getMinimumBpt() internal pure virtual returns (uint256) {
-        return _MINIMUM_BPT;
+        return _DEFAULT_MINIMUM_BPT;
     }
 
     function getSwapFeePercentage() public view returns (uint256) {
         return _miscData.decodeUint64(_SWAP_FEE_PERCENTAGE_OFFSET);
     }
 
-    function setSwapFeePercentage(uint256 swapFeePercentage) external virtual authenticate whenNotPaused {
+    function setSwapFeePercentage(uint256 swapFeePercentage) public virtual authenticate whenNotPaused {
         _setSwapFeePercentage(swapFeePercentage);
     }
 
