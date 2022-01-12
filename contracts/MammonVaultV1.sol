@@ -14,7 +14,6 @@ import "./interfaces/IBVault.sol";
 import "./interfaces/IBManagedPool.sol";
 import "./interfaces/IMammonVaultV1.sol";
 import "./interfaces/IWithdrawalValidator.sol";
-import "hardhat/console.sol";
 
 /// @title Risk-managed treasury vault.
 /// @notice Managed n-asset vault that supports withdrawals
