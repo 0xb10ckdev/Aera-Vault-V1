@@ -606,29 +606,36 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256[] memory holdings = getHoldings();
         uint256[] memory weights = getNormalizedWeights();
 
-        uint256 tokenInId = tokens.length;
-        uint256 tokenOutId = tokens.length;
+        uint256 tokenInId = type(uint256).max;
+        uint256 tokenOutId = type(uint256).max;
 
         for (uint256 i = 0; i < tokens.length; i++) {
             if (tokenIn == address(tokens[i])) {
                 tokenInId = i;
-            }
-            if (tokenOut == address(tokens[i])) {
+                if (tokenOutId < type(uint256).max) {
+                    break;
+                }
+            } else if (tokenOut == address(tokens[i])) {
                 tokenOutId = i;
+                if (tokenInId < type(uint256).max) {
+                    break;
+                }
             }
         }
 
-        if (tokenInId < tokens.length && tokenOutId < tokens.length) {
-            return
-                calcSpotPrice(
-                    holdings[tokenInId],
-                    weights[tokenInId],
-                    holdings[tokenOutId],
-                    weights[tokenOutId]
-                );
+        if (
+            tokenInId == type(uint256).max || tokenOutId == type(uint256).max
+        ) {
+            return 0;
         }
 
-        return 0;
+        return
+            calcSpotPrice(
+                holdings[tokenInId],
+                weights[tokenInId],
+                holdings[tokenOutId],
+                weights[tokenOutId]
+            );
     }
 
     /// @inheritdoc IUserAPI
@@ -643,7 +650,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256[] memory weights = getNormalizedWeights();
         spotPrices = new uint256[](tokens.length);
 
-        uint256 tokenInId = tokens.length;
+        uint256 tokenInId = type(uint256).max;
 
         for (uint256 i = 0; i < tokens.length; i++) {
             if (tokenIn == address(tokens[i])) {
@@ -652,7 +659,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             }
         }
 
-        if (tokenInId < tokens.length) {
+        if (tokenInId != type(uint256).max) {
             for (uint256 i = 0; i < tokens.length; i++) {
                 spotPrices[i] = calcSpotPrice(
                     holdings[tokenInId],
@@ -662,8 +669,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 );
             }
         }
-
-        return spotPrices;
     }
 
     /// INTERNAL FUNCTIONS ///
