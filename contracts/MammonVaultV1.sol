@@ -526,7 +526,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         emit SetSwapFee(newSwapFee);
     }
 
-    /// BINARY VAULT INTERFACE ///
+    /// MULTI ASSET VAULT INTERFACE ///
 
     /// @inheritdoc IMultiAssetVault
     function holding(uint256 index) public view override returns (uint256) {
