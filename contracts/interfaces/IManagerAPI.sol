@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.7;
+pragma solidity 0.8.11;
 
 /// @title Interface for vault manager.
 /// @notice Supports parameter submission.
