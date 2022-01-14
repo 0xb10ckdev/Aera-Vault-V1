@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.7;
+pragma solidity 0.8.11;
 
 import "./MammonVaultV1.sol";
 import "./dependencies/openzeppelin/IERC20.sol";

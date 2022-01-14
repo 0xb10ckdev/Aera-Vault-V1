@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.7;
+pragma solidity 0.8.11;
 
 /// @title Withdrawal validation logic.
 /// @notice Represents the withdrawal conditions for a vault.
