@@ -360,7 +360,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             newBalances[i] = holdings[i] + amounts[i];
             if (amounts[i] > 0) {
                 if (newBalances[i] > MAX_BALANCE) {
-                    revert Mammon__AmountIsAboveMax(newBalances[i], MAX_BALANCE);
+                    revert Mammon__AmountIsAboveMax(
+                        newBalances[i],
+                        MAX_BALANCE
+                    );
                 }
                 depositToken(tokens[i], amounts[i]);
             }
@@ -373,6 +376,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         /// i.e. Move amounts from managed balance to cash balance
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
 
+        // TODO: unify computeNewWeights and updateWeights
         uint256[] memory newWeights = computeNewWeights(
             weights,
             holdings,
@@ -427,12 +431,16 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             newBalances[i] = holdings[i] - exactAmounts[i];
             if (exactAmounts[i] > 0) {
                 if (newBalances[i] < MIN_BALANCE) {
-                    revert Mammon__AmountIsBelowMin(newBalances[i], MIN_BALANCE);
+                    revert Mammon__AmountIsBelowMin(
+                        newBalances[i],
+                        MIN_BALANCE
+                    );
                 }
                 withdrawnAmounts[i] = withdrawToken(tokens[i]);
             }
         }
 
+        // TODO: unify computeNewWeights and updateWeights
         uint256[] memory newWeights = computeNewWeights(
             weights,
             holdings,
@@ -635,20 +643,21 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         newWeights = new uint256[](weights.length);
 
         uint256 recalibrationFactor = ONE;
-        for (uint256 i = 0; i < weights.length; i++) {
+        uint256 i;
+        for (i = 0; i < weights.length; i++) {
             uint256 boostedBalance = holdings[i] * MIN_WEIGHT;
             uint256 denom = weights[i] * newBalances[i];
             if (denom < boostedBalance) {
-                uint256 newRecalibrationFactor = (boostedBalance * ONE)
-                    .ceilDiv(denom);
-                if (newRecalibrationFactor > recalibrationFactor) {
-                    recalibrationFactor = newRecalibrationFactor;
+                uint256 newFactor = (boostedBalance * ONE).ceilDiv(denom);
+                if (newFactor > recalibrationFactor) {
+                    recalibrationFactor = newFactor;
                 }
             }
         }
 
         // TODO: evaluate gas savings of skipping multiplication when recalibrationFactor == ONE
-        for (uint256 i = 0; i < weights.length; i++) {
+        // ie newWeights[i] = (weights[i] * newBalances[i]) / holdings[i];
+        for (i = 0; i < weights.length; i++) {
             newWeights[i] = (weights[i] * newBalances[i]) / ONE;
             newWeights[i] *= recalibrationFactor / holdings[i];
             if (newWeights[i] > MAX_WEIGHT) {
