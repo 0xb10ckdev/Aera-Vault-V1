@@ -28,6 +28,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     uint256 private constant ONE = 10**18;
 
+    // TODO: source these from balancer pool
+    uint256 private constant MIN_WEIGHT = ONE;
+    uint256 private constant MAX_WEIGHT = ONE * 50;
+
     /// @notice Minimum period for weight change duration.
     uint256 private constant MINIMUM_WEIGHT_CHANGE_DURATION = 1 days;
 
@@ -371,6 +375,26 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         emit Deposit(amounts, getNormalizedWeights());
     }
 
+    function recalibrateWeights(
+        uint256[] memory weights,
+        uint256[] memory holdings,
+        uint256[] memory newBalances,
+        uint256 recalibrationFactor
+    ) internal pure returns (uint256[] memory recalibratedWeights) {
+        uint256[] memory recalibratedWeights = new uint256[](weights.length);
+
+        for (uint256 i = 0; i < weights.length; i++) {
+            recalibratedWeights[i] = (weights[i] * newBalances[i]) / ONE;
+            recalibratedWeights[i] *= recalibrationFactor / holdings[i];
+            if (recalibratedWeights[i] > MAX_WEIGHT) {
+                revert Mammon__WeightIsAboveMax(
+                    recalibratedWeights[i],
+                    MAX_WEIGHT
+                );
+            }
+        }
+    }
+
     /// @inheritdoc IProtocolAPI
     function withdraw(uint256[] calldata amounts)
         external
@@ -394,7 +418,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256[] memory allowances = validator.allowance();
         uint256[] memory weights = getNormalizedWeights();
         uint256[] memory exactAmounts = new uint256[](tokens.length);
-        uint256[] memory newWeights = new uint256[](tokens.length);
 
         for (uint256 i = 0; i < tokens.length; i++) {
             exactAmounts[i] = amounts[i].min(holdings[i]).min(allowances[i]);
@@ -409,15 +432,47 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         /// i.e. Withdraw amounts of tokens from pool to Mammon Vault
         updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
 
+        uint256[] memory newBalances = new uint256[](tokens.length);
         uint256[] memory withdrawnAmounts = new uint256[](amounts.length);
         for (uint256 i = 0; i < amounts.length; i++) {
             if (exactAmounts[i] > 0) {
                 withdrawnAmounts[i] = withdrawToken(tokens[i]);
+                newBalances[i] = holdings[i] - exactAmounts[i];
+            }
+        }
 
-                uint256 newBalance = holdings[i] - exactAmounts[i];
-                newWeights[i] = (weights[i] * newBalance) / holdings[i];
-            } else {
-                newWeights[i] = weights[i];
+        bool isOutOfBound;
+        uint256 recalibrationFactor = ONE;
+
+        for (uint256 i = 0; i < tokens.length; i++) {
+            uint256 boostedBalance = holdings[i] * MIN_WEIGHT;
+            uint256 denom = weights[i] * newBalances[i];
+            if (denom < boostedBalance) {
+                isOutOfBound = true;
+                uint256 newRecalibrationFactor = (boostedBalance * ONE)
+                    .ceilDiv(denom);
+                if (newRecalibrationFactor > recalibrationFactor) {
+                    recalibrationFactor = newRecalibrationFactor;
+                }
+            }
+        }
+
+        uint256[] memory newWeights;
+        if (isOutOfBound) {
+            newWeights = recalibrateWeights(
+                weights,
+                holdings,
+                newBalances,
+                recalibrationFactor
+            );
+        } else {
+            newWeights = new uint256[](weights.length);
+            for (uint256 i = 0; i < tokens.length; i++) {
+                if (exactAmounts[i] > 0) {
+                    newWeights[i] = weights[i] * newBalances[i] / holdings[i];
+                } else {
+                    newWeights[i] = weights[i];
+                }
             }
         }
 
