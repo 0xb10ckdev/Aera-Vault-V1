@@ -1,4 +1,3 @@
-import { getConfig } from "../../scripts/config";
 import { task, types } from "hardhat/config";
 
 task("deploy:vault", "Deploys a Mammon vault with the given parameters")
@@ -18,7 +17,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     false,
     types.boolean,
   )
-  .setAction(async (taskArgs, { deployments, ethers, network }) => {
+  .setAction(async (taskArgs, { deployments, ethers }) => {
     const factory = taskArgs.factory;
     const name = taskArgs.name;
     const symbol = taskArgs.symbol;
@@ -43,8 +42,6 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
       return;
     }
 
-    const config = getConfig(network.config.chainId || 1);
-
     const { admin } = await ethers.getNamedSigners();
 
     if (!taskArgs.silent) {
@@ -61,8 +58,8 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
       console.log(`Notice Period: ${noticePeriod}`);
     }
 
-    await deployments.deploy(config.vault, {
-      contract: config.vault,
+    await deployments.deploy("MammonVaultV1", {
+      contract: "MammonVaultV1",
       args: [
         factory,
         name,
@@ -82,7 +79,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     if (!taskArgs.silent) {
       console.log(
         "Vault is deployed to:",
-        (await deployments.get(config.vault)).address,
+        (await deployments.get("MammonVaultV1")).address,
       );
     }
   });

@@ -40,18 +40,4 @@ interface IUserAPI {
     /// @notice Get token weights.
     /// @return Normalized weights of tokens on Balancer pool.
     function getNormalizedWeights() external view returns (uint256[] memory);
-
-    /// @notice Get token spot price.
-    /// @return Spot price of two given tokens.
-    function getSpotPrice(address tokenIn, address tokenOut)
-        external
-        view
-        returns (uint256);
-
-    /// @notice Get token spot price.
-    /// @return All spot prices of given token.
-    function getSpotPrices(address tokenIn)
-        external
-        view
-        returns (uint256[] memory);
 }
