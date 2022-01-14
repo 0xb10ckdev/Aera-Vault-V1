@@ -350,17 +350,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         uint256[] memory weights = getNormalizedWeights();
-        uint256[] memory newWeights = new uint256[](tokens.length);
-
+        uint256[] memory newBalances = new uint256[](tokens.length);
         for (uint256 i = 0; i < amounts.length; i++) {
             if (amounts[i] > 0) {
                 depositToken(tokens[i], amounts[i]);
-
-                uint256 newBalance = holdings[i] + amounts[i];
-                newWeights[i] = (weights[i] * newBalance) / holdings[i];
-            } else {
-                newWeights[i] = weights[i];
             }
+            newBalances[i] = holdings[i] + amounts[i];
         }
 
         /// Set managed balance of pool as amounts
@@ -369,6 +364,41 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         /// Decrease managed balance and increase cash balance of pool
         /// i.e. Move amounts from managed balance to cash balance
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
+
+        bool isOutOfBound;
+        uint256 recalibrationFactor = ONE;
+
+        for (uint256 i = 0; i < tokens.length; i++) {
+            uint256 boostedBalance = holdings[i] * MIN_WEIGHT;
+            uint256 denom = weights[i] * newBalances[i];
+            if (denom < boostedBalance) {
+                isOutOfBound = true;
+                uint256 newRecalibrationFactor = (boostedBalance * ONE)
+                    .ceilDiv(denom);
+                if (newRecalibrationFactor > recalibrationFactor) {
+                    recalibrationFactor = newRecalibrationFactor;
+                }
+            }
+        }
+
+        uint256[] memory newWeights;
+        if (isOutOfBound) {
+            newWeights = recalibrateWeights(
+                weights,
+                holdings,
+                newBalances,
+                recalibrationFactor
+            );
+        } else {
+            newWeights = new uint256[](weights.length);
+            for (uint256 i = 0; i < tokens.length; i++) {
+                if (amounts[i] > 0) {
+                    newWeights[i] = weights[i] * newBalances[i] / holdings[i];
+                } else {
+                    newWeights[i] = weights[i];
+                }
+            }
+        }
 
         updateWeights(newWeights);
 
@@ -437,8 +467,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < amounts.length; i++) {
             if (exactAmounts[i] > 0) {
                 withdrawnAmounts[i] = withdrawToken(tokens[i]);
-                newBalances[i] = holdings[i] - exactAmounts[i];
             }
+            newBalances[i] = holdings[i] - exactAmounts[i];
         }
 
         bool isOutOfBound;
