@@ -444,7 +444,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             }
         }
 
-        updateWeights(amounts, holdings, weights, recalibrationFactor);
+        updateWeights(exactAmounts, holdings, weights, recalibrationFactor);
 
         emit Withdraw(
             amounts,
