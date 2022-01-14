@@ -32,6 +32,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     uint256 private constant MIN_WEIGHT = ONE;
     uint256 private constant MAX_WEIGHT = ONE * 50;
 
+    /// @notice Maximum holdable balance for each token.
+    uint256 private constant MAX_BALANCE = ONE * (10**24);
+    uint256 private constant MIN_BALANCE = 10**6;
+
     /// @notice Minimum period for weight change duration.
     uint256 private constant MINIMUM_WEIGHT_CHANGE_DURATION = 1 days;
 
@@ -153,6 +157,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__WeightChangeDurationIsBelowMin(uint256 actual, uint256 min);
     error Mammon__WeightIsAboveMax(uint256 actual, uint256 max);
     error Mammon__WeightIsBelowMin(uint256 actual, uint256 min);
+    error Mammon__AmountIsAboveMax(uint256 actual, uint256 max);
     error Mammon__AmountIsBelowMin(uint256 actual, uint256 min);
     error Mammon__FinalizationNotInitialized();
     error Mammon__VaultNotInitialized();
@@ -352,10 +357,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256[] memory weights = getNormalizedWeights();
         uint256[] memory newBalances = new uint256[](tokens.length);
         for (uint256 i = 0; i < amounts.length; i++) {
+            newBalances[i] = holdings[i] + amounts[i];
             if (amounts[i] > 0) {
+                if (newBalances[i] > MAX_BALANCE) {
+                    revert Mammon__AmountIsAboveMax(newBalances[i], MAX_BALANCE);
+                }
                 depositToken(tokens[i], amounts[i]);
             }
-            newBalances[i] = holdings[i] + amounts[i];
         }
 
         /// Set managed balance of pool as amounts
@@ -416,10 +424,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256[] memory newBalances = new uint256[](tokens.length);
         uint256[] memory withdrawnAmounts = new uint256[](amounts.length);
         for (uint256 i = 0; i < amounts.length; i++) {
+            newBalances[i] = holdings[i] - exactAmounts[i];
             if (exactAmounts[i] > 0) {
+                if (newBalances[i] < MIN_BALANCE) {
+                    revert Mammon__AmountIsBelowMin(newBalances[i], MIN_BALANCE);
+                }
                 withdrawnAmounts[i] = withdrawToken(tokens[i]);
             }
-            newBalances[i] = holdings[i] - exactAmounts[i];
         }
 
         uint256[] memory newWeights = computeNewWeights(
@@ -679,7 +690,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @notice Withdraw token from the pool.
-    /// @dev Will only be called by withdraw().
+    /// @dev Will only be called by withdraw() and returnFunds().
     /// @param token Address of the token to withdraw.
     /// @param amount Amount to withdraw.
     function withdrawToken(IERC20 token) internal returns (uint256 amount) {
