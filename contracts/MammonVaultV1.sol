@@ -356,8 +356,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         uint256[] memory weights = getNormalizedWeights();
         uint256 recalibrationFactor = ONE;
-        uint256 i;
-        for (i = 0; i < amounts.length; i++) {
+        for (uint256 i = 0; i < amounts.length; i++) {
             if (amounts[i] > 0) {
                 uint256 newBalance = holdings[i] + amounts[i];
                 if (newBalance > MAX_BALANCE) {
@@ -427,7 +426,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         uint256[] memory withdrawnAmounts = new uint256[](amounts.length);
         uint256 recalibrationFactor = ONE;
-        for (; i > 0; i--) {
+        for (i = 0; i < tokens.length; i++) {
             if (exactAmounts[i] > 0) {
                 uint256 newBalance = holdings[i] - exactAmounts[i];
                 if (newBalance < MIN_BALANCE) {
@@ -661,7 +660,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         uint256 adjustedSum;
-        for (; i > 0; i--) {
+        for (i = 0; i < weights.length; i++) {
             newWeights[i] = (newWeights[i] * ONE) / weightSum;
             adjustedSum += newWeights[i];
         }
