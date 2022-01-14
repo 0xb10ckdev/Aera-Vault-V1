@@ -334,6 +334,25 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         );
     }
 
+    function updateRecalibrationFactor(
+        uint256 recalibrationFactor,
+        uint256 balance,
+        uint256 weight,
+        uint256 newBalance
+    ) internal pure returns (uint256) {
+        uint256 boostedBalance = MIN_WEIGHT * balance;
+        uint256 weightedBalance = weight * newBalance;
+        if (weightedBalance < boostedBalance) {
+            uint256 newFactor = (boostedBalance * ONE).ceilDiv(
+                weightedBalance
+            );
+            if (newFactor > recalibrationFactor) {
+                return newFactor;
+            }
+        }
+        return recalibrationFactor;
+    }
+
     /// @inheritdoc IProtocolAPI
     function deposit(uint256[] calldata amounts)
         external
@@ -355,17 +374,23 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         uint256[] memory weights = getNormalizedWeights();
-        uint256[] memory newBalances = new uint256[](tokens.length);
-        for (uint256 i = 0; i < amounts.length; i++) {
-            newBalances[i] = holdings[i] + amounts[i];
+        uint256 recalibrationFactor = ONE;
+        uint256 i;
+        for (i = 0; i < amounts.length; i++) {
             if (amounts[i] > 0) {
-                if (newBalances[i] > MAX_BALANCE) {
-                    revert Mammon__AmountIsAboveMax(
-                        newBalances[i],
-                        MAX_BALANCE
-                    );
+                uint256 newBalance = holdings[i] + amounts[i];
+                if (newBalance > MAX_BALANCE) {
+                    revert Mammon__AmountIsAboveMax(newBalance, MAX_BALANCE);
                 }
+
                 depositToken(tokens[i], amounts[i]);
+
+                recalibrationFactor = updateRecalibrationFactor(
+                    recalibrationFactor,
+                    holdings[i],
+                    weights[i],
+                    newBalance
+                );
             }
         }
 
@@ -376,14 +401,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         /// i.e. Move amounts from managed balance to cash balance
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
 
-        // TODO: unify computeNewWeights and updateWeights
-        uint256[] memory newWeights = computeNewWeights(
-            weights,
-            holdings,
-            newBalances
-        );
-
-        updateWeights(newWeights);
+        updateWeights(amounts, holdings, weights, recalibrationFactor);
 
         emit Deposit(amounts, getNormalizedWeights());
     }
@@ -412,7 +430,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256[] memory weights = getNormalizedWeights();
         uint256[] memory exactAmounts = new uint256[](tokens.length);
 
-        for (uint256 i = 0; i < tokens.length; i++) {
+        uint256 i;
+        for (i = 0; i < tokens.length; i++) {
             exactAmounts[i] = amounts[i].min(holdings[i]).min(allowances[i]);
         }
 
@@ -425,29 +444,27 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         /// i.e. Withdraw amounts of tokens from pool to Mammon Vault
         updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
 
-        uint256[] memory newBalances = new uint256[](tokens.length);
         uint256[] memory withdrawnAmounts = new uint256[](amounts.length);
-        for (uint256 i = 0; i < amounts.length; i++) {
-            newBalances[i] = holdings[i] - exactAmounts[i];
+        uint256 recalibrationFactor = ONE;
+        for (; i > 0; i--) {
             if (exactAmounts[i] > 0) {
-                if (newBalances[i] < MIN_BALANCE) {
-                    revert Mammon__AmountIsBelowMin(
-                        newBalances[i],
-                        MIN_BALANCE
-                    );
+                uint256 newBalance = holdings[i] - exactAmounts[i];
+                if (newBalance < MIN_BALANCE) {
+                    revert Mammon__AmountIsBelowMin(newBalance, MIN_BALANCE);
                 }
+
                 withdrawnAmounts[i] = withdrawToken(tokens[i]);
+
+                recalibrationFactor = updateRecalibrationFactor(
+                    recalibrationFactor,
+                    holdings[i],
+                    weights[i],
+                    newBalance
+                );
             }
         }
 
-        // TODO: unify computeNewWeights and updateWeights
-        uint256[] memory newWeights = computeNewWeights(
-            weights,
-            holdings,
-            newBalances
-        );
-
-        updateWeights(newWeights);
+        updateWeights(amounts, holdings, weights, recalibrationFactor);
 
         emit Withdraw(
             amounts,
@@ -633,52 +650,37 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         bVault.managePoolBalance(ops);
     }
 
-    /// @notice Compute new weights for tokens in the pool and perform recalibration if necessary.
+    /// @notice Compute new weights for tokens, perform recalibration if necessary, and update the pool.
     /// @dev Will only be called by deposit() and withdraw().
-    function computeNewWeights(
-        uint256[] memory weights,
+    function updateWeights(
+        uint256[] calldata amounts,
         uint256[] memory holdings,
-        uint256[] memory newBalances
-    ) internal pure returns (uint256[] memory newWeights) {
-        newWeights = new uint256[](weights.length);
+        uint256[] memory weights,
+        uint256 recalibrationFactor
+    ) internal {
+        uint256[] memory newWeights = new uint256[](weights.length);
 
-        uint256 recalibrationFactor = ONE;
         uint256 i;
+        uint256 weightSum;
         for (i = 0; i < weights.length; i++) {
-            uint256 boostedBalance = holdings[i] * MIN_WEIGHT;
-            uint256 denom = weights[i] * newBalances[i];
-            if (denom < boostedBalance) {
-                uint256 newFactor = (boostedBalance * ONE).ceilDiv(denom);
-                if (newFactor > recalibrationFactor) {
-                    recalibrationFactor = newFactor;
+            // NOTE: redundant check with deposit/withdraw
+            if (amounts[i] == 0) {
+                newWeights[i] = weights[i];
+            } else {
+                uint256 newBalance = amounts[i] + holdings[i];
+                // TODO: evaluate impact of unnecessary multiplication when recalibrationFactor == ONE
+                // NOTE: separate branch for recalibrationFactor == ONE fails cyclomatic complexity lint
+                newWeights[i] = (weights[i] * newBalance) / ONE;
+                newWeights[i] *= recalibrationFactor / holdings[i];
+                if (newWeights[i] > MAX_WEIGHT) {
+                    revert Mammon__WeightIsAboveMax(newWeights[i], MAX_WEIGHT);
                 }
             }
-        }
-
-        // TODO: evaluate gas savings of skipping multiplication when recalibrationFactor == ONE
-        // ie newWeights[i] = (weights[i] * newBalances[i]) / holdings[i];
-        for (i = 0; i < weights.length; i++) {
-            newWeights[i] = (weights[i] * newBalances[i]) / ONE;
-            newWeights[i] *= recalibrationFactor / holdings[i];
-            if (newWeights[i] > MAX_WEIGHT) {
-                revert Mammon__WeightIsAboveMax(newWeights[i], MAX_WEIGHT);
-            }
-        }
-    }
-
-    /// @notice Update weights of tokens in the pool.
-    /// @dev Will only be called by deposit() and withdraw().
-    function updateWeights(uint256[] memory weights) internal {
-        uint256[] memory newWeights = new uint256[](weights.length);
-        uint256 weightSum;
-
-        for (uint256 i = 0; i < weights.length; i++) {
-            newWeights[i] = weights[i];
-            weightSum += weights[i];
+            weightSum += newWeights[i];
         }
 
         uint256 adjustedSum;
-        for (uint256 i = 0; i < weights.length; i++) {
+        for (; i > 0; i--) {
             newWeights[i] = (newWeights[i] * ONE) / weightSum;
             adjustedSum += newWeights[i];
         }
