@@ -334,7 +334,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         onlyInitialized
         nonFinalizing
     {
-        IERC20[] memory tokens = getTokens();
+        IERC20[] memory tokens;
+        uint256[] memory holdings;
+        (tokens, holdings, ) = getTokensData();
 
         if (tokens.length != amounts.length) {
             revert Mammon__AmountLengthIsNotSame(
@@ -343,7 +345,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             );
         }
 
-        uint256[] memory holdings = getHoldings();
         uint256[] memory weights = getNormalizedWeights();
         uint256[] memory newWeights = new uint256[](tokens.length);
 
@@ -379,7 +380,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         onlyInitialized
         nonFinalizing
     {
-        IERC20[] memory tokens = getTokens();
+        IERC20[] memory tokens;
+        uint256[] memory holdings;
+        (tokens, holdings, ) = getTokensData();
 
         if (tokens.length != amounts.length) {
             revert Mammon__AmountLengthIsNotSame(
@@ -389,7 +392,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         uint256[] memory allowances = validator.allowance();
-        uint256[] memory holdings = getHoldings();
         uint256[] memory weights = getNormalizedWeights();
         uint256[] memory exactAmounts = new uint256[](tokens.length);
         uint256[] memory newWeights = new uint256[](tokens.length);
@@ -584,11 +586,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         returns (uint256)
     {
         if (tokenIn == tokenOut) {
-          return ONE;
+            return ONE;
         }
 
-        IERC20[] memory tokens = getTokens();
-        uint256[] memory holdings = getHoldings();
+        IERC20[] memory tokens;
+        uint256[] memory holdings;
+        (tokens, holdings, ) = getTokensData();
         uint256[] memory weights = getNormalizedWeights();
 
         uint256 tokenInId = type(uint256).max;
@@ -631,8 +634,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         override
         returns (uint256[] memory spotPrices)
     {
-        IERC20[] memory tokens = getTokens();
-        uint256[] memory holdings = getHoldings();
+        IERC20[] memory tokens;
+        uint256[] memory holdings;
+        (tokens, holdings, ) = getTokensData();
         uint256[] memory weights = getNormalizedWeights();
         spotPrices = new uint256[](tokens.length);
 
@@ -645,18 +649,18 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             }
         }
 
-        if (tokenInId != type(uint256).max) {
+        if (tokenInId < type(uint256).max) {
             for (uint256 i = 0; i < tokens.length; i++) {
                 if (i == tokenInId) {
-                  spotPrices[i] = ONE;
+                    spotPrices[i] = ONE;
                 } else {
-                  spotPrices[i] = calcSpotPrice(
-                      holdings[tokenInId],
-                      weights[tokenInId],
-                      holdings[i],
-                      weights[i],
-                      pool.getSwapFeePercentage()
-                  );
+                    spotPrices[i] = calcSpotPrice(
+                        holdings[tokenInId],
+                        weights[tokenInId],
+                        holdings[i],
+                        weights[i],
+                        pool.getSwapFeePercentage()
+                    );
                 }
             }
         }
