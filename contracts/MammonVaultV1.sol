@@ -597,7 +597,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IUserAPI
     function getSpotPrice(address tokenIn, address tokenOut)
-        public
+        external
         view
         override
         returns (uint256)
@@ -634,13 +634,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 holdings[tokenInId],
                 weights[tokenInId],
                 holdings[tokenOutId],
-                weights[tokenOutId]
+                weights[tokenOutId],
+                pool.getSwapFeePercentage()
             );
     }
 
     /// @inheritdoc IUserAPI
     function getSpotPrices(address tokenIn)
-        public
+        external
         view
         override
         returns (uint256[] memory spotPrices)
@@ -665,7 +666,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                     holdings[tokenInId],
                     weights[tokenInId],
                     holdings[i],
-                    weights[i]
+                    weights[i],
+                    pool.getSwapFeePercentage()
                 );
             }
         }
@@ -766,9 +768,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 tokenBalanceIn,
         uint256 tokenWeightIn,
         uint256 tokenBalanceOut,
-        uint256 tokenWeightOut
+        uint256 tokenWeightOut,
+        uint256 swapFee
     ) internal view returns (uint256) {
-        uint256 swapFee = pool.getSwapFeePercentage();
         uint256 numer = (tokenBalanceIn * ONE) / tokenWeightIn;
         uint256 denom = (tokenBalanceOut * ONE) / tokenWeightOut;
         uint256 ratio = (numer * ONE) / denom;
