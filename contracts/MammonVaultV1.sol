@@ -633,13 +633,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 weightSum;
 
         for (uint256 i = 0; i < weights.length; i++) {
-            newWeights[i] = weights[i];
             weightSum += weights[i];
         }
 
         uint256 adjustedSum;
         for (uint256 i = 0; i < weights.length; i++) {
-            newWeights[i] = (newWeights[i] * ONE) / weightSum;
+            newWeights[i] = (weights[i] * ONE) / weightSum;
             adjustedSum += newWeights[i];
         }
 
