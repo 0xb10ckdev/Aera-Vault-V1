@@ -334,25 +334,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         );
     }
 
-    function updateRecalibrationFactor(
-        uint256 recalibrationFactor,
-        uint256 balance,
-        uint256 weight,
-        uint256 newBalance
-    ) internal pure returns (uint256) {
-        uint256 boostedBalance = MIN_WEIGHT * balance;
-        uint256 weightedBalance = weight * newBalance;
-        if (weightedBalance < boostedBalance) {
-            uint256 newFactor = (boostedBalance * ONE).ceilDiv(
-                weightedBalance
-            );
-            if (newFactor > recalibrationFactor) {
-                return newFactor;
-            }
-        }
-        return recalibrationFactor;
-    }
-
     /// @inheritdoc IProtocolAPI
     function deposit(uint256[] calldata amounts)
         external
@@ -689,6 +670,25 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         uint256 timestamp = block.timestamp;
         pool.updateWeightsGradually(timestamp, timestamp, newWeights);
+    }
+
+    function updateRecalibrationFactor(
+        uint256 recalibrationFactor,
+        uint256 balance,
+        uint256 weight,
+        uint256 newBalance
+    ) internal pure returns (uint256) {
+        uint256 boostedBalance = MIN_WEIGHT * balance;
+        uint256 weightedBalance = weight * newBalance;
+        if (weightedBalance < boostedBalance) {
+            uint256 newFactor = (boostedBalance * ONE).ceilDiv(
+                weightedBalance
+            );
+            if (newFactor > recalibrationFactor) {
+                return newFactor;
+            }
+        }
+        return recalibrationFactor;
     }
 
     /// @notice Deposit token to the pool.
