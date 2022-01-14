@@ -602,6 +602,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         override
         returns (uint256)
     {
+        if (tokenIn == tokenOut) {
+          return ONE;
+        }
+
         IERC20[] memory tokens = getTokens();
         uint256[] memory holdings = getHoldings();
         uint256[] memory weights = getNormalizedWeights();
@@ -662,13 +666,17 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         if (tokenInId != type(uint256).max) {
             for (uint256 i = 0; i < tokens.length; i++) {
-                spotPrices[i] = calcSpotPrice(
-                    holdings[tokenInId],
-                    weights[tokenInId],
-                    holdings[i],
-                    weights[i],
-                    pool.getSwapFeePercentage()
-                );
+                if (i == tokenInId) {
+                  spotPrices[i] = ONE;
+                } else {
+                  spotPrices[i] = calcSpotPrice(
+                      holdings[tokenInId],
+                      weights[tokenInId],
+                      holdings[i],
+                      weights[i],
+                      pool.getSwapFeePercentage()
+                  );
+                }
             }
         }
     }
