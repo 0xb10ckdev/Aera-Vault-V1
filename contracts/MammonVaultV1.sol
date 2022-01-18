@@ -364,6 +364,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         uint256[] memory weights = getNormalizedWeights();
         uint256[] memory newWeights = new uint256[](tokens.length);
+        uint256 weightSum;
 
         for (uint256 i = 0; i < amounts.length; i++) {
             if (amounts[i] > 0) {
@@ -374,6 +375,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             } else {
                 newWeights[i] = weights[i];
             }
+
+            weightSum += newWeights[i];
         }
 
         /// Set managed balance of pool as amounts
@@ -383,7 +386,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         /// i.e. Move amounts from managed balance to cash balance
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
 
-        updateWeights(newWeights);
+        updateWeights(newWeights, weightSum);
 
         emit Deposit(amounts, getNormalizedWeights());
     }
@@ -433,6 +436,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
 
         uint256[] memory withdrawnAmounts = new uint256[](amounts.length);
+        uint256 weightSum;
+
         for (uint256 i = 0; i < amounts.length; i++) {
             if (amounts[i] > 0) {
                 withdrawnAmounts[i] = withdrawToken(tokens[i]);
@@ -442,9 +447,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             } else {
                 newWeights[i] = weights[i];
             }
+
+            weightSum += newWeights[i];
         }
 
-        updateWeights(newWeights);
+        updateWeights(newWeights, weightSum);
 
         emit Withdraw(
             amounts,
@@ -638,13 +645,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Update weights of tokens in the pool.
     /// @dev Will only be called by deposit() and withdraw().
-    function updateWeights(uint256[] memory weights) internal {
+    function updateWeights(uint256[] memory weights, uint256 weightSum)
+        internal
+    {
         uint256[] memory newWeights = new uint256[](weights.length);
-        uint256 weightSum;
-
-        for (uint256 i = 0; i < weights.length; i++) {
-            weightSum += weights[i];
-        }
 
         uint256 adjustedSum;
         for (uint256 i = 0; i < weights.length; i++) {
