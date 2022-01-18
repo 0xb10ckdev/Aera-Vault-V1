@@ -88,14 +88,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Emitted when tokens are deposited.
     /// @param amounts Amounts of tokens.
-    /// @param weights Weights of tokens.
+    /// @param weights Weights of tokens after deposit.
     event Deposit(uint256[] amounts, uint256[] weights);
 
     /// @notice Emitted when tokens are withdrawn.
     /// @param requestedAmounts Requested amount of tokens.
     /// @param withdrawnAmounts Withdrawn amount of tokens.
     /// @param allowances Allowance of tokens.
-    /// @param weights Weight of tokens.
+    /// @param weights Weight of tokens after withdrawal.
     event Withdraw(
         uint256[] requestedAmounts,
         uint256[] withdrawnAmounts,
