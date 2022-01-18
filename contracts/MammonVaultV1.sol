@@ -158,6 +158,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__WeightIsAboveMax(uint256 actual, uint256 max);
     error Mammon__WeightIsBelowMin(uint256 actual, uint256 min);
     error Mammon__AmountIsBelowMin(uint256 actual, uint256 min);
+    error Mammon__AmountExceedAvailable(
+        address token,
+        uint256 amount,
+        uint256 available
+    );
     error Mammon__FinalizationNotInitialized();
     error Mammon__VaultNotInitialized();
     error Mammon__VaultIsAlreadyInitialized();
@@ -406,28 +411,33 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         uint256[] memory allowances = validator.allowance();
         uint256[] memory weights = getNormalizedWeights();
-        uint256[] memory exactAmounts = new uint256[](tokens.length);
         uint256[] memory newWeights = new uint256[](tokens.length);
 
         for (uint256 i = 0; i < tokens.length; i++) {
-            exactAmounts[i] = amounts[i].min(holdings[i]).min(allowances[i]);
+            if (amounts[i] > holdings[i] || amounts[i] > allowances[i]) {
+                revert Mammon__AmountExceedAvailable(
+                    address(tokens[i]),
+                    amounts[i],
+                    holdings[i].min(allowances[i])
+                );
+            }
         }
 
         uint256[] memory managed = new uint256[](tokens.length);
 
         /// Decrease cash balance and increase managed balance of pool
         /// i.e. Move amounts from cash balance to managed balance
-        updatePoolBalance(exactAmounts, IBVault.PoolBalanceOpKind.WITHDRAW);
+        updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.WITHDRAW);
         /// Set managed balance of pool as zero array
         /// i.e. Withdraw amounts of tokens from pool to Mammon Vault
         updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
 
         uint256[] memory withdrawnAmounts = new uint256[](amounts.length);
         for (uint256 i = 0; i < amounts.length; i++) {
-            if (exactAmounts[i] > 0) {
+            if (amounts[i] > 0) {
                 withdrawnAmounts[i] = withdrawToken(tokens[i]);
 
-                uint256 newBalance = holdings[i] - exactAmounts[i];
+                uint256 newBalance = holdings[i] - amounts[i];
                 newWeights[i] = (weights[i] * newBalance) / holdings[i];
             } else {
                 newWeights[i] = weights[i];

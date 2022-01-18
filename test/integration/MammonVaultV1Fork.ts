@@ -502,18 +502,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
     describe("when withdrawing to Vault", () => {
       describe("when allowance on validator is invalid", () => {
-        it("should withdraw no tokens", async () => {
-          const { holdings, balances } = await getState();
-
-          await vault.withdraw(valueArray(toWei(5), tokens.length));
-
-          const { holdings: newHoldings, balances: newBalances } =
-            await getState();
-
-          for (let i = 0; i < tokens.length; i++) {
-            expect(newHoldings[i]).to.equal(holdings[i]);
-            expect(newBalances[i]).to.equal(balances[i]);
-          }
+        it("should revert to withdraw tokens", async () => {
+          await expect(
+            vault.withdraw(valueArray(toWei(5), tokens.length)),
+          ).to.be.revertedWith("Mammon__AmountExceedAvailable");
         });
       });
 
@@ -535,6 +527,16 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             await expect(
               vault.withdraw(valueArray(ONE, tokens.length + 1)),
             ).to.be.revertedWith("Mammon__AmountLengthIsNotSame");
+          });
+
+          it("when amount exceeds holdings", async () => {
+            const { holdings } = await getState();
+            await expect(
+              vault.withdraw([
+                holdings[0].add(1),
+                ...valueArray(ONE, tokens.length - 1),
+              ]),
+            ).to.be.revertedWith("Mammon__AmountExceedAvailable");
           });
         });
 
@@ -575,12 +577,12 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             for (let i = 0; i < tokens.length; i++) {
               await tokens[i].approve(vault.address, toWei(100000));
             }
-            await vault.deposit(valueArray(toWei(100000), tokens.length));
+            await vault.deposit(valueArray(toWei(10000), tokens.length));
 
             const { holdings, balances } = await getState();
 
             const amounts = tokens.map(_ =>
-              toWei(Math.floor(Math.random() * 100000)),
+              toWei(Math.floor(Math.random() * 10000)),
             );
 
             const spotPrices = [];
