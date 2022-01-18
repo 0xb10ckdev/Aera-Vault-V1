@@ -33,9 +33,7 @@ contract MammonPoolFactoryV1 is
         // solhint-disable-previous-line no-empty-blocks
     }
 
-    /**
-     * @dev Deploys a new `ManagedPool`.
-     */
+    /// @inheritdoc IMammonPoolFactoryV1
     function create(
         string memory name,
         string memory symbol,
