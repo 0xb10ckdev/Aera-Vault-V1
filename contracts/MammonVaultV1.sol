@@ -112,13 +112,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     );
 
     /// @notice Emitted when updateWeightsGradually is called.
-    /// @param weights The target weights of the tokens.
     /// @param startTime Start timestamp of updates.
     /// @param endTime End timestamp of updates.
+    /// @param weights The target weights of the tokens.
     event UpdateWeightsGradually(
-        uint256[] weights,
         uint256 startTime,
-        uint256 endTime
+        uint256 endTime,
+        uint256[] weights
     );
 
     /// @notice Emitted when swap is enabled/disabled.
@@ -508,7 +508,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         pool.updateWeightsGradually(startTime, endTime, targetWeights);
 
-        emit UpdateWeightsGradually(targetWeights, startTime, endTime);
+        emit UpdateWeightsGradually(startTime, endTime, targetWeights);
     }
 
     /// @inheritdoc IManagerAPI
