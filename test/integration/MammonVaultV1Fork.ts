@@ -431,10 +431,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         it("when deposit one token", async () => {
           let { holdings, balances } = await getState();
           for (let i = 0; i < tokens.length; i++) {
-            const amounts = tokens.map((_, index) =>
-              index == i ? toWei(5) : toWei(0),
-            );
-
+            const amounts = new Array(tokens.length).fill(0);
+            amounts[i] = toWei(5);
             const spotPrices = await vault.getSpotPrices(tokens[i].address);
 
             await vault.deposit(amounts);
@@ -546,9 +544,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             let { holdings, balances } = await getState();
 
             for (let i = 0; i < tokens.length; i++) {
-              const amounts = tokens.map((_, index) =>
-                index == i ? toWei(5) : toWei(0),
-              );
+              const amounts = new Array(tokens.length).fill(0);
+              amounts[i] = toWei(5);
 
               const spotPrices = await vault.getSpotPrices(tokens[i].address);
 

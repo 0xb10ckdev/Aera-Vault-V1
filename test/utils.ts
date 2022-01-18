@@ -72,7 +72,7 @@ export const valueArray = (
   value: number | string | BigNumber,
   length: number,
 ): string[] => {
-  return Array.from({ length }, _ => value.toString());
+  return new Array(length).fill(value.toString());
 };
 
 export const getCurrentTime = async (): Promise<number> => {
