@@ -23,7 +23,9 @@ export const setupTokens = async (): Promise<{
 
   const tokens = tokenDeploys
     .map(token => ERC20Mock__factory.connect(token.address, admin))
-    .sort((a, b) => (a.address < b.address ? -1 : 1));
+    .sort((a, b) =>
+      a.address.toLowerCase() < b.address.toLowerCase() ? -1 : 1,
+    );
 
   const sortedTokens = [];
   const unsortedTokens = [];
