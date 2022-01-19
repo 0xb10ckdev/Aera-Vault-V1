@@ -235,7 +235,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         address validator_,
         uint32 noticePeriod_
     ) {
-        if (tokens_.length == weights_.length) {
+        if (tokens_.length != weights_.length) {
             revert Mammon__LengthIsNotSame(tokens_.length, weights_.length);
         }
         if (
@@ -262,13 +262,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 symbol,
                 tokens_,
                 weights_,
-                managers,
                 swapFeePercentage,
                 msg.sender,
                 false,
                 managementSwapFeePercentage
             )
         );
+
         tokens = tokens_;
         manager = manager_;
         validator = IWithdrawalValidator(validator_);
