@@ -35,7 +35,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     address private constant UNSET_MANAGER_ADDRESS = address(0);
 
     /// @notice Largest possible notice period for vault termination (2 months).
-    uint32 private constant MAX_NOTICE_PERIOD = 60 days;
+    uint256 private constant MAX_NOTICE_PERIOD = 60 days;
 
     /// @notice Balancer Vault. Controlled by Mammon Vault.
     IBVault public immutable bVault;
