@@ -9,6 +9,7 @@ export const ZERO_ADDRESS = ethers.constants.AddressZero;
 export const NOTICE_PERIOD = 10000;
 export const MAX_NOTICE_PERIOD = 5184000; // 60 days in seconds
 export const MINIMUM_WEIGHT_CHANGE_DURATION = 86400; // 1 day in seconds
+export const DEVIATION = 1e10;
 
 export const BALANCER_ERRORS = {
   // Math

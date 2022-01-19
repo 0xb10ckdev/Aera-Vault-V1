@@ -29,6 +29,7 @@ import {
   MAX_NOTICE_PERIOD,
   BALANCER_ERRORS,
   MINIMUM_WEIGHT_CHANGE_DURATION,
+  DEVIATION,
 } from "../constants";
 
 describe("Mammon Vault V1 Mainnet Deployment", function () {
@@ -440,11 +441,19 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               index == i ? toWei(5) : toWei(0),
             );
 
+            const spotPrices = await vault.getSpotPrices(tokens[i].address);
+
             await vault.deposit(amounts);
 
+            const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
             const { holdings: newHoldings, balances: newBalances } =
               await getState();
+
             for (let j = 0; j < tokens.length; j++) {
+              expect(newSpotPrices[j]).to.be.at.closeTo(
+                spotPrices[j],
+                DEVIATION,
+              );
               expect(newHoldings[j]).to.equal(holdings[j].add(amounts[j]));
               expect(newBalances[j]).to.equal(balances[j].sub(amounts[j]));
             }
@@ -460,15 +469,36 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           const amounts = tokens.map(_ =>
             toWei(Math.floor(Math.random() * 100000)),
           );
+
+          const spotPrices = [];
           for (let i = 0; i < tokens.length; i++) {
             await tokens[i].approve(vault.address, amounts[i]);
+            spotPrices.push(await vault.getSpotPrices(tokens[i].address));
           }
 
           await vault.deposit(amounts);
 
+          const newSpotPrices = [];
+          for (let i = 0; i < tokens.length; i++) {
+            newSpotPrices.push(await vault.getSpotPrices(tokens[i].address));
+            expect(
+              await vault.getSpotPrice(
+                tokens[i].address,
+                tokens[(i + 1) % tokens.length].address,
+              ),
+            ).to.equal(newSpotPrices[i][(i + 1) % tokens.length]);
+          }
           const { holdings: newHoldings, balances: newBalances } =
             await getState();
+
           for (let i = 0; i < tokens.length; i++) {
+            for (let j = 0; j < tokens.length; j++) {
+              expect(newSpotPrices[i][j]).to.be.at.closeTo(
+                spotPrices[i][j],
+                DEVIATION,
+              );
+            }
+            expect(await vault.holding(i)).to.equal(newHoldings[i]);
             expect(newHoldings[i]).to.equal(holdings[i].add(amounts[i]));
             expect(newBalances[i]).to.equal(balances[i].sub(amounts[i]));
           }
@@ -524,11 +554,20 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 index == i ? toWei(5) : toWei(0),
               );
 
+              const spotPrices = await vault.getSpotPrices(tokens[i].address);
+
               await vault.withdraw(amounts);
 
+              const newSpotPrices = await vault.getSpotPrices(
+                tokens[i].address,
+              );
               const { holdings: newHoldings, balances: newBalances } =
                 await getState();
               for (let j = 0; j < tokens.length; j++) {
+                expect(newSpotPrices[j]).to.be.at.closeTo(
+                  spotPrices[j],
+                  DEVIATION,
+                );
                 expect(newHoldings[j]).to.equal(holdings[j].sub(amounts[j]));
                 expect(newBalances[j]).to.equal(balances[j].add(amounts[j]));
               }
@@ -549,15 +588,35 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             const amounts = tokens.map(_ =>
               toWei(Math.floor(Math.random() * 100000)),
             );
+
+            const spotPrices = [];
             for (let i = 0; i < tokens.length; i++) {
-              await tokens[i].approve(vault.address, amounts[i]);
+              spotPrices.push(await vault.getSpotPrices(tokens[i].address));
             }
 
             await vault.withdraw(amounts);
 
+            const newSpotPrices = [];
+            for (let i = 0; i < tokens.length; i++) {
+              newSpotPrices.push(await vault.getSpotPrices(tokens[i].address));
+              expect(
+                await vault.getSpotPrice(
+                  tokens[i].address,
+                  tokens[(i + 1) % tokens.length].address,
+                ),
+              ).to.equal(newSpotPrices[i][(i + 1) % tokens.length]);
+            }
+
             const { holdings: newHoldings, balances: newBalances } =
               await getState();
             for (let i = 0; i < tokens.length; i++) {
+              for (let j = 0; j < tokens.length; j++) {
+                expect(newSpotPrices[i][j]).to.be.at.closeTo(
+                  spotPrices[i][j],
+                  DEVIATION,
+                );
+              }
+              expect(await vault.holding(i)).to.equal(newHoldings[i]);
               expect(newHoldings[i]).to.equal(holdings[i].sub(amounts[i]));
               expect(newBalances[i]).to.equal(balances[i].add(amounts[i]));
             }
@@ -578,7 +637,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           ).to.be.revertedWith("Mammon__CallerIsNotManager");
         });
 
-        it("when time travel is invalid", async () => {
+        it("when duration is less than minimum", async () => {
           const timestamp = await getCurrentTime();
           await expect(
             vault
@@ -586,9 +645,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               .updateWeightsGradually(
                 valueArray(ONE.div(tokens.length), tokens.length),
                 timestamp,
-                timestamp - 1,
+                timestamp + 1,
               ),
-          ).to.be.revertedWith("BAL#326"); // GRADUAL_UPDATE_TIME_TRAVEL
+          ).to.be.revertedWith("Mammon__WeightChangeDurationIsBelowMin");
         });
 
         it("when total sum of weight is not one", async () => {
@@ -660,8 +719,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             .sub(startWeights[i])
             .mul(ptcProgress)
             .div(ONE);
-          expect(startWeights[i].add(weightDelta)).to.be.at.most(
+          expect(startWeights[i].add(weightDelta)).to.be.at.closeTo(
             currentWeights[i],
+            DEVIATION,
           );
         }
       });
@@ -737,10 +797,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       it("should be possible to finalize", async () => {
-        const holding = await vault.holding(0);
-        await validator.setAllowance(0, holding);
-        await vault.withdraw([holding, ...valueArray(0, tokens.length - 1)]);
-
         await vault.initializeFinalization();
         await ethers.provider.send("evm_increaseTime", [NOTICE_PERIOD + 1]);
 
@@ -756,6 +812,31 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
         expect(await ethers.provider.getCode(vault.address)).to.equal("0x");
       });
+    });
+  });
+
+  describe("Get Spot Prices", () => {
+    let TOKEN: IERC20;
+    beforeEach(async () => {
+      ({ TOKEN } = await deployToken());
+      for (let i = 0; i < tokens.length; i++) {
+        await tokens[i].approve(vault.address, ONE);
+      }
+      await vault.initialDeposit(valueArray(ONE, tokens.length));
+    });
+
+    it("should return zero for invalid token", async () => {
+      const spotPrices = await vault.getSpotPrices(TOKEN.address);
+
+      for (let i = 0; i < tokens.length; i++) {
+        expect(spotPrices[i]).to.equal(toWei(0));
+        expect(
+          await vault.getSpotPrice(TOKEN.address, tokens[i].address),
+        ).to.equal(toWei(0));
+        expect(
+          await vault.getSpotPrice(tokens[i].address, TOKEN.address),
+        ).to.equal(toWei(0));
+      }
     });
   });
 

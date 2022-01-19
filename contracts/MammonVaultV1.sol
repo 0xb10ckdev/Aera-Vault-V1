@@ -14,6 +14,7 @@ import "./interfaces/IBVault.sol";
 import "./interfaces/IBManagedPool.sol";
 import "./interfaces/IMammonVaultV1.sol";
 import "./interfaces/IWithdrawalValidator.sol";
+import "hardhat/console.sol";
 
 /// @title Risk-managed treasury vault.
 /// @notice Managed n-asset vault that supports withdrawals
@@ -28,11 +29,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     uint256 private constant ONE = 10**18;
 
-    /// @notice Largest possible notice period for vault termination (2 months).
-    uint32 private constant MAX_NOTICE_PERIOD = 60 days;
+    /// @notice Minimum period for weight change duration.
+    uint256 private constant MINIMUM_WEIGHT_CHANGE_DURATION = 1 days;
 
     /// @dev Address to represent unset manager in events.
     address private constant UNSET_MANAGER_ADDRESS = address(0);
+
+    /// @notice Largest possible notice period for vault termination (2 months).
+    uint32 private constant MAX_NOTICE_PERIOD = 60 days;
 
     /// @notice Balancer Vault. Controlled by Mammon Vault.
     IBVault public immutable bVault;
@@ -151,7 +155,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
     error Mammon__ManagerIsZeroAddress();
     error Mammon__CallerIsNotManager();
-    error Mammon__RatioChangePerBlockIsAboveMax(uint256 actual, uint256 max);
+    error Mammon__WeightChangeDurationIsBelowMin(uint256 actual, uint256 min);
     error Mammon__WeightIsAboveMax(uint256 actual, uint256 max);
     error Mammon__WeightIsBelowMin(uint256 actual, uint256 min);
     error Mammon__AmountIsBelowMin(uint256 actual, uint256 min);
@@ -303,7 +307,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         /// must encode the userData for join as below
         /// abi.encode(JoinKind.INIT, initBalances)
-        /// InvestmentPool JoinKinds:
+        /// ManagedPool JoinKinds:
         /// enum JoinKind {
         ///     INIT,
         ///     EXACT_TOKENS_IN_FOR_BPT_OUT,
@@ -352,9 +356,18 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             );
         }
 
+        uint256[] memory holdings = getHoldings();
+        uint256[] memory weights = getNormalizedWeights();
+        uint256[] memory newWeights = new uint256[](tokens.length);
+
         for (uint256 i = 0; i < amounts.length; i++) {
             if (amounts[i] > 0) {
                 depositToken(tokens[i], amounts[i]);
+
+                uint256 newBalance = holdings[i] + amounts[i];
+                newWeights[i] = (weights[i] * newBalance) / holdings[i];
+            } else {
+                newWeights[i] = weights[i];
             }
         }
 
@@ -364,6 +377,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         /// Decrease managed balance and increase cash balance of pool
         /// i.e. Move amounts from managed balance to cash balance
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
+
+        updateWeights(newWeights);
 
         emit Deposit(amounts, getNormalizedWeights());
     }
@@ -380,19 +395,21 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     {
         IERC20[] memory tokens = getTokens();
 
-        uint256[] memory allowances = validator.allowance();
-        uint256[] memory holdings = getHoldings();
-        uint256[] memory exactAmounts = new uint256[](tokens.length);
-
-        for (uint256 i = 0; i < tokens.length; i++) {
-            exactAmounts[i] = amounts[i].min(holdings[i]).min(allowances[i]);
-        }
-
         if (tokens.length != amounts.length) {
             revert Mammon__AmountLengthIsNotSame(
                 tokens.length,
                 amounts.length
             );
+        }
+
+        uint256[] memory allowances = validator.allowance();
+        uint256[] memory holdings = getHoldings();
+        uint256[] memory weights = getNormalizedWeights();
+        uint256[] memory exactAmounts = new uint256[](tokens.length);
+        uint256[] memory newWeights = new uint256[](tokens.length);
+
+        for (uint256 i = 0; i < tokens.length; i++) {
+            exactAmounts[i] = amounts[i].min(holdings[i]).min(allowances[i]);
         }
 
         uint256[] memory managed = new uint256[](tokens.length);
@@ -408,8 +425,15 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < amounts.length; i++) {
             if (exactAmounts[i] > 0) {
                 withdrawnAmounts[i] = withdrawToken(tokens[i]);
+
+                uint256 newBalance = holdings[i] - exactAmounts[i];
+                newWeights[i] = (weights[i] * newBalance) / holdings[i];
+            } else {
+                newWeights[i] = weights[i];
             }
         }
+
+        updateWeights(newWeights);
 
         emit Withdraw(
             amounts,
@@ -470,10 +494,17 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IManagerAPI
     function updateWeightsGradually(
-        uint256[] memory targetWeights,
+        uint256[] calldata targetWeights,
         uint256 startTime,
         uint256 endTime
     ) external override onlyManager onlyInitialized nonFinalizing {
+        if (endTime - startTime < MINIMUM_WEIGHT_CHANGE_DURATION) {
+            revert Mammon__WeightChangeDurationIsBelowMin(
+                endTime - startTime,
+                MINIMUM_WEIGHT_CHANGE_DURATION
+            );
+        }
+
         pool.updateWeightsGradually(startTime, endTime, targetWeights);
 
         emit UpdateWeightsGradually(targetWeights, startTime, endTime);
@@ -565,6 +596,77 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         return pool.getNormalizedWeights();
     }
 
+    /// @inheritdoc IUserAPI
+    function getSpotPrice(address tokenIn, address tokenOut)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        IERC20[] memory tokens = getTokens();
+        uint256[] memory holdings = getHoldings();
+        uint256[] memory weights = getNormalizedWeights();
+
+        uint256 tokenInId = tokens.length;
+        uint256 tokenOutId = tokens.length;
+
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (tokenIn == address(tokens[i])) {
+                tokenInId = i;
+            }
+            if (tokenOut == address(tokens[i])) {
+                tokenOutId = i;
+            }
+        }
+
+        if (tokenInId < tokens.length && tokenOutId < tokens.length) {
+            return
+                calcSpotPrice(
+                    holdings[tokenInId],
+                    weights[tokenInId],
+                    holdings[tokenOutId],
+                    weights[tokenOutId]
+                );
+        }
+
+        return 0;
+    }
+
+    /// @inheritdoc IUserAPI
+    function getSpotPrices(address tokenIn)
+        public
+        view
+        override
+        returns (uint256[] memory spotPrices)
+    {
+        IERC20[] memory tokens = getTokens();
+        uint256[] memory holdings = getHoldings();
+        uint256[] memory weights = getNormalizedWeights();
+        spotPrices = new uint256[](tokens.length);
+
+        uint256 tokenInId = tokens.length;
+
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (tokenIn == address(tokens[i])) {
+                tokenInId = i;
+                break;
+            }
+        }
+
+        if (tokenInId < tokens.length) {
+            for (uint256 i = 0; i < tokens.length; i++) {
+                spotPrices[i] = calcSpotPrice(
+                    holdings[tokenInId],
+                    weights[tokenInId],
+                    holdings[i],
+                    weights[i]
+                );
+            }
+        }
+
+        return spotPrices;
+    }
+
     /// INTERNAL FUNCTIONS ///
     /// @dev PoolBalanceOpKind has three kinds
     /// Withdrawal - decrease the Pool's cash, but increase its managed balance,
@@ -594,6 +696,29 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         bVault.managePoolBalance(ops);
     }
 
+    /// @notice Update weights of tokens in the pool.
+    /// @dev Will only be called by deposit() and withdraw().
+    function updateWeights(uint256[] memory weights) internal {
+        uint256[] memory newWeights = new uint256[](weights.length);
+        uint256 weightSum;
+
+        for (uint256 i = 0; i < weights.length; i++) {
+            newWeights[i] = weights[i];
+            weightSum += weights[i];
+        }
+
+        uint256 adjustedSum;
+        for (uint256 i = 0; i < weights.length; i++) {
+            newWeights[i] = (newWeights[i] * ONE) / weightSum;
+            adjustedSum += newWeights[i];
+        }
+
+        newWeights[0] = newWeights[0] + ONE - adjustedSum;
+
+        uint256 timestamp = block.timestamp;
+        pool.updateWeightsGradually(timestamp, timestamp, newWeights);
+    }
+
     /// @notice Deposit token to the pool.
     /// @dev Will only be called by deposit().
     /// @param token Address of the token to deposit.
@@ -609,9 +734,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param amount Amount to withdraw.
     function withdrawToken(IERC20 token) internal returns (uint256 amount) {
         amount = token.balanceOf(address(this));
-        if (amount > 0) {
-            token.safeTransfer(owner(), amount);
-        }
+        token.safeTransfer(owner(), amount);
     }
 
     /// @notice Return all funds to owner.
@@ -630,5 +753,22 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < tokens.length; i++) {
             amounts[i] = withdrawToken(tokens[i]);
         }
+    }
+
+    /// @notice Calculate spot price from balances and weights.
+    /// @dev Will only be called by getSpotPrice().
+    /// @return Spot Price from balances and weights.
+    function calcSpotPrice(
+        uint256 tokenBalanceIn,
+        uint256 tokenWeightIn,
+        uint256 tokenBalanceOut,
+        uint256 tokenWeightOut
+    ) internal view returns (uint256) {
+        uint256 swapFee = pool.getSwapFeePercentage();
+        uint256 numer = (tokenBalanceIn * ONE) / tokenWeightIn;
+        uint256 denom = (tokenBalanceOut * ONE) / tokenWeightOut;
+        uint256 ratio = (numer * ONE) / denom;
+        uint256 scale = (ONE * ONE) / (ONE - swapFee);
+        return (ratio * scale) / ONE;
     }
 }
