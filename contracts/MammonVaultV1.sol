@@ -54,9 +54,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @dev string cannot be immutable bytecode but only set in constructor
     string public description;
 
-    /// @notice Token addresses in vault.
-    IERC20[] public tokens;
-
     /// @notice Submits new balance parameters for the vault
     address public manager;
 
@@ -349,7 +346,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         onlyOwner
         onlyInitialized
         nonFinalizing
-    // solhint-disable-next-line no-empty-blocks
     {
         IERC20[] memory tokens;
         uint256[] memory holdings;
@@ -399,7 +395,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         onlyOwner
         onlyInitialized
         nonFinalizing
-    // solhint-disable-next-line no-empty-blocks
     {
         IERC20[] memory tokens;
         uint256[] memory holdings;
@@ -468,9 +463,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         onlyOwner
         onlyInitialized
         nonFinalizing
-    // solhint-disable-next-line no-empty-blocks
     {
-        // Should be implemented, updated or removed
+        noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
+        emit FinalizationInitialized(noticeTimeoutAt);
     }
 
     /// @inheritdoc IProtocolAPI
@@ -489,23 +484,17 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IProtocolAPI
-    function setManager(address newManager)
-        external
-        override
-        onlyOwner
-    // solhint-disable-next-line no-empty-blocks
-    {
-        // Should be implemented, updated or removed
+    function setManager(address newManager) external override onlyOwner {
+        if (newManager == address(0)) {
+            revert Mammon__ManagerIsZeroAddress();
+        }
+        emit ManagerChanged(manager, newManager);
+        manager = newManager;
     }
 
     /// @inheritdoc IProtocolAPI
-    function sweep(address token, uint256 amount)
-        external
-        override
-        onlyOwner
-    // solhint-disable-next-line no-empty-blocks
-    {
-        // Should be implemented, updated or removed
+    function sweep(address token, uint256 amount) external override onlyOwner {
+        IERC20(token).safeTransfer(msg.sender, amount);
     }
 
     /// MANAGER API ///
