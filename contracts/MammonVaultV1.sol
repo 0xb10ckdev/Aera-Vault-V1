@@ -9,17 +9,16 @@ import "./dependencies/openzeppelin/ReentrancyGuard.sol";
 import "./dependencies/openzeppelin/Math.sol";
 import "./dependencies/openzeppelin/SafeCast.sol";
 import "./dependencies/openzeppelin/ERC165Checker.sol";
-import "./interfaces/IBFactory.sol";
-import "./interfaces/IBPool.sol";
-import "./interfaces/IMammonVaultV0.sol";
+import "./interfaces/IBManagedPoolFactory.sol";
+import "./interfaces/IBManagedPool.sol";
+import "./interfaces/IMammonVaultV1.sol";
 import "./interfaces/IWithdrawalValidator.sol";
-import "./libraries/SmartPoolManager.sol";
 
 /// @title Risk-managed treasury vault.
 /// @notice Managed two-asset vault that supports withdrawals
 ///         in line with a pre-defined validator contract.
 /// @dev Vault owner is the asset owner.
-contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
+contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using Math for uint256;
     using SafeCast for uint256;
@@ -46,13 +45,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     uint256 private constant MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK = 10**16;
 
     /// @notice Balancer pool. Controlled by the vault.
-    IBPool public immutable pool;
-
-    /// @notice First token address in vault.
-    address public immutable token0;
-
-    /// @notice Second token address in vault.
-    address public immutable token1;
+    IBManagedPool public immutable pool;
 
     /// @notice Notice period for vault termination (in seconds).
     uint32 public immutable noticePeriod;
@@ -61,6 +54,9 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     IWithdrawalValidator public immutable validator;
 
     /// STORAGE SLOT START ///
+
+    /// @notice Token addresses in vault.
+    IERC20[] public tokens;
 
     /// @notice Submits new balance parameters for the vault
     address public manager;
@@ -71,23 +67,19 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     /// @notice Indicates that the Vault has been initialized
     bool public initialized;
 
-    // STORAGE SLOT END, 3 BYTES LEFT ///
-
-    SmartPoolManager.GradualUpdateParams public gradualUpdate;
-
     /// EVENTS ///
 
     /// @notice Emitted when the vault is created.
-    /// @param factory Address of Balancer factory.
-    /// @param token0 Address of first token.
-    /// @param token1 Address of second token.
+    /// @param factory Address of Balancer Managed Pool factory.
+    /// @param tokens Address of tokens.
+    /// @param weights Weights of tokens.
     /// @param manager Address of vault manager.
     /// @param validator Address of withdrawal validator contract
     /// @param noticePeriod Notice period in seconds.
     event Created(
         address indexed factory,
-        address indexed token0,
-        address indexed token1,
+        IERC20[] tokens,
+        uint256[] weights,
         address manager,
         address validator,
         uint32 noticePeriod
@@ -168,7 +160,7 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
 
     /// ERRORS ///
 
-    error Mammon__SameTokenAddresses(address token);
+    error Mammon__LengthIsNotSame(uint256 tokenLength, uint256 weightLength);
     error Mammon__ValidatorIsNotValid(address validator);
     error Mammon__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
     error Mammon__CallerIsNotOwnerOrManager();
@@ -222,22 +214,29 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
 
     /// @notice Initialize the contract by deploying new Balancer pool using the provided factory.
     /// @dev First token and second token shouldn't be same. Validator should conform to interface.
-    /// @param factory_ Balancer Pool Factory address.
-    /// @param token0_ First token address.
-    /// @param token1_ Second token address.
+    /// @param factory_ Balancer Managed Pool Factory address.
+    /// @param name Name of a Pool Token.
+    /// @param symbol Symbol of a Pool Token.
+    /// @param tokens_ Address of tokens.
+    /// @param swapFeePercentage Swap fee of the pool.
+    /// @param managementSwapFeePercentage Management swap fee of the pool.
     /// @param manager_ Vault manager address.
     /// @param validator_ Withdrawal validator contract address.
     /// @param noticePeriod_ Notice period in seconds.
     constructor(
         address factory_,
-        address token0_,
-        address token1_,
+        string memory name,
+        string memory symbol,
+        IERC20[] memory tokens_,
+        uint256[] memory weights_,
+        uint256 swapFeePercentage,
+        uint256 managementSwapFeePercentage,
         address manager_,
         address validator_,
         uint32 noticePeriod_
     ) {
-        if (token0_ == token1_) {
-            revert Mammon__SameTokenAddresses(token0_);
+        if (tokens_.length == weights_.length) {
+            revert Mammon__LengthIsNotSame(tokens_.length, weights_.length);
         }
         if (
             !ERC165Checker.supportsInterface(
@@ -254,17 +253,31 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
             );
         }
 
-        pool = IBPool(IBFactory(factory_).newBPool());
-        token0 = token0_;
-        token1 = token1_;
+        address[] memory managers = new address[](1);
+        managers[0] = msg.sender;
+
+        pool = IBManagedPool(
+            IBManagedPoolFactory(factory_).create(
+                name,
+                symbol,
+                tokens_,
+                weights_,
+                managers,
+                swapFeePercentage,
+                msg.sender,
+                false,
+                managementSwapFeePercentage
+            )
+        );
+        tokens = tokens_;
         manager = manager_;
         validator = IWithdrawalValidator(validator_);
         noticePeriod = noticePeriod_;
 
         emit Created(
             factory_,
-            token0_,
-            token1_,
+            tokens_,
+            weights_,
             manager_,
             validator_,
             noticePeriod_
@@ -280,41 +293,12 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         uint256 amount1,
         uint256 weight0,
         uint256 weight1
-    ) external override onlyOwner {
-        if (initialized) {
-            revert Mammon__VaultIsAlreadyInitialized();
-        }
-        initialized = true;
-
-        uint256 poolMinWeight = pool.MIN_WEIGHT();
-        if (weight0 < poolMinWeight) {
-            revert Mammon__WeightIsBelowMin(weight0, poolMinWeight);
-        }
-        uint256 poolMaxWeight = pool.MAX_WEIGHT();
-        if (weight0 > poolMaxWeight) {
-            revert Mammon__WeightIsAboveMax(weight0, poolMaxWeight);
-        }
-        uint256 poolMinAmount = pool.MIN_BALANCE();
-        if (amount0 < poolMinAmount) {
-            revert Mammon__AmountIsBelowMin(amount0, poolMinAmount);
-        }
-
-        if (weight1 < poolMinWeight) {
-            revert Mammon__WeightIsBelowMin(weight1, poolMinWeight);
-        }
-        if (weight1 > poolMaxWeight) {
-            revert Mammon__WeightIsAboveMax(weight1, poolMaxWeight);
-        }
-        if (amount1 < poolMinAmount) {
-            revert Mammon__AmountIsBelowMin(amount1, poolMinAmount);
-        }
-
-        bindToken(token0, amount0, weight0);
-        bindToken(token1, amount1, weight1);
-
-        gradualUpdate.startWeights = [weight0, weight1];
-
-        emit Deposit(amount0, amount1, weight0, weight1);
+    )
+        external
+        override
+        onlyOwner // solhint-disable-next-line no-empty-blocks
+    {
+        // Should be implemented, updated or removed
     }
 
     /// @inheritdoc IProtocolAPI
@@ -325,18 +309,9 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         onlyOwner
         onlyInitialized
         nonFinalizing
+    // solhint-disable-next-line no-empty-blocks
     {
-        if (amount0 > 0) {
-            depositToken(token0, amount0, holdings0());
-        }
-        if (amount1 > 0) {
-            depositToken(token1, amount1, holdings1());
-        }
-
-        uint256 weight0 = getDenormalizedWeight(token0);
-        uint256 weight1 = getDenormalizedWeight(token1);
-
-        emit Deposit(amount0, amount1, weight0, weight1);
+        // Should be implemented, updated or removed
     }
 
     /// @inheritdoc IProtocolAPI
@@ -347,38 +322,9 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         onlyOwner
         onlyInitialized
         nonFinalizing
+    // solhint-disable-next-line no-empty-blocks
     {
-        (uint256 allowance0, uint256 allowance1) = validator.allowance();
-
-        uint256 balance0 = holdings0();
-        uint256 balance1 = holdings1();
-
-        uint256 exactAmount0 = amount0.min(balance0).min(allowance0);
-        uint256 exactAmount1 = amount1.min(balance1).min(allowance1);
-
-        uint256 withdrawnAmount0;
-        uint256 withdrawnAmount1;
-
-        if (exactAmount0 > 0) {
-            withdrawnAmount0 = withdrawToken(token0, exactAmount0, balance0);
-        }
-        if (exactAmount1 > 0) {
-            withdrawnAmount1 = withdrawToken(token1, exactAmount1, balance1);
-        }
-
-        uint256 finalWeight0 = getDenormalizedWeight(token0);
-        uint256 finalWeight1 = getDenormalizedWeight(token1);
-
-        emit Withdraw(
-            amount0,
-            amount1,
-            withdrawnAmount0,
-            withdrawnAmount1,
-            allowance0,
-            allowance1,
-            finalWeight0,
-            finalWeight1
-        );
+        // Should be implemented, updated or removed
     }
 
     /// @inheritdoc IProtocolAPI
@@ -388,38 +334,40 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         onlyOwner
         onlyInitialized
         nonFinalizing
+    // solhint-disable-next-line no-empty-blocks
     {
-        noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
-        emit FinalizationInitialized(noticeTimeoutAt);
+        // Should be implemented, updated or removed
     }
 
     /// @inheritdoc IProtocolAPI
-    function finalize() external override nonReentrant onlyOwnerOrManager {
-        if (noticeTimeoutAt == 0) {
-            revert Mammon__FinalizationNotInitialized();
-        }
-        if (noticeTimeoutAt > block.timestamp) {
-            revert Mammon__NoticeTimeoutNotElapsed(noticeTimeoutAt);
-        }
-
-        (uint256 amount0, uint256 amount1) = returnFunds();
-        emit Finalized(msg.sender, amount0, amount1);
-
-        selfdestruct(payable(owner()));
+    function finalize()
+        external
+        override
+        nonReentrant
+        onlyOwnerOrManager
+    // solhint-disable-next-line no-empty-blocks
+    {
+        // Should be implemented, updated or removed
     }
 
     /// @inheritdoc IProtocolAPI
-    function setManager(address newManager) external override onlyOwner {
-        if (newManager == address(0)) {
-            revert Mammon__ManagerIsZeroAddress();
-        }
-        emit ManagerChanged(manager, newManager);
-        manager = newManager;
+    function setManager(address newManager)
+        external
+        override
+        onlyOwner
+    // solhint-disable-next-line no-empty-blocks
+    {
+        // Should be implemented, updated or removed
     }
 
     /// @inheritdoc IProtocolAPI
-    function sweep(address token, uint256 amount) external override onlyOwner {
-        IERC20(token).safeTransfer(msg.sender, amount);
+    function sweep(address token, uint256 amount)
+        external
+        override
+        onlyOwner
+    // solhint-disable-next-line no-empty-blocks
+    {
+        // Should be implemented, updated or removed
     }
 
     /// MANAGER API ///
@@ -430,41 +378,15 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         uint256 targetWeight1,
         uint256 startBlock,
         uint256 endBlock
-    ) external override onlyManager onlyInitialized nonFinalizing {
-        /// Library computes the startBlock,
-        /// computes startWeights as the current
-        /// denormalized weights of the core pool tokens.
-
-        uint256 period = endBlock - startBlock;
-        uint256 change = getWeightsChangeRatio(targetWeight0, targetWeight1) /
-            period;
-
-        if (change > MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK) {
-            revert Mammon__RatioChangePerBlockIsAboveMax(
-                change,
-                MAX_WEIGHT_CHANGE_RATIO_PER_BLOCK
-            );
-        }
-
-        uint256[] memory newWeights = new uint256[](2);
-        newWeights[0] = targetWeight0;
-        newWeights[1] = targetWeight1;
-
-        SmartPoolManager.updateWeightsGradually(
-            pool,
-            gradualUpdate,
-            newWeights,
-            startBlock,
-            endBlock,
-            MIN_WEIGHT_CHANGE_BLOCK_PERIOD
-        );
-
-        emit UpdateWeightsGradually(
-            targetWeight0,
-            targetWeight1,
-            startBlock,
-            endBlock
-        );
+    )
+        external
+        override
+        onlyManager
+        onlyInitialized
+        nonFinalizing
+    // solhint-disable-next-line no-empty-blocks
+    {
+        // Should be implemented, updated or removed
     }
 
     /// @inheritdoc IManagerAPI
@@ -474,12 +396,9 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         onlyManager
         onlyInitialized
         nonFinalizing
+    // solhint-disable-next-line no-empty-blocks
     {
-        // IMPORTANT: This function currently privileges manager
-        // as an arbitrageur but will be unnecessary when we migrate
-        // to Balancer V2.
-        SmartPoolManager.pokeWeights(pool, gradualUpdate);
-        emit PokeWeights();
+        // Should be implemented, updated or removed
     }
 
     /// @inheritdoc IManagerAPI
@@ -488,39 +407,67 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         override
         onlyManager
         onlyInitialized
+    // solhint-disable-next-line no-empty-blocks
     {
-        pool.setPublicSwap(value);
-        emit SetPublicSwap(value);
+        // Should be implemented, updated or removed
     }
 
     /// @inheritdoc IManagerAPI
-    function setSwapFee(uint256 newSwapFee) external override onlyManager {
-        pool.setSwapFee(newSwapFee);
-        emit SetSwapFee(newSwapFee);
+    function setSwapFee(uint256 newSwapFee)
+        external
+        override
+        onlyManager
+    // solhint-disable-next-line no-empty-blocks
+    {
+        // Should be implemented, updated or removed
     }
 
     /// BINARY VAULT INTERFACE ///
 
     /// @inheritdoc IBinaryVault
-    function holdings0() public view override returns (uint256) {
-        return pool.getBalance(token0);
+    function holdings0()
+        public
+        view
+        override
+        returns (uint256)
+    // solhint-disable-next-line no-empty-blocks
+    {
+        // Should be implemented, updated or removed
     }
 
     /// @inheritdoc IBinaryVault
-    function holdings1() public view override returns (uint256) {
-        return pool.getBalance(token1);
+    function holdings1()
+        public
+        view
+        override
+        returns (uint256)
+    // solhint-disable-next-line no-empty-blocks
+    {
+        // Should be implemented, updated or removed
     }
 
     /// USER API ///
 
     /// @inheritdoc IUserAPI
-    function isPublicSwap() external view override returns (bool) {
-        return pool.isPublicSwap();
+    function isPublicSwap()
+        external
+        view
+        override
+        returns (bool)
+    // solhint-disable-next-line no-empty-blocks
+    {
+        // Should be implemented, updated or removed
     }
 
     /// @inheritdoc IUserAPI
-    function getSwapFee() external view override returns (uint256) {
-        return pool.getSwapFee();
+    function getSwapFee()
+        external
+        view
+        override
+        returns (uint256)
+    // solhint-disable-next-line no-empty-blocks
+    {
+        // Should be implemented, updated or removed
     }
 
     /// @inheritdoc IUserAPI
@@ -529,8 +476,9 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         view
         override
         returns (uint256)
+    // solhint-disable-next-line no-empty-blocks
     {
-        return pool.getDenormalizedWeight(token);
+        // Should be implemented, updated or removed
     }
 
     /// @notice Calculate change ratio for weights upgrade.
@@ -541,17 +489,13 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     function getWeightsChangeRatio(
         uint256 targetWeight0,
         uint256 targetWeight1
-    ) public view returns (uint256) {
-        uint256 weight0 = getDenormalizedWeight(token0);
-        uint256 weight1 = getDenormalizedWeight(token1);
-
-        uint256 factor0 = weight0 * targetWeight1;
-        uint256 factor1 = targetWeight0 * weight1;
-
-        return
-            factor0 > factor1
-                ? (ONE * factor0) / factor1
-                : (ONE * factor1) / factor0;
+    )
+        public
+        view
+        returns (uint256)
+    // solhint-disable-next-line no-empty-blocks
+    {
+        // Should be implemented, updated or removed
     }
 
     /// INTERNAL FUNCTIONS ///
@@ -564,14 +508,9 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     function bindToken(
         address token,
         uint256 amount,
-        uint256 weight
+        uint256 weight // solhint-disable-next-line no-empty-blocks
     ) internal {
-        /// Transfer token to this contract
-        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-        /// Approve the balancer pool
-        IERC20(token).safeApprove(address(pool), amount);
-        /// Bind token
-        pool.bind(token, amount, weight);
+        // Should be implemented, updated or removed
     }
 
     /// @notice Deposit token to the pool.
@@ -582,19 +521,9 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     function depositToken(
         address token,
         uint256 amount,
-        uint256 balance
+        uint256 balance // solhint-disable-next-line no-empty-blocks
     ) internal {
-        uint256 tokenDenorm = getDenormalizedWeight(token);
-        uint256 newBalance = balance + amount;
-
-        uint256 newDenorm = (tokenDenorm * newBalance) / balance;
-
-        IERC20 erc20 = IERC20(token);
-
-        erc20.safeTransferFrom(msg.sender, address(this), amount);
-        erc20.safeApprove(address(pool), amount);
-
-        pool.rebind(token, newBalance, newDenorm);
+        // Should be implemented, updated or removed
     }
 
     /// @notice Withdraw token from the pool.
@@ -606,17 +535,12 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
         address token,
         uint256 amount,
         uint256 balance
-    ) internal returns (uint256 withdrawAmount) {
-        uint256 tokenDenorm = getDenormalizedWeight(token);
-
-        uint256 newBalance = balance - amount;
-        uint256 newDenorm = (tokenDenorm * newBalance) / balance;
-
-        pool.rebind(token, newBalance, newDenorm);
-
-        IERC20 erc20 = IERC20(token);
-        withdrawAmount = erc20.balanceOf(address(this));
-        erc20.safeTransfer(msg.sender, withdrawAmount);
+    )
+        internal
+        returns (uint256 withdrawAmount)
+    // solhint-disable-next-line no-empty-blocks
+    {
+        // Should be implemented, updated or removed
     }
 
     /// @notice Return all funds to owner.
@@ -626,9 +550,9 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     function returnFunds()
         internal
         returns (uint256 amount0, uint256 amount1)
+    // solhint-disable-next-line no-empty-blocks
     {
-        amount0 = returnTokenFunds(token0);
-        amount1 = returnTokenFunds(token1);
+        // Should be implemented, updated or removed
     }
 
     /// @notice Return funds to owner.
@@ -638,11 +562,8 @@ contract MammonVaultV0 is IMammonVaultV0, Ownable, ReentrancyGuard {
     function returnTokenFunds(address token)
         internal
         returns (uint256 amount)
+    // solhint-disable-next-line no-empty-blocks
     {
-        pool.unbind(token);
-
-        IERC20 erc20 = IERC20(token);
-        amount = erc20.balanceOf(address(this));
-        erc20.safeTransfer(owner(), amount);
+        // Should be implemented, updated or removed
     }
 }
