@@ -1,41 +1,25 @@
 // Addresses are taken from https://docs.balancer.fi/v/v1/smart-contracts/addresses
 export const getConfig = (
   chainId: number,
-<<<<<<< HEAD
 ): { vault: string; factory: string; bVault: string } => {
-=======
-): { vault: string; bFactory: string } => {
->>>>>>> f91652b (update with init fork test)
   switch (chainId) {
     case 1:
       return {
         vault: "MammonVaultV1Mainnet",
-<<<<<<< HEAD
         factory: "0x48767F9F868a4A7b86A90736632F6E44C2df7fa9",
         bVault: "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
-=======
-        bFactory: "0x48767F9F868a4A7b86A90736632F6E44C2df7fa9",
->>>>>>> f91652b (update with init fork test)
       };
     case 42:
       return {
         vault: "MammonVaultV1Kovan",
-<<<<<<< HEAD
         factory: "0xb08E16cFc07C684dAA2f93C70323BAdb2A6CBFd2",
         bVault: "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
-=======
-        bFactory: "0xb08E16cFc07C684dAA2f93C70323BAdb2A6CBFd2",
->>>>>>> f91652b (update with init fork test)
       };
     case 31337:
       return {
         vault: "MammonVaultV1Mainnet",
-<<<<<<< HEAD
         factory: "0x48767F9F868a4A7b86A90736632F6E44C2df7fa9",
         bVault: "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
-=======
-        bFactory: "0x48767F9F868a4A7b86A90736632F6E44C2df7fa9",
->>>>>>> f91652b (update with init fork test)
       };
     default:
       throw "unsupported chain ID";

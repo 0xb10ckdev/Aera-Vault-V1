@@ -1,14 +1,8 @@
 import { getConfig } from "../../scripts/config";
-<<<<<<< HEAD
 import { task, types } from "hardhat/config";
 
 task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   .addParam("factory", "Mammon Pool Factory's address")
-=======
-import { task } from "hardhat/config";
-
-task("deploy:vault", "Deploys a Mammon vault with the given parameters")
->>>>>>> f91652b (update with init fork test)
   .addParam("name", "Pool Token's name")
   .addParam("symbol", "Pool Token's symbol")
   .addParam("tokens", "Tokens' addresses")
@@ -18,7 +12,6 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   .addParam("manager", "Manager's address")
   .addParam("validator", "Validator's address")
   .addParam("noticePeriod", "Notice period in seconds")
-<<<<<<< HEAD
   .addOptionalParam(
     "silent",
     "Disable console log on deployment",
@@ -27,9 +20,6 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   )
   .setAction(async (taskArgs, { deployments, ethers, network }) => {
     const factory = taskArgs.factory;
-=======
-  .setAction(async (taskArgs, { deployments, ethers, network }) => {
->>>>>>> f91652b (update with init fork test)
     const name = taskArgs.name;
     const symbol = taskArgs.symbol;
     const tokens = taskArgs.tokens.split(",");
@@ -40,7 +30,6 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     const validator = taskArgs.validator;
     const noticePeriod = taskArgs.noticePeriod;
 
-<<<<<<< HEAD
     if (tokens.length < 2) {
       console.error("Number of Tokens should be at least two");
       return;
@@ -54,13 +43,10 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
       return;
     }
 
-=======
->>>>>>> f91652b (update with init fork test)
     const config = getConfig(network.config.chainId || 1);
 
     const { admin } = await ethers.getNamedSigners();
 
-<<<<<<< HEAD
     if (!taskArgs.silent) {
       console.log("Deploying vault with");
       console.log(`Factory: ${factory}`);
@@ -74,28 +60,11 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
       console.log(`Validator: ${validator}`);
       console.log(`Notice Period: ${noticePeriod}`);
     }
-=======
-    console.log("Deploying vault with");
-    console.log(`Name: ${name}`);
-    console.log(`Symbol: ${symbol}`);
-    console.log("Tokens:");
-    console.log(tokens.join("\n"));
-    console.log("Weights");
-    console.log(weights.join("\n"));
-    console.log(`Swap Fee: ${swapFee}`);
-    console.log(`Management Swap Fee: ${managementSwapFee}`);
-    console.log(`Manager: ${manager}`);
-    console.log(`Validator: ${validator}`);
-    console.log(`Notice Period: ${noticePeriod}`);
->>>>>>> f91652b (update with init fork test)
 
     await deployments.deploy(config.vault, {
       contract: config.vault,
       args: [
-<<<<<<< HEAD
         factory,
-=======
->>>>>>> f91652b (update with init fork test)
         name,
         symbol,
         tokens,
@@ -110,17 +79,10 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
       log: true,
     });
 
-<<<<<<< HEAD
     if (!taskArgs.silent) {
       console.log(
         "Vault is deployed to:",
         (await deployments.get(config.vault)).address,
       );
     }
-=======
-    console.log(
-      "Vault is deployed to:",
-      (await deployments.get(config.vault)).address,
-    );
->>>>>>> f91652b (update with init fork test)
   });
