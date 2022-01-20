@@ -19,9 +19,10 @@ contract MammonVaultV1Mock is MammonVaultV1 {
         uint256[] memory weights,
         uint256 swapFeePercentage,
         uint256 managementSwapFeePercentage,
-        address manager_,
-        address validator_,
-        uint32 noticePeriod_
+        address manager,
+        address validator,
+        uint32 noticePeriod,
+        string memory description
     )
         MammonVaultV1(
             factory,
@@ -31,9 +32,10 @@ contract MammonVaultV1Mock is MammonVaultV1 {
             weights,
             swapFeePercentage,
             managementSwapFeePercentage,
-            manager_,
-            validator_,
-            noticePeriod_
+            manager,
+            validator,
+            noticePeriod,
+            description
         )
     {}
 
