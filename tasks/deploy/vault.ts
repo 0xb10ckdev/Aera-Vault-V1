@@ -7,7 +7,6 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   .addParam("tokens", "Tokens' addresses")
   .addParam("weights", "Tokens' weights")
   .addParam("swapFee", "Swap Fee Percentage")
-  .addParam("managementSwapFee", "Management Swap Fee Percentage")
   .addParam("manager", "Manager's address")
   .addParam("validator", "Validator's address")
   .addParam("noticePeriod", "Notice period in seconds")
@@ -24,7 +23,6 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     const tokens = taskArgs.tokens.split(",");
     const weights = taskArgs.weights.split(",");
     const swapFee = taskArgs.swapFee;
-    const managementSwapFee = taskArgs.managementSwapFee;
     const manager = taskArgs.manager;
     const validator = taskArgs.validator;
     const noticePeriod = taskArgs.noticePeriod;
@@ -52,7 +50,6 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
       console.log("Tokens:\n", tokens.join("\n"));
       console.log("Weights:\n", weights.join("\n"));
       console.log(`Swap Fee: ${swapFee}`);
-      console.log(`Management Swap Fee: ${managementSwapFee}`);
       console.log(`Manager: ${manager}`);
       console.log(`Validator: ${validator}`);
       console.log(`Notice Period: ${noticePeriod}`);
@@ -67,7 +64,6 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
         tokens,
         weights,
         swapFee,
-        managementSwapFee,
         manager,
         validator,
         noticePeriod,

@@ -208,7 +208,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param symbol Symbol of a Pool Token.
     /// @param tokens Address of tokens.
     /// @param swapFeePercentage Swap fee of the pool.
-    /// @param managementSwapFeePercentage Management swap fee of the pool.
     /// @param manager_ Vault manager address.
     /// @param validator_ Withdrawal validator contract address.
     /// @param noticePeriod_ Notice period in seconds.
@@ -219,7 +218,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         IERC20[] memory tokens,
         uint256[] memory weights,
         uint256 swapFeePercentage,
-        uint256 managementSwapFeePercentage,
         address manager_,
         address validator_,
         uint32 noticePeriod_,
@@ -262,7 +260,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 address(this),
                 false,
                 true,
-                managementSwapFeePercentage
+                0
             )
         );
 
