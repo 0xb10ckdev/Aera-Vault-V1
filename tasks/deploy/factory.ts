@@ -1,5 +1,5 @@
-import { getConfig } from "../../scripts/config";
 import { task, types } from "hardhat/config";
+import { getConfig } from "../../scripts/config";
 
 task("deploy:factory", "Deploys a Mammon Pool Factory")
   .addOptionalParam(
@@ -18,17 +18,15 @@ task("deploy:factory", "Deploys a Mammon Pool Factory")
       console.log(`Balancer Vault: ${config.bVault}`);
     }
 
-    await deployments.deploy("MammonPoolFactoryV1", {
-      contract: "MammonPoolFactoryV1",
+    const contract = "MammonPoolFactoryV1";
+    const result = await deployments.deploy(contract, {
+      contract,
       args: [config.bVault],
       from: admin.address,
       log: true,
     });
 
     if (!taskArgs.silent) {
-      console.log(
-        "Factory is deployed to:",
-        (await deployments.get("MammonPoolFactoryV1")).address,
-      );
+      console.log("Factory is deployed to:", result.address);
     }
   });
