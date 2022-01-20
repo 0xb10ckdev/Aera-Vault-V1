@@ -279,7 +279,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     const validWeights = valueArray(ONE.div(tokens.length), tokens.length);
 
     const vaultFactory = await ethers.getContractFactory(config.vault);
-    const vaultCaontract = await vaultFactory
+    const vaultContract = await vaultFactory
       .connect(admin)
       .deploy(
         factory.address,
@@ -292,9 +292,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         manager.address,
         validator.address,
         DEFAULT_NOTICE_PERIOD,
+        "Test vault description",
       );
     vault = MammonVaultV1Mainnet__factory.connect(
-      vaultCaontract.address,
+      vaultContract.address,
       admin,
     );
   });

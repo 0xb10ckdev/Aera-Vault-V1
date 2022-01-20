@@ -24,6 +24,7 @@ export const deployVault = async (
   manager: string,
   validator?: string,
   noticePeriod: number = DEFAULT_NOTICE_PERIOD,
+  description: string = "",
 ): Promise<MammonVaultV1Mainnet> => {
   const chainId = getChainId(process.env.HARDHAT_FORK);
   const config = getConfig(chainId);
@@ -48,6 +49,7 @@ export const deployVault = async (
       manager,
       validator,
       noticePeriod,
+      description,
     );
 };
 
