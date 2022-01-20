@@ -8,8 +8,8 @@ import {
 import {
   MammonPoolFactoryV1,
   MammonPoolFactoryV1__factory,
-  MammonVaultV1Mainnet,
-  MammonVaultV1Mainnet__factory,
+  MammonVaultV1Mock,
+  MammonVaultV1Mock__factory,
 } from "../typechain";
 
 export const deployVault = async (
@@ -25,12 +25,9 @@ export const deployVault = async (
   validator?: string,
   noticePeriod: number = DEFAULT_NOTICE_PERIOD,
   description: string = "",
-): Promise<MammonVaultV1Mainnet> => {
-  const chainId = getChainId(process.env.HARDHAT_FORK);
-  const config = getConfig(chainId);
-
-  const vault = await ethers.getContractFactory<MammonVaultV1Mainnet__factory>(
-    config.vault,
+): Promise<MammonVaultV1Mock> => {
+  const vault = await ethers.getContractFactory<MammonVaultV1Mock__factory>(
+    "MammonVaultV1Mock",
   );
 
   if (!validator) {

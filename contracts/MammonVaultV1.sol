@@ -597,94 +597,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         return pool.getNormalizedWeights();
     }
 
-    /// @inheritdoc IUserAPI
-    function getSpotPrice(address tokenIn, address tokenOut)
-        external
-        view
-        override
-        returns (uint256)
-    {
-        if (tokenIn == tokenOut) {
-            return ONE;
-        }
-
-        IERC20[] memory tokens;
-        uint256[] memory holdings;
-        (tokens, holdings, ) = getTokensData();
-        uint256[] memory weights = getNormalizedWeights();
-
-        uint256 tokenInId = type(uint256).max;
-        uint256 tokenOutId = type(uint256).max;
-
-        for (uint256 i = 0; i < tokens.length; i++) {
-            if (tokenIn == address(tokens[i])) {
-                tokenInId = i;
-                if (tokenOutId < type(uint256).max) {
-                    break;
-                }
-            } else if (tokenOut == address(tokens[i])) {
-                tokenOutId = i;
-                if (tokenInId < type(uint256).max) {
-                    break;
-                }
-            }
-        }
-
-        if (
-            tokenInId == type(uint256).max || tokenOutId == type(uint256).max
-        ) {
-            return 0;
-        }
-
-        return
-            calcSpotPrice(
-                holdings[tokenInId],
-                weights[tokenInId],
-                holdings[tokenOutId],
-                weights[tokenOutId],
-                pool.getSwapFeePercentage()
-            );
-    }
-
-    /// @inheritdoc IUserAPI
-    function getSpotPrices(address tokenIn)
-        external
-        view
-        override
-        returns (uint256[] memory spotPrices)
-    {
-        IERC20[] memory tokens;
-        uint256[] memory holdings;
-        (tokens, holdings, ) = getTokensData();
-        uint256[] memory weights = getNormalizedWeights();
-        spotPrices = new uint256[](tokens.length);
-
-        uint256 tokenInId = type(uint256).max;
-
-        for (uint256 i = 0; i < tokens.length; i++) {
-            if (tokenIn == address(tokens[i])) {
-                tokenInId = i;
-                break;
-            }
-        }
-
-        if (tokenInId < type(uint256).max) {
-            for (uint256 i = 0; i < tokens.length; i++) {
-                if (i == tokenInId) {
-                    spotPrices[i] = ONE;
-                } else {
-                    spotPrices[i] = calcSpotPrice(
-                        holdings[tokenInId],
-                        weights[tokenInId],
-                        holdings[i],
-                        weights[i],
-                        pool.getSwapFeePercentage()
-                    );
-                }
-            }
-        }
-    }
-
     /// INTERNAL FUNCTIONS ///
     /// @dev PoolBalanceOpKind has three kinds
     /// Withdrawal - decrease the Pool's cash, but increase its managed balance,
@@ -771,22 +683,5 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < tokens.length; i++) {
             amounts[i] = withdrawToken(tokens[i]);
         }
-    }
-
-    /// @notice Calculate spot price from balances and weights.
-    /// @dev Will only be called by getSpotPrice().
-    /// @return Spot Price from balances and weights.
-    function calcSpotPrice(
-        uint256 tokenBalanceIn,
-        uint256 tokenWeightIn,
-        uint256 tokenBalanceOut,
-        uint256 tokenWeightOut,
-        uint256 swapFee
-    ) internal view returns (uint256) {
-        uint256 numer = (tokenBalanceIn * ONE) / tokenWeightIn;
-        uint256 denom = (tokenBalanceOut * ONE) / tokenWeightOut;
-        uint256 ratio = (numer * ONE) / denom;
-        uint256 scale = (ONE * ONE) / (ONE - swapFee);
-        return (ratio * scale) / ONE;
     }
 }

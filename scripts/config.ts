@@ -5,19 +5,19 @@ export const getConfig = (
   switch (chainId) {
     case 1:
       return {
-        vault: "MammonVaultV1Mainnet",
+        vault: "MammonVaultV1",
         factory: "0x48767F9F868a4A7b86A90736632F6E44C2df7fa9",
         bVault: "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
       };
     case 42:
       return {
-        vault: "MammonVaultV1Kovan",
+        vault: "MammonVaultV1",
         factory: "0xb08E16cFc07C684dAA2f93C70323BAdb2A6CBFd2",
         bVault: "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
       };
     case 31337:
       return {
-        vault: "MammonVaultV1Mainnet",
+        vault: "MammonVaultV1",
         factory: "0x48767F9F868a4A7b86A90736632F6E44C2df7fa9",
         bVault: "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
       };
