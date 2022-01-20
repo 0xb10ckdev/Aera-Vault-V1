@@ -58,6 +58,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     IWithdrawalValidator public immutable validator;
 
     /// STORAGE SLOT START ///
+    /// @notice Describes vault purpose and modelling assumptions for differentiating between vaults
+    /// @dev string cannot be immutable bytecode but only set in constructor
+    string public description;
 
     /// @notice Submits new balance parameters for the vault
     address public manager;
@@ -77,13 +80,15 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param manager Address of vault manager.
     /// @param validator Address of withdrawal validator contract
     /// @param noticePeriod Notice period in seconds.
+    /// @param description Vault description.
     event Created(
         address indexed factory,
         IERC20[] tokens,
         uint256[] weights,
         address manager,
         address validator,
-        uint32 noticePeriod
+        uint32 noticePeriod,
+        string description
     );
 
     /// @notice Emitted when tokens are deposited.
@@ -217,7 +222,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 managementSwapFeePercentage,
         address manager_,
         address validator_,
-        uint32 noticePeriod_
+        uint32 noticePeriod_,
+        string memory description_
     ) {
         if (tokens.length != weights.length) {
             revert Mammon__WeightLengthIsNotSame(
@@ -263,6 +269,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         manager = manager_;
         validator = IWithdrawalValidator(validator_);
         noticePeriod = noticePeriod_;
+        description = description_;
 
         emit Created(
             factory,
@@ -270,7 +277,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             weights,
             manager_,
             validator_,
-            noticePeriod_
+            noticePeriod_,
+            description_
         );
         emit ManagerChanged(UNSET_MANAGER_ADDRESS, manager_);
     }

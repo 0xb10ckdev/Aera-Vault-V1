@@ -22,7 +22,8 @@ contract MammonVaultV1Kovan is MammonVaultV1 {
         uint256 managementSwapFeePercentage,
         address manager_,
         address validator_,
-        uint32 noticePeriod_
+        uint32 noticePeriod_,
+        string memory description_
     )
         MammonVaultV1(
             factory,
@@ -34,7 +35,8 @@ contract MammonVaultV1Kovan is MammonVaultV1 {
             managementSwapFeePercentage,
             manager_,
             validator_,
-            noticePeriod_
+            noticePeriod_,
+            description_
         )
     {}
 }
