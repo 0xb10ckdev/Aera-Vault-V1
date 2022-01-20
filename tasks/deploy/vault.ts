@@ -55,8 +55,9 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
       console.log(`Notice Period: ${noticePeriod}`);
     }
 
-    await deployments.deploy("MammonVaultV1", {
-      contract: "MammonVaultV1",
+    const contract = "MammonVaultV1";
+    const result = await deployments.deploy(contract, {
+      contract,
       args: [
         factory,
         name,
@@ -73,9 +74,6 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     });
 
     if (!taskArgs.silent) {
-      console.log(
-        "Vault is deployed to:",
-        (await deployments.get("MammonVaultV1")).address,
-      );
+      console.log("Vault is deployed to:", result.address);
     }
   });

@@ -2,8 +2,8 @@ import { BigNumber, Signer } from "ethers";
 import { deployments, ethers } from "hardhat";
 import {
   DEFAULT_NOTICE_PERIOD,
-  getConfig,
   getChainId,
+  getConfig,
 } from "../scripts/config";
 import {
   MammonPoolFactoryV1,

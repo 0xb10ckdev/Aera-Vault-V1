@@ -1,24 +1,21 @@
+import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-waffle";
+import "@primitivefi/hardhat-dodoc";
 import "@typechain/hardhat";
-import "hardhat-gas-reporter";
-import "solidity-coverage";
+import { config as dotenvConfig } from "dotenv";
 import "hardhat-contract-sizer";
 import "hardhat-deploy";
-import "@nomiclabs/hardhat-ethers";
-import "@primitivefi/hardhat-dodoc";
-
+import "hardhat-gas-reporter";
+import { HardhatUserConfig } from "hardhat/config";
+import { NetworkUserConfig } from "hardhat/types";
+import { resolve } from "path";
+import "solidity-coverage";
 import "./tasks/clean";
 import "./tasks/deploy";
 
-import { resolve } from "path";
-
-import { config as dotenvConfig } from "dotenv";
-import { HardhatUserConfig } from "hardhat/config";
-import { NetworkUserConfig } from "hardhat/types";
-
 dotenvConfig({ path: resolve(__dirname, "./.env") });
 
-const chainIds = {
+export const chainIds = {
   ganache: 1337,
   goerli: 5,
   hardhat: 31337,
@@ -26,6 +23,8 @@ const chainIds = {
   mainnet: 1,
   rinkeby: 4,
   ropsten: 3,
+  polygon: 15001,
+  mumbai: 80001,
 };
 
 // Ensure that we have all the environment variables we need.
@@ -54,15 +53,42 @@ if (!infuraApiKey && !alchemyApiKey) {
   );
 }
 
-const forkUrl = alchemyApiKey
-  ? `https://eth-${process.env.HARDHAT_FORK}.alchemyapi.io/v2/${alchemyApiKey}`
-  : `https://${process.env.HARDHAT_FORK}.infura.io/v3/${infuraApiKey}`;
+// validate Infura API key and create access URL
+function createInfuraUrl(network: string) {
+  if (!infuraApiKey || infuraApiKey.includes("zzzz")) {
+    console.log(
+      "Warning: Please set your INFURA_API_KEY in the env file if doing a deployment",
+    );
+  }
+  return "https://" + network + ".infura.io/v3/" + infuraApiKey;
+}
+
+function createAlchemyUrl(network: string) {
+  if (!alchemyApiKey || alchemyApiKey.includes("zzzz")) {
+    console.log(
+      "Warning: Please set your ALCHEMY_API_KEY in the env file if doing a deployment",
+    );
+  }
+  let urlPrefix = `eth-${network}`;
+  if (network === "polygon") {
+    urlPrefix = "polygon-mainnet.g";
+  } else if (network === "mumbai") {
+    urlPrefix = "polygon-mumbai.g";
+  }
+  return `https://${urlPrefix}.alchemyapi.io/v2/${alchemyApiKey}`;
+}
+
+const forkUrl = process.env.HARDHAT_FORK
+  ? alchemyApiKey
+    ? createAlchemyUrl(process.env.HARDHAT_FORK)
+    : createInfuraUrl(process.env.HARDHAT_FORK)
+  : "";
 
 // use mnemonic for deployment
 function createTestnetConfig(
   network: keyof typeof chainIds,
 ): NetworkUserConfig {
-  const url = createInfuraUrl(network, infuraApiKey);
+  const url = createInfuraUrl(network);
   return {
     accounts: {
       count: 10,
@@ -75,21 +101,11 @@ function createTestnetConfig(
   };
 }
 
-// validate Infura API key and create access URL
-function createInfuraUrl(network: string, infuraApiKey: string | undefined) {
-  if (!infuraApiKey || infuraApiKey.includes("zzzz")) {
-    console.log(
-      "Warning: Please set your INFURA_API_KEY in the env file if doing a deployment",
-    );
-  }
-  return "https://" + network + ".infura.io/v3/" + infuraApiKey;
-}
-
 // use private key for deployment rather than mnemonic
 function createTestnetPrivateKeyConfig(
   network: keyof typeof chainIds,
 ): NetworkUserConfig {
-  const url = createInfuraUrl(network, infuraApiKey);
+  const url = createAlchemyUrl(network);
   return {
     // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
     accounts: [testnetPrivateKey!],
@@ -136,6 +152,8 @@ const config: HardhatUserConfig = {
     kovan: createTestnetPrivateKeyConfig("kovan"),
     rinkeby: createTestnetConfig("rinkeby"),
     ropsten: createTestnetConfig("ropsten"),
+    polygon: createTestnetPrivateKeyConfig("polygon"),
+    mumbai: createTestnetPrivateKeyConfig("mumbai"),
   },
   etherscan: {
     apiKey: etherscanApiKey,
