@@ -5,8 +5,8 @@ import {
   IERC20,
   MammonPoolFactoryV1,
   MammonPoolFactoryV1__factory,
-  MammonVaultV1Mainnet,
-  MammonVaultV1Mainnet__factory,
+  MammonVaultV1Mock,
+  MammonVaultV1Mock__factory,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
 } from "../../typechain";
@@ -233,7 +233,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
   let user: SignerWithAddress;
-  let vault: MammonVaultV1Mainnet;
+  let vault: MammonVaultV1Mock;
   let validator: WithdrawalValidatorMock;
   let factory: MammonPoolFactoryV1;
   let tokens: IERC20[];
@@ -274,21 +274,19 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
     validator = await validatorMock.connect(admin).deploy(tokens.length);
 
-    const factoryV1Factory = await ethers.getContractFactory(
-      "MammonPoolFactoryV1",
-    );
-    const factoryContract = await factoryV1Factory
-      .connect(admin)
-      .deploy(config.bVault);
-    factory = MammonPoolFactoryV1__factory.connect(
-      factoryContract.address,
-      admin,
-    );
+    const factoryV1Factory =
+      await ethers.getContractFactory<MammonPoolFactoryV1__factory>(
+        "MammonPoolFactoryV1",
+      );
+    factory = await factoryV1Factory.connect(admin).deploy(config.bVault);
 
     const validWeights = valueArray(ONE.div(tokens.length), tokens.length);
 
-    const vaultFactory = await ethers.getContractFactory(config.vault);
-    const vaultContract = await vaultFactory
+    const vaultFactory =
+      await ethers.getContractFactory<MammonVaultV1Mock__factory>(
+        "MammonVaultV1Mock",
+      );
+    vault = await vaultFactory
       .connect(admin)
       .deploy(
         factory.address,
@@ -303,10 +301,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         DEFAULT_NOTICE_PERIOD,
         "Test vault description",
       );
-    vault = MammonVaultV1Mainnet__factory.connect(
-      vaultContract.address,
-      admin,
-    );
   });
 
   afterEach(async () => {
