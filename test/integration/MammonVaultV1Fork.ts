@@ -85,7 +85,6 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
           [...sortedTokens, tokens[0].address],
           validWeights,
           MIN_SWAP_FEE.toString(),
-          ONE.toString(),
           manager.address,
         ),
       ).to.be.revertedWith("Mammon__WeightLengthIsNotSame");
@@ -101,7 +100,6 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
           sortedTokens,
           validWeights,
           MIN_SWAP_FEE.toString(),
-          ONE.toString(),
           manager.address,
           validator.address,
           MAX_NOTICE_PERIOD + 1,
@@ -119,7 +117,6 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
           sortedTokens,
           validWeights,
           MIN_SWAP_FEE.toString(),
-          ONE.toString(),
           manager.address,
           manager.address,
         ),
@@ -133,7 +130,6 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
           sortedTokens,
           validWeights,
           MIN_SWAP_FEE.toString(),
-          ONE.toString(),
           manager.address,
           (
             await deployments.get("InvalidValidator")
@@ -152,7 +148,6 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
           unsortedTokens,
           validWeights,
           MIN_SWAP_FEE.toString(),
-          ONE.toString(),
           manager.address,
           validator.address,
         ),
@@ -169,7 +164,6 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
           sortedTokens,
           validWeights,
           MAX_SWAP_FEE.add(1).toString(),
-          ONE.toString(),
           manager.address,
           validator.address,
         ),
@@ -186,7 +180,6 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
           sortedTokens,
           validWeights,
           MIN_SWAP_FEE.sub(1).toString(),
-          ONE.toString(),
           manager.address,
           validator.address,
         ),
@@ -203,28 +196,10 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
           sortedTokens,
           valueArray(MIN_WEIGHT, tokens.length),
           MIN_SWAP_FEE.toString(),
-          ONE.toString(),
           manager.address,
           validator.address,
         ),
       ).to.be.revertedWith(BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT);
-    });
-
-    it("when management swap fee is greater than maximum", async () => {
-      await expect(
-        deployVault(
-          admin,
-          factory.address,
-          "Test",
-          "TEST",
-          sortedTokens,
-          validWeights,
-          MIN_SWAP_FEE.toString(),
-          ONE.add(1).toString(),
-          manager.address,
-          validator.address,
-        ),
-      ).to.be.revertedWith(BALANCER_ERRORS.MAX_MANAGEMENT_SWAP_FEE_PERCENTAGE);
     });
   });
 });
@@ -295,7 +270,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         sortedTokens,
         validWeights,
         MIN_SWAP_FEE,
-        ONE,
         manager.address,
         validator.address,
         DEFAULT_NOTICE_PERIOD,
