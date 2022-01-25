@@ -10,6 +10,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   .addParam("manager", "Manager's address")
   .addParam("validator", "Validator's address")
   .addParam("noticePeriod", "Notice period in seconds")
+  .addParam("description", "Description")
   .addOptionalParam(
     "silent",
     "Disable console log on deployment",
@@ -26,6 +27,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     const manager = taskArgs.manager;
     const validator = taskArgs.validator;
     const noticePeriod = taskArgs.noticePeriod;
+    const description = taskArgs.description;
 
     if (tokens.length < 2) {
       console.error("Number of Tokens should be at least two");
@@ -53,6 +55,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
       console.log(`Manager: ${manager}`);
       console.log(`Validator: ${validator}`);
       console.log(`Notice Period: ${noticePeriod}`);
+      console.log(`Description: ${description}`);
     }
 
     const contract = "MammonVaultV1";
@@ -68,6 +71,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
         manager,
         validator,
         noticePeriod,
+        description,
       ],
       from: admin.address,
       log: true,
