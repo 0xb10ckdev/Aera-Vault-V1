@@ -10,7 +10,10 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   .addParam("manager", "Manager's address")
   .addParam("validator", "Validator's address")
   .addParam("noticePeriod", "Notice period in seconds")
-  .addParam("description", "Description")
+  .addParam(
+    "description",
+    "Vault text description. Keep it short and simple, please.",
+  )
   .addOptionalParam(
     "silent",
     "Disable console log on deployment",
