@@ -190,6 +190,18 @@ const config: HardhatUserConfig = {
         },
       },
     ],
+    overrides: {
+      "contracts/dependencies/balancer-labs/pool-weighted/contracts/WeightedPool.sol":
+        {
+          version: "0.7.1",
+          settings: {
+            optimizer: {
+              enabled: true,
+              runs: 200,
+            },
+          },
+        },
+    },
     settings: {
       metadata: {
         // Not including the metadata hash
