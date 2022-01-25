@@ -211,6 +211,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param manager_ Vault manager address.
     /// @param validator_ Withdrawal validator contract address.
     /// @param noticePeriod_ Notice period in seconds.
+    /// @param description_ Vault text description. Keep it short and simple, please.
     constructor(
         address factory,
         string memory name,
