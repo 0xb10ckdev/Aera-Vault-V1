@@ -78,6 +78,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
       ],
       from: admin.address,
       log: true,
+      gasLimit: 10000000,
     });
 
     if (!taskArgs.silent) {
