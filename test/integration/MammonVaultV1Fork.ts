@@ -257,7 +257,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
     const validWeights = valueArray(ONE.div(tokens.length), tokens.length);
 
-    await hre.run("deploy:vault", {
+    vault = await hre.run("deploy:vault", {
       factory: factory.address,
       name: "Test",
       symbol: "TEST",
@@ -271,11 +271,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       silent: true,
       test: true,
     });
-
-    vault = MammonVaultV1Mock__factory.connect(
-      (await deployments.get("MammonVaultV1Mock")).address,
-      admin,
-    );
   });
 
   afterEach(async () => {
