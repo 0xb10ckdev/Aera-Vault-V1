@@ -257,24 +257,26 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
     const validWeights = valueArray(ONE.div(tokens.length), tokens.length);
 
-    const vaultFactory =
-      await ethers.getContractFactory<MammonVaultV1Mock__factory>(
-        "MammonVaultV1Mock",
-      );
-    vault = await vaultFactory
-      .connect(admin)
-      .deploy(
-        factory.address,
-        "Test",
-        "TEST",
-        sortedTokens,
-        validWeights,
-        MIN_SWAP_FEE,
-        manager.address,
-        validator.address,
-        DEFAULT_NOTICE_PERIOD,
-        "Test vault description",
-      );
+    await hre.run("deploy:vault", {
+      factory: factory.address,
+      name: "Test",
+      symbol: "TEST",
+      tokens: sortedTokens.join(","),
+      weights: validWeights.join(","),
+      swapFee: MIN_SWAP_FEE.toString(),
+      managementSwapFee: ONE.toString(),
+      manager: manager.address,
+      validator: validator.address,
+      noticePeriod: DEFAULT_NOTICE_PERIOD.toString(),
+      description: "Test vault description",
+      silent: true,
+      test: true,
+    });
+
+    vault = MammonVaultV1Mock__factory.connect(
+      (await deployments.get("MammonVaultV1Mock")).address,
+      admin,
+    );
   });
 
   afterEach(async () => {
