@@ -434,6 +434,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         for (uint256 i = 0; i < amounts.length; i++) {
             if (amounts[i] > 0) {
+                // slither-disable-next-line calls-loop
                 withdrawnAmounts[i] = withdrawToken(tokens[i]);
 
                 uint256 newBalance = holdings[i] - amounts[i];
@@ -468,6 +469,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IProtocolAPI
+    // slither-disable-next-line timestamp
     function finalize() external override nonReentrant onlyOwnerOrManager {
         if (noticeTimeoutAt == 0) {
             revert Mammon__FinalizationNotInitialized();
