@@ -26,7 +26,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     false,
     types.boolean,
   )
-  .setAction(async (taskArgs, { deployments, ethers }) => {
+  .setAction(async (taskArgs, { ethers }) => {
     const factory = taskArgs.factory;
     const name = taskArgs.name;
     const symbol = taskArgs.symbol;
@@ -68,9 +68,12 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     }
 
     const contract = taskArgs.test ? "MammonVaultV1Mock" : "MammonVaultV1";
-    const result = await deployments.deploy(contract, {
-      contract,
-      args: [
+
+    const vaultFactory = await ethers.getContractFactory(contract);
+
+    const vault = await vaultFactory
+      .connect(admin)
+      .deploy(
         factory,
         name,
         symbol,
@@ -81,12 +84,11 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
         validator,
         noticePeriod,
         description,
-      ],
-      from: admin.address,
-      log: true,
-    });
+      );
 
     if (!taskArgs.silent) {
-      console.log("Vault is deployed to:", result.address);
+      console.log("Vault is deployed to:", vault.address);
     }
+
+    return vault;
   });
