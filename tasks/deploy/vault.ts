@@ -20,6 +20,12 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     false,
     types.boolean,
   )
+  .addOptionalParam(
+    "test",
+    "Deploy Mammon Vault V1 Mock contract",
+    false,
+    types.boolean,
+  )
   .setAction(async (taskArgs, { deployments, ethers }) => {
     const factory = taskArgs.factory;
     const name = taskArgs.name;
@@ -61,7 +67,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
       console.log(`Description: ${description}`);
     }
 
-    const contract = "MammonVaultV1";
+    const contract = taskArgs.test ? "MammonVaultV1Mock" : "MammonVaultV1";
     const result = await deployments.deploy(contract, {
       contract,
       args: [
