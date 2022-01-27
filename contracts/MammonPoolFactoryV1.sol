@@ -27,6 +27,7 @@ contract MammonPoolFactoryV1 is
     BasePoolSplitCodeFactory,
     FactoryWidePauseWindow
 {
+    // slither-disable-next-line too-many-digits
     constructor(IVault vault)
         BasePoolSplitCodeFactory(vault, type(ManagedPool).creationCode)
     {
