@@ -264,7 +264,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       tokens: sortedTokens.join(","),
       weights: validWeights.join(","),
       swapFee: MIN_SWAP_FEE.toString(),
-      managementSwapFee: ONE.toString(),
       manager: manager.address,
       validator: validator.address,
       noticePeriod: DEFAULT_NOTICE_PERIOD.toString(),
