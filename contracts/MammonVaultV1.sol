@@ -673,8 +673,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param token Address of the token to withdraw.
     /// @param amount Amount to withdraw.
     function withdrawToken(IERC20 token) internal returns (uint256 amount) {
-        amount = token.balanceOf(address(this));
         // slither-disable-next-line calls-loop
+        amount = token.balanceOf(address(this));
         token.safeTransfer(msg.sender, amount);
     }
 
