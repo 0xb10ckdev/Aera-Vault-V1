@@ -265,6 +265,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             )
         );
 
+        // slither-disable-next-line reentrancy-benign
         bVault = IMammonPoolFactoryV1(factory).getVault();
         manager = manager_;
         validator = IWithdrawalValidator(validator_);
