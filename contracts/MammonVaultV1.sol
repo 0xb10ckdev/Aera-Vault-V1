@@ -271,6 +271,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         noticePeriod = noticePeriod_;
         description = description_;
 
+        // slither-disable-next-line reentrancy-events
         emit Created(
             factory,
             tokens,
@@ -280,6 +281,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             noticePeriod_,
             description_
         );
+        // slither-disable-next-line reentrancy-events
         emit ManagerChanged(UNSET_MANAGER_ADDRESS, manager_);
     }
 
@@ -383,6 +385,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         updateWeights(newWeights, weightSum);
 
+        // slither-disable-next-line reentrancy-events
         emit Deposit(amounts, getNormalizedWeights());
     }
 
@@ -434,7 +437,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         for (uint256 i = 0; i < amounts.length; i++) {
             if (amounts[i] > 0) {
-                // slither-disable-next-line calls-loop
                 withdrawnAmounts[i] = withdrawToken(tokens[i]);
 
                 uint256 newBalance = holdings[i] - amounts[i];
@@ -448,6 +450,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         updateWeights(newWeights, weightSum);
 
+        // slither-disable-next-line reentrancy-events
         emit Withdraw(
             amounts,
             withdrawnAmounts,
@@ -515,6 +518,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         pool.updateWeightsGradually(startTime, endTime, targetWeights);
 
+        // slither-disable-next-line reentrancy-events
         emit UpdateWeightsGradually(startTime, endTime, targetWeights);
     }
 
@@ -526,12 +530,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         onlyInitialized
     {
         pool.setSwapEnabled(value);
+        // slither-disable-next-line reentrancy-events
         emit SetSwapEnabled(value);
     }
 
     /// @inheritdoc IManagerAPI
     function setSwapFee(uint256 newSwapFee) external override onlyManager {
         pool.setSwapFeePercentage(newSwapFee);
+        // slither-disable-next-line reentrancy-events
         emit SetSwapFee(newSwapFee);
     }
 
@@ -667,6 +673,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param amount Amount to withdraw.
     function withdrawToken(IERC20 token) internal returns (uint256 amount) {
         amount = token.balanceOf(address(this));
+        // slither-disable-next-line calls-loop
         token.safeTransfer(msg.sender, amount);
     }
 
