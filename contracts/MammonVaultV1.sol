@@ -475,7 +475,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         uint256[] memory amounts = returnFunds();
-        emit Finalized(msg.sender, amounts);
+        emit Finalized(owner(), amounts);
 
         selfdestruct(payable(owner()));
     }
@@ -491,7 +491,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IProtocolAPI
     function sweep(address token, uint256 amount) external override onlyOwner {
-        IERC20(token).safeTransfer(msg.sender, amount);
+        IERC20(token).safeTransfer(owner(), amount);
     }
 
     /// MANAGER API ///
@@ -656,7 +656,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param token Address of the token to deposit.
     /// @param amount Amount to deposit.
     function depositToken(IERC20 token, uint256 amount) internal {
-        token.safeTransferFrom(msg.sender, address(this), amount);
+        token.safeTransferFrom(owner(), address(this), amount);
         token.safeApprove(address(bVault), amount);
     }
 
