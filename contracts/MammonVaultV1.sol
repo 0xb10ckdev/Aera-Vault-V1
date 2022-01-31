@@ -175,14 +175,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         _;
     }
 
-    /// @dev Throws if called by any account other than the owner or manager.
-    modifier onlyOwnerOrManager() {
-        if (msg.sender != owner() && msg.sender != manager) {
-            revert Mammon__CallerIsNotOwnerOrManager();
-        }
-        _;
-    }
-
     /// @dev Throws if called before vault is initialized.
     modifier onlyInitialized() {
         if (!initialized) {
