@@ -700,9 +700,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       describe("should be reverted to call finalize", async () => {
-        it("when called from non-owner and non-manager", async () => {
+        it("when called from non-owner", async () => {
           await expect(vault.connect(user).finalize()).to.be.revertedWith(
-            "Mammon__CallerIsNotOwnerOrManager",
+            "Ownable: caller is not the owner",
           );
         });
 
