@@ -474,7 +474,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IProtocolAPI
     // slither-disable-next-line timestamp
-    function finalize() external override nonReentrant onlyOwnerOrManager {
+    function finalize() external override nonReentrant onlyOwner {
         if (noticeTimeoutAt == 0) {
             revert Mammon__FinalizationNotInitialized();
         }
@@ -669,13 +669,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @notice Withdraw token from the pool.
-    /// @dev Will only be called by withdraw().
+    /// @dev Will only be called by withdraw() and returnFunds().
     /// @param token Address of the token to withdraw.
     /// @param amount Amount to withdraw.
     function withdrawToken(IERC20 token) internal returns (uint256 amount) {
         // slither-disable-next-line calls-loop
         amount = token.balanceOf(address(this));
-        token.safeTransfer(msg.sender, amount);
+        token.safeTransfer(owner(), amount);
     }
 
     /// @notice Return all funds to owner.
