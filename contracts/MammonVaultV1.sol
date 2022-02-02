@@ -148,6 +148,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__ValidatorIsNotValid(address validator);
     error Mammon__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
     error Mammon__CallerIsNotOwnerOrManager();
+    error Mammon__RenounceOwnershipDisabled();
     error Mammon__NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
     error Mammon__ManagerIsZeroAddress();
     error Mammon__CallerIsNotManager();
@@ -609,6 +610,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         returns (uint256[] memory)
     {
         return pool.getNormalizedWeights();
+    }
+
+    /// @dev Always reverts to protect `onlyOwner` interface.
+    function renounceOwnership() public override {
+        revert Mammon__RenounceOwnershipDisabled();
     }
 
     /// INTERNAL FUNCTIONS ///
