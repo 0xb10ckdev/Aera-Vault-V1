@@ -1,0 +1,45 @@
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+name: Create Release
+
+jobs:
+  build:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
+
+      - name: Install dependencies
+        run: yarn install --immutable || true
+
+      - name: Create mnemonic file
+        run: cp .env.ci .env
+      # Alchemy URL looks like https://eth-mainnet.alchemyapi.io/v2/API_KEY
+      # To extract API_KEY from URL we need to take the string after last "/"
+      # 'cut' command cannot take the last field after splitting the string,
+      # so to overcome this, we reverse the string, then split the string by "/"
+      # then take first item, then reverse the string back to obtain valid API key
+      - name: Parse Alchemy URL and append API key to .env file
+        run: echo ${{ secrets.ALCHEMY_URL_DEV_MAINNET }} | rev | cut -d "/" -f 1 | rev | ( read ALCHEMY_API_KEY; echo ALCHEMY_API_KEY=$ALCHEMY_API_KEY >> .env )
+
+      - name: Compile the contracts and generate TypeChain artifacts
+        run: yarn run typechain
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            contracts
+            artifacts
+            typechain
