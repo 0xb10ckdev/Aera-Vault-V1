@@ -1,5 +1,7 @@
 # Mammon Protocol
 
+[![Unit Tests](https://github.com/GauntletNetworks/mammon-contracts/actions/workflows/unit.yml/badge.svg)](https://github.com/GauntletNetworks/mammon-contracts/actions/workflows/unit.yml)
+
 Tools used:
 
 - [Hardhat](https://github.com/nomiclabs/hardhat): compile and run the smart contracts on a local development network
