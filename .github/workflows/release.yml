@@ -1,11 +1,12 @@
-on:
-  create:
-
 name: Create Release
+
+on:
+  push:
+    tags:
+      - "*"
 
 jobs:
   build:
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     name: Create Release
     runs-on: ubuntu-latest
     steps:
@@ -33,11 +34,19 @@ jobs:
       - name: Compile the contracts and generate TypeChain artifacts
         run: yarn run typechain
 
-      - name: Create Release
+      - name: Bundle build artifacts into archives
+        run: |
+          tar czf artifacts.tar.gz artifacts
+          tar czf typechain.tar.gz typechain
+          tar czf contracts.tar.gz contracts
+
+      - name: Create release and upload archive
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
+          fail_on_unmatched_files: true
+          generate_release_notes: true
           files: |
-            contracts
-            artifacts
-            typechain
+            artifacts.tar.gz
+            typechain.tar.gz
+            contracts.tar.gz
