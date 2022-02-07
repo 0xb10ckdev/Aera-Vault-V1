@@ -9,9 +9,9 @@ interface IManagerAPI {
     function setSwapEnabled(bool value) external;
 
     /// @notice Initiate weight move to target in given update window.
-    /// @param targetWeights Target weights of tokens.
-    /// @param startTime Timestamp at when weight movement starts.
-    /// @param endTime Timestamp at when the weights should reach target.
+    /// @param targetWeights Target token weights.
+    /// @param startTime Timestamp at which weight movement should start.
+    /// @param endTime Timestamp at which the weights should reach target values.
     function updateWeightsGradually(
         uint256[] memory targetWeights,
         uint256 startTime,
