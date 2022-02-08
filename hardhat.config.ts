@@ -23,7 +23,7 @@ export const chainIds = {
   mainnet: 1,
   rinkeby: 4,
   ropsten: 3,
-  polygon: 15001,
+  polygon: 137,
   mumbai: 80001,
 };
 
