@@ -10,11 +10,11 @@ interface IProtocolAPI {
     function initialDeposit(uint256[] memory amounts) external;
 
     /// @notice Deposit tokens into vault.
-    /// @param amounts Amount to deposit of tokens.
+    /// @param amounts Token amounts to deposit.
     function deposit(uint256[] memory amounts) external;
 
     /// @notice Withdraw tokens up to requested amounts.
-    /// @param amounts Requested amount of tokens.
+    /// @param amounts Requested token amounts.
     function withdraw(uint256[] memory amounts) external;
 
     /// @notice Initiate vault destruction and return all funds to treasury owner.
