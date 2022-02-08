@@ -37,10 +37,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Largest possible notice period for vault termination (2 months).
     uint256 private constant MAX_NOTICE_PERIOD = 60 days;
 
-    /// @notice Balancer Vault. Controlled by Mammon Vault.
+    /// @notice Balancer Vault.
     IBVault public immutable bVault;
 
-    /// @notice Balancer pool. Controlled by the Balancer vault.
+    /// @notice Balancer Pool.
     IBManagedPool public immutable pool;
 
     /// @notice Notice period for vault termination (in seconds).
@@ -49,12 +49,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Verifies withdraw limits.
     IWithdrawalValidator public immutable validator;
 
-    /// STORAGE SLOT START ///
     /// @notice Describes vault purpose and modelling assumptions for differentiating between vaults
     /// @dev string cannot be immutable bytecode but only set in constructor
     string public description;
 
-    /// @notice Submits new balance parameters for the vault
+    /// STORAGE SLOT START ///
+
+    /// @notice Controls vault parameters.
     address public manager;
 
     /// @notice Timestamp when notice elapses or 0 if not yet set
@@ -66,12 +67,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// EVENTS ///
 
     /// @notice Emitted when the vault is created.
-    /// @param factory Address of Balancer Managed Pool factory.
-    /// @param tokens Address of tokens.
-    /// @param weights Weights of tokens.
-    /// @param manager Address of vault manager.
-    /// @param validator Address of withdrawal validator contract
-    /// @param noticePeriod Notice period in seconds.
+    /// @param factory Balancer Managed Pool factory address.
+    /// @param tokens Token addresses.
+    /// @param weights Token weights.
+    /// @param manager Vault manager address.
+    /// @param validator Withdrawal validator contract address.
+    /// @param noticePeriod Notice period (in seconds).
     /// @param description Vault description.
     event Created(
         address indexed factory,
@@ -84,15 +85,15 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     );
 
     /// @notice Emitted when tokens are deposited.
-    /// @param amounts Amounts of tokens.
-    /// @param weights Weights of tokens after deposit.
+    /// @param amounts Token amounts.
+    /// @param weights Token weights following deposit.
     event Deposit(uint256[] amounts, uint256[] weights);
 
     /// @notice Emitted when tokens are withdrawn.
-    /// @param requestedAmounts Requested amount of tokens.
-    /// @param withdrawnAmounts Withdrawn amount of tokens.
-    /// @param allowances Allowance of tokens.
-    /// @param weights Weight of tokens after withdrawal.
+    /// @param requestedAmounts Requested token amounts.
+    /// @param withdrawnAmounts Withdrawn token amounts.
+    /// @param allowances Token withdrawal allowances.
+    /// @param weights Token weights following withdrawal.
     event Withdraw(
         uint256[] requestedAmounts,
         uint256[] withdrawnAmounts,
@@ -101,8 +102,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     );
 
     /// @notice Emitted when manager is changed.
-    /// @param previousManager Address of previous manager.
-    /// @param manager Address of a new manager.
+    /// @param previousManager Previous manager address.
+    /// @param manager New manager address.
     event ManagerChanged(
         address indexed previousManager,
         address indexed manager
@@ -111,7 +112,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Emitted when updateWeightsGradually is called.
     /// @param startTime Start timestamp of updates.
     /// @param endTime End timestamp of updates.
-    /// @param weights The target weights of the tokens.
+    /// @param weights Target weights of tokens.
     event UpdateWeightsGradually(
         uint256 startTime,
         uint256 endTime,
@@ -132,7 +133,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Emitted when vault is finalized.
     /// @param caller Address of finalizer.
-    /// @param amounts Returned amount of tokens.
+    /// @param amounts Returned token amounts.
     event Finalized(address indexed caller, uint256[] amounts);
 
     /// ERRORS ///
@@ -195,14 +196,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Initialize the contract by deploying new Balancer pool using the provided factory.
     /// @dev First token and second token shouldn't be same. Validator should conform to interface.
     /// @param factory Balancer Managed Pool Factory address.
-    /// @param name Name of a Pool Token.
-    /// @param symbol Symbol of a Pool Token.
-    /// @param tokens Address of tokens.
-    /// @param swapFeePercentage Swap fee of the pool.
+    /// @param name Name of Pool Token.
+    /// @param symbol Symbol of Pool Token.
+    /// @param tokens Token addresses.
+    /// @param swapFeePercentage Pool swap fee.
     /// @param manager_ Vault manager address.
     /// @param validator_ Withdrawal validator contract address.
-    /// @param noticePeriod_ Notice period in seconds.
-    /// @param description_ Vault text description. Keep it short and simple, please.
+    /// @param noticePeriod_ Notice period (in seconds).
+    /// @param description_ Simple vault text description.
     constructor(
         address factory,
         string memory name,
@@ -419,9 +420,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         /// Decrease cash balance and increase managed balance of pool
         /// i.e. Move amounts from cash balance to managed balance
+        /// and withdraw token amounts from pool to Mammon Vault
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.WITHDRAW);
-        /// Set managed balance of pool as zero array
-        /// i.e. Withdraw amounts of tokens from pool to Mammon Vault
+        /// Adjust managed balance of pool as the zero array
         updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
 
         uint256[] memory withdrawnAmounts = new uint256[](amounts.length);
@@ -603,6 +604,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// INTERNAL FUNCTIONS ///
+
     /// @dev PoolBalanceOpKind has three kinds
     /// Withdrawal - decrease the Pool's cash, but increase its managed balance,
     ///              leaving the total balance unchanged.
