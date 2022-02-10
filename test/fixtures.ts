@@ -1,6 +1,11 @@
+import { AssetHelpers } from "@balancer-labs/balancer-js";
 import { parseEther } from "@ethersproject/units";
 import { ethers } from "hardhat";
 import { ERC20Mock, ERC20Mock__factory } from "../typechain";
+
+// https://github.com/balancer-labs/balancer-v2-monorepo/blob/master/pkg/balancer-js/test/tokens.test.ts
+const wethAddress = "0x000000000000000000000000000000000000000F";
+const assetHelpers = new AssetHelpers(wethAddress);
 
 export const setupTokens = async (): Promise<{
   tokens: ERC20Mock[];
@@ -21,19 +26,22 @@ export const setupTokens = async (): Promise<{
     tokenDeploys.push(token);
   }
 
-  const tokens = tokenDeploys
-    .map(token => ERC20Mock__factory.connect(token.address, admin))
-    .sort((a, b) =>
-      a.address.toLowerCase() < b.address.toLowerCase() ? -1 : 1,
-    );
+  const tokens = tokenDeploys.map(token =>
+    ERC20Mock__factory.connect(token.address, admin),
+  );
 
-  const sortedTokens = [];
+  const [sortedTokens] = assetHelpers.sortTokens(
+    tokens.map(token => token.address),
+  );
+
+  tokens.sort(
+    (a, b) =>
+      sortedTokens.indexOf(a.address) - sortedTokens.indexOf(b.address),
+  );
+
   const unsortedTokens = [];
-
   for (let i = 0; i < tokens.length; i += 2) {
-    sortedTokens.push(tokens[i].address);
     if (i + 1 < tokens.length) {
-      sortedTokens.push(tokens[i + 1].address);
       unsortedTokens.push(tokens[i + 1].address);
     }
     unsortedTokens.push(tokens[i].address);
