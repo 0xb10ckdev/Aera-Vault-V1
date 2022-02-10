@@ -556,7 +556,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
     });
 
-    describe("Set Swap Enabled", () => {
+    describe("Enable Trading", () => {
       beforeEach(async () => {
         for (let i = 0; i < tokens.length; i++) {
           await tokens[i].approve(vault.address, ONE);
@@ -564,18 +564,47 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         await vault.initialDeposit(valueArray(ONE, tokens.length));
       });
 
-      it("should be reverted to set public swap", async () => {
-        await expect(vault.setSwapEnabled(true)).to.be.revertedWith(
-          "Mammon__CallerIsNotManager()",
-        );
+      it("should be reverted to enable trading", async () => {
+        await expect(
+          vault
+            .connect(manager)
+            .enableTrading(valueArray(ONE.div(tokens.length), tokens.length)),
+        ).to.be.revertedWith("Ownable: caller is not the owner");
       });
 
-      it("should be possible to set public swap", async () => {
-        await expect(vault.connect(manager).setSwapEnabled(true))
+      it("should be possible to enable trading", async () => {
+        await expect(
+          vault.enableTrading(
+            valueArray(ONE.div(tokens.length), tokens.length),
+          ),
+        )
           .to.emit(vault, "SetSwapEnabled")
           .withArgs(true);
 
         expect(await vault.isSwapEnabled()).to.equal(true);
+      });
+    });
+
+    describe("Disable Trading", () => {
+      beforeEach(async () => {
+        for (let i = 0; i < tokens.length; i++) {
+          await tokens[i].approve(vault.address, ONE);
+        }
+        await vault.initialDeposit(valueArray(ONE, tokens.length));
+      });
+
+      it("should be reverted to disable trading", async () => {
+        await expect(vault.connect(user).disableTrading()).to.be.revertedWith(
+          "Mammon__CallerIsNotOwnerOrManager",
+        );
+      });
+
+      it("should be possible to disable trading", async () => {
+        await expect(vault.connect(manager).disableTrading())
+          .to.emit(vault, "SetSwapEnabled")
+          .withArgs(false);
+
+        expect(await vault.isSwapEnabled()).to.equal(false);
       });
     });
 
