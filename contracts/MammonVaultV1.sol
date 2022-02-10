@@ -376,6 +376,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         /// i.e. Move amounts from managed balance to cash balance
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
 
+        /// It cancels current active weights change schedule
+        /// and update weights with newWeights
         updateWeights(newWeights, weightSum);
 
         // slither-disable-next-line reentrancy-events
@@ -441,6 +443,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             weightSum += newWeights[i];
         }
 
+        /// It cancels current active weights change schedule
+        /// and update weights with newWeights
         updateWeights(newWeights, weightSum);
 
         // slither-disable-next-line reentrancy-events

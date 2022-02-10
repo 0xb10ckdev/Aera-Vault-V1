@@ -10,10 +10,14 @@ interface IProtocolAPI {
     function initialDeposit(uint256[] memory amounts) external;
 
     /// @notice Deposit tokens into vault.
+    /// @dev It calls updateWeights() function
+    ///      which cancels current active weights change schedule.
     /// @param amounts Token amounts to deposit.
     function deposit(uint256[] memory amounts) external;
 
     /// @notice Withdraw tokens up to requested amounts.
+    /// @dev It calls updateWeights() function
+    ///      which cancels current active weights change schedule.
     /// @param amounts Requested token amounts.
     function withdraw(uint256[] memory amounts) external;
 
