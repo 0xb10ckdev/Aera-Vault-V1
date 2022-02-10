@@ -505,7 +505,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     ) external override onlyManager onlyInitialized nonFinalizing {
         if (
             Math.max(block.timestamp, startTime) +
-                MINIMUM_WEIGHT_CHANGE_DURATION <
+                MINIMUM_WEIGHT_CHANGE_DURATION >
             endTime
         ) {
             revert Mammon__WeightChangeDurationIsBelowMin(
