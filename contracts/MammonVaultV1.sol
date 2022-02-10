@@ -476,8 +476,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         uint256[] memory amounts = returnFunds();
         emit Finalized(owner(), amounts);
-
-        selfdestruct(payable(owner()));
     }
 
     /// @inheritdoc IProtocolAPI
