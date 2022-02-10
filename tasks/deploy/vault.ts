@@ -1,4 +1,9 @@
+import { AssetHelpers } from "@balancer-labs/balancer-js";
 import { task, types } from "hardhat/config";
+
+// https://github.com/balancer-labs/balancer-v2-monorepo/blob/master/pkg/balancer-js/test/tokens.test.ts
+const wethAddress = "0x000000000000000000000000000000000000000F";
+const assetHelpers = new AssetHelpers(wethAddress);
 
 task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   .addParam("factory", "Mammon Pool Factory's address")
@@ -43,12 +48,12 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
       return;
     }
 
-    for (let i = 0; i < tokens.length - 1; i++) {
-      if (tokens[i] < tokens[i + 1]) {
-        continue;
+    const [sortedTokens] = assetHelpers.sortTokens(tokens);
+    for (let i = 0; i < tokens.length; i++) {
+      if (tokens[i] !== sortedTokens[i]) {
+        console.error("Tokens should be sorted by address in ascending order");
+        return;
       }
-      console.error("Tokens should be sorted by address in ascending order");
-      return;
     }
 
     const { admin } = await ethers.getNamedSigners();
