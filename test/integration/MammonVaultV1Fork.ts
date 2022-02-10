@@ -613,6 +613,19 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           ).to.be.revertedWith("Mammon__WeightChangeDurationIsBelowMin");
         });
 
+        it("when actual duration is less than minimum", async () => {
+          const timestamp = await getCurrentTime();
+          await expect(
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                valueArray(ONE.div(tokens.length), tokens.length),
+                timestamp - 2,
+                timestamp + MINIMUM_WEIGHT_CHANGE_DURATION - 1,
+              ),
+          ).to.be.revertedWith("Mammon__WeightChangeDurationIsBelowMin");
+        });
+
         it("when total sum of weight is not one", async () => {
           const timestamp = await getCurrentTime();
           await expect(
