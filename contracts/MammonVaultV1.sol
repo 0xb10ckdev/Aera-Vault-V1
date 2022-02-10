@@ -497,6 +497,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// MANAGER API ///
 
     /// @inheritdoc IManagerAPI
+    // slither-disable-next-line timestamp
     function updateWeightsGradually(
         uint256[] calldata targetWeights,
         uint256 startTime,
