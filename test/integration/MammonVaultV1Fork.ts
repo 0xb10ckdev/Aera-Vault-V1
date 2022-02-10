@@ -1,36 +1,35 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
 import hre, { deployments, ethers } from "hardhat";
+import { DEFAULT_NOTICE_PERIOD, getConfig } from "../../scripts/config";
 import {
   IERC20,
   MammonPoolFactoryV1,
   MammonPoolFactoryV1__factory,
   MammonVaultV1Mock,
-  MammonVaultV1Mock__factory,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
 } from "../../typechain";
-import { setupTokens, deployToken } from "../fixtures";
+import {
+  BALANCER_ERRORS,
+  DEVIATION,
+  MAX_NOTICE_PERIOD,
+  MAX_SWAP_FEE,
+  MINIMUM_WEIGHT_CHANGE_DURATION,
+  MIN_SWAP_FEE,
+  MIN_WEIGHT,
+  NOTICE_PERIOD,
+  ONE,
+  ZERO_ADDRESS,
+} from "../constants";
+import { deployToken, setupTokens } from "../fixtures";
 import {
   deployFactory,
   deployVault,
+  getCurrentTime,
   toWei,
   valueArray,
-  getCurrentTime,
 } from "../utils";
-import { getConfig, DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
-import {
-  ONE,
-  MIN_WEIGHT,
-  MIN_SWAP_FEE,
-  MAX_SWAP_FEE,
-  ZERO_ADDRESS,
-  NOTICE_PERIOD,
-  MAX_NOTICE_PERIOD,
-  BALANCER_ERRORS,
-  MINIMUM_WEIGHT_CHANGE_DURATION,
-  DEVIATION,
-} from "../constants";
 
 describe("Mammon Vault V1 Mainnet Deployment", function () {
   let admin: SignerWithAddress;
@@ -893,6 +892,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     });
 
     describe("Set Swap Fee", () => {
+      const maxFeeDelta = toWei(0.0005);
+
       describe("should be reverted to set swap fee", async () => {
         it("when called from non-manager", async () => {
           await expect(vault.setSwapFee(toWei(3))).to.be.revertedWith(
@@ -900,26 +901,40 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           );
         });
 
-        it("when swap fee is greater than maximum", async () => {
+        it("when swap fee is greater than balancer maximum", async () => {
+          const maxFee = toWei(0.1);
+          let newFee = await vault.getSwapFee();
+          while (newFee.lte(maxFee)) {
+            await vault.connect(manager).setSwapFee(newFee);
+            newFee = newFee.add(maxFeeDelta);
+          }
           await expect(
-            vault.connect(manager).setSwapFee(toWei(0.3)),
+            vault.connect(manager).setSwapFee(maxFee.add(1)),
           ).to.be.revertedWith(BALANCER_ERRORS.MAX_SWAP_FEE_PERCENTAGE);
         });
 
-        it("when swap fee is less than minimum", async () => {
+        it("when swap fee is less than balancer minimum", async () => {
+          const minFee = toWei(0.000001);
+          let newFee = await vault.getSwapFee();
+          while (newFee.gte(minFee)) {
+            await vault.connect(manager).setSwapFee(newFee);
+            newFee = newFee.sub(maxFeeDelta);
+          }
           await expect(
-            vault.connect(manager).setSwapFee(toWei(1).div(1e7)),
+            vault.connect(manager).setSwapFee(minFee.sub(1)),
           ).to.be.revertedWith(BALANCER_ERRORS.MIN_SWAP_FEE_PERCENTAGE);
         });
       });
 
       it("should be possible to set swap fee", async () => {
+        const fee = await vault.getSwapFee();
+        const newFee = fee.add(maxFeeDelta);
         expect(
-          await vault.connect(manager).estimateGas.setSwapFee(toWei(0.01)),
+          await vault.connect(manager).estimateGas.setSwapFee(newFee),
         ).to.below(50000);
-        await vault.connect(manager).setSwapFee(toWei(0.01));
+        await vault.connect(manager).setSwapFee(newFee);
 
-        expect(await vault.getSwapFee()).to.equal(toWei(0.01));
+        expect(await vault.getSwapFee()).to.equal(newFee);
       });
     });
   });

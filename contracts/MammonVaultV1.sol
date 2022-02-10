@@ -31,6 +31,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Minimum period for weight change duration.
     uint256 private constant MINIMUM_WEIGHT_CHANGE_DURATION = 1 days;
 
+    /// @notice Maximum absolute change in swap fee.
+    uint256 private constant MAXIMUM_SWAP_FEE_PERCENT_CHANGE = 0.0005e18;
+
     /// @dev Address to represent unset manager in events.
     address private constant UNSET_MANAGER_ADDRESS = address(0);
 
@@ -151,6 +154,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
     error Mammon__ManagerIsZeroAddress();
     error Mammon__CallerIsNotManager();
+    error Mammon__SwapFeePercentageChangeIsAboveMax(
+        uint256 actual,
+        uint256 max
+    );
     error Mammon__WeightChangeDurationIsBelowMin(uint256 actual, uint256 min);
     error Mammon__WeightIsAboveMax(uint256 actual, uint256 max);
     error Mammon__WeightIsBelowMin(uint256 actual, uint256 min);
@@ -529,6 +536,18 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IManagerAPI
     function setSwapFee(uint256 newSwapFee) external override onlyManager {
+        uint256 oldSwapFee = pool.getSwapFeePercentage();
+
+        uint256 absoluteDelta = (newSwapFee > oldSwapFee)
+            ? newSwapFee - oldSwapFee
+            : oldSwapFee - newSwapFee;
+        if (absoluteDelta > MAXIMUM_SWAP_FEE_PERCENT_CHANGE) {
+            revert Mammon__SwapFeePercentageChangeIsAboveMax(
+                absoluteDelta,
+                MAXIMUM_SWAP_FEE_PERCENT_CHANGE
+            );
+        }
+
         pool.setSwapFeePercentage(newSwapFee);
         // slither-disable-next-line reentrancy-events
         emit SetSwapFee(newSwapFee);
