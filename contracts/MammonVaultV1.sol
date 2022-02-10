@@ -164,6 +164,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__VaultNotInitialized();
     error Mammon__VaultIsAlreadyInitialized();
     error Mammon__VaultIsFinalizing();
+    error Mammon__VaultIsNotRenounceable();
 
     /// MODIFIERS ///
 
@@ -601,6 +602,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         returns (uint256[] memory)
     {
         return pool.getNormalizedWeights();
+    }
+
+    /// @notice Disable ownership renounceable
+    function renounceOwnership() public override onlyOwner {
+        revert Mammon__VaultIsNotRenounceable();
     }
 
     /// INTERNAL FUNCTIONS ///
