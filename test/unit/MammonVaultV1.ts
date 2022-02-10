@@ -464,8 +464,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         for (let i = 0; i < tokens.length; i++) {
           expect(newBalances[i]).to.equal(balances[i].add(holdings[i]));
         }
-
-        expect(await ethers.provider.getCode(vault.address)).to.equal("0x");
       });
     });
   });
