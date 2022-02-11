@@ -319,9 +319,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         bytes memory initUserData = abi.encode(0, amounts);
 
         for (uint256 i = 0; i < tokens.length; i++) {
-            if (amounts[i] > 0) {
-                depositToken(tokens[i], amounts[i]);
-            }
+            depositToken(tokens[i], amounts[i]);
         }
 
         IBVault.JoinPoolRequest memory joinPoolRequest = IBVault
