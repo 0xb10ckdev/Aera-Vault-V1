@@ -184,7 +184,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @dev Throws if called before vault is initialized.
-    modifier onlyInitialized() {
+    modifier whenInitialized() {
         if (!initialized) {
             revert Mammon__VaultNotInitialized();
         }
@@ -192,7 +192,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @dev Throws if called before finalization is initialized.
-    modifier nonFinalizing() {
+    modifier whenNotFinalizing() {
         if (noticeTimeoutAt != 0) {
             revert Mammon__VaultIsFinalizing();
         }
@@ -344,8 +344,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         override
         nonReentrant
         onlyOwner
-        onlyInitialized
-        nonFinalizing
+        whenInitialized
+        whenNotFinalizing
     {
         IERC20[] memory tokens;
         uint256[] memory holdings;
@@ -394,8 +394,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         override
         nonReentrant
         onlyOwner
-        onlyInitialized
-        nonFinalizing
+        whenInitialized
+        whenNotFinalizing
     {
         IERC20[] memory tokens;
         uint256[] memory holdings;
@@ -463,8 +463,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         external
         override
         onlyOwner
-        onlyInitialized
-        nonFinalizing
+        whenInitialized
+        whenNotFinalizing
     {
         noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
         emit FinalizationInitialized(noticeTimeoutAt);
@@ -506,7 +506,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256[] calldata targetWeights,
         uint256 startTime,
         uint256 endTime
-    ) external override onlyManager onlyInitialized nonFinalizing {
+    ) external override onlyManager whenInitialized whenNotFinalizing {
         if (
             Math.max(block.timestamp, startTime) +
                 MINIMUM_WEIGHT_CHANGE_DURATION >
@@ -529,7 +529,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         external
         override
         onlyManager
-        onlyInitialized
+        whenInitialized
     {
         pool.setSwapEnabled(value);
         // slither-disable-next-line reentrancy-events
