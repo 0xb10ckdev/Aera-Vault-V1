@@ -615,5 +615,21 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
       });
     });
+
+    describe("Renounce Ownership", () => {
+      describe("should be reverted", () => {
+        it("when called from non-owner", async () => {
+          await expect(
+            vault.connect(user).renounceOwnership(),
+          ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("when called from owner", async () => {
+          await expect(vault.renounceOwnership()).to.be.revertedWith(
+            "Mammon__VaultIsNotRenounceable",
+          );
+        });
+      });
+    });
   });
 });
