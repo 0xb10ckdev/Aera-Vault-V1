@@ -27,6 +27,7 @@ import {
   deployFactory,
   deployVault,
   getCurrentTime,
+  increaseTime,
   toWei,
   valueArray,
 } from "../utils";
@@ -684,9 +685,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           .connect(manager)
           .updateWeightsGradually(endWeights, startTime, endTime);
 
-        for (let i = 0; i < 1000; i++) {
-          await ethers.provider.send("evm_mine", []);
-        }
+        await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION);
 
         const currentWeights = await vault.getNormalizedWeights();
 
@@ -734,17 +733,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           .connect(manager)
           .updateWeightsGradually(endWeights, startTime, endTime);
 
-        for (let i = 0; i < 500; i++) {
-          await ethers.provider.send("evm_mine", []);
-        }
+        await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION / 2);
 
         await vault.connect(manager).cancelWeightUpdates();
 
         const newWeights = await vault.getNormalizedWeights();
 
-        for (let i = 0; i < 500; i++) {
-          await ethers.provider.send("evm_mine", []);
-        }
+        await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION / 2);
 
         const currentWeights = await vault.getNormalizedWeights();
 
