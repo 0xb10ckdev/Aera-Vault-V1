@@ -185,7 +185,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
       ).to.be.revertedWith(BALANCER_ERRORS.MIN_SWAP_FEE_PERCENTAGE);
     });
 
-    it("when total sum of weight is not one", async () => {
+    it("when total sum of weights is not one", async () => {
       await expect(
         deployVault(
           admin,
@@ -625,7 +625,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           ).to.be.revertedWith("Mammon__WeightChangeDurationIsBelowMin");
         });
 
-        it("when total sum of weight is not one", async () => {
+        it("when total sum of weights is not one", async () => {
           const timestamp = await getCurrentTime();
           await expect(
             vault
@@ -878,7 +878,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
     });
 
-    describe("Set Swap Enabled", () => {
+    describe("Enable Trading", () => {
       beforeEach(async () => {
         for (let i = 0; i < tokens.length; i++) {
           await tokens[i].approve(vault.address, ONE);
@@ -886,19 +886,74 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         await vault.initialDeposit(valueArray(ONE, tokens.length));
       });
 
-      it("should be reverted to set public swap", async () => {
-        await expect(vault.setSwapEnabled(true)).to.be.revertedWith(
-          "Mammon__CallerIsNotManager()",
+      describe("should be reverted to enable trading", () => {
+        it("when called from non-owner", async () => {
+          await expect(
+            vault
+              .connect(manager)
+              .enableTrading(
+                valueArray(ONE.div(tokens.length), tokens.length),
+              ),
+          ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("when total sum of weights is not one", async () => {
+          await expect(
+            vault.enableTrading(
+              valueArray(ONE.div(tokens.length).sub(1), tokens.length),
+            ),
+          ).to.be.revertedWith(BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT);
+        });
+      });
+
+      it("should be possible to enable trading", async () => {
+        const newWeights = [];
+        const avgWeights = ONE.div(tokens.length);
+        for (let i = 0; i < tokens.length; i += 2) {
+          if (i < tokens.length - 1) {
+            newWeights.push(avgWeights.add(toWei((i + 1) / 100)));
+            newWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
+          } else {
+            newWeights.push(avgWeights);
+          }
+        }
+
+        await vault.enableTrading(newWeights);
+
+        const currentWeights = await vault.getNormalizedWeights();
+
+        expect(await vault.isSwapEnabled()).to.equal(true);
+        for (let i = 0; i < tokens.length; i++) {
+          expect(newWeights[i]).to.be.at.closeTo(currentWeights[i], DEVIATION);
+        }
+      });
+    });
+
+    describe("Disable Trading", () => {
+      beforeEach(async () => {
+        for (let i = 0; i < tokens.length; i++) {
+          await tokens[i].approve(vault.address, ONE);
+        }
+        await vault.initialDeposit(valueArray(ONE, tokens.length));
+      });
+
+      it("should be reverted to disable trading", async () => {
+        await expect(vault.connect(user).disableTrading()).to.be.revertedWith(
+          "Mammon__CallerIsNotOwnerOrManager",
         );
       });
 
-      it("should be possible to set public swap", async () => {
-        expect(
-          await vault.connect(manager).estimateGas.setSwapEnabled(true),
-        ).to.below(48000);
-        await vault.connect(manager).setSwapEnabled(true);
+      it("should be possible to disable trading", async () => {
+        await vault.enableTrading(
+          valueArray(ONE.div(tokens.length), tokens.length),
+        );
 
         expect(await vault.isSwapEnabled()).to.equal(true);
+
+        expect(await vault.estimateGas.disableTrading()).to.below(48000);
+        await vault.connect(manager).disableTrading();
+
+        expect(await vault.isSwapEnabled()).to.equal(false);
       });
     });
 
