@@ -18,7 +18,7 @@ task("deploy:factory", "Deploys a Mammon Pool Factory")
       console.log(`Balancer Vault: ${config.bVault}`);
     }
 
-    const contract = "MammonPoolFactoryV1";
+    const contract = "BaseManagedPoolFactory";
     const result = await deployments.deploy(contract, {
       contract,
       args: [config.bVault],
