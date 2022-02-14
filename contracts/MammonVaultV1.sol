@@ -516,6 +516,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     {
         uint256 timestamp = block.timestamp;
         pool.updateWeightsGradually(timestamp, timestamp, weights);
+
         pool.setSwapEnabled(true);
         // slither-disable-next-line reentrancy-events
         emit SetSwapEnabled(true);
@@ -528,6 +529,15 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         onlyOwnerOrManager
         whenInitialized
     {
+        uint256[] memory weights = pool.getNormalizedWeights();
+        uint256 weightSum;
+
+        for (uint256 i = 0; i < weights.length; i++) {
+            weightSum += weights[i];
+        }
+
+        updateWeights(weights, weightSum);
+
         pool.setSwapEnabled(false);
         // slither-disable-next-line reentrancy-events
         emit SetSwapEnabled(false);
