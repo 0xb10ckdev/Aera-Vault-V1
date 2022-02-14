@@ -512,7 +512,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         external
         override
         onlyOwner
-        onlyInitialized
+        whenInitialized
     {
         uint256 timestamp = block.timestamp;
         pool.updateWeightsGradually(timestamp, timestamp, weights);
@@ -526,7 +526,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         external
         override
         onlyOwnerOrManager
-        onlyInitialized
+        whenInitialized
     {
         pool.setSwapEnabled(false);
         // slither-disable-next-line reentrancy-events
