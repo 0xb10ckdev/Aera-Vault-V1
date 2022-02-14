@@ -137,8 +137,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         ).to.be.revertedWith("Mammon__VaultNotInitialized");
       });
 
-      it("when call initializeFinalization", async () => {
-        await expect(vault.initializeFinalization()).to.be.revertedWith(
+      it("when call initiateFinalization", async () => {
+        await expect(vault.initiateFinalization()).to.be.revertedWith(
           "Mammon__VaultNotInitialized",
         );
       });
@@ -389,10 +389,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     });
 
     describe("when finalizing", () => {
-      describe("should be reverted to call initializeFinalization", async () => {
+      describe("should be reverted to call initiateFinalization", async () => {
         it("when called from non-owner", async () => {
           await expect(
-            vault.connect(manager).initializeFinalization(),
+            vault.connect(manager).initiateFinalization(),
           ).to.be.revertedWith("Ownable: caller is not the owner");
         });
       });
@@ -411,7 +411,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
 
         it("when noticeTimeout is not elapsed", async () => {
-          await vault.initializeFinalization();
+          await vault.initiateFinalization();
           const noticeTimeoutAt = await vault.noticeTimeoutAt();
 
           await expect(vault.finalize()).to.be.revertedWith(
@@ -422,7 +422,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
       describe("should be reverted to call functions when finalizing", async () => {
         beforeEach(async () => {
-          await vault.initializeFinalization();
+          await vault.initiateFinalization();
         });
 
         it("when call deposit", async () => {
@@ -450,15 +450,15 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           ).to.be.revertedWith("Mammon__VaultIsFinalizing");
         });
 
-        it("when call initializeFinalization", async () => {
-          await expect(vault.initializeFinalization()).to.be.revertedWith(
+        it("when call initiateFinalization", async () => {
+          await expect(vault.initiateFinalization()).to.be.revertedWith(
             "Mammon__VaultIsFinalizing",
           );
         });
       });
 
       it("should be possible to finalize", async () => {
-        const trx = await vault.initializeFinalization();
+        const trx = await vault.initiateFinalization();
         const noticeTimeoutAt = await vault.noticeTimeoutAt();
         await expect(trx)
           .to.emit(vault, "FinalizationInitialized")
