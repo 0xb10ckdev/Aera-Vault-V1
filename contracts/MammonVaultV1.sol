@@ -701,9 +701,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @dev Will only be called by finalize().
     /// @return amounts Exact returned amount of tokens.
     function returnFunds() internal returns (uint256[] memory amounts) {
-        uint256[] memory holdings = getHoldings();
-
-        IERC20[] memory tokens = getTokens();
+        IERC20[] memory tokens;
+        uint256[] memory holdings;
+        (tokens, holdings, ) = getTokensData();
         uint256[] memory managed = new uint256[](tokens.length);
 
         updatePoolBalance(holdings, IBVault.PoolBalanceOpKind.WITHDRAW);
