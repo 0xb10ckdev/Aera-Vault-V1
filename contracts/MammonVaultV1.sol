@@ -508,7 +508,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IProtocolAPI
-    function enableTrading(uint256[] memory weights)
+    function enableTrading(uint256[] calldata weights)
         external
         override
         onlyOwner
