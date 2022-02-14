@@ -5,8 +5,8 @@ import { DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
 import {
   BalancerVaultMock__factory,
   IERC20,
-  MammonPoolFactoryV1,
-  MammonPoolFactoryV1__factory,
+  BaseManagedPoolFactory,
+  BaseManagedPoolFactory__factory,
   MammonVaultV1Mock,
   MammonVaultV1Mock__factory,
   WithdrawalValidatorMock,
@@ -29,7 +29,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
   let user: SignerWithAddress;
   let vault: MammonVaultV1Mock;
   let validator: WithdrawalValidatorMock;
-  let factory: MammonPoolFactoryV1;
+  let factory: BaseManagedPoolFactory;
   let tokens: IERC20[];
   let sortedTokens: string[];
   let snapshot: unknown;
@@ -73,8 +73,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     const bVault = await bVaultVactory.connect(admin).deploy(ZERO_ADDRESS);
 
     const factoryV1Factory =
-      await ethers.getContractFactory<MammonPoolFactoryV1__factory>(
-        "MammonPoolFactoryV1",
+      await ethers.getContractFactory<BaseManagedPoolFactory__factory>(
+        "BaseManagedPoolFactory",
       );
     factory = await factoryV1Factory.connect(admin).deploy(bVault.address);
 

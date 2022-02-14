@@ -5,16 +5,25 @@ import "../dependencies/openzeppelin/IERC20.sol";
 import "./IBVault.sol";
 
 interface IBManagedPoolFactory {
-    function create(
-        string memory name,
-        string memory symbol,
-        IERC20[] memory tokens,
-        uint256[] memory weights,
-        uint256 swapFeePercentage,
-        address owner,
-        bool swapEnabledOnStart,
-        uint256 managementSwapFeePercentage
-    ) external returns (address);
+    struct NewPoolParams {
+        IBVault vault;
+        string name;
+        string symbol;
+        IERC20[] tokens;
+        uint256[] normalizedWeights;
+        address[] assetManagers;
+        uint256 swapFeePercentage;
+        uint256 pauseWindowDuration;
+        uint256 bufferPeriodDuration;
+        address owner;
+        bool swapEnabledOnStart;
+        bool mustAllowlistLPs;
+        uint256 managementSwapFeePercentage;
+    }
+
+    function create(NewPoolParams memory poolParams)
+        external
+        returns (address);
 
     function getVault() external view returns (IBVault);
 }

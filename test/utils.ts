@@ -6,8 +6,8 @@ import {
   getConfig,
 } from "../scripts/config";
 import {
-  MammonPoolFactoryV1,
-  MammonPoolFactoryV1__factory,
+  BaseManagedPoolFactory,
+  BaseManagedPoolFactory__factory,
   MammonVaultV1Mock,
   MammonVaultV1Mock__factory,
 } from "../typechain";
@@ -50,13 +50,13 @@ export const deployVault = async (
 
 export const deployFactory = async (
   signer: Signer,
-): Promise<MammonPoolFactoryV1> => {
+): Promise<BaseManagedPoolFactory> => {
   const chainId = getChainId(process.env.HARDHAT_FORK);
   const config = getConfig(chainId);
 
   const factory =
-    await ethers.getContractFactory<MammonPoolFactoryV1__factory>(
-      "MammonPoolFactoryV1",
+    await ethers.getContractFactory<BaseManagedPoolFactory__factory>(
+      "BaseManagedPoolFactory",
     );
 
   return await factory.connect(signer).deploy(config.bVault);
