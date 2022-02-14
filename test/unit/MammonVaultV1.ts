@@ -292,7 +292,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 .to.emit(vault, "Withdraw")
                 .withArgs(
                   amounts,
-                  amounts,
                   valueArray(toWei(100000), tokens.length),
                   weights,
                 );
@@ -314,7 +313,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             await expect(trx)
               .to.emit(vault, "Withdraw")
               .withArgs(
-                amounts,
                 amounts,
                 valueArray(toWei(100000), tokens.length),
                 weights,
