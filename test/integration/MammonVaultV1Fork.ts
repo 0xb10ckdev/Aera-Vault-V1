@@ -4,8 +4,8 @@ import hre, { deployments, ethers } from "hardhat";
 import { DEFAULT_NOTICE_PERIOD, getConfig } from "../../scripts/config";
 import {
   IERC20,
-  MammonPoolFactoryV1,
-  MammonPoolFactoryV1__factory,
+  BaseManagedPoolFactory,
+  BaseManagedPoolFactory__factory,
   MammonVaultV1Mock,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
@@ -35,7 +35,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
   let validator: WithdrawalValidatorMock;
-  let factory: MammonPoolFactoryV1;
+  let factory: BaseManagedPoolFactory;
   let tokens: IERC20[];
   let sortedTokens: string[];
   let unsortedTokens: string[];
@@ -209,7 +209,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
   let user: SignerWithAddress;
   let vault: MammonVaultV1Mock;
   let validator: WithdrawalValidatorMock;
-  let factory: MammonPoolFactoryV1;
+  let factory: BaseManagedPoolFactory;
   let tokens: IERC20[];
   let sortedTokens: string[];
   let snapshot: unknown;
@@ -249,8 +249,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     validator = await validatorMock.connect(admin).deploy(tokens.length);
 
     const factoryV1Factory =
-      await ethers.getContractFactory<MammonPoolFactoryV1__factory>(
-        "MammonPoolFactoryV1",
+      await ethers.getContractFactory<BaseManagedPoolFactory__factory>(
+        "BaseManagedPoolFactory",
       );
     factory = await factoryV1Factory.connect(admin).deploy(config.bVault);
 

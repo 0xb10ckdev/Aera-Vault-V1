@@ -9,7 +9,7 @@ import "./dependencies/openzeppelin/ReentrancyGuard.sol";
 import "./dependencies/openzeppelin/Math.sol";
 import "./dependencies/openzeppelin/SafeCast.sol";
 import "./dependencies/openzeppelin/ERC165Checker.sol";
-import "./interfaces/IMammonPoolFactoryV1.sol";
+import "./interfaces/IBManagedPoolFactory.sol";
 import "./interfaces/IBVault.sol";
 import "./interfaces/IBManagedPool.sol";
 import "./interfaces/IMammonVaultV1.sol";
@@ -260,22 +260,27 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         pool = IBManagedPool(
-            IMammonPoolFactoryV1(factory).create(
-                name,
-                symbol,
-                tokens,
-                weights,
-                managers,
-                swapFeePercentage,
-                address(this),
-                false,
-                true,
-                0
+            IBManagedPoolFactory(factory).create(
+                IBManagedPoolFactory.NewPoolParams({
+                    vault: IBVault(address(0)),
+                    name: name,
+                    symbol: symbol,
+                    tokens: tokens,
+                    normalizedWeights: weights,
+                    assetManagers: managers,
+                    swapFeePercentage: swapFeePercentage,
+                    pauseWindowDuration: 0,
+                    bufferPeriodDuration: 0,
+                    owner: address(this),
+                    swapEnabledOnStart: false,
+                    mustAllowlistLPs: true,
+                    managementSwapFeePercentage: 0
+                })
             )
         );
 
         // slither-disable-next-line reentrancy-benign
-        bVault = IMammonPoolFactoryV1(factory).getVault();
+        bVault = IBManagedPoolFactory(factory).getVault();
         manager = manager_;
         validator = IWithdrawalValidator(validator_);
         noticePeriod = noticePeriod_;
