@@ -158,6 +158,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 actual,
         uint256 max
     );
+    error Mammon__CallerIsNotOwnerOrManager();
     error Mammon__WeightChangeDurationIsBelowMin(uint256 actual, uint256 min);
     error Mammon__WeightIsAboveMax(uint256 actual, uint256 max);
     error Mammon__WeightIsBelowMin(uint256 actual, uint256 min);
@@ -179,6 +180,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     modifier onlyManager() {
         if (msg.sender != manager) {
             revert Mammon__CallerIsNotManager();
+        }
+        _;
+    }
+
+    /// @dev Throws if called by any account other than the owner or manager.
+    modifier onlyOwnerOrManager() {
+        if (msg.sender != owner() && msg.sender != manager) {
+            revert Mammon__CallerIsNotOwnerOrManager();
         }
         _;
     }
@@ -498,6 +507,32 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         IERC20(token).safeTransfer(owner(), amount);
     }
 
+    /// @inheritdoc IProtocolAPI
+    function enableTrading(uint256[] calldata weights)
+        external
+        override
+        onlyOwner
+        whenInitialized
+    {
+        uint256 timestamp = block.timestamp;
+        pool.updateWeightsGradually(timestamp, timestamp, weights);
+        pool.setSwapEnabled(true);
+        // slither-disable-next-line reentrancy-events
+        emit SetSwapEnabled(true);
+    }
+
+    /// @inheritdoc IProtocolAPI
+    function disableTrading()
+        external
+        override
+        onlyOwnerOrManager
+        whenInitialized
+    {
+        pool.setSwapEnabled(false);
+        // slither-disable-next-line reentrancy-events
+        emit SetSwapEnabled(false);
+    }
+
     /// MANAGER API ///
 
     /// @inheritdoc IManagerAPI
@@ -522,18 +557,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         // slither-disable-next-line reentrancy-events
         emit UpdateWeightsGradually(startTime, endTime, targetWeights);
-    }
-
-    /// @inheritdoc IManagerAPI
-    function setSwapEnabled(bool value)
-        external
-        override
-        onlyManager
-        whenInitialized
-    {
-        pool.setSwapEnabled(value);
-        // slither-disable-next-line reentrancy-events
-        emit SetSwapEnabled(value);
     }
 
     /// @inheritdoc IManagerAPI

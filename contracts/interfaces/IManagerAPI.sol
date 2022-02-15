@@ -4,10 +4,6 @@ pragma solidity 0.8.11;
 /// @title Interface for vault manager.
 /// @notice Supports parameter submission.
 interface IManagerAPI {
-    /// @notice Enable or disable swap.
-    /// @param value New state of swap.
-    function setSwapEnabled(bool value) external;
-
     /// @notice Initiate weight move to target in given update window.
     /// @param targetWeights Target token weights.
     /// @param startTime Timestamp at which weight movement should start.
