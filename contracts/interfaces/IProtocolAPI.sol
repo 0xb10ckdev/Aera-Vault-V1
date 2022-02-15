@@ -18,7 +18,7 @@ interface IProtocolAPI {
     function withdraw(uint256[] memory amounts) external;
 
     /// @notice Initiate vault destruction and return all funds to treasury owner.
-    function initializeFinalization() external;
+    function initiateFinalization() external;
 
     /// @notice Destroy vault and returns all funds to treasury owner.
     function finalize() external;

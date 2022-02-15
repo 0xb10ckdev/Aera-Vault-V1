@@ -130,7 +130,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param swapFee New swap fee.
     event SetSwapFee(uint256 swapFee);
 
-    /// @notice Emitted when initializeFinalization is called.
+    /// @notice Emitted when initiateFinalization is called.
     /// @param noticeTimeoutAt Timestamp for notice timeout.
     event FinalizationInitialized(uint64 noticeTimeoutAt);
 
@@ -468,7 +468,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IProtocolAPI
-    function initializeFinalization()
+    function initiateFinalization()
         external
         override
         onlyOwner
