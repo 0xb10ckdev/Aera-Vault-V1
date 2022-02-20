@@ -94,12 +94,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Emitted when tokens are withdrawn.
     /// @param requestedAmounts Requested token amounts.
-    /// @param withdrawnAmounts Withdrawn token amounts.
     /// @param allowances Token withdrawal allowances.
     /// @param weights Token weights following withdrawal.
     event Withdraw(
         uint256[] requestedAmounts,
-        uint256[] withdrawnAmounts,
         uint256[] allowances,
         uint256[] weights
     );
@@ -445,12 +443,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         /// Adjust managed balance of pool as the zero array
         updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
 
-        uint256[] memory withdrawnAmounts = new uint256[](amounts.length);
         uint256 weightSum;
 
         for (uint256 i = 0; i < amounts.length; i++) {
             if (amounts[i] > 0) {
-                withdrawnAmounts[i] = withdrawToken(tokens[i]);
+                tokens[i].safeTransfer(owner(), amounts[i]);
 
                 uint256 newBalance = holdings[i] - amounts[i];
                 newWeights[i] = (weights[i] * newBalance) / holdings[i];
@@ -464,12 +461,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         updateWeights(newWeights, weightSum);
 
         // slither-disable-next-line reentrancy-events
-        emit Withdraw(
-            amounts,
-            withdrawnAmounts,
-            allowances,
-            getNormalizedWeights()
-        );
+        emit Withdraw(amounts, allowances, getNormalizedWeights());
     }
 
     /// @inheritdoc IProtocolAPI
@@ -715,16 +707,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         token.safeApprove(address(bVault), amount);
     }
 
-    /// @notice Withdraw token from the pool.
-    /// @dev Will only be called by withdraw() and returnFunds().
-    /// @param token Address of the token to withdraw.
-    /// @param amount Amount to withdraw.
-    function withdrawToken(IERC20 token) internal returns (uint256 amount) {
-        // slither-disable-next-line calls-loop
-        amount = token.balanceOf(address(this));
-        token.safeTransfer(owner(), amount);
-    }
-
     /// @notice Return all funds to owner.
     /// @dev Will only be called by finalize().
     /// @return amounts Exact returned amount of tokens.
@@ -739,7 +721,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         amounts = new uint256[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
-            amounts[i] = withdrawToken(tokens[i]);
+            amounts[i] = tokens[i].balanceOf(address(this));
+            tokens[i].safeTransfer(owner(), amounts[i]);
         }
     }
 }
