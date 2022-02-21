@@ -700,6 +700,143 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           );
         }
       });
+
+      describe("should cancel current weight update", async () => {
+        it("when deposit tokens", async () => {
+          const timestamp = await getCurrentTime();
+          const endWeights = [];
+          const avgWeights = ONE.div(tokens.length);
+          const startTime = timestamp + 10;
+          const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
+          for (let i = 0; i < tokens.length; i += 2) {
+            if (i < tokens.length - 1) {
+              endWeights.push(avgWeights.add(toWei((i + 1) / 100)));
+              endWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
+            } else {
+              endWeights.push(avgWeights);
+            }
+          }
+
+          await vault
+            .connect(manager)
+            .updateWeightsGradually(endWeights, startTime, endTime);
+
+          const { holdings, balances } = await getState();
+          const spotPrices = [];
+          for (let i = 0; i < tokens.length; i++) {
+            spotPrices.push(await vault.getSpotPrices(tokens[i].address));
+          }
+
+          await vault.deposit(valueArray(toWei(50), tokens.length));
+
+          const newSpotPrices = [];
+          for (let i = 0; i < tokens.length; i++) {
+            newSpotPrices.push(await vault.getSpotPrices(tokens[i].address));
+            expect(
+              await vault.getSpotPrice(
+                tokens[i].address,
+                tokens[(i + 1) % tokens.length].address,
+              ),
+            ).to.equal(newSpotPrices[i][(i + 1) % tokens.length]);
+          }
+          const { holdings: newHoldings, balances: newBalances } =
+            await getState();
+
+          for (let i = 0; i < tokens.length; i++) {
+            for (let j = 0; j < tokens.length; j++) {
+              expect(newSpotPrices[i][j]).to.be.at.closeTo(
+                spotPrices[i][j],
+                DEVIATION,
+              );
+            }
+            expect(await vault.holding(i)).to.equal(newHoldings[i]);
+            expect(newHoldings[i]).to.equal(holdings[i].add(toWei(50)));
+            expect(newBalances[i]).to.equal(balances[i].sub(toWei(50)));
+          }
+
+          const newWeights = await vault.getNormalizedWeights();
+
+          for (let i = 0; i < 1000; i++) {
+            await ethers.provider.send("evm_mine", []);
+          }
+
+          const currentWeights = await vault.getNormalizedWeights();
+
+          for (let i = 0; i < tokens.length; i++) {
+            expect(newWeights[i]).to.be.equal(currentWeights[i]);
+          }
+        });
+
+        it("when withdraw tokens", async () => {
+          await validator.setAllowances(
+            valueArray(toWei(100000), tokens.length),
+          );
+          await vault.deposit(valueArray(toWei(50), tokens.length));
+
+          const timestamp = await getCurrentTime();
+          const endWeights = [];
+          const avgWeights = ONE.div(tokens.length);
+          const startTime = timestamp + 10;
+          const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
+          for (let i = 0; i < tokens.length; i += 2) {
+            if (i < tokens.length - 1) {
+              endWeights.push(avgWeights.add(toWei((i + 1) / 100)));
+              endWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
+            } else {
+              endWeights.push(avgWeights);
+            }
+          }
+
+          await vault
+            .connect(manager)
+            .updateWeightsGradually(endWeights, startTime, endTime);
+
+          const { holdings, balances } = await getState();
+          const spotPrices = [];
+          for (let i = 0; i < tokens.length; i++) {
+            spotPrices.push(await vault.getSpotPrices(tokens[i].address));
+          }
+
+          await vault.withdraw(valueArray(toWei(50), tokens.length));
+
+          const newSpotPrices = [];
+          for (let i = 0; i < tokens.length; i++) {
+            newSpotPrices.push(await vault.getSpotPrices(tokens[i].address));
+            expect(
+              await vault.getSpotPrice(
+                tokens[i].address,
+                tokens[(i + 1) % tokens.length].address,
+              ),
+            ).to.equal(newSpotPrices[i][(i + 1) % tokens.length]);
+          }
+
+          const { holdings: newHoldings, balances: newBalances } =
+            await getState();
+          for (let i = 0; i < tokens.length; i++) {
+            for (let j = 0; j < tokens.length; j++) {
+              expect(newSpotPrices[i][j]).to.be.at.closeTo(
+                spotPrices[i][j],
+                DEVIATION,
+              );
+            }
+            expect(await vault.holding(i)).to.equal(newHoldings[i]);
+            expect(newHoldings[i]).to.equal(holdings[i].sub(toWei(50)));
+            expect(newBalances[i]).to.equal(balances[i].add(toWei(50)));
+          }
+
+          const newWeights = await vault.getNormalizedWeights();
+
+          for (let i = 0; i < 1000; i++) {
+            await ethers.provider.send("evm_mine", []);
+          }
+
+          const currentWeights = await vault.getNormalizedWeights();
+
+          for (let i = 0; i < tokens.length; i++) {
+            expect(newWeights[i]).to.be.equal(currentWeights[i]);
+          }
+        });
+      });
     });
 
     describe("when finalizing", () => {
