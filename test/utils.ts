@@ -77,3 +77,10 @@ export const getCurrentTime = async (): Promise<number> => {
   const block = await ethers.provider.getBlock("latest");
   return block.timestamp;
 };
+
+export const increaseTime = async (timestamp: number): Promise<void> => {
+  await ethers.provider.send("evm_increaseTime", [
+    Math.floor(timestamp / 1000),
+  ]);
+  await ethers.provider.send("evm_mine", []);
+};
