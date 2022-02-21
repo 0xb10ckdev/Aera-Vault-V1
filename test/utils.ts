@@ -12,39 +12,39 @@ import {
   MammonVaultV1Mock__factory,
 } from "../typechain";
 
-export const deployVault = async (
-  signer: Signer,
-  factory: string,
-  name: string,
-  symbol: string,
-  tokens: string[],
-  weights: string[],
-  swapFeePercentage: string,
-  manager: string,
-  validator?: string,
-  noticePeriod: number = DEFAULT_NOTICE_PERIOD,
-  description: string = "",
-): Promise<MammonVaultV1Mock> => {
+export const deployVault = async (params: {
+  signer: Signer;
+  factory: string;
+  name: string;
+  symbol: string;
+  tokens: string[];
+  weights: string[];
+  swapFeePercentage: BigNumber;
+  manager: string;
+  validator?: string;
+  noticePeriod?: number;
+  description?: string;
+}): Promise<MammonVaultV1Mock> => {
   const vault = await ethers.getContractFactory<MammonVaultV1Mock__factory>(
     "MammonVaultV1Mock",
   );
 
-  if (!validator) {
-    validator = (await deployments.get("Validator")).address;
+  if (!params.validator) {
+    params.validator = (await deployments.get("Validator")).address;
   }
   return await vault
-    .connect(signer)
+    .connect(params.signer)
     .deploy(
-      factory,
-      name,
-      symbol,
-      tokens,
-      weights,
-      swapFeePercentage,
-      manager,
-      validator,
-      noticePeriod,
-      description,
+      params.factory,
+      params.name,
+      params.symbol,
+      params.tokens,
+      params.weights,
+      params.swapFeePercentage,
+      params.manager,
+      params.validator,
+      params.noticePeriod || DEFAULT_NOTICE_PERIOD,
+      params.description || "",
     );
 };
 

@@ -1,5 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
+import { BigNumber, Signer } from "ethers";
 import hre, { deployments, ethers } from "hardhat";
 import { DEFAULT_NOTICE_PERIOD, getConfig } from "../../scripts/config";
 import {
@@ -43,6 +44,19 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
   let unsortedTokens: string[];
   let snapshot: unknown;
   let validWeights: string[];
+  let validParams: {
+    signer: Signer;
+    factory: string;
+    name: string;
+    symbol: string;
+    tokens: string[];
+    weights: string[];
+    swapFeePercentage: BigNumber;
+    manager: string;
+    validator?: string;
+    noticePeriod?: number;
+    description?: string;
+  };
 
   describe("should be reverted to deploy vault", async () => {
     before(async function () {
@@ -72,135 +86,80 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
       factory = await deployFactory(admin);
     });
 
+    beforeEach(async function () {
+      validParams = {
+        signer: admin,
+        factory: factory.address,
+        name: "Test",
+        symbol: "TEST",
+        tokens: sortedTokens,
+        weights: validWeights,
+        swapFeePercentage: MIN_SWAP_FEE,
+        manager: manager.address,
+        validator: validator.address,
+        noticePeriod: MAX_NOTICE_PERIOD,
+        description: "",
+      };
+    });
+
     after(async () => {
       await ethers.provider.send("evm_revert", [snapshot]);
     });
 
     it("when token and weight length is not same", async () => {
-      await expect(
-        deployVault(
-          admin,
-          factory.address,
-          "Test",
-          "TEST",
-          [...sortedTokens, tokens[0].address],
-          validWeights,
-          MIN_SWAP_FEE.toString(),
-          manager.address,
-        ),
-      ).to.be.revertedWith("Mammon__WeightLengthIsNotSame");
+      validParams.tokens = [...sortedTokens, tokens[0].address];
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Mammon__WeightLengthIsNotSame",
+      );
     });
 
     it("when notice period is greater than maximum", async () => {
-      await expect(
-        deployVault(
-          admin,
-          factory.address,
-          "Test",
-          "TEST",
-          sortedTokens,
-          validWeights,
-          MIN_SWAP_FEE.toString(),
-          manager.address,
-          validator.address,
-          MAX_NOTICE_PERIOD + 1,
-        ),
-      ).to.be.revertedWith("Mammon__NoticePeriodIsAboveMax");
+      validParams.noticePeriod = MAX_NOTICE_PERIOD + 1;
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Mammon__NoticePeriodIsAboveMax",
+      );
     });
 
     it("when validator is not valid", async () => {
-      await expect(
-        deployVault(
-          admin,
-          factory.address,
-          "Test",
-          "TEST",
-          sortedTokens,
-          validWeights,
-          MIN_SWAP_FEE.toString(),
-          manager.address,
-          manager.address,
-        ),
-      ).to.be.revertedWith("Mammon__ValidatorIsNotValid");
-      await expect(
-        deployVault(
-          admin,
-          factory.address,
-          "Test",
-          "TEST",
-          sortedTokens,
-          validWeights,
-          MIN_SWAP_FEE.toString(),
-          manager.address,
-          (
-            await deployments.get("InvalidValidator")
-          ).address,
-        ),
-      ).to.be.revertedWith("Mammon__ValidatorIsNotValid");
+      validParams.validator = manager.address;
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Mammon__ValidatorIsNotValid",
+      );
+
+      validParams.validator = (
+        await deployments.get("InvalidValidator")
+      ).address;
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Mammon__ValidatorIsNotValid",
+      );
     });
 
     it("when token is not sorted in ascending order", async () => {
-      await expect(
-        deployVault(
-          admin,
-          factory.address,
-          "Test",
-          "TEST",
-          unsortedTokens,
-          validWeights,
-          MIN_SWAP_FEE.toString(),
-          manager.address,
-          validator.address,
-        ),
-      ).to.be.revertedWith(BALANCER_ERRORS.UNSORTED_ARRAY);
+      validParams.tokens = unsortedTokens;
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        BALANCER_ERRORS.UNSORTED_ARRAY,
+      );
     });
 
     it("when swap fee is greater than maximum", async () => {
-      await expect(
-        deployVault(
-          admin,
-          factory.address,
-          "Test",
-          "TEST",
-          sortedTokens,
-          validWeights,
-          MAX_SWAP_FEE.add(1).toString(),
-          manager.address,
-          validator.address,
-        ),
-      ).to.be.revertedWith(BALANCER_ERRORS.MAX_SWAP_FEE_PERCENTAGE);
+      validParams.swapFeePercentage = MAX_SWAP_FEE.add(1);
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        BALANCER_ERRORS.MAX_SWAP_FEE_PERCENTAGE,
+      );
     });
 
     it("when swap fee is less than minimum", async () => {
-      await expect(
-        deployVault(
-          admin,
-          factory.address,
-          "Test",
-          "TEST",
-          sortedTokens,
-          validWeights,
-          MIN_SWAP_FEE.sub(1).toString(),
-          manager.address,
-          validator.address,
-        ),
-      ).to.be.revertedWith(BALANCER_ERRORS.MIN_SWAP_FEE_PERCENTAGE);
+      validParams.swapFeePercentage = MIN_SWAP_FEE.sub(1);
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        BALANCER_ERRORS.MIN_SWAP_FEE_PERCENTAGE,
+      );
     });
 
     it("when total sum of weights is not one", async () => {
-      await expect(
-        deployVault(
-          admin,
-          factory.address,
-          "Test",
-          "TEST",
-          sortedTokens,
-          valueArray(MIN_WEIGHT, tokens.length),
-          MIN_SWAP_FEE.toString(),
-          manager.address,
-          validator.address,
-        ),
-      ).to.be.revertedWith(BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT);
+      validParams.weights = valueArray(MIN_WEIGHT, tokens.length);
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT,
+      );
     });
   });
 });
