@@ -137,6 +137,12 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         ).to.be.revertedWith("Mammon__VaultNotInitialized");
       });
 
+      it("when call cancelWeightUpdates", async () => {
+        await expect(
+          vault.connect(manager).cancelWeightUpdates(),
+        ).to.be.revertedWith("Mammon__VaultNotInitialized");
+      });
+
       it("when call initiateFinalization", async () => {
         await expect(vault.initiateFinalization()).to.be.revertedWith(
           "Mammon__VaultNotInitialized",
@@ -386,6 +392,22 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
     });
 
+    describe("when calling cancelWeightUpdates()", () => {
+      it("should be reverted when called from non-manager", async () => {
+        await expect(vault.cancelWeightUpdates()).to.be.revertedWith(
+          "Mammon__CallerIsNotManager",
+        );
+      });
+
+      it("should be possible to call cancelWeightUpdates", async () => {
+        const weights = await vault.getNormalizedWeights();
+
+        await expect(vault.connect(manager).cancelWeightUpdates())
+          .to.emit(vault, "CancelWeightUpdates")
+          .withArgs(weights);
+      });
+    });
+
     describe("when finalizing", () => {
       describe("should be reverted to call initiateFinalization", async () => {
         it("when called from non-owner", async () => {
@@ -445,6 +467,12 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 blocknumber + 1,
                 blocknumber + 1000,
               ),
+          ).to.be.revertedWith("Mammon__VaultIsFinalizing");
+        });
+
+        it("when call cancelWeightUpdates", async () => {
+          await expect(
+            vault.connect(manager).cancelWeightUpdates(),
           ).to.be.revertedWith("Mammon__VaultIsFinalizing");
         });
 
