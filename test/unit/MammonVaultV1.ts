@@ -185,7 +185,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       ).to.be.revertedWith("Mammon__VaultIsAlreadyInitialized");
     });
 
-    describe("when depositing to Vault", () => {
+    describe("when deposit to Vault", () => {
       describe("should be reverted to deposit tokens", async () => {
         it("when called from non-owner", async () => {
           await expect(
@@ -238,7 +238,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
     });
 
-    describe("when withdrawing to Vault", () => {
+    describe("when withdraw from Vault", () => {
       describe("when allowance on validator is invalid", () => {
         it("should revert to withdraw tokens", async () => {
           await expect(
