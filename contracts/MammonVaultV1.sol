@@ -565,8 +565,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         external
         override
         onlyManager
-        onlyInitialized
-        nonFinalizing
+        whenInitialized
+        whenNotFinalizing
     {
         uint256[] memory weights = pool.getNormalizedWeights();
         uint256 weightSum;
