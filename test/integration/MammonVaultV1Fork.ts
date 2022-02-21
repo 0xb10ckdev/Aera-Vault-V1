@@ -709,7 +709,38 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             .connect(manager)
             .updateWeightsGradually(endWeights, startTime, endTime);
 
+          const { holdings, balances } = await getState();
+          const spotPrices = [];
+          for (let i = 0; i < tokens.length; i++) {
+            spotPrices.push(await vault.getSpotPrices(tokens[i].address));
+          }
+
           await vault.deposit(valueArray(toWei(50), tokens.length));
+
+          const newSpotPrices = [];
+          for (let i = 0; i < tokens.length; i++) {
+            newSpotPrices.push(await vault.getSpotPrices(tokens[i].address));
+            expect(
+              await vault.getSpotPrice(
+                tokens[i].address,
+                tokens[(i + 1) % tokens.length].address,
+              ),
+            ).to.equal(newSpotPrices[i][(i + 1) % tokens.length]);
+          }
+          const { holdings: newHoldings, balances: newBalances } =
+            await getState();
+
+          for (let i = 0; i < tokens.length; i++) {
+            for (let j = 0; j < tokens.length; j++) {
+              expect(newSpotPrices[i][j]).to.be.at.closeTo(
+                spotPrices[i][j],
+                DEVIATION,
+              );
+            }
+            expect(await vault.holding(i)).to.equal(newHoldings[i]);
+            expect(newHoldings[i]).to.equal(holdings[i].add(toWei(50)));
+            expect(newBalances[i]).to.equal(balances[i].sub(toWei(50)));
+          }
 
           const newWeights = await vault.getNormalizedWeights();
 
@@ -748,7 +779,38 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             .connect(manager)
             .updateWeightsGradually(endWeights, startTime, endTime);
 
-          await vault.withdraw(valueArray(ONE, tokens.length));
+          const { holdings, balances } = await getState();
+          const spotPrices = [];
+          for (let i = 0; i < tokens.length; i++) {
+            spotPrices.push(await vault.getSpotPrices(tokens[i].address));
+          }
+
+          await vault.withdraw(valueArray(toWei(50), tokens.length));
+
+          const newSpotPrices = [];
+          for (let i = 0; i < tokens.length; i++) {
+            newSpotPrices.push(await vault.getSpotPrices(tokens[i].address));
+            expect(
+              await vault.getSpotPrice(
+                tokens[i].address,
+                tokens[(i + 1) % tokens.length].address,
+              ),
+            ).to.equal(newSpotPrices[i][(i + 1) % tokens.length]);
+          }
+
+          const { holdings: newHoldings, balances: newBalances } =
+            await getState();
+          for (let i = 0; i < tokens.length; i++) {
+            for (let j = 0; j < tokens.length; j++) {
+              expect(newSpotPrices[i][j]).to.be.at.closeTo(
+                spotPrices[i][j],
+                DEVIATION,
+              );
+            }
+            expect(await vault.holding(i)).to.equal(newHoldings[i]);
+            expect(newHoldings[i]).to.equal(holdings[i].sub(toWei(50)));
+            expect(newBalances[i]).to.equal(balances[i].add(toWei(50)));
+          }
 
           const newWeights = await vault.getNormalizedWeights();
 
