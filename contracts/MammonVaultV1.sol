@@ -120,6 +120,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256[] weights
     );
 
+    /// @notice Emitted when cancelWeightUpdates is called.
+    /// @param weights Current weights of tokens.
+    event CancelWeightUpdates(uint256[] weights);
+
     /// @notice Emitted when swap is enabled/disabled.
     /// @param swapEnabled New state of swap.
     event SetSwapEnabled(bool swapEnabled);
@@ -561,6 +565,27 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IManagerAPI
+    function cancelWeightUpdates()
+        external
+        override
+        onlyManager
+        whenInitialized
+        whenNotFinalizing
+    {
+        uint256[] memory weights = pool.getNormalizedWeights();
+        uint256 weightSum;
+
+        for (uint256 i = 0; i < weights.length; i++) {
+            weightSum += weights[i];
+        }
+
+        updateWeights(weights, weightSum);
+
+        // slither-disable-next-line reentrancy-events
+        emit CancelWeightUpdates(weights);
+    }
+
+    /// @inheritdoc IManagerAPI
     function setSwapFee(uint256 newSwapFee) external override onlyManager {
         uint256 oldSwapFee = pool.getSwapFeePercentage();
 
@@ -684,7 +709,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @notice Update weights of tokens in the pool.
-    /// @dev Will only be called by deposit() and withdraw().
+    /// @dev Will only be called by deposit(), withdraw() and cancelWeightUpdates().
     function updateWeights(uint256[] memory weights, uint256 weightSum)
         internal
     {

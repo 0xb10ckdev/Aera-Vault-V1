@@ -14,6 +14,10 @@ interface IManagerAPI {
         uint256 endTime
     ) external;
 
+    /// @notice Cancel the active weight update schedule.
+    /// @dev Keep calculated weights from the schedule at the time.
+    function cancelWeightUpdates() external;
+
     /// @notice Change swap fee.
     function setSwapFee(uint256 newSwapFee) external;
 }
