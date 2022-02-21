@@ -375,7 +375,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       ).to.be.revertedWith("Mammon__VaultIsAlreadyInitialized");
     });
 
-    describe("when depositing to Vault", () => {
+    describe("when deposit to Vault", () => {
       describe("should be reverted to deposit tokens", async () => {
         it("when called from non-owner", async () => {
           await expect(
@@ -467,7 +467,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
     });
 
-    describe("when withdrawing to Vault", () => {
+    describe("when withdraw from Vault", () => {
       describe("when allowance on validator is invalid", () => {
         it("should revert to withdraw tokens", async () => {
           await expect(
@@ -584,6 +584,84 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             }
           });
         });
+      });
+    });
+
+    describe("when deposit and withdraw", () => {
+      beforeEach(async () => {
+        await validator.setAllowances(
+          valueArray(toWei(100000), tokens.length),
+        );
+      });
+
+      it("should be possible to deposit and withdraw one token", async () => {
+        let { holdings, balances } = await getState();
+        for (let i = 0; i < tokens.length; i++) {
+          const amounts = new Array(tokens.length).fill(0);
+          amounts[i] = toWei(5);
+          const spotPrices = await vault.getSpotPrices(tokens[i].address);
+
+          await vault.deposit(amounts);
+          await vault.withdraw(amounts);
+
+          const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
+          const { holdings: newHoldings, balances: newBalances } =
+            await getState();
+
+          for (let j = 0; j < tokens.length; j++) {
+            expect(newSpotPrices[j]).to.be.at.closeTo(
+              spotPrices[j],
+              DEVIATION,
+            );
+            expect(newHoldings[j]).to.equal(holdings[j]);
+            expect(newBalances[j]).to.equal(balances[j]);
+          }
+
+          holdings = newHoldings;
+          balances = newBalances;
+        }
+      });
+
+      it("when deposit and withdraw tokens", async () => {
+        const { holdings, balances } = await getState();
+
+        const amounts = tokens.map(_ =>
+          toWei(Math.floor(Math.random() * 100)),
+        );
+
+        const spotPrices = [];
+        for (let i = 0; i < tokens.length; i++) {
+          await tokens[i].approve(vault.address, amounts[i]);
+          spotPrices.push(await vault.getSpotPrices(tokens[i].address));
+        }
+
+        await vault.deposit(amounts);
+        await vault.withdraw(amounts);
+
+        const newSpotPrices = [];
+        for (let i = 0; i < tokens.length; i++) {
+          newSpotPrices.push(await vault.getSpotPrices(tokens[i].address));
+          expect(
+            await vault.getSpotPrice(
+              tokens[i].address,
+              tokens[(i + 1) % tokens.length].address,
+            ),
+          ).to.equal(newSpotPrices[i][(i + 1) % tokens.length]);
+        }
+        const { holdings: newHoldings, balances: newBalances } =
+          await getState();
+
+        for (let i = 0; i < tokens.length; i++) {
+          for (let j = 0; j < tokens.length; j++) {
+            expect(newSpotPrices[i][j]).to.be.at.closeTo(
+              spotPrices[i][j],
+              DEVIATION,
+            );
+          }
+          expect(await vault.holding(i)).to.equal(newHoldings[i]);
+          expect(newHoldings[i]).to.equal(holdings[i]);
+          expect(newBalances[i]).to.equal(balances[i]);
+        }
       });
     });
 
