@@ -6,7 +6,7 @@ const wethAddress = "0x000000000000000000000000000000000000000F";
 const assetHelpers = new AssetHelpers(wethAddress);
 
 task("deploy:vault", "Deploys a Mammon vault with the given parameters")
-  .addParam("factory", "Mammon Pool Factory's address")
+  .addParam("factory", "Balancer Managed Pool Factory address")
   .addParam("name", "Pool Token's name")
   .addParam("symbol", "Pool Token's symbol")
   .addParam("tokens", "Tokens' addresses")
