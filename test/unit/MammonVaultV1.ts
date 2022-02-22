@@ -185,7 +185,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       ).to.be.revertedWith("Mammon__VaultIsAlreadyInitialized");
     });
 
-    describe("when deposit to Vault", () => {
+    describe("when depositing to Vault", () => {
       describe("should be reverted to deposit tokens", async () => {
         it("when called from non-owner", async () => {
           await expect(
@@ -207,7 +207,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       describe("should be possible to deposit tokens", async () => {
-        it("when deposit one token", async () => {
+        it("when depositing one token", async () => {
           for (let i = 0; i < tokens.length; i++) {
             const amounts = new Array(tokens.length).fill(0);
             amounts[i] = toWei(5);
@@ -220,7 +220,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           }
         });
 
-        it("when deposit tokens", async () => {
+        it("when depositing tokens", async () => {
           const amounts = tokens.map(_ =>
             toWei(Math.floor(Math.random() * 100)),
           );
@@ -238,7 +238,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
     });
 
-    describe("when withdraw from Vault", () => {
+    describe("when withdrawing from Vault", () => {
       describe("when allowance on validator is invalid", () => {
         it("should revert to withdraw tokens", async () => {
           await expect(
@@ -279,7 +279,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
 
         describe("should be possible to withdraw ", async () => {
-          it("when withdraw one token", async () => {
+          it("when withdrawing one token", async () => {
             await vault.deposit(valueArray(toWei(5), tokens.length));
 
             for (let i = 0; i < tokens.length; i++) {
@@ -298,7 +298,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             }
           });
 
-          it("when withdraw tokens", async () => {
+          it("when withdrawing tokens", async () => {
             for (let i = 0; i < tokens.length; i++) {
               await tokens[i].approve(vault.address, toWei(100000));
             }

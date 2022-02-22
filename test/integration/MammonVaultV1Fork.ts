@@ -375,7 +375,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       ).to.be.revertedWith("Mammon__VaultIsAlreadyInitialized");
     });
 
-    describe("when deposit to Vault", () => {
+    describe("when depositing to Vault", () => {
       describe("should be reverted to deposit tokens", async () => {
         it("when called from non-owner", async () => {
           await expect(
@@ -397,7 +397,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       describe("should be possible to deposit tokens", async () => {
-        it("when deposit one token", async () => {
+        it("when depositing one token", async () => {
           let { holdings, balances } = await getState();
           for (let i = 0; i < tokens.length; i++) {
             const amounts = new Array(tokens.length).fill(0);
@@ -424,7 +424,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           }
         });
 
-        it("when deposit tokens", async () => {
+        it("when depositing tokens", async () => {
           const { holdings, balances } = await getState();
 
           const amounts = tokens.map(_ =>
@@ -467,7 +467,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
     });
 
-    describe("when withdraw from Vault", () => {
+    describe("when withdrawing from Vault", () => {
       describe("when allowance on validator is invalid", () => {
         it("should revert to withdraw tokens", async () => {
           await expect(
@@ -508,7 +508,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
 
         describe("should be possible to withdraw ", async () => {
-          it("when withdraw one token", async () => {
+          it("when withdrawing one token", async () => {
             await vault.deposit(valueArray(toWei(5), tokens.length));
             let { holdings, balances } = await getState();
 
@@ -539,7 +539,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             }
           });
 
-          it("when withdraw tokens", async () => {
+          it("when withdrawing tokens", async () => {
             for (let i = 0; i < tokens.length; i++) {
               await tokens[i].approve(vault.address, toWei(100000));
             }
@@ -587,7 +587,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
     });
 
-    describe("when deposit and withdraw", () => {
+    describe("when depositing and withdrawing", () => {
       beforeEach(async () => {
         await validator.setAllowances(
           valueArray(toWei(100000), tokens.length),
@@ -622,7 +622,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         }
       });
 
-      it("when deposit and withdraw tokens", async () => {
+      it("when depositing and withdrawing tokens", async () => {
         const { holdings, balances } = await getState();
 
         const amounts = tokens.map(_ =>
