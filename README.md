@@ -8,6 +8,7 @@ Tools used:
 - [TypeChain](https://github.com/ethereum-ts/TypeChain): generate TypeScript types for smart contracts
 - [Ethers](https://github.com/ethers-io/ethers.js/): renowned Ethereum library and wallet implementation
 - [Waffle](https://github.com/EthWorks/Waffle): tooling for writing comprehensive smart contract tests
+- [Slither](https://github.com/crytic/slither): solidity analyzer
 - [Solhint](https://github.com/protofire/solhint): linter
 - [Solcover](https://github.com/sc-forks/solidity-coverage): code coverage
 - [Prettier Plugin Solidity](https://github.com/prettier-solidity/prettier-plugin-solidity): code formatter
@@ -44,6 +45,14 @@ Compile the smart contracts and generate TypeChain artifacts:
 
 ```sh
 $ yarn typechain
+```
+
+### Analyze Solidity
+
+Analyze the Solidity code:
+
+```sh
+$ yarn slither
 ```
 
 ### Lint Solidity
@@ -109,40 +118,54 @@ Prior to deployment, make sure you have provided Infura keys by setting `INFURA_
 Deploy the Validator to a specific network:
 
 ```sh
-$ yarn deploy:validator --network <NETWORK>
+$ yarn deploy:validator --network <NETWORK> --count <TOKEN_COUNT>
+```
+
+Deploy the ManagedPoolFactory to a specific network:
+
+```sh
+$ yarn deploy:factory --network <NETWORK>
 ```
 
 Deploy the Vault to a specific network:
 
 ```sh
-$ yarn deploy:vault --network <NETWORK> --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD>
+$ yarn deploy:vault --network <NETWORK> --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --description <DESCRIPTION>
 ```
 
 Deploy the Vault to Kovan Network:
 
 ```sh
-$ yarn deploy:kovan --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD>
+$ yarn deploy:kovan --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --description <DESCRIPTION>
 ```
 
 Deploy the Vault to Mainnet Network:
 
 ```sh
-$ yarn deploy:mainnet --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD>
+$ yarn deploy:mainnet --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --description <DESCRIPTION>
 ```
 
-Deploy the Validator and Vault to Hardhat Network:
+Deploy the Validator, ManagedPoolFactory and Vault to Hardhat Network:
 
 ```sh
-$ yarn deploy --token0 <TOKEN0> --token1 <TOKEN1> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD>
+$ yarn deploy:validator --count <TOKEN_COUNT>
+$ yarn deploy:factory
+$ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --description <DESCRIPTION>
 ```
 
 **Legend**:
 
-- TOKEN0: First token address
-- TOKEN1: Second token address
+- TOKEN_COUNT: Token Count
+- FACTORY: Balancer's Managed Pool Factory address
+- NAME: Pool token name
+- SYMBOL: Pool token symbol
+- TOKENS: Tokens' addresses
+- Weights: Tokens' weights
+- FEE: Swap fee percentage
 - MANAGER: Manager's address
 - VALIDATOR: Address of withdrawal validator contract
 - NOTICE_PERIOD: Finalization notice period in seconds
+- DESCRIPTION: Vault text descriptino
 
 ## Syntax Highlighting
 
@@ -152,9 +175,9 @@ compiler version is to add the following fields to your VSCode user settings:
 
 ```json
 {
-  "solidity.compileUsingRemoteVersion": "v0.8.4+commit.c7e474f2",
+  "solidity.compileUsingRemoteVersion": "v0.8.11",
   "solidity.defaultCompiler": "remote"
 }
 ```
 
-Where of course `v0.8.4+commit.c7e474f2` can be replaced with any other version.
+Where of course `v0.8.11` can be replaced with any other version.
