@@ -12,7 +12,7 @@ import {
   MammonVaultV1Mock__factory,
 } from "../typechain";
 
-export const deployVault = async (params: {
+export type VaultParams = {
   signer: Signer;
   factory: string;
   name: string;
@@ -24,7 +24,11 @@ export const deployVault = async (params: {
   validator?: string;
   noticePeriod?: number;
   description?: string;
-}): Promise<MammonVaultV1Mock> => {
+};
+
+export const deployVault = async (
+  params: VaultParams,
+): Promise<MammonVaultV1Mock> => {
   const vault = await ethers.getContractFactory<MammonVaultV1Mock__factory>(
     "MammonVaultV1Mock",
   );

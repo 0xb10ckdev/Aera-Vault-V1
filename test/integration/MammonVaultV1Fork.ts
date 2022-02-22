@@ -1,6 +1,5 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
-import { BigNumber, Signer } from "ethers";
 import hre, { deployments, ethers } from "hardhat";
 import { DEFAULT_NOTICE_PERIOD, getConfig } from "../../scripts/config";
 import {
@@ -32,6 +31,7 @@ import {
   increaseTime,
   toWei,
   valueArray,
+  VaultParams,
 } from "../utils";
 
 describe("Mammon Vault V1 Mainnet Deployment", function () {
@@ -44,19 +44,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
   let unsortedTokens: string[];
   let snapshot: unknown;
   let validWeights: string[];
-  let validParams: {
-    signer: Signer;
-    factory: string;
-    name: string;
-    symbol: string;
-    tokens: string[];
-    weights: string[];
-    swapFeePercentage: BigNumber;
-    manager: string;
-    validator?: string;
-    noticePeriod?: number;
-    description?: string;
-  };
+  let validParams: VaultParams;
 
   describe("should be reverted to deploy vault", async () => {
     before(async function () {
