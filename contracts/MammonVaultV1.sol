@@ -40,7 +40,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Largest possible notice period for vault termination (2 months).
     uint256 private constant MAX_NOTICE_PERIOD = 60 days;
 
-    /// @notice Largest possible weight change ratio per one second
+    /// @notice Largest possible weight change ratio per one second.
+    /// @dev It's the increment/decrement factor per one second.
+    ///      increment/decrement factor per n seconds: Fn = f * n
+    ///      Weight growth range for n seconds: [1 / Fn - 1, Fn - 1]
+    ///      E.g. increment/decrement factor per 2000 seconds is 2
+    ///      Weight growth range for 2000 seconds is [-50%, 100%]
     uint256 private constant MAX_WEIGHT_CHANGE_RATIO = 10**15;
 
     /// @notice Balancer Vault.
@@ -711,7 +716,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @dev Will only be called by updateWeightsGradually().
     /// @param weight Current weight.
     /// @param targetWeight Target weight.
-    /// @return Change ratio from current weight to target weight.
+    /// @return Change ratio(>1) from current weight to target weight.
     function getWeightChangeRatio(uint256 weight, uint256 targetWeight)
         internal
         view
