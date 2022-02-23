@@ -40,6 +40,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Largest possible notice period for vault termination (2 months).
     uint256 private constant MAX_NOTICE_PERIOD = 60 days;
 
+    /// @notice Largest possible weight change ratio per one second.
+    /// @dev It's the increment/decrement factor per one second.
+    ///      increment/decrement factor per n seconds: Fn = f * n
+    ///      Weight growth range for n seconds: [1 / Fn - 1, Fn - 1]
+    ///      E.g. increment/decrement factor per 2000 seconds is 2
+    ///      Weight growth range for 2000 seconds is [-50%, 100%]
+    uint256 private constant MAX_WEIGHT_CHANGE_RATIO = 10**15;
+
     /// @notice Balancer Vault.
     IBVault public immutable bVault;
 
@@ -162,6 +170,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     );
     error Mammon__CallerIsNotOwnerOrManager();
     error Mammon__WeightChangeDurationIsBelowMin(uint256 actual, uint256 min);
+    error Mammon__WeightChangeRatioIsAboveMax(
+        address token,
+        uint256 actual,
+        uint256 max
+    );
     error Mammon__WeightIsAboveMax(uint256 actual, uint256 max);
     error Mammon__WeightIsBelowMin(uint256 actual, uint256 min);
     error Mammon__AmountIsBelowMin(uint256 actual, uint256 min);
@@ -558,6 +571,26 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             );
         }
 
+        // Check if weight change ratio is exceeded
+        uint256[] memory weights = pool.getNormalizedWeights();
+        IERC20[] memory tokens = getTokens();
+        uint256 duration = endTime - startTime;
+        uint256 maximumRatio = MAX_WEIGHT_CHANGE_RATIO * duration;
+        for (uint256 i = 0; i < targetWeights.length; i++) {
+            uint256 changeRatio = getWeightChangeRatio(
+                weights[i],
+                targetWeights[i]
+            );
+
+            if (changeRatio > maximumRatio) {
+                revert Mammon__WeightChangeRatioIsAboveMax(
+                    address(tokens[i]),
+                    changeRatio,
+                    maximumRatio
+                );
+            }
+        }
+
         pool.updateWeightsGradually(startTime, endTime, targetWeights);
 
         // slither-disable-next-line reentrancy-events
@@ -679,6 +712,22 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// INTERNAL FUNCTIONS ///
+
+    /// @notice Calculate change ratio for weight upgrade.
+    /// @dev Will only be called by updateWeightsGradually().
+    /// @param weight Current weight.
+    /// @param targetWeight Target weight.
+    /// @return Change ratio(>1) from current weight to target weight.
+    function getWeightChangeRatio(uint256 weight, uint256 targetWeight)
+        internal
+        pure
+        returns (uint256)
+    {
+        return
+            weight > targetWeight
+                ? (ONE * weight) / targetWeight
+                : (ONE * targetWeight) / weight;
+    }
 
     /// @dev PoolBalanceOpKind has three kinds
     /// Withdrawal - decrease the Pool's cash, but increase its managed balance,
