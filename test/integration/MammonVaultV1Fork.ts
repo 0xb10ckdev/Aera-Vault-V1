@@ -15,6 +15,7 @@ import {
   DEVIATION,
   MAX_NOTICE_PERIOD,
   MAX_SWAP_FEE,
+  MAX_WEIGHT_CHANGE_RATIO,
   MINIMUM_WEIGHT_CHANGE_DURATION,
   MIN_SWAP_FEE,
   MIN_WEIGHT,
@@ -721,6 +722,41 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
               ),
           ).to.be.revertedWith(BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT);
+        });
+
+        it("when change ratio is greater than maximum", async () => {
+          const timestamp = await getCurrentTime();
+          const startWeights = await vault.getNormalizedWeights();
+          const targetWeight0 = startWeights[0]
+            .mul(ONE)
+            .div(MAX_WEIGHT_CHANGE_RATIO + 2)
+            .div(MINIMUM_WEIGHT_CHANGE_DURATION + 1);
+          const targetWeights = [
+            targetWeight0,
+            ...valueArray(
+              ONE.sub(targetWeight0).div(tokens.length - 1),
+              tokens.length - 1,
+            ),
+          ];
+
+          let weightSum = toWei(0);
+          for (let i = 0; i < tokens.length; i++) {
+            weightSum = weightSum.add(targetWeights[i]);
+          }
+
+          targetWeights[tokens.length - 1] = ONE.sub(weightSum).add(
+            targetWeights[tokens.length - 1],
+          );
+
+          await expect(
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                targetWeights,
+                timestamp,
+                timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
+              ),
+          ).to.be.revertedWith("Mammon__WeightChaingeRatioIsAboveMax");
         });
 
         it("when weight is less than minimum", async () => {
