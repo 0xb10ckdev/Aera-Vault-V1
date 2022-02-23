@@ -165,7 +165,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     );
     error Mammon__CallerIsNotOwnerOrManager();
     error Mammon__WeightChangeDurationIsBelowMin(uint256 actual, uint256 min);
-    error Mammon__WeightChaingeRatioIsAboveMax(
+    error Mammon__WeightChangeRatioIsAboveMax(
         address token,
         uint256 actual,
         uint256 max
@@ -576,7 +576,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             ) / duration;
 
             if (change > MAX_WEIGHT_CHANGE_RATIO) {
-                revert Mammon__WeightChaingeRatioIsAboveMax(
+                revert Mammon__WeightChangeRatioIsAboveMax(
                     address(tokens[i]),
                     change,
                     MAX_WEIGHT_CHANGE_RATIO
