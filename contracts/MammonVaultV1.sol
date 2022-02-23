@@ -574,9 +574,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             uint256 change = getWeightChangeRatio(
                 weights[i],
                 targetWeights[i]
-            ) / duration;
+            );
 
-            if (change > MAX_WEIGHT_CHANGE_RATIO) {
+            if (change > MAX_WEIGHT_CHANGE_RATIO * duration) {
                 revert Mammon__WeightChangeRatioIsAboveMax(
                     address(tokens[i]),
                     change,
