@@ -40,6 +40,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Largest possible notice period for vault termination (2 months).
     uint256 private constant MAX_NOTICE_PERIOD = 60 days;
 
+    /// @notice Largest possible weight change ratio per one second
+    uint256 private constant MAX_WEIGHT_CHANGE_RATIO = 10**15;
+
     /// @notice Balancer Vault.
     IBVault public immutable bVault;
 
@@ -162,6 +165,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     );
     error Mammon__CallerIsNotOwnerOrManager();
     error Mammon__WeightChangeDurationIsBelowMin(uint256 actual, uint256 min);
+    error Mammon__WeightChaingeRatioIsAboveMax(
+        address token,
+        uint256 actual,
+        uint256 max
+    );
     error Mammon__WeightIsAboveMax(uint256 actual, uint256 max);
     error Mammon__WeightIsBelowMin(uint256 actual, uint256 min);
     error Mammon__AmountIsBelowMin(uint256 actual, uint256 min);
@@ -558,6 +566,24 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             );
         }
 
+        uint256[] memory weights = pool.getNormalizedWeights();
+        IERC20[] memory tokens = getTokens();
+        uint256 duration = endTime - startTime;
+        for (uint256 i = 0; i < targetWeights.length; i++) {
+            uint256 change = getWeightChangeRatio(
+                weights[i],
+                targetWeights[i]
+            ) / duration;
+
+            if (change > MAX_WEIGHT_CHANGE_RATIO) {
+                revert Mammon__WeightChaingeRatioIsAboveMax(
+                    address(tokens[i]),
+                    change,
+                    MAX_WEIGHT_CHANGE_RATIO
+                );
+            }
+        }
+
         pool.updateWeightsGradually(startTime, endTime, targetWeights);
 
         // slither-disable-next-line reentrancy-events
@@ -671,6 +697,22 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         returns (uint256[] memory)
     {
         return pool.getNormalizedWeights();
+    }
+
+    /// @notice Calculate change ratio for weight upgrade.
+    /// @dev Will only be called by updateWeightsGradually().
+    /// @param weight Current weight.
+    /// @param targetWeight Target weight.
+    /// @return Change ratio from current weight to target weight.
+    function getWeightChangeRatio(uint256 weight, uint256 targetWeight)
+        public
+        view
+        returns (uint256)
+    {
+        return
+            weight > targetWeight
+                ? (ONE * weight) / targetWeight
+                : (ONE * targetWeight) / weight;
     }
 
     /// @notice Disable ownership renounceable
