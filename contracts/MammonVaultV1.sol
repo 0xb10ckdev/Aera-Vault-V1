@@ -700,13 +700,20 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         return pool.getNormalizedWeights();
     }
 
+    /// @notice Disable ownership renounceable
+    function renounceOwnership() public override onlyOwner {
+        revert Mammon__VaultIsNotRenounceable();
+    }
+
+    /// INTERNAL FUNCTIONS ///
+
     /// @notice Calculate change ratio for weight upgrade.
     /// @dev Will only be called by updateWeightsGradually().
     /// @param weight Current weight.
     /// @param targetWeight Target weight.
     /// @return Change ratio from current weight to target weight.
     function getWeightChangeRatio(uint256 weight, uint256 targetWeight)
-        public
+        internal
         view
         returns (uint256)
     {
@@ -715,13 +722,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 ? (ONE * weight) / targetWeight
                 : (ONE * targetWeight) / weight;
     }
-
-    /// @notice Disable ownership renounceable
-    function renounceOwnership() public override onlyOwner {
-        revert Mammon__VaultIsNotRenounceable();
-    }
-
-    /// INTERNAL FUNCTIONS ///
 
     /// @dev PoolBalanceOpKind has three kinds
     /// Withdrawal - decrease the Pool's cash, but increase its managed balance,
