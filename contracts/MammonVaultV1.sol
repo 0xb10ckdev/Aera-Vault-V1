@@ -566,6 +566,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             );
         }
 
+        // Check if weight change ratio is exceeded
         uint256[] memory weights = pool.getNormalizedWeights();
         IERC20[] memory tokens = getTokens();
         uint256 duration = endTime - startTime;
