@@ -719,7 +719,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @return Change ratio(>1) from current weight to target weight.
     function getWeightChangeRatio(uint256 weight, uint256 targetWeight)
         internal
-        view
+        pure
         returns (uint256)
     {
         return
