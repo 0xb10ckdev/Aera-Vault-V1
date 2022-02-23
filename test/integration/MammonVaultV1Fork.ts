@@ -756,7 +756,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 timestamp,
                 timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
               ),
-          ).to.be.revertedWith("Mammon__WeightChaingeRatioIsAboveMax");
+          ).to.be.revertedWith("Mammon__WeightChangeRatioIsAboveMax");
         });
 
         it("when weight is less than minimum", async () => {
