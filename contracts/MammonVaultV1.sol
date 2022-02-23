@@ -575,17 +575,18 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256[] memory weights = pool.getNormalizedWeights();
         IERC20[] memory tokens = getTokens();
         uint256 duration = endTime - startTime;
+        uint256 maximumRatio = MAX_WEIGHT_CHANGE_RATIO * duration;
         for (uint256 i = 0; i < targetWeights.length; i++) {
-            uint256 change = getWeightChangeRatio(
+            uint256 changeRatio = getWeightChangeRatio(
                 weights[i],
                 targetWeights[i]
             );
 
-            if (change > MAX_WEIGHT_CHANGE_RATIO * duration) {
+            if (changeRatio > maximumRatio) {
                 revert Mammon__WeightChangeRatioIsAboveMax(
                     address(tokens[i]),
-                    change,
-                    MAX_WEIGHT_CHANGE_RATIO
+                    changeRatio,
+                    maximumRatio
                 );
             }
         }
