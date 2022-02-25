@@ -165,7 +165,7 @@ $ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKE
 - MANAGER: Manager's address
 - VALIDATOR: Address of withdrawal validator contract
 - NOTICE_PERIOD: Finalization notice period in seconds
-- DESCRIPTION: Vault text descriptino
+- DESCRIPTION: Vault text description
 
 ## Syntax Highlighting
 
