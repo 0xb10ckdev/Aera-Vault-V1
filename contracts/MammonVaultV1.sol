@@ -60,6 +60,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Verifies withdraw limits.
     IWithdrawalValidator public immutable validator;
 
+    /// @notice Management fee earned proportion per second.
+    /// @dev 10**18 is 100%
+    uint256 public immutable managementFee;
+
     /// @notice Describes vault purpose and modelling assumptions for differentiating between vaults
     /// @dev string cannot be immutable bytecode but only set in constructor
     string public description;
@@ -74,6 +78,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Indicates that the Vault has been initialized
     bool public initialized;
+
+    /// @notice Manager fee earned proportion
+    uint256 public managerFeeIndex;
+
+    /// @notice Last timestamp where manager fee index was locked.
+    uint256 public managerTimeIndex;
 
     /// EVENTS ///
 
@@ -246,6 +256,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         address manager_,
         address validator_,
         uint32 noticePeriod_,
+        uint256 managementFee_,
         string memory description_
     ) {
         if (tokens.length != weights.length) {
@@ -300,6 +311,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         validator = IWithdrawalValidator(validator_);
         noticePeriod = noticePeriod_;
         description = description_;
+        managementFee = managementFee_;
+        managerTimeIndex = block.timestamp;
 
         // slither-disable-next-line reentrancy-events
         emit Created(
@@ -376,6 +389,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
+        calculateAndClaimManagerFees();
+
         IERC20[] memory tokens;
         uint256[] memory holdings;
         (tokens, holdings, ) = getTokensData();
@@ -428,6 +443,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
+        calculateAndClaimManagerFees();
+
         IERC20[] memory tokens;
         uint256[] memory holdings;
         (tokens, holdings, ) = getTokensData();
@@ -493,6 +510,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
+        calculateAndClaimManagerFees();
         noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
         emit FinalizationInitialized(noticeTimeoutAt);
     }
@@ -516,6 +534,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         if (newManager == address(0)) {
             revert Mammon__ManagerIsZeroAddress();
         }
+
+        calculateAndClaimManagerFees();
+
         emit ManagerChanged(manager, newManager);
         manager = newManager;
     }
@@ -637,6 +658,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         emit SetSwapFee(newSwapFee);
     }
 
+    /// @inheritdoc IManagerAPI
+    function claimManagerFees() external override onlyManager {
+        calculateAndClaimManagerFees();
+    }
+
     /// MULTI ASSET VAULT INTERFACE ///
 
     /// @inheritdoc IMultiAssetVault
@@ -712,6 +738,43 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// INTERNAL FUNCTIONS ///
+
+    /// @notice Calculate manager fee index.
+    function updateManagerFeeIndex() internal {
+        managerFeeIndex +=
+            (block.timestamp - managerTimeIndex) *
+            managementFee;
+        managerTimeIndex = block.timestamp;
+    }
+
+    /// @notice Calculate manager fee index and claim.
+    /// @dev Will only be called by claimManagerfee(), setManager(),
+    ///      initiateFinalization(), deposit() and withdraw().
+    function calculateAndClaimManagerFees() internal {
+        updateManagerFeeIndex();
+
+        IERC20[] memory tokens;
+        uint256[] memory holdings;
+        (tokens, holdings, ) = getTokensData();
+
+        uint256[] memory amounts = new uint256[](tokens.length);
+        uint256[] memory managed = new uint256[](tokens.length);
+
+        for (uint256 i = 0; i < tokens.length; i++) {
+            amounts[i] = (holdings[i] * managerFeeIndex) / ONE;
+        }
+
+        /// Decrease cash balance and increase managed balance of pool
+        /// i.e. Move amounts from cash balance to managed balance
+        /// and withdraw token amounts from pool to Mammon Vault
+        updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.WITHDRAW);
+        /// Adjust managed balance of pool as the zero array
+        updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
+
+        for (uint256 i = 0; i < amounts.length; i++) {
+            tokens[i].safeTransfer(manager, amounts[i]);
+        }
+    }
 
     /// @notice Calculate change ratio for weight upgrade.
     /// @dev Will only be called by updateWeightsGradually().
