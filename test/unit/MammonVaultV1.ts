@@ -13,6 +13,7 @@ import {
   WithdrawalValidatorMock__factory,
 } from "../../typechain";
 import {
+  MAX_MANAGEMENT_FEE,
   MINIMUM_WEIGHT_CHANGE_DURATION,
   MIN_SWAP_FEE,
   MIN_WEIGHT,
@@ -96,6 +97,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         manager.address,
         validator.address,
         DEFAULT_NOTICE_PERIOD,
+        MAX_MANAGEMENT_FEE,
         "Test vault description",
       );
   });
