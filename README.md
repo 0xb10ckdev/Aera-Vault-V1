@@ -130,19 +130,19 @@ $ yarn deploy:factory --network <NETWORK>
 Deploy the Vault to a specific network:
 
 ```sh
-$ yarn deploy:vault --network <NETWORK> --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --description <DESCRIPTION>
+$ yarn deploy:vault --network <NETWORK> --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION>
 ```
 
 Deploy the Vault to Kovan Network:
 
 ```sh
-$ yarn deploy:kovan --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --description <DESCRIPTION>
+$ yarn deploy:kovan --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION>
 ```
 
 Deploy the Vault to Mainnet Network:
 
 ```sh
-$ yarn deploy:mainnet --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --description <DESCRIPTION>
+$ yarn deploy:mainnet --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION>
 ```
 
 Deploy the Validator, ManagedPoolFactory and Vault to Hardhat Network:
@@ -150,7 +150,7 @@ Deploy the Validator, ManagedPoolFactory and Vault to Hardhat Network:
 ```sh
 $ yarn deploy:validator --count <TOKEN_COUNT>
 $ yarn deploy:factory
-$ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --description <DESCRIPTION>
+$ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION>
 ```
 
 **Legend**:
@@ -165,6 +165,7 @@ $ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKE
 - MANAGER: Manager's address
 - VALIDATOR: Address of withdrawal validator contract
 - NOTICE_PERIOD: Finalization notice period in seconds
+- MANAGEMENT_FEE: Management fee earned proportion per second
 - DESCRIPTION: Vault text description
 
 ## Syntax Highlighting
