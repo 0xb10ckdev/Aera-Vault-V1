@@ -1365,28 +1365,59 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       it("should be possible to change manager", async () => {
-        const { holdings, managerBalances } = await getState();
-        const managerTimeIndex = await vault.managerTimeIndex();
+        it("should withdraw no fee when Vault is not initialized", async () => {
+          const { holdings, managerBalances } = await getState();
 
-        await increaseTime(1000);
+          await increaseTime(1000);
 
-        const trx = await vault.setManager(user.address);
+          await vault.setManager(user.address);
 
-        const currentTime = await getTimestamp(trx.blockNumber);
-        const feeIndex = MAX_MANAGEMENT_FEE.mul(
-          currentTime - managerTimeIndex.toNumber(),
-        );
-        const { holdings: newHoldings, managerBalances: newManagerBalances } =
-          await getState();
+          const {
+            holdings: newHoldings,
+            managerBalances: newManagerBalances,
+          } = await getState();
 
-        for (let i = 0; i < tokens.length; i++) {
-          const fee = holdings[i].mul(feeIndex).div(ONE);
+          for (let i = 0; i < tokens.length; i++) {
+            expect(newHoldings[i]).to.equal(holdings[i]);
+            expect(newManagerBalances[i]).to.equal(managerBalances[i]);
+          }
 
-          expect(newHoldings[i]).to.equal(holdings[i].sub(fee));
-          expect(newManagerBalances[i]).to.equal(managerBalances[i].add(fee));
-        }
+          expect(await vault.manager()).to.equal(user.address);
+        });
 
-        expect(await vault.manager()).to.equal(user.address);
+        it("should withdraw fees when Vault is initialized", async () => {
+          for (let i = 0; i < tokens.length; i++) {
+            await tokens[i].approve(vault.address, toWei(10000));
+          }
+          await vault.initialDeposit(valueArray(toWei(10000), tokens.length));
+
+          const { holdings, managerBalances } = await getState();
+          const managerTimeIndex = await vault.managerTimeIndex();
+
+          await increaseTime(1000);
+
+          const trx = await vault.setManager(user.address);
+
+          const currentTime = await getTimestamp(trx.blockNumber);
+          const feeIndex = MAX_MANAGEMENT_FEE.mul(
+            currentTime - managerTimeIndex.toNumber(),
+          );
+          const {
+            holdings: newHoldings,
+            managerBalances: newManagerBalances,
+          } = await getState();
+
+          for (let i = 0; i < tokens.length; i++) {
+            const fee = holdings[i].mul(feeIndex).div(ONE);
+
+            expect(newHoldings[i]).to.equal(holdings[i].sub(fee));
+            expect(newManagerBalances[i]).to.equal(
+              managerBalances[i].add(fee),
+            );
+          }
+
+          expect(await vault.manager()).to.equal(user.address);
+        });
       });
     });
 
