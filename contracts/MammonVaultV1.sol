@@ -323,7 +323,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         noticePeriod = noticePeriod_;
         description = description_;
         managementFee = managementFee_;
-        managerTimeIndex = block.timestamp;
 
         // slither-disable-next-line reentrancy-events
         emit Created(
@@ -350,7 +349,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         if (initialized) {
             revert Mammon__VaultIsAlreadyInitialized();
         }
+
         initialized = true;
+        managerTimeIndex = block.timestamp;
 
         IERC20[] memory tokens = getTokens();
 
