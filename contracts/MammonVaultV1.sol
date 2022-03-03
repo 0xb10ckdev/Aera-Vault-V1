@@ -781,6 +781,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             amounts[i] = (holdings[i] * managerFeeIndex) / ONE;
         }
 
+        managerFeeIndex = 0;
+
         /// Decrease cash balance and increase managed balance of pool
         /// i.e. Move amounts from cash balance to managed balance
         /// and withdraw token amounts from pool to Mammon Vault
@@ -791,8 +793,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < amounts.length; i++) {
             tokens[i].safeTransfer(manager, amounts[i]);
         }
-
-        managerFeeIndex = 0;
     }
 
     /// @notice Calculate change ratio for weight upgrade.
