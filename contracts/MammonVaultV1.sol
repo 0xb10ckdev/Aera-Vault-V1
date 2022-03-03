@@ -542,6 +542,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IProtocolAPI
+    // slither-disable-next-line timestamp
     function setManager(address newManager) external override onlyOwner {
         if (newManager == address(0)) {
             revert Mammon__ManagerIsZeroAddress();
