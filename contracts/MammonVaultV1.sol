@@ -48,6 +48,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     ///      Weight growth range for 2000 seconds is [-50%, 100%]
     uint256 private constant MAX_WEIGHT_CHANGE_RATIO = 10**15;
 
+    /// @notice Largest management fee earned proportion per one second.
+    /// @dev 0.0000001% per second, i.e. 3.1536% per year.
+    uint256 private constant MAX_MANAGEMENT_FEE = 10**9;
+
     /// @notice Balancer Vault.
     IBVault public immutable bVault;
 
@@ -170,6 +174,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 amountLength
     );
     error Mammon__ValidatorIsNotValid(address validator);
+    error Mammon__ManagementFeeIsAboveMax(uint256 actual, uint256 max);
     error Mammon__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
     error Mammon__NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
     error Mammon__ManagerIsZeroAddress();
@@ -272,6 +277,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             )
         ) {
             revert Mammon__ValidatorIsNotValid(validator_);
+        }
+        if (managementFee_ > MAX_MANAGEMENT_FEE) {
+            revert Mammon__ManagementFeeIsAboveMax(
+                managementFee_,
+                MAX_MANAGEMENT_FEE
+            );
         }
         if (noticePeriod_ > MAX_NOTICE_PERIOD) {
             revert Mammon__NoticePeriodIsAboveMax(
@@ -659,7 +670,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IManagerAPI
-    function claimManagerFees() external override onlyManager {
+    function claimManagerFees()
+        external
+        override
+        whenInitialized
+        whenNotFinalizing
+        onlyManager
+    {
         calculateAndClaimManagerFees();
     }
 
@@ -774,6 +791,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < amounts.length; i++) {
             tokens[i].safeTransfer(manager, amounts[i]);
         }
+
+        managerFeeIndex = 0;
     }
 
     /// @notice Calculate change ratio for weight upgrade.

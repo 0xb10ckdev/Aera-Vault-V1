@@ -15,6 +15,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   .addParam("manager", "Manager's address")
   .addParam("validator", "Validator's address")
   .addParam("noticePeriod", "Notice period in seconds")
+  .addParam("managementFee", "Management fee earned proportion per second")
   .addParam(
     "description",
     "Vault text description. Keep it short and simple, please.",
@@ -41,6 +42,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
     const manager = taskArgs.manager;
     const validator = taskArgs.validator;
     const noticePeriod = taskArgs.noticePeriod;
+    const managementFee = taskArgs.managementFee;
     const description = taskArgs.description;
 
     if (tokens.length < 2) {
@@ -69,6 +71,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
       console.log(`Manager: ${manager}`);
       console.log(`Validator: ${validator}`);
       console.log(`Notice Period: ${noticePeriod}`);
+      console.log(`Management Fee: ${managementFee}`);
       console.log(`Description: ${description}`);
     }
 
@@ -88,6 +91,7 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
         manager,
         validator,
         noticePeriod,
+        managementFee,
         description,
       );
 
