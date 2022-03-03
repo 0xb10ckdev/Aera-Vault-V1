@@ -11,6 +11,7 @@ import {
   MammonVaultV1Mock,
   MammonVaultV1Mock__factory,
 } from "../typechain";
+import { MAX_MANAGEMENT_FEE } from "./constants";
 
 export type VaultParams = {
   signer: Signer;
@@ -23,6 +24,7 @@ export type VaultParams = {
   manager: string;
   validator?: string;
   noticePeriod?: number;
+  managementFee?: BigNumber;
   description?: string;
 };
 
@@ -48,6 +50,7 @@ export const deployVault = async (
       params.manager,
       params.validator,
       params.noticePeriod || DEFAULT_NOTICE_PERIOD,
+      params.managementFee || MAX_MANAGEMENT_FEE,
       params.description || "",
     );
 };
@@ -82,9 +85,14 @@ export const getCurrentTime = async (): Promise<number> => {
   return block.timestamp;
 };
 
+export const getTimestamp = async (
+  blockNumber: number | undefined,
+): Promise<number> => {
+  const block = await ethers.provider.getBlock(blockNumber || "latest");
+  return block.timestamp;
+};
+
 export const increaseTime = async (timestamp: number): Promise<void> => {
-  await ethers.provider.send("evm_increaseTime", [
-    Math.floor(timestamp / 1000),
-  ]);
+  await ethers.provider.send("evm_increaseTime", [Math.floor(timestamp)]);
   await ethers.provider.send("evm_mine", []);
 };
