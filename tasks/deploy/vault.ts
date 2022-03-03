@@ -15,7 +15,10 @@ task("deploy:vault", "Deploys a Mammon vault with the given parameters")
   .addParam("manager", "Manager's address")
   .addParam("validator", "Validator's address")
   .addParam("noticePeriod", "Notice period in seconds")
-  .addParam("managementFee", "Management fee earned proportion per second")
+  .addParam(
+    "managementFee",
+    "Management fee earned proportion per second(1e9 is maximum)",
+  )
   .addParam(
     "description",
     "Vault text description. Keep it short and simple, please.",
