@@ -1364,8 +1364,34 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
       });
 
-      it("should be possible to change manager", async () => {
+      describe("should be possible to change manager", async () => {
         it("should withdraw no fee when Vault is not initialized", async () => {
+          const { holdings, managerBalances } = await getState();
+
+          await increaseTime(1000);
+
+          await vault.setManager(user.address);
+
+          const {
+            holdings: newHoldings,
+            managerBalances: newManagerBalances,
+          } = await getState();
+
+          for (let i = 0; i < tokens.length; i++) {
+            expect(newHoldings[i]).to.equal(holdings[i]);
+            expect(newManagerBalances[i]).to.equal(managerBalances[i]);
+          }
+
+          expect(await vault.manager()).to.equal(user.address);
+        });
+
+        it("should withdraw no fee when Vault is finalizing", async () => {
+          for (let i = 0; i < tokens.length; i++) {
+            await tokens[i].approve(vault.address, toWei(10000));
+          }
+          await vault.initialDeposit(valueArray(toWei(10000), tokens.length));
+          await vault.initiateFinalization();
+
           const { holdings, managerBalances } = await getState();
 
           await increaseTime(1000);

@@ -523,7 +523,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenNotFinalizing
     {
         calculateAndClaimManagerFees();
-        managerFeeIndex = type(uint64).max;
         noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
         emit FinalizationInitialized(noticeTimeoutAt);
     }
@@ -548,7 +547,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             revert Mammon__ManagerIsZeroAddress();
         }
 
-        calculateAndClaimManagerFees();
+        if (initialized && noticeTimeoutAt == 0) {
+            calculateAndClaimManagerFees();
+        }
 
         emit ManagerChanged(manager, newManager);
         manager = newManager;
@@ -767,13 +768,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @notice Calculate manager fee index and claim.
-    /// @dev Will only be called by claimManagerfee(), setManager(),
+    /// @dev Will only be called by claimManagerfees(), setManager(),
     ///      initiateFinalization(), deposit() and withdraw().
     function calculateAndClaimManagerFees() internal {
-        if (managerTimeIndex == type(uint64).max) {
-            return;
-        }
-
         updateManagerFeeIndex();
 
         IERC20[] memory tokens;
