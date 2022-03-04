@@ -776,9 +776,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Calculate manager fee index and claim.
     /// @dev Will only be called by claimManagerFees(), setManager(),
     ///      initiateFinalization(), deposit() and withdraw().
+    // slither-disable-next-line timestamp
     function calculateAndClaimManagerFees() internal {
         updateManagerFeeIndex();
 
+        // slither-disable-next-line incorrect-equality
         if (managerFeeIndex == 0) {
             return;
         }
