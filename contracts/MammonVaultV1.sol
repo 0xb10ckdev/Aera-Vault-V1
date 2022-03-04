@@ -769,7 +769,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @notice Calculate manager fee index and claim.
-    /// @dev Will only be called by claimManagerfees(), setManager(),
+    /// @dev Will only be called by claimManagerFees(), setManager(),
     ///      initiateFinalization(), deposit() and withdraw().
     function calculateAndClaimManagerFees() internal {
         updateManagerFeeIndex();
