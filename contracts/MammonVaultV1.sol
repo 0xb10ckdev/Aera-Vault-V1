@@ -124,6 +124,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256[] weights
     );
 
+    /// @notice Emitted when management fees are withdrawn.
+    /// @param manager Manager address.
+    /// @param amounts Withdrawn amounts.
+    event ClaimManagerFees(address indexed manager, uint256[] amounts);
+
     /// @notice Emitted when manager is changed.
     /// @param previousManager Previous manager address.
     /// @param manager New manager address.
@@ -774,6 +779,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     function calculateAndClaimManagerFees() internal {
         updateManagerFeeIndex();
 
+        if (managerFeeIndex == 0) {
+            return;
+        }
+
         IERC20[] memory tokens;
         uint256[] memory holdings;
         (tokens, holdings, ) = getTokensData();
@@ -797,6 +806,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < amounts.length; i++) {
             tokens[i].safeTransfer(manager, amounts[i]);
         }
+
+        // slither-disable-next-line reentrancy-events
+        emit ClaimManagerFees(manager, amounts);
     }
 
     /// @notice Calculate change ratio for weight upgrade.
