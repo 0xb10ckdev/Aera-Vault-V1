@@ -1,5 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
+import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
 import {
@@ -22,7 +23,7 @@ import {
   ZERO_ADDRESS,
 } from "../constants";
 import { deployToken, setupTokens } from "../fixtures";
-import { getCurrentTime, toWei, valueArray } from "../utils";
+import { getCurrentTime, getTimestamp, toWei, valueArray } from "../utils";
 
 describe("Mammon Vault V1 Mainnet Functionality", function () {
   let admin: SignerWithAddress;
@@ -220,11 +221,26 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             const amounts = new Array(tokens.length).fill(0);
             amounts[i] = toWei(5);
 
+            const { holdings } = await getState();
+            const managerTimeIndex = await vault.managerTimeIndex();
             const trx = await vault.deposit(amounts);
+            const currentTime = await getTimestamp(trx.blockNumber);
             const weights = await vault.getNormalizedWeights();
+
             await expect(trx)
               .to.emit(vault, "Deposit")
               .withArgs(amounts, weights);
+            await expect(trx)
+              .to.emit(vault, "ClaimManagerFees")
+              .withArgs(
+                manager.address,
+                holdings.map((holding: BigNumber) =>
+                  holding
+                    .mul(currentTime - managerTimeIndex.toNumber())
+                    .mul(MAX_MANAGEMENT_FEE)
+                    .div(ONE),
+                ),
+              );
           }
         });
 
@@ -237,11 +253,26 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             await tokens[i].approve(vault.address, amounts[i]);
           }
 
+          const { holdings } = await getState();
+          const managerTimeIndex = await vault.managerTimeIndex();
           const trx = await vault.deposit(amounts);
+          const currentTime = await getTimestamp(trx.blockNumber);
           const weights = await vault.getNormalizedWeights();
+
           await expect(trx)
             .to.emit(vault, "Deposit")
             .withArgs(amounts, weights);
+          await expect(trx)
+            .to.emit(vault, "ClaimManagerFees")
+            .withArgs(
+              manager.address,
+              holdings.map((holding: BigNumber) =>
+                holding
+                  .mul(currentTime - managerTimeIndex.toNumber())
+                  .mul(MAX_MANAGEMENT_FEE)
+                  .div(ONE),
+              ),
+            );
         });
       });
     });
@@ -294,7 +325,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               const amounts = new Array(tokens.length).fill(0);
               amounts[i] = toWei(5);
 
+              const { holdings } = await getState();
+              const managerTimeIndex = await vault.managerTimeIndex();
               const trx = await vault.withdraw(amounts);
+              const currentTime = await getTimestamp(trx.blockNumber);
               const weights = await vault.getNormalizedWeights();
               await expect(trx)
                 .to.emit(vault, "Withdraw")
@@ -302,6 +336,17 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                   amounts,
                   valueArray(toWei(100000), tokens.length),
                   weights,
+                );
+              await expect(trx)
+                .to.emit(vault, "ClaimManagerFees")
+                .withArgs(
+                  manager.address,
+                  holdings.map((holding: BigNumber) =>
+                    holding
+                      .mul(currentTime - managerTimeIndex.toNumber())
+                      .mul(MAX_MANAGEMENT_FEE)
+                      .div(ONE),
+                  ),
                 );
             }
           });
@@ -316,7 +361,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               toWei(Math.floor(Math.random() * 100)),
             );
 
+            const { holdings } = await getState();
+            const managerTimeIndex = await vault.managerTimeIndex();
             const trx = await vault.withdraw(amounts);
+            const currentTime = await getTimestamp(trx.blockNumber);
             const weights = await vault.getNormalizedWeights();
             await expect(trx)
               .to.emit(vault, "Withdraw")
@@ -324,6 +372,17 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 amounts,
                 valueArray(toWei(100000), tokens.length),
                 weights,
+              );
+            await expect(trx)
+              .to.emit(vault, "ClaimManagerFees")
+              .withArgs(
+                manager.address,
+                holdings.map((holding: BigNumber) =>
+                  holding
+                    .mul(currentTime - managerTimeIndex.toNumber())
+                    .mul(MAX_MANAGEMENT_FEE)
+                    .div(ONE),
+                ),
               );
           });
         });
