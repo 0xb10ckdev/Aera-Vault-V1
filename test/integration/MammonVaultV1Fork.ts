@@ -386,13 +386,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             amounts[i] = toWei(5);
 
             const spotPrices = await vault.getSpotPrices(tokens[i].address);
-            const managerTimeIndex = await vault.managerTimeIndex();
+            const lastFeeCheckpoint = await vault.lastFeeCheckpoint();
 
             const trx = await vault.deposit(amounts);
 
             const currentTime = await getTimestamp(trx.blockNumber);
             const feeIndex = MAX_MANAGEMENT_FEE.mul(
-              currentTime - managerTimeIndex.toNumber(),
+              currentTime - lastFeeCheckpoint.toNumber(),
             );
             const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
             const {
@@ -428,7 +428,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         it("when depositing tokens", async () => {
           const { holdings, adminBalances, managerBalances } =
             await getState();
-          const managerTimeIndex = await vault.managerTimeIndex();
+          const lastFeeCheckpoint = await vault.lastFeeCheckpoint();
 
           const amounts = tokens.map(_ =>
             toWei(Math.floor(Math.random() * 100)),
@@ -444,7 +444,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
           const currentTime = await getTimestamp(trx.blockNumber);
           const feeIndex = MAX_MANAGEMENT_FEE.mul(
-            currentTime - managerTimeIndex.toNumber(),
+            currentTime - lastFeeCheckpoint.toNumber(),
           );
           const {
             holdings: newHoldings,
@@ -536,13 +536,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               amounts[i] = toWei(5);
 
               const spotPrices = await vault.getSpotPrices(tokens[i].address);
-              const managerTimeIndex = await vault.managerTimeIndex();
+              const lastFeeCheckpoint = await vault.lastFeeCheckpoint();
 
               const trx = await vault.withdraw(amounts);
 
               const currentTime = await getTimestamp(trx.blockNumber);
               const feeIndex = MAX_MANAGEMENT_FEE.mul(
-                currentTime - managerTimeIndex.toNumber(),
+                currentTime - lastFeeCheckpoint.toNumber(),
               );
               const newSpotPrices = await vault.getSpotPrices(
                 tokens[i].address,
@@ -585,7 +585,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
             const { holdings, adminBalances, managerBalances } =
               await getState();
-            const managerTimeIndex = await vault.managerTimeIndex();
+            const lastFeeCheckpoint = await vault.lastFeeCheckpoint();
 
             const amounts = tokens.map(_ =>
               toWei(Math.floor(Math.random() * 100)),
@@ -600,7 +600,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
             const currentTime = await getTimestamp(trx.blockNumber);
             const feeIndex = MAX_MANAGEMENT_FEE.mul(
-              currentTime - managerTimeIndex.toNumber(),
+              currentTime - lastFeeCheckpoint.toNumber(),
             );
             const {
               holdings: newHoldings,
@@ -658,7 +658,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           amounts[i] = toWei(5);
 
           const spotPrices = await vault.getSpotPrices(tokens[i].address);
-          const managerTimeIndex = await vault.managerTimeIndex();
+          const lastFeeCheckpoint = await vault.lastFeeCheckpoint();
 
           const trx1 = await vault.deposit(amounts);
           const trx2 = await vault.withdraw(amounts);
@@ -666,7 +666,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           const trx1Time = await getTimestamp(trx1.blockNumber);
           const trx2Time = await getTimestamp(trx2.blockNumber);
           const feeIndex1 = MAX_MANAGEMENT_FEE.mul(
-            trx1Time - managerTimeIndex.toNumber(),
+            trx1Time - lastFeeCheckpoint.toNumber(),
           );
           const feeIndex2 = MAX_MANAGEMENT_FEE.mul(trx2Time - trx1Time);
 
@@ -704,7 +704,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
       it("when depositing and withdrawing tokens", async () => {
         const { holdings, adminBalances, managerBalances } = await getState();
-        const managerTimeIndex = await vault.managerTimeIndex();
+        const lastFeeCheckpoint = await vault.lastFeeCheckpoint();
 
         const amounts = tokens.map(_ =>
           toWei(Math.floor(Math.random() * 100)),
@@ -722,7 +722,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         const trx1Time = await getTimestamp(trx1.blockNumber);
         const trx2Time = await getTimestamp(trx2.blockNumber);
         const feeIndex1 = MAX_MANAGEMENT_FEE.mul(
-          trx1Time - managerTimeIndex.toNumber(),
+          trx1Time - lastFeeCheckpoint.toNumber(),
         );
         const feeIndex2 = MAX_MANAGEMENT_FEE.mul(trx2Time - trx1Time);
         const {
@@ -933,7 +933,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
           const { holdings, adminBalances, managerBalances } =
             await getState();
-          const managerTimeIndex = await vault.managerTimeIndex();
+          const lastFeeCheckpoint = await vault.lastFeeCheckpoint();
 
           const spotPrices = [];
           for (let i = 0; i < tokens.length; i++) {
@@ -946,7 +946,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
           const currentTime = await getTimestamp(trx.blockNumber);
           const feeIndex = MAX_MANAGEMENT_FEE.mul(
-            currentTime - managerTimeIndex.toNumber(),
+            currentTime - lastFeeCheckpoint.toNumber(),
           );
           const {
             holdings: newHoldings,
@@ -1022,7 +1022,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
           const { holdings, adminBalances, managerBalances } =
             await getState();
-          const managerTimeIndex = await vault.managerTimeIndex();
+          const lastFeeCheckpoint = await vault.lastFeeCheckpoint();
 
           const spotPrices = [];
           for (let i = 0; i < tokens.length; i++) {
@@ -1035,7 +1035,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
           const currentTime = await getTimestamp(trx.blockNumber);
           const feeIndex = MAX_MANAGEMENT_FEE.mul(
-            currentTime - managerTimeIndex.toNumber(),
+            currentTime - lastFeeCheckpoint.toNumber(),
           );
           const {
             holdings: newHoldings,
@@ -1212,13 +1212,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
       it("should be possible to finalize", async () => {
         const { holdings, adminBalances, managerBalances } = await getState();
-        const managerTimeIndex = await vault.managerTimeIndex();
+        const lastFeeCheckpoint = await vault.lastFeeCheckpoint();
 
         const trx = await vault.initiateFinalization();
 
         const currentTime = await getTimestamp(trx.blockNumber);
         const feeIndex = MAX_MANAGEMENT_FEE.mul(
-          currentTime - managerTimeIndex.toNumber(),
+          currentTime - lastFeeCheckpoint.toNumber(),
         );
 
         const { holdings: newHoldings, managerBalances: newManagerBalances } =
@@ -1326,7 +1326,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
     it("should be possible to claim manager fee", async () => {
       const { holdings, managerBalances } = await getState();
-      const managerTimeIndex = await vault.managerTimeIndex();
+      const lastFeeCheckpoint = await vault.lastFeeCheckpoint();
 
       await increaseTime(500);
 
@@ -1334,7 +1334,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
       const currentTime = await getTimestamp(trx.blockNumber);
       const feeIndex = MAX_MANAGEMENT_FEE.mul(
-        currentTime - managerTimeIndex.toNumber(),
+        currentTime - lastFeeCheckpoint.toNumber(),
       );
       const { holdings: newHoldings, managerBalances: newManagerBalances } =
         await getState();
@@ -1418,7 +1418,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           await vault.initialDeposit(valueArray(toWei(10000), tokens.length));
 
           const { holdings, managerBalances } = await getState();
-          const managerTimeIndex = await vault.managerTimeIndex();
+          const lastFeeCheckpoint = await vault.lastFeeCheckpoint();
 
           await increaseTime(1000);
 
@@ -1426,7 +1426,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
           const currentTime = await getTimestamp(trx.blockNumber);
           const feeIndex = MAX_MANAGEMENT_FEE.mul(
-            currentTime - managerTimeIndex.toNumber(),
+            currentTime - lastFeeCheckpoint.toNumber(),
           );
           const {
             holdings: newHoldings,

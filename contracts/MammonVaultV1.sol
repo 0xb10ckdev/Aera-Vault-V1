@@ -84,7 +84,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     bool public initialized;
 
     /// @notice Last timestamp where manager fee index was locked.
-    uint64 public managerTimeIndex = type(uint64).max;
+    uint64 public lastFeeCheckpoint = type(uint64).max;
 
     /// @notice Manager fee earned proportion
     uint256 public managerFeeIndex;
@@ -356,7 +356,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         initialized = true;
-        managerTimeIndex = uint64(block.timestamp);
+        lastFeeCheckpoint = uint64(block.timestamp);
 
         IERC20[] memory tokens = getTokens();
 
@@ -768,9 +768,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Calculate manager fee index.
     function updateManagerFeeIndex() internal {
         managerFeeIndex +=
-            (block.timestamp - managerTimeIndex) *
+            (block.timestamp - lastFeeCheckpoint) *
             managementFee;
-        managerTimeIndex = uint64(block.timestamp);
+        lastFeeCheckpoint = uint64(block.timestamp);
     }
 
     /// @notice Calculate manager fee index and claim.
