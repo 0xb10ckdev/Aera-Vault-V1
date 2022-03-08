@@ -488,14 +488,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             }
         }
 
-        uint256[] memory managed = new uint256[](tokens.length);
-
-        /// Decrease cash balance and increase managed balance of pool
-        /// i.e. Move amounts from cash balance to managed balance
-        /// and withdraw token amounts from pool to Mammon Vault
-        updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.WITHDRAW);
-        /// Adjust managed balance of pool as the zero array
-        updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
+        withdrawFromPool(amounts);
 
         uint256 weightSum;
 
@@ -774,6 +767,20 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         lastFeeCheckpoint = uint64(block.timestamp);
     }
 
+    /// @notice Withdraw tokens from Balancer Pool to Mammon Vault
+    /// @dev Will only be called by withdraw(), returnFunds
+    ///      and calculateAndDistributeManagerFees()
+    function withdrawFromPool(uint256[] memory amounts) internal {
+        uint256[] memory managed = new uint256[](amounts.length);
+
+        /// Decrease cash balance and increase managed balance of pool
+        /// i.e. Move amounts from cash balance to managed balance
+        /// and withdraw token amounts from pool to Mammon Vault
+        updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.WITHDRAW);
+        /// Adjust managed balance of pool as the zero array
+        updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
+    }
+
     /// @notice Calculate manager fee index and distribute.
     /// @dev Will only be called by claimManagerFees(), setManager(),
     ///      initiateFinalization(), deposit() and withdraw().
@@ -791,7 +798,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         (tokens, holdings, ) = getTokensData();
 
         uint256[] memory amounts = new uint256[](tokens.length);
-        uint256[] memory managed = new uint256[](tokens.length);
 
         for (uint256 i = 0; i < tokens.length; i++) {
             amounts[i] = (holdings[i] * managerFeeIndex) / ONE;
@@ -799,12 +805,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         managerFeeIndex = 0;
 
-        /// Decrease cash balance and increase managed balance of pool
-        /// i.e. Move amounts from cash balance to managed balance
-        /// and withdraw token amounts from pool to Mammon Vault
-        updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.WITHDRAW);
-        /// Adjust managed balance of pool as the zero array
-        updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
+        withdrawFromPool(amounts);
 
         for (uint256 i = 0; i < amounts.length; i++) {
             tokens[i].safeTransfer(manager, amounts[i]);
@@ -891,12 +892,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @return amounts Exact returned amount of tokens.
     function returnFunds() internal returns (uint256[] memory amounts) {
         uint256[] memory holdings = getHoldings();
-
         IERC20[] memory tokens = getTokens();
-        uint256[] memory managed = new uint256[](tokens.length);
 
-        updatePoolBalance(holdings, IBVault.PoolBalanceOpKind.WITHDRAW);
-        updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
+        withdrawFromPool(holdings);
 
         amounts = new uint256[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
