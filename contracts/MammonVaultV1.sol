@@ -357,7 +357,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         initialized = true;
-        lastFeeCheckpoint = uint64(block.timestamp);
+        lastFeeCheckpoint = block.timestamp.toUint64();
 
         IERC20[] memory tokens = getTokens();
 
@@ -764,7 +764,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         managerFeeIndex +=
             (block.timestamp - lastFeeCheckpoint) *
             managementFee;
-        lastFeeCheckpoint = uint64(block.timestamp);
+        lastFeeCheckpoint = block.timestamp.toUint64();
     }
 
     /// @notice Withdraw tokens from Balancer Pool to Mammon Vault
