@@ -50,6 +50,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Largest management fee earned proportion per one second.
     /// @dev 0.0000001% per second, i.e. 3.1536% per year.
+    ///      0.0000001% * (365 * 24 * 60 * 60) = 3.1536%
     uint256 private constant MAX_MANAGEMENT_FEE = 10**9;
 
     /// @notice Balancer Vault.
@@ -127,7 +128,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Emitted when management fees are withdrawn.
     /// @param manager Manager address.
     /// @param amounts Withdrawn amounts.
-    event ClaimManagerFees(address indexed manager, uint256[] amounts);
+    event DistributeManagerFees(address indexed manager, uint256[] amounts);
 
     /// @notice Emitted when manager is changed.
     /// @param previousManager Previous manager address.
@@ -406,7 +407,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
-        calculateAndClaimManagerFees();
+        calculateAndDistributeManagerFees();
 
         IERC20[] memory tokens;
         uint256[] memory holdings;
@@ -460,7 +461,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
-        calculateAndClaimManagerFees();
+        calculateAndDistributeManagerFees();
 
         IERC20[] memory tokens;
         uint256[] memory holdings;
@@ -527,7 +528,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
-        calculateAndClaimManagerFees();
+        calculateAndDistributeManagerFees();
         noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
         emit FinalizationInitialized(noticeTimeoutAt);
     }
@@ -554,7 +555,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         if (initialized && noticeTimeoutAt == 0) {
-            calculateAndClaimManagerFees();
+            calculateAndDistributeManagerFees();
         }
 
         emit ManagerChanged(manager, newManager);
@@ -686,7 +687,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenNotFinalizing
         onlyManager
     {
-        calculateAndClaimManagerFees();
+        calculateAndDistributeManagerFees();
     }
 
     /// MULTI ASSET VAULT INTERFACE ///
@@ -773,11 +774,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         lastFeeCheckpoint = uint64(block.timestamp);
     }
 
-    /// @notice Calculate manager fee index and claim.
+    /// @notice Calculate manager fee index and distribute.
     /// @dev Will only be called by claimManagerFees(), setManager(),
     ///      initiateFinalization(), deposit() and withdraw().
     // slither-disable-next-line timestamp
-    function calculateAndClaimManagerFees() internal {
+    function calculateAndDistributeManagerFees() internal {
         updateManagerFeeIndex();
 
         // slither-disable-next-line incorrect-equality
@@ -810,7 +811,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         // slither-disable-next-line reentrancy-events
-        emit ClaimManagerFees(manager, amounts);
+        emit DistributeManagerFees(manager, amounts);
     }
 
     /// @notice Calculate change ratio for weight upgrade.
