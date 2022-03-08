@@ -231,7 +231,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               .to.emit(vault, "Deposit")
               .withArgs(amounts, weights);
             await expect(trx)
-              .to.emit(vault, "ClaimManagerFees")
+              .to.emit(vault, "DistributeManagerFees")
               .withArgs(
                 manager.address,
                 holdings.map((holding: BigNumber) =>
@@ -263,7 +263,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             .to.emit(vault, "Deposit")
             .withArgs(amounts, weights);
           await expect(trx)
-            .to.emit(vault, "ClaimManagerFees")
+            .to.emit(vault, "DistributeManagerFees")
             .withArgs(
               manager.address,
               holdings.map((holding: BigNumber) =>
@@ -338,7 +338,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                   weights,
                 );
               await expect(trx)
-                .to.emit(vault, "ClaimManagerFees")
+                .to.emit(vault, "DistributeManagerFees")
                 .withArgs(
                   manager.address,
                   holdings.map((holding: BigNumber) =>
@@ -374,7 +374,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 weights,
               );
             await expect(trx)
-              .to.emit(vault, "ClaimManagerFees")
+              .to.emit(vault, "DistributeManagerFees")
               .withArgs(
                 manager.address,
                 holdings.map((holding: BigNumber) =>
