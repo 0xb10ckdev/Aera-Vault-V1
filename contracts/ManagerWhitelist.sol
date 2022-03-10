@@ -32,6 +32,7 @@ contract ManagerWhitelist is Ownable, IManagerWhitelist {
     /// ERRORS ///
 
     error ManagerIsZeroAddress();
+    error AddressIsAlreadyManager();
     error AddressIsNotManager();
 
     /// FUNCTIONS ///
@@ -58,18 +59,20 @@ contract ManagerWhitelist is Ownable, IManagerWhitelist {
             revert ManagerIsZeroAddress();
         }
 
-        managers.add(manager);
+        bool result = managers.add(manager);
+        if (!result) {
+            revert AddressIsAlreadyManager();
+        }
 
         emit ManagerCreated(manager);
     }
 
     /// @inheritdoc IManagerWhitelist
     function removeManager(address manager) external override onlyOwner {
-        if (!managers.contains(manager)) {
+        bool result = managers.remove(manager);
+        if (!result) {
             revert AddressIsNotManager();
         }
-
-        managers.remove(manager);
 
         emit ManagerRemoved(manager);
     }
