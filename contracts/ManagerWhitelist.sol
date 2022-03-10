@@ -23,7 +23,7 @@ contract ManagerWhitelist is Ownable, IManagerWhitelist {
 
     /// @notice Emitted when a new manager is added.
     /// @param manager New manager address.
-    event ManagerCreated(address indexed manager);
+    event ManagerAdded(address indexed manager);
 
     /// @notice Emitted when a manager is removed.
     /// @param manager Removed manager address.
@@ -64,7 +64,7 @@ contract ManagerWhitelist is Ownable, IManagerWhitelist {
             revert AddressIsAlreadyManager();
         }
 
-        emit ManagerCreated(manager);
+        emit ManagerAdded(manager);
     }
 
     /// @inheritdoc IManagerWhitelist
