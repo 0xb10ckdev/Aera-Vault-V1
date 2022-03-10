@@ -38,13 +38,7 @@ contract ManagerWhitelist is Ownable, IManagerWhitelist {
     constructor(address[] memory managers_) {
         if (managers_.length > 0) {
             for (uint256 i = 0; i < managers_.length; i++) {
-                if (managers_[i] == address(0)) {
-                    revert ManagerIsZeroAddress();
-                }
-
-                managers.add(managers_[i]);
-
-                emit ManagerAdded(managers_[i]);
+                _addManager(managers_[i]);
             }
         }
     }
@@ -53,16 +47,7 @@ contract ManagerWhitelist is Ownable, IManagerWhitelist {
 
     /// @inheritdoc IManagerWhitelist
     function addManager(address manager) external override onlyOwner {
-        if (manager == address(0)) {
-            revert ManagerIsZeroAddress();
-        }
-
-        bool result = managers.add(manager);
-        if (!result) {
-            revert AddressIsAlreadyManager();
-        }
-
-        emit ManagerAdded(manager);
+        _addManager(manager);
     }
 
     /// @inheritdoc IManagerWhitelist
@@ -83,5 +68,19 @@ contract ManagerWhitelist is Ownable, IManagerWhitelist {
     /// @inheritdoc IManagerWhitelist
     function getManagers() external view override returns (address[] memory) {
         return managers.values();
+    }
+
+    /// INTERNAL FUNCTIONS ///
+    function _addManager(address manager) internal {
+        if (manager == address(0)) {
+            revert ManagerIsZeroAddress();
+        }
+
+        bool result = managers.add(manager);
+        if (!result) {
+            revert AddressIsAlreadyManager();
+        }
+
+        emit ManagerAdded(manager);
     }
 }
