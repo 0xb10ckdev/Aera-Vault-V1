@@ -78,13 +78,7 @@ contract ManagerWhitelist is Ownable, IManagerWhitelist {
     }
 
     /// @inheritdoc IManagerWhitelist
-    function isManager(address manager)
-        external
-        view
-        override
-        onlyOwner
-        returns (bool)
-    {
+    function isManager(address manager) external view override returns (bool) {
         return managers.contains(manager);
     }
 
