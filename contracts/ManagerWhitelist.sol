@@ -17,10 +17,6 @@ contract ManagerWhitelist is Ownable, IManagerWhitelist {
 
     /// EVENTS ///
 
-    /// @notice Emitted when manager list is initialized.
-    /// @param managers Manager addresses.
-    event ManagerInitialized(address[] managers);
-
     /// @notice Emitted when a new manager is added.
     /// @param manager New manager address.
     event ManagerAdded(address indexed manager);
@@ -45,9 +41,11 @@ contract ManagerWhitelist is Ownable, IManagerWhitelist {
                 if (managers_[i] == address(0)) {
                     revert ManagerIsZeroAddress();
                 }
-            }
 
-            emit ManagerInitialized(managers_);
+                managers.add(managers_[i]);
+
+                emit ManagerAdded(managers_[i]);
+            }
         }
     }
 
