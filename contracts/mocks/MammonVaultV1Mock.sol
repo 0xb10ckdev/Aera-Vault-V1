@@ -21,6 +21,7 @@ contract MammonVaultV1Mock is MammonVaultV1 {
         address manager,
         address validator,
         uint32 noticePeriod,
+        uint256 managementFee,
         string memory description
     )
         MammonVaultV1(
@@ -33,6 +34,7 @@ contract MammonVaultV1Mock is MammonVaultV1 {
             manager,
             validator,
             noticePeriod,
+            managementFee,
             description
         )
     {}
