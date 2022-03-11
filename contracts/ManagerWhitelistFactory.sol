@@ -15,6 +15,7 @@ contract ManagerWhitelistFactory is Ownable {
 
     /// FUNCTIONS ///
 
+    // solhint-disable no-empty-blocks
     constructor() {}
 
     /// @notice Deploy ManagerWhitelist contract
