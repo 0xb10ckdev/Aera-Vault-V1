@@ -84,11 +84,11 @@ describe("ManagerWhitelist Functionality", function () {
 
     it("should be possible to add a new manager", async () => {
       for (let i = 0; i < users.length; i++) {
-        expect(await contract.isManager(users[i].address)).to.be.equal(false);
+        expect(await contract.isManager(users[i].address)).to.be.false;
 
         await contract.addManager(users[i].address);
 
-        expect(await contract.isManager(users[i].address)).to.be.equal(true);
+        expect(await contract.isManager(users[i].address)).to.be.true;
         expect(await contract.getManagers()).to.be.eql(
           users.slice(0, i + 1).map(user => user.address),
         );
@@ -119,7 +119,7 @@ describe("ManagerWhitelist Functionality", function () {
 
     it("should be possible to remove a manager", async () => {
       for (let i = 0; i < users.length; i++) {
-        expect(await contract.isManager(users[i].address)).to.be.equal(true);
+        expect(await contract.isManager(users[i].address)).to.be.true;
 
         const managers = await contract.getManagers();
 
@@ -132,7 +132,7 @@ describe("ManagerWhitelist Functionality", function () {
         newManagers[managerIndex] = managers[managers.length - 1];
         newManagers = newManagers.slice(0, managers.length - 1);
 
-        expect(await contract.isManager(users[i].address)).to.be.equal(false);
+        expect(await contract.isManager(users[i].address)).to.be.false;
         expect(await contract.getManagers()).to.be.eql(newManagers);
       }
     });
