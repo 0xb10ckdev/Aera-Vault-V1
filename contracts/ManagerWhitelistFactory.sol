@@ -30,6 +30,7 @@ contract ManagerWhitelistFactory is Ownable {
         }(managers);
         managerWhitelist.transferOwnership(msg.sender);
 
+        // slither-disable-next-line reentrancy-events
         emit Deployed(address(managerWhitelist), salt);
     }
 
@@ -44,6 +45,7 @@ contract ManagerWhitelistFactory is Ownable {
         view
         returns (address)
     {
+        // slither-disable-next-line too-many-digits
         address addr = address(
             uint160(
                 uint256(
