@@ -1,6 +1,9 @@
+import { ethers } from "ethers";
 import { task, types } from "hardhat/config";
-import { ManagerWhitelistFactory__factory } from "../../typechain/factories/ManagerWhitelistFactory__factory";
-import { ManagerWhitelist__factory } from "../../typechain/factories/ManagerWhitelist__factory";
+import {
+  ManagerWhitelist__factory,
+  ManagerWhitelistFactory__factory,
+} from "../../typechain";
 
 task(
   "deploy:managerWhitelist",
@@ -40,7 +43,9 @@ task(
     const trx = await managerWhitelistFactory.deploy(managers, salt);
     const receipt = await trx.wait();
 
-    const deployedEvent = receipt.events?.find(e => e.event == "Deployed");
+    const deployedEvent = receipt.events?.find(
+      (e: ethers.Event) => e.event == "Deployed",
+    );
     const deployedAddress = deployedEvent?.args?.addr;
 
     if (!taskArgs.silent) {

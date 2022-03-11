@@ -1,8 +1,7 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
 import hre, { ethers } from "hardhat";
-import { ManagerWhitelist } from "../../typechain";
-import { ManagerWhitelistFactory } from "../../typechain/ManagerWhitelistFactory";
+import { ManagerWhitelist, ManagerWhitelistFactory } from "../../typechain";
 import { ZERO_ADDRESS } from "../constants";
 import { deployManagerWhitelist } from "../utils";
 
@@ -36,7 +35,6 @@ describe("ManagerWhitelist Deployment", function () {
 });
 
 describe("ManagerWhitelist Functionality", function () {
-  let admin: SignerWithAddress;
   let manager: SignerWithAddress;
   let users: SignerWithAddress[];
   let factory: ManagerWhitelistFactory;
@@ -47,7 +45,6 @@ describe("ManagerWhitelist Functionality", function () {
     snapshot = await ethers.provider.send("evm_snapshot", []);
 
     const signers = await ethers.getSigners();
-    admin = signers[0];
     manager = signers[1];
     users = signers.slice(2);
 
