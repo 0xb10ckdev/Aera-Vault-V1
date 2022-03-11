@@ -1,9 +1,5 @@
 import { ethers } from "ethers";
 import { task, types } from "hardhat/config";
-import {
-  ManagerWhitelist__factory,
-  ManagerWhitelistFactory__factory,
-} from "../../typechain";
 
 task(
   "deploy:managerWhitelist",
@@ -24,8 +20,6 @@ task(
       taskArgs.managers == "" ? [] : taskArgs.managers.split(",");
     const salt = taskArgs.salt;
 
-    const { admin } = await ethers.getNamedSigners();
-
     if (!taskArgs.silent) {
       console.log("Deploying ManagerWhitelist with");
       console.log(`ManagerWhitelistFactory: ${factory}`);
@@ -35,9 +29,9 @@ task(
       console.log(`Salt: ${salt}`);
     }
 
-    const managerWhitelistFactory = ManagerWhitelistFactory__factory.connect(
+    const managerWhitelistFactory = await ethers.getContractAt(
+      "ManagerWhitelistFactory",
       factory,
-      admin,
     );
 
     const trx = await managerWhitelistFactory.deploy(managers, salt);
@@ -52,9 +46,9 @@ task(
       console.log("ManagerWhitelist is deployed to:", deployedAddress);
     }
 
-    const managerWhitelist = ManagerWhitelist__factory.connect(
+    const managerWhitelist = await ethers.getContractAt(
+      "ManagerWhitelist",
       deployedAddress,
-      admin,
     );
 
     return managerWhitelist;
