@@ -20,4 +20,7 @@ interface IManagerAPI {
 
     /// @notice Change swap fee.
     function setSwapFee(uint256 newSwapFee) external;
+
+    /// @notice Claim manager fee.
+    function claimManagerFees() external;
 }
