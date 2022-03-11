@@ -36,10 +36,8 @@ contract ManagerWhitelist is Ownable, IManagerWhitelist {
     /// @notice Initialize the contract by initializing manager list.
     /// @param managers_ Manager addresses.
     constructor(address[] memory managers_) {
-        if (managers_.length > 0) {
-            for (uint256 i = 0; i < managers_.length; i++) {
-                _addManager(managers_[i]);
-            }
+        for (uint256 i = 0; i < managers_.length; i++) {
+            _addManager(managers_[i]);
         }
     }
 
