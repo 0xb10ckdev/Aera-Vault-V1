@@ -2,6 +2,7 @@
 pragma solidity 0.8.11;
 
 import "./dependencies/openzeppelin/Ownable.sol";
+import "./dependencies/openzeppelin/Create2.sol";
 import "./ManagerWhitelist.sol";
 
 /// @title Factory to deploy ManagerWhitelist contract.
@@ -45,25 +46,17 @@ contract ManagerWhitelistFactory is Ownable {
         view
         returns (address)
     {
-        // slither-disable-next-line too-many-digits
-        address addr = address(
-            uint160(
-                uint256(
-                    keccak256(
-                        abi.encodePacked(
-                            bytes1(0xff),
-                            address(this),
-                            salt,
-                            keccak256(
-                                abi.encodePacked(
-                                    type(ManagerWhitelist).creationCode,
-                                    abi.encode(managers)
-                                )
-                            )
-                        )
-                    )
-                )
+        bytes32 bytecodeHash = keccak256(
+            abi.encodePacked(
+                type(ManagerWhitelist).creationCode,
+                abi.encode(managers)
             )
+        );
+
+        address addr = Create2.computeAddress(
+            bytes32(salt),
+            bytecodeHash,
+            address(this)
         );
 
         return addr;

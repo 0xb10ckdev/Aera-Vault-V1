@@ -11,7 +11,7 @@ import {
   MammonVaultV1Mock,
   MammonVaultV1Mock__factory,
   ManagerWhitelist,
-  ManagerWhitelist__factory
+  ManagerWhitelist__factory,
 } from "../typechain";
 import { MAX_MANAGEMENT_FEE } from "./constants";
 
