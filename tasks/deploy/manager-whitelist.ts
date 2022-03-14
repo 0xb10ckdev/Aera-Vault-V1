@@ -24,7 +24,9 @@ task(
       console.log("Deploying ManagerWhitelist with");
       console.log(`ManagerWhitelistFactory: ${factory}`);
       console.log(
-        `Managers: ${managers.length > 0 ? managers.join("\n") : "no"}`,
+        `Initial Managers: ${
+          managers.length > 0 ? managers.join("\n") : "no"
+        }`,
       );
       console.log(`Salt: ${salt}`);
     }
