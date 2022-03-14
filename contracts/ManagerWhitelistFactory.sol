@@ -41,6 +41,7 @@ contract ManagerWhitelistFactory is Ownable {
     /// @param managers Initial manager addresses.
     /// @param salt Salt value to be used for deployment.
     /// @return Precomputed address of ManagerWhitelist deployment.
+    // slither-disable-next-line too-many-digits
     function computeAddress(address[] calldata managers, uint256 salt)
         external
         view
