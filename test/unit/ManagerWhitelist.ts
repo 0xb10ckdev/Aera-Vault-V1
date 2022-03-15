@@ -145,4 +145,37 @@ describe("ManagerWhitelist Functionality", function () {
       }
     });
   });
+
+  describe("Add and remove Managers", () => {
+    it("should be possible to add and remove managers", async () => {
+      for (let i = 0; i < users.length; i++) {
+        expect(await managerWhitelist.isManager(users[i].address)).to.be.false;
+
+        await managerWhitelist.addManager(users[i].address);
+
+        expect(await managerWhitelist.isManager(users[i].address)).to.be.true;
+        expect(await managerWhitelist.getManagers()).to.be.eql(
+          users.slice(0, i + 1).map(user => user.address),
+        );
+      }
+
+      for (let i = 0; i < users.length; i++) {
+        expect(await managerWhitelist.isManager(users[i].address)).to.be.true;
+
+        const managers = await managerWhitelist.getManagers();
+
+        await managerWhitelist.removeManager(users[i].address);
+
+        const managerIndex = managers.findIndex(
+          (address: string) => address == users[i].address,
+        );
+        let newManagers = [...managers];
+        newManagers[managerIndex] = managers[managers.length - 1];
+        newManagers = newManagers.slice(0, managers.length - 1);
+
+        expect(await managerWhitelist.isManager(users[i].address)).to.be.false;
+        expect(await managerWhitelist.getManagers()).to.be.eql(newManagers);
+      }
+    });
+  });
 });
