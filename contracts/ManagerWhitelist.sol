@@ -5,7 +5,7 @@ import "./dependencies/openzeppelin/Ownable.sol";
 import "./dependencies/openzeppelin/EnumerableSet.sol";
 import "./interfaces/IManagerWhitelist.sol";
 
-/// @title Manager whitelist management.
+/// @title Protocol-level manager whitelist.
 /// @notice ManagerWhitelist contract that manages manager list.
 contract ManagerWhitelist is Ownable, IManagerWhitelist {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -67,6 +67,7 @@ contract ManagerWhitelist is Ownable, IManagerWhitelist {
     }
 
     /// INTERNAL FUNCTIONS ///
+
     function _addManager(address manager) internal {
         if (manager == address(0)) {
             revert Mammon__ManagerIsZeroAddress();
