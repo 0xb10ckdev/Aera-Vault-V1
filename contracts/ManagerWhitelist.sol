@@ -10,8 +10,6 @@ import "./interfaces/IManagerWhitelist.sol";
 contract ManagerWhitelist is Ownable, IManagerWhitelist {
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    /// STORAGE SLOT START ///
-
     /// @notice Manager list.
     EnumerableSet.AddressSet private managers;
 
