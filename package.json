@@ -81,6 +81,8 @@
     "deploy:validator": "hardhat deploy:validator",
     "deploy:factory": "hardhat deploy:factory",
     "deploy:vault": "hardhat deploy:vault",
+    "deploy:managerWhitelistFactory": "hardhat deploy:managerWhitelistFactory",
+    "deploy:managerWhitelist": "hardhat deploy:managerWhitelist",
     "deploy": "yarn deploy:validator && yarn deploy:vault",
     "deploy:kovan": "yarn deploy:vault --network kovan",
     "deploy:mainnet": "yarn deploy:vault --network mainnet",

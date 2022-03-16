@@ -1,6 +1,8 @@
 import "./validator";
 import "./factory";
 import "./vault";
+import "./manager-whitelist-factory";
+import "./manager-whitelist";
 import "./apples";
 import "./oranges";
 import "./mangos";

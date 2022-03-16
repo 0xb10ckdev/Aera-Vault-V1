@@ -10,6 +10,8 @@ import {
   BaseManagedPoolFactory__factory,
   MammonVaultV1Mock,
   MammonVaultV1Mock__factory,
+  ManagerWhitelist,
+  ManagerWhitelist__factory,
 } from "../typechain";
 import { MAX_MANAGEMENT_FEE } from "./constants";
 
@@ -67,6 +69,18 @@ export const deployFactory = async (
     );
 
   return await factory.connect(signer).deploy(config.bVault);
+};
+
+export const deployManagerWhitelist = async (
+  signer: Signer,
+  managers: string[],
+): Promise<ManagerWhitelist> => {
+  const managerWhitelist =
+    await ethers.getContractFactory<ManagerWhitelist__factory>(
+      "ManagerWhitelist",
+    );
+
+  return await managerWhitelist.connect(signer).deploy(managers);
 };
 
 export const toWei = (value: number | string): BigNumber => {
