@@ -127,6 +127,18 @@ Deploy the ManagedPoolFactory to a specific network:
 $ yarn deploy:factory --network <NETWORK>
 ```
 
+Deploy the ManagerWhitelistFactory to a specific network:
+
+```sh
+$ yarn deploy:managerWhitelistFactory --network <NETWORK>
+```
+
+Deploy the ManagerWhitelist to a specific network:
+
+```sh
+$ yarn deploy:managerWhitelist --network <NETWORK> --factory <MANAGER_WHITELIST_FACTORY> --managers <MANAGERS> --salt <SALT>
+```
+
 Deploy the Vault to a specific network:
 
 ```sh
@@ -155,6 +167,10 @@ $ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKE
 
 **Legend**:
 
+- MANAGER_WHITELIST_FACTORY: ManagerWhitelistFactory address
+- MANAGERS: Initial Managers addresses
+- SALT: Salt value for ManagerWhitelist deployment
+- FACTORY: Balancer's Managed Pool Factory address
 - TOKEN_COUNT: Token Count
 - FACTORY: Balancer's Managed Pool Factory address
 - NAME: Pool token name
