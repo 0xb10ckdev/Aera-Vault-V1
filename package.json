@@ -91,7 +91,7 @@
     "lint:ts": "eslint --config ./.eslintrc.yaml --ignore-path ./.eslintignore --ext .js,.ts .",
     "prettier": "prettier --config ./.prettierrc --write \"**/*.{js,json,md,sol,ts}\"",
     "prettier:check": "prettier --check --config ./.prettierrc \"**/*.{js,json,md,sol,ts}\"",
-    "slither": "slither . --filter-paths \"contracts/dependencies|contracts/mocks\" --exclude solc-version",
+    "slither": "slither . --filter-paths \"contracts/v1/dependencies|contracts/v1/mocks\" --exclude solc-version",
     "test:unit": "cross-env TEST_PATH=./test/unit hardhat test",
     "test:integration": "cross-env TEST_PATH=./test/integration HARDHAT_FORK=mainnet HARDHAT_FORK_NUMBER=13000000 hardhat test",
     "test:kovan": "cross-env TEST_PATH=./test/integration HARDHAT_FORK=kovan HARDHAT_FORK_NUMBER=27000000 hardhat test",

@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
 import hre, { deployments, ethers } from "hardhat";
-import { DEFAULT_NOTICE_PERIOD, getConfig } from "../../scripts/config";
+import { DEFAULT_NOTICE_PERIOD, getConfig } from "../../../scripts/config";
 import {
   IERC20,
   BaseManagedPoolFactory,
@@ -9,7 +9,7 @@ import {
   MammonVaultV1Mock,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
-} from "../../typechain";
+} from "../../../typechain";
 import {
   BALANCER_ERRORS,
   DEVIATION,

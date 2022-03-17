@@ -4,4 +4,4 @@ build/
 dist/
 node_modules/
 
-contracts/dependencies/
+contracts/*/dependencies/
