@@ -161,7 +161,7 @@ const config: HardhatUserConfig = {
   paths: {
     artifacts: "./artifacts",
     cache: "./cache",
-    sources: "./contracts",
+    sources: "./contracts/v1",
     tests: process.env.TEST_PATH || "./test",
   },
   solidity: {
@@ -191,7 +191,7 @@ const config: HardhatUserConfig = {
       },
     ],
     overrides: {
-      "contracts/dependencies/balancer-labs/pool-weighted/contracts/WeightedPool.sol":
+      "contracts/v1/dependencies/balancer-labs/pool-weighted/contracts/WeightedPool.sol":
         {
           version: "0.7.1",
           settings: {
@@ -230,8 +230,6 @@ const config: HardhatUserConfig = {
       "AccessControl",
       "AccessControlEnumerable",
       "Address",
-      "BFactoryMock",
-      "BPoolMock",
       "Context",
       "EnumerableSet",
       "ERC20",

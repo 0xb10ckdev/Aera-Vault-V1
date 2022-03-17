@@ -9,7 +9,7 @@ node_modules/
 typechain/
 deployments/
 
-contracts/dependencies/
+contracts/*/dependencies/
 
 # files
 coverage.json
