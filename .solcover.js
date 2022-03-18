@@ -19,5 +19,5 @@ module.exports = {
   providerOptions: {
     mnemonic,
   },
-  skipFiles: ["mocks", "test", "dependencies"],
+  skipFiles: ["v1/mocks", "test", "v1/dependencies"],
 };

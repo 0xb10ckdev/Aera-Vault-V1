@@ -161,7 +161,7 @@ const config: HardhatUserConfig = {
   paths: {
     artifacts: "./artifacts",
     cache: "./cache",
-    sources: "./contracts/v1",
+    sources: "./contracts",
     tests: process.env.TEST_PATH || "./test",
   },
   solidity: {
