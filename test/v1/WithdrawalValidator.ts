@@ -2,8 +2,8 @@ import { ethers, waffle, artifacts } from "hardhat";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Artifact } from "hardhat/types";
 import { expect } from "chai";
-import { Signers } from "../types";
-import { PermissiveWithdrawalValidator } from "../typechain";
+import { Signers } from "../../types";
+import { PermissiveWithdrawalValidator } from "../../typechain";
 
 const { deployContract } = waffle;
 

@@ -2,7 +2,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
-import { DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
+import { DEFAULT_NOTICE_PERIOD } from "../../../scripts/config";
 import {
   BalancerVaultMock__factory,
   IERC20,
@@ -12,7 +12,7 @@ import {
   MammonVaultV1Mock__factory,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
-} from "../../typechain";
+} from "../../../typechain";
 import {
   MAX_MANAGEMENT_FEE,
   MINIMUM_WEIGHT_CHANGE_DURATION,
