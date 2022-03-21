@@ -4,7 +4,7 @@ import {
   DEFAULT_NOTICE_PERIOD,
   getChainId,
   getConfig,
-} from "../scripts/config";
+} from "../../scripts/config";
 import {
   BaseManagedPoolFactory,
   BaseManagedPoolFactory__factory,
@@ -12,7 +12,7 @@ import {
   MammonVaultV1Mock__factory,
   ManagerWhitelist,
   ManagerWhitelist__factory,
-} from "../typechain";
+} from "../../typechain";
 import { MAX_MANAGEMENT_FEE } from "./constants";
 
 export type VaultParams = {

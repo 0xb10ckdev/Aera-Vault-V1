@@ -1,7 +1,7 @@
 import { AssetHelpers } from "@balancer-labs/balancer-js";
 import { parseEther } from "@ethersproject/units";
 import { ethers } from "hardhat";
-import { ERC20Mock, ERC20Mock__factory } from "../typechain";
+import { ERC20Mock, ERC20Mock__factory } from "../../typechain";
 
 // https://github.com/balancer-labs/balancer-v2-monorepo/blob/master/pkg/balancer-js/test/tokens.test.ts
 const wethAddress = "0x000000000000000000000000000000000000000F";

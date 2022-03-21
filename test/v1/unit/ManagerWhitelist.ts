@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
 import hre, { ethers } from "hardhat";
-import { ManagerWhitelist, ManagerWhitelistFactory } from "../../typechain";
+import { ManagerWhitelist, ManagerWhitelistFactory } from "../../../typechain";
 import { ZERO_ADDRESS } from "../constants";
 import { deployManagerWhitelist } from "../utils";
 
