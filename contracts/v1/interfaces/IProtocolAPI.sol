@@ -33,9 +33,12 @@ interface IProtocolAPI {
     /// @notice Withdraw any tokens accidentally sent to vault.
     function sweep(address token, uint256 amount) external;
 
-    /// @notice Enable swap.
+    /// @notice Enable swap with current weights.
+    function enableTrading() external;
+
+    /// @notice Enable swap with updating weights.
     /// @param weights New weights of tokens.
-    function enableTrading(uint256[] memory weights) external;
+    function enableTradingWithWeights(uint256[] memory weights) external;
 
     /// @notice Disable swap.
     function disableTrading() external;
