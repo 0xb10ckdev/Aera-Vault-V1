@@ -34,7 +34,7 @@ interface IProtocolAPI {
     function sweep(address token, uint256 amount) external;
 
     /// @notice Enable swap with current weights.
-    function enableTrading() external;
+    function enableTradingRiskingArbitrage() external;
 
     /// @notice Enable swap with updating weights.
     /// @param weights New weights of tokens.
