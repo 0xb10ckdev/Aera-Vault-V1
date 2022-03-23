@@ -1455,46 +1455,72 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         await vault.initialDeposit(valueArray(ONE, tokens.length));
       });
 
-      describe("should be reverted to enable trading", () => {
-        it("when called from non-owner", async () => {
+      describe("with enableTrading function", () => {
+        it("should be reverted to enable trading when called from non-owner", async () => {
           await expect(
-            vault
-              .connect(manager)
-              .enableTrading(
-                valueArray(ONE.div(tokens.length), tokens.length),
-              ),
+            vault.connect(manager).enableTrading(),
           ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
-        it("when total sum of weights is not one", async () => {
-          await expect(
-            vault.enableTrading(
-              valueArray(ONE.div(tokens.length).sub(1), tokens.length),
-            ),
-          ).to.be.revertedWith(BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT);
+        it("should be possible to enable trading", async () => {
+          const weights = await vault.getNormalizedWeights();
+
+          await vault.enableTrading();
+
+          const currentWeights = await vault.getNormalizedWeights();
+
+          expect(await vault.isSwapEnabled()).to.equal(true);
+          for (let i = 0; i < tokens.length; i++) {
+            expect(weights[i]).to.be.equal(currentWeights[i]);
+          }
         });
       });
 
-      it("should be possible to enable trading", async () => {
-        const newWeights = [];
-        const avgWeights = ONE.div(tokens.length);
-        for (let i = 0; i < tokens.length; i += 2) {
-          if (i < tokens.length - 1) {
-            newWeights.push(avgWeights.add(toWei((i + 1) / 100)));
-            newWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
-          } else {
-            newWeights.push(avgWeights);
+      describe("with enableTradingWithWeights function", () => {
+        describe("should be reverted to enable trading", () => {
+          it("when called from non-owner", async () => {
+            await expect(
+              vault
+                .connect(manager)
+                .enableTradingWithWeights(
+                  valueArray(ONE.div(tokens.length), tokens.length),
+                ),
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+          });
+
+          it("when total sum of weights is not one", async () => {
+            await expect(
+              vault.enableTradingWithWeights(
+                valueArray(ONE.div(tokens.length).sub(1), tokens.length),
+              ),
+            ).to.be.revertedWith(BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT);
+          });
+        });
+
+        it("should be possible to enable trading", async () => {
+          const newWeights = [];
+          const avgWeights = ONE.div(tokens.length);
+          for (let i = 0; i < tokens.length; i += 2) {
+            if (i < tokens.length - 1) {
+              newWeights.push(avgWeights.add(toWei((i + 1) / 100)));
+              newWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
+            } else {
+              newWeights.push(avgWeights);
+            }
           }
-        }
 
-        await vault.enableTrading(newWeights);
+          await vault.enableTradingWithWeights(newWeights);
 
-        const currentWeights = await vault.getNormalizedWeights();
+          const currentWeights = await vault.getNormalizedWeights();
 
-        expect(await vault.isSwapEnabled()).to.equal(true);
-        for (let i = 0; i < tokens.length; i++) {
-          expect(newWeights[i]).to.be.at.closeTo(currentWeights[i], DEVIATION);
-        }
+          expect(await vault.isSwapEnabled()).to.equal(true);
+          for (let i = 0; i < tokens.length; i++) {
+            expect(newWeights[i]).to.be.at.closeTo(
+              currentWeights[i],
+              DEVIATION,
+            );
+          }
+        });
       });
     });
 
@@ -1513,7 +1539,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       it("should be possible to disable trading", async () => {
-        await vault.enableTrading(
+        await vault.enableTradingWithWeights(
           valueArray(ONE.div(tokens.length), tokens.length),
         );
 

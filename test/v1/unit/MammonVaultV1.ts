@@ -651,24 +651,44 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         await vault.initialDeposit(valueArray(ONE, tokens.length));
       });
 
-      it("should be reverted to enable trading", async () => {
-        await expect(
-          vault
-            .connect(manager)
-            .enableTrading(valueArray(ONE.div(tokens.length), tokens.length)),
-        ).to.be.revertedWith("Ownable: caller is not the owner");
+      describe("with enableTrading function", () => {
+        it("should be reverted to enable trading", async () => {
+          await expect(
+            vault.connect(manager).enableTrading(),
+          ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
+
+        it("should be possible to enable trading", async () => {
+          await expect(vault.enableTrading())
+            .to.emit(vault, "SetSwapEnabled")
+            .withArgs(true);
+
+          expect(await vault.isSwapEnabled()).to.equal(true);
+        });
       });
 
-      it("should be possible to enable trading", async () => {
-        await expect(
-          vault.enableTrading(
-            valueArray(ONE.div(tokens.length), tokens.length),
-          ),
-        )
-          .to.emit(vault, "SetSwapEnabled")
-          .withArgs(true);
+      describe("with enableTradingWithWeights function", () => {
+        it("should be reverted to enable trading", async () => {
+          await expect(
+            vault
+              .connect(manager)
+              .enableTradingWithWeights(
+                valueArray(ONE.div(tokens.length), tokens.length),
+              ),
+          ).to.be.revertedWith("Ownable: caller is not the owner");
+        });
 
-        expect(await vault.isSwapEnabled()).to.equal(true);
+        it("should be possible to enable trading", async () => {
+          await expect(
+            vault.enableTradingWithWeights(
+              valueArray(ONE.div(tokens.length), tokens.length),
+            ),
+          )
+            .to.emit(vault, "SetSwapEnabled")
+            .withArgs(true);
+
+          expect(await vault.isSwapEnabled()).to.equal(true);
+        });
       });
     });
 
