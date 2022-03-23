@@ -561,7 +561,17 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IProtocolAPI
-    function enableTrading(uint256[] calldata weights)
+    function enableTradingRiskingArbitrage()
+        external
+        override
+        onlyOwner
+        whenInitialized
+    {
+        setSwapEnabled(true);
+    }
+
+    /// @inheritdoc IProtocolAPI
+    function enableTradingWithWeights(uint256[] calldata weights)
         external
         override
         onlyOwner
@@ -569,9 +579,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     {
         uint256 timestamp = block.timestamp;
         pool.updateWeightsGradually(timestamp, timestamp, weights);
-        pool.setSwapEnabled(true);
-        // slither-disable-next-line reentrancy-events
-        emit SetSwapEnabled(true);
+        setSwapEnabled(true);
     }
 
     /// @inheritdoc IProtocolAPI
@@ -581,9 +589,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         onlyOwnerOrManager
         whenInitialized
     {
-        pool.setSwapEnabled(false);
-        // slither-disable-next-line reentrancy-events
-        emit SetSwapEnabled(false);
+        setSwapEnabled(false);
     }
 
     /// MANAGER API ///
@@ -901,5 +907,15 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             amounts[i] = tokens[i].balanceOf(address(this));
             tokens[i].safeTransfer(owner(), amounts[i]);
         }
+    }
+
+    /// @notice Enable or disable swap.
+    /// @dev Will only be called by enableTradingRiskingArbitrage(), enableTradingWithWeights()
+    ///      and disableTrading().
+    /// @param swapEnabled Swap status.
+    function setSwapEnabled(bool swapEnabled) internal {
+        pool.setSwapEnabled(swapEnabled);
+        // slither-disable-next-line reentrancy-events
+        emit SetSwapEnabled(swapEnabled);
     }
 }
