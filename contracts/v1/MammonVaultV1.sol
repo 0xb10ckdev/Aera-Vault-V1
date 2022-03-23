@@ -561,7 +561,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IProtocolAPI
-    function enableTrading() external override onlyOwner whenInitialized {
+    function enableTradingRiskingArbitrage()
+        external
+        override
+        onlyOwner
+        whenInitialized
+    {
         setSwapEnabled(true);
     }
 
@@ -905,7 +910,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @notice Enable or disable swap.
-    /// @dev Will only be called by enableTrading(), enableTradingWithWeights()
+    /// @dev Will only be called by enableTradingRiskingArbitrage(), enableTradingWithWeights()
     ///      and disableTrading().
     /// @param swapEnabled Swap status.
     function setSwapEnabled(bool swapEnabled) internal {

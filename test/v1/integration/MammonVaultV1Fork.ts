@@ -1455,17 +1455,17 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         await vault.initialDeposit(valueArray(ONE, tokens.length));
       });
 
-      describe("with enableTrading function", () => {
+      describe("with enableTradingRiskingArbitrage function", () => {
         it("should be reverted to enable trading when called from non-owner", async () => {
           await expect(
-            vault.connect(manager).enableTrading(),
+            vault.connect(manager).enableTradingRiskingArbitrage(),
           ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
         it("should be possible to enable trading", async () => {
           const weights = await vault.getNormalizedWeights();
 
-          await vault.enableTrading();
+          await vault.enableTradingRiskingArbitrage();
 
           const currentWeights = await vault.getNormalizedWeights();
 
