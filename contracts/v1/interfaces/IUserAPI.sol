@@ -2,8 +2,6 @@
 pragma solidity 0.8.11;
 
 import "../dependencies/openzeppelin/IERC20.sol";
-import "./IProtocolAPI.sol";
-import "./IMultiAssetVault.sol";
 
 /// @title Vault public interface.
 /// @notice Interface for vault arbitrageurs and other observers.

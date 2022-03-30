@@ -1,5 +1,6 @@
 import { Transaction } from "ethereumjs-tx";
 import { task, types } from "hardhat/config";
+import { getConfig } from "../scripts/config";
 
 export type ManagerWhitelistFactoryDeployment = {
   sender: string;
@@ -12,14 +13,16 @@ task(
   "Calculates ManagerWhitelistFactory address",
 )
   .addParam("owner", "Initial owner", undefined, types.string)
-  .setAction(async ({ owner }: { owner: string }, { ethers }) => {
+  .setAction(async ({ owner }: { owner: string }, { ethers, network }) => {
+    const config = getConfig(network.config.chainId || 1);
+
     const contractFactory = await ethers.getContractFactory(
       "ManagerWhitelistFactory",
     );
 
     const rawTransaction = {
       nonce: 0,
-      gasPrice: 100000000000,
+      gasPrice: config.proxyDeployGasPrice,
       value: 0,
       data:
         contractFactory.bytecode +
@@ -27,7 +30,7 @@ task(
           .solidityPack(["address"], [owner])
           .slice(2)
           .padStart(64, "0"),
-      gasLimit: 1100000,
+      gasLimit: config.proxyDeployGasLimit,
       v: 27,
       r: "0x1889898989898989898989898989898989898989898989898989898989898989",
       s: "0x1889898989898989898989898989898989898989898989898989898989898989",

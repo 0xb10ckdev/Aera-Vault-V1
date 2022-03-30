@@ -5,18 +5,25 @@ export const getConfig = (
   chainId: number,
 ): {
   bVault: string; // Balancer Vault address
-  deployerProxy: string; // Deterministic deployment proxy address
+  proxyDeployGasPrice: number;
+  proxyDeployGasLimit: number;
 } => {
   switch (chainId) {
     case chainIds.mainnet:
     case chainIds.polygon:
     case chainIds.kovan:
-    case chainIds.hardhat:
     case chainIds.rinkeby:
     case chainIds.goerli:
       return {
         bVault: "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
-        deployerProxy: "0x7A0D94F55792C434d74a40883C6ed8545E406D12",
+        proxyDeployGasPrice: 100000000000,
+        proxyDeployGasLimit: 1100000,
+      };
+    case chainIds.hardhat:
+      return {
+        bVault: "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
+        proxyDeployGasPrice: 100000000000,
+        proxyDeployGasLimit: 3000000,
       };
     default:
       throw "unsupported chain ID";
