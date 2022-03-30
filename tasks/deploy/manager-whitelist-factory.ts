@@ -1,4 +1,5 @@
 import { task, types } from "hardhat/config";
+import { getConfig } from "../../scripts/config";
 import { ManagerWhitelistFactoryDeployment } from "../manager-whitelist-factory-address";
 
 task(
@@ -11,7 +12,9 @@ task(
     false,
     types.boolean,
   )
-  .setAction(async (taskArgs, { ethers, run }) => {
+  .setAction(async (taskArgs, { ethers, run, network }) => {
+    const config = getConfig(network.config.chainId || 1);
+
     const { admin } = await ethers.getNamedSigners();
 
     const deployment = (await run("get:managerWhitelistFactory", {
@@ -27,7 +30,9 @@ task(
     // We need to fund the calculated sender first
     const funding = await admin.sendTransaction({
       to: deployment.sender,
-      value: ethers.utils.parseEther("0.11"),
+      value: ethers.BigNumber.from(config.proxyDeployGasLimit).mul(
+        config.proxyDeployGasPrice,
+      ),
     });
     await funding.wait();
 
