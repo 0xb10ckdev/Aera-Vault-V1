@@ -12,6 +12,7 @@ import { resolve } from "path";
 import "solidity-coverage";
 import "./tasks/clean";
 import "./tasks/deploy";
+import "./tasks/manager-whitelist-factory-address";
 
 dotenvConfig({ path: resolve(__dirname, "./.env") });
 

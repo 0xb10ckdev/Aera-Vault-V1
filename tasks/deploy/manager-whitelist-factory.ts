@@ -1,5 +1,5 @@
 import { task, types } from "hardhat/config";
-import { getConfig } from "../../scripts/config";
+import { ManagerWhitelistFactoryDeployment } from "../manager-whitelist-factory-address";
 
 task(
   "deploy:managerWhitelistFactory",
@@ -11,41 +11,32 @@ task(
     false,
     types.boolean,
   )
-  .setAction(async (taskArgs, { ethers, network }) => {
+  .setAction(async (taskArgs, { ethers, run }) => {
     const { admin } = await ethers.getNamedSigners();
-    const config = getConfig(network.config.chainId || 1);
+
+    const deployment = (await run("get:managerWhitelistFactory", {
+      owner: admin.address,
+    })) as ManagerWhitelistFactoryDeployment;
 
     if (!taskArgs.silent) {
-      console.log("Deploying ManagerWhitelistFactory");
+      console.log(
+        `Deploying ManagerWhitelistFactory\n\tSender: ${deployment.sender}\n\tContract address: ${deployment.contractAddr}`,
+      );
     }
 
-    const contractFactory = await ethers.getContractFactory(
-      "ManagerWhitelistFactory",
-    );
+    // We need to fund the calculated sender first
+    const funding = await admin.sendTransaction({
+      to: deployment.sender,
+      value: ethers.utils.parseEther("0.11"),
+    });
+    await funding.wait();
 
-    const bytecode = contractFactory.bytecode.slice(2);
-    const callData = `0x0000000000000000000000000000000000000000000000000000000000000000${bytecode}`;
-
-    const computedAddress = await ethers.provider.send("eth_call", [
-      {
-        from: admin.address,
-        to: config.deployerProxy,
-        data: callData,
-      },
-    ]);
-
-    await ethers.provider.send("eth_sendTransaction", [
-      {
-        from: admin.address,
-        to: config.deployerProxy,
-        data: callData,
-        gas: "0xf4240",
-      },
-    ]);
+    const tx = await ethers.provider.sendTransaction(deployment.rawTx);
+    await tx.wait();
 
     const factory = await ethers.getContractAt(
       "ManagerWhitelistFactory",
-      computedAddress,
+      deployment.contractAddr,
     );
 
     if (!taskArgs.silent) {
