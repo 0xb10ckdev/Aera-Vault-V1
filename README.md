@@ -184,6 +184,15 @@ $ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKE
 - MANAGEMENT_FEE: Management fee earned proportion per second
 - DESCRIPTION: Vault text description
 
+**Important**:
+
+The deployment address of `ManagerWhitelistFactory` will be changed when:
+
+- `ManagerWhitelistFactory` or `ManagerWhitelist` contracts are updated
+- `ManagerWhitelistFactory` initial owner is changed
+
+Also, mainnet address may be different from Hardhat deployed address (because of different gas price/gas limit).
+
 ## Syntax Highlighting
 
 If you use VSCode, you can enjoy syntax highlighting for your Solidity code via the
