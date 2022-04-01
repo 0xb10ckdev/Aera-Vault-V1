@@ -2,6 +2,9 @@ import { Transaction } from "ethereumjs-tx";
 import { task, types } from "hardhat/config";
 import { getConfig } from "../scripts/config";
 
+// Referred to https://github.com/0xjac/ERC1820/tree/master/js
+// `r` and `s` are random numbers.
+
 export type ManagerWhitelistFactoryDeployment = {
   sender: string;
   rawTx: string;
