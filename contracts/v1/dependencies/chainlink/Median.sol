@@ -98,9 +98,7 @@ library Median {
         }
 
         uint256 index2 = k2 - lo;
-        if (k1 == k2) {
-            return (k1th, k1th);
-        } else if (index2 < len) {
+        if (index2 < len) {
             return (k1th, x[index2]);
         } else if (index2 < SHORTSELECTTWO_MAX_LENGTH) {
             return (k1th, INT_MAX);
