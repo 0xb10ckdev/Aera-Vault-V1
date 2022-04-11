@@ -30,16 +30,11 @@ library WeightedMedian {
             revert InvalidSum(weightSum);
         }
 
-        int256 temp;
         for (uint256 i = 0; i < len; i++) {
             for (uint256 j = len - 1; j > i; j--) {
                 if (list[j] < list[j - 1]) {
-                    temp = list[j];
-                    list[j] = list[j - 1];
-                    list[j - 1] = temp;
-                    temp = weights[j];
-                    weights[j] = weights[j - 1];
-                    weights[j - 1] = temp;
+                    (list[j], list[j - 1]) = (list[j - 1], list[j]);
+                    (weights[j], weights[j - 1]) = (weights[j - 1], weights[j]);
                 }
             }
         }

@@ -77,13 +77,10 @@ library Median {
             x[i] = list[lo + i];
         }
 
-        int256 temp;
         for (uint256 i = 0; i < len; i++) {
             for (uint256 j = len - 1; j > i; j--) {
                 if (x[j] < x[j - 1]) {
-                    temp = x[j];
-                    x[j] = x[j - 1];
-                    x[j - 1] = temp;
+                    (x[j], x[j - 1]) = (x[j - 1], x[j]);
                 }
             }
         }
