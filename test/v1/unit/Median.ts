@@ -2,11 +2,14 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import { MammonMedian } from "../../../typechain";
+import { ONE } from "../constants";
+import { toWei } from "../utils";
 
 describe("ChainLink Median Functionality", function () {
   let admin: SignerWithAddress;
   let mammonMedian: MammonMedian;
   let snapshot: unknown;
+  const gasEstimation: any = {};
 
   const getMedian = (list: number[]) => {
     const len = list.length;
@@ -19,6 +22,41 @@ describe("ChainLink Median Functionality", function () {
         : list[pivot];
 
     return listMedian;
+  };
+
+  const getWeightedMedian = (list: number[], weights: any[]) => {
+    const len = list.length;
+    for (let j = 0; j < len; j++) {
+      for (let k = len - 1; k > j; k--) {
+        if (list[k] < list[k - 1]) {
+          let temp: any = list[k];
+          list[k] = list[k - 1];
+          list[k - 1] = temp;
+          temp = weights[k];
+          weights[k] = weights[k - 1];
+          weights[k - 1] = temp;
+        }
+      }
+    }
+
+    let loSum = weights[0];
+    let hiSum = toWei("0");
+    let index = 0;
+    while (loSum.lt(ONE.div(2))) {
+      index++;
+      loSum = loSum.add(weights[index]);
+    }
+
+    hiSum = ONE.sub(loSum);
+    loSum = loSum.sub(weights[index]);
+
+    while (loSum.gt(ONE.div(2)) || hiSum.gt(ONE.div(2))) {
+      loSum = loSum.add(weights[index]);
+      index++;
+      hiSum = hiSum.sub(weights[index]);
+    }
+
+    return list[index];
   };
 
   beforeEach(async function () {
@@ -38,28 +76,60 @@ describe("ChainLink Median Functionality", function () {
     await ethers.provider.send("evm_revert", [snapshot]);
   });
 
-  describe("calculate", () => {
-    const gasEstimation: any[] = [];
+  this.beforeAll(() => {
+    for (let i = 3; i <= 20; i++) {
+      gasEstimation[i] = {};
+    }
+  });
+
+  this.afterAll(() => {
+    console.log("Gas Estimation");
+    console.table(gasEstimation);
+  });
+
+  describe("median", () => {
     for (let i = 3; i <= 20; i++) {
       it(`should be possible to calculate with ${i} submitters`, async () => {
         const list = Array.from({ length: i }, () =>
           Math.floor(Math.random() * 10000),
         );
 
-        gasEstimation.push({
-          Submitters: i,
-          "Estimated Gas": (
-            await mammonMedian.estimateGas.calculateMedian(list)
-          ).toNumber(),
-        });
+        gasEstimation[i]["Median"] = (
+          await mammonMedian.estimateGas.calculateMedian(list)
+        ).toNumber();
 
         expect(await mammonMedian.calculateMedian(list)).to.be.equal(
           getMedian(list),
         );
+      });
+    }
+  });
 
-        if (i == 20) {
-          console.table(gasEstimation);
+  describe("weighted median", async () => {
+    for (let i = 3; i <= 20; i++) {
+      it(`should be possible to calculate with ${i} submitters`, async () => {
+        const list = Array.from({ length: i }, () =>
+          Math.floor(Math.random() * 10000),
+        );
+
+        const weights = [];
+        let totalShare = i;
+        Array.from(Array(i).keys()).forEach(i => (totalShare += i));
+
+        let weightSum = toWei("0");
+        for (let j = 0; j < i - 1; j++) {
+          weights.push(toWei((j + 1) / totalShare));
+          weightSum = weightSum.add(weights[j]);
         }
+        weights[i - 1] = toWei("1").sub(weightSum);
+
+        gasEstimation[i]["Weighted Median"] = (
+          await mammonMedian.estimateGas.calculateWeightedMedian(list, weights)
+        ).toNumber();
+
+        expect(
+          await mammonMedian.calculateWeightedMedian(list, weights),
+        ).to.be.equal(getWeightedMedian(list, weights));
       });
     }
   });
