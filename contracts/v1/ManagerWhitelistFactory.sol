@@ -17,7 +17,9 @@ contract ManagerWhitelistFactory is Ownable {
     /// FUNCTIONS ///
 
     // solhint-disable no-empty-blocks
-    constructor() {}
+    constructor(address owner) {
+        _transferOwnership(owner);
+    }
 
     /// @notice Deploy ManagerWhitelist contract
     /// @param managers Initial manager addresses.
