@@ -59,6 +59,15 @@ describe("ChainLink Median Functionality", function () {
     return list[index];
   };
 
+  const getSortedLinkedMedian = (list: number[]) => {
+    const len = list.length;
+
+    const pivot = Math.floor(len / 2);
+    list.sort((a: number, b: number) => a - b);
+
+    return list[pivot];
+  };
+
   beforeEach(async function () {
     snapshot = await ethers.provider.send("evm_snapshot", []);
 
@@ -130,6 +139,32 @@ describe("ChainLink Median Functionality", function () {
         expect(
           await mammonMedian.calculateWeightedMedian(list, weights),
         ).to.be.equal(getWeightedMedian(list, weights));
+      });
+    }
+  });
+
+  describe("sorted linked median", () => {
+    for (let i = 3; i <= 20; i++) {
+      it(`should be possible to calculate with ${i} submitters`, async () => {
+        const list = Array.from({ length: i }, () =>
+          Math.floor(Math.random() * 10000),
+        );
+
+        const gasCost = (
+          await mammonMedian.estimateGas.updateList(list)
+        ).toNumber();
+
+        await mammonMedian.updateList(list);
+
+        gasEstimation[i]["Sorted Linked Median"] =
+          gasCost +
+          (
+            await mammonMedian.estimateGas.calculateSortedLinkedMedian()
+          ).toNumber();
+
+        expect(await mammonMedian.calculateSortedLinkedMedian()).to.be.equal(
+          getSortedLinkedMedian(list),
+        );
       });
     }
   });
