@@ -164,6 +164,24 @@ describe("ChainLink Median Functionality", function () {
     }
   });
 
+  describe("uint median", () => {
+    for (let i = 3; i <= 20; i++) {
+      it(`should be possible to calculate with ${i} submitters`, async () => {
+        const list = Array.from({ length: i }, () =>
+          Math.floor(Math.random() * 10000),
+        );
+
+        gasEstimation[i]["Uint Median"] = (
+          await mammonMedian.estimateGas.calculateWithUintMedian(list)
+        ).toNumber();
+
+        expect(await mammonMedian.calculateWithUintMedian(list)).to.be.equal(
+          getMedian(list),
+        );
+      });
+    }
+  });
+
   describe("sorted linked median", () => {
     for (let i = 3; i <= 20; i++) {
       it(`should be possible to calculate with ${i} submitters`, async () => {
