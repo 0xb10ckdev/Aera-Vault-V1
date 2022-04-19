@@ -96,18 +96,18 @@ describe("ChainLink Median Functionality", function () {
     console.table(gasEstimation);
   });
 
-  describe("median", () => {
+  describe("chainlink", () => {
     for (let i = 3; i <= 20; i++) {
       it(`should be possible to calculate with ${i} submitters`, async () => {
         const list = Array.from({ length: i }, () =>
           Math.floor(Math.random() * 10000),
         );
 
-        gasEstimation[i]["Median"] = (
-          await mammonMedian.estimateGas.calculateMedian(list)
+        gasEstimation[i]["Chainlink"] = (
+          await mammonMedian.estimateGas.calculateWithChainLink(list)
         ).toNumber();
 
-        expect(await mammonMedian.calculateMedian(list)).to.be.equal(
+        expect(await mammonMedian.calculateWithChainLink(list)).to.be.equal(
           getMedian(list),
         );
       });
@@ -133,12 +133,33 @@ describe("ChainLink Median Functionality", function () {
         weights[i - 1] = toWei("1").sub(weightSum);
 
         gasEstimation[i]["Weighted Median"] = (
-          await mammonMedian.estimateGas.calculateWeightedMedian(list, weights)
+          await mammonMedian.estimateGas.calculateWithWeightedMedian(
+            list,
+            weights,
+          )
         ).toNumber();
 
         expect(
-          await mammonMedian.calculateWeightedMedian(list, weights),
+          await mammonMedian.calculateWithWeightedMedian(list, weights),
         ).to.be.equal(getWeightedMedian(list, weights));
+      });
+    }
+  });
+
+  describe("median oracle", () => {
+    for (let i = 3; i <= 20; i++) {
+      it(`should be possible to calculate with ${i} submitters`, async () => {
+        const list = Array.from({ length: i }, () =>
+          Math.floor(Math.random() * 10000),
+        );
+
+        gasEstimation[i]["Median Oracle"] = (
+          await mammonMedian.estimateGas.calculateWithMedianOracle(list)
+        ).toNumber();
+
+        expect(await mammonMedian.calculateWithMedianOracle(list)).to.be.equal(
+          getMedian(list),
+        );
       });
     }
   });
@@ -159,12 +180,12 @@ describe("ChainLink Median Functionality", function () {
         gasEstimation[i]["Sorted Linked Median"] =
           gasCost +
           (
-            await mammonMedian.estimateGas.calculateSortedLinkedMedian()
+            await mammonMedian.estimateGas.calculateWithSortedLinkedMedian()
           ).toNumber();
 
-        expect(await mammonMedian.calculateSortedLinkedMedian()).to.be.equal(
-          getSortedLinkedMedian(list),
-        );
+        expect(
+          await mammonMedian.calculateWithSortedLinkedMedian(),
+        ).to.be.equal(getSortedLinkedMedian(list));
       });
     }
   });

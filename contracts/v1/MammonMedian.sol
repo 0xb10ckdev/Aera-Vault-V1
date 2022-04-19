@@ -4,6 +4,7 @@ pragma solidity 0.8.11;
 import "./dependencies/median/chainlink/Median.sol";
 import "./dependencies/median/chainlink/WeightedMedian.sol";
 import "./dependencies/median/celo-org/SortedLinkedListWithMedian.sol";
+import "./dependencies/median/MedianOracle.sol";
 
 contract MammonMedian {
     using SortedLinkedListWithMedian for SortedLinkedListWithMedian.List;
@@ -26,6 +27,14 @@ contract MammonMedian {
         int256[] memory weights
     ) external pure returns (int256) {
         return WeightedMedian.calculate(list, weights);
+    }
+
+    function calculateWithMedianOracle(uint256[] memory list)
+        external
+        pure
+        returns (uint256)
+    {
+        return Select.computeMedian(list, list.length);
     }
 
     function updateList(uint256[] calldata list) external {
