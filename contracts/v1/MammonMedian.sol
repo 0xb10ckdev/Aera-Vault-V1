@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.11;
 
-import "./dependencies/chainlink/Median.sol";
-import "./dependencies/chainlink/WeightedMedian.sol";
-import "./dependencies/celo-org/SortedLinkedListWithMedian.sol";
+import "./dependencies/median/chainlink/Median.sol";
+import "./dependencies/median/chainlink/WeightedMedian.sol";
+import "./dependencies/median/celo-org/SortedLinkedListWithMedian.sol";
 
 contract MammonMedian {
     using SortedLinkedListWithMedian for SortedLinkedListWithMedian.List;
@@ -13,7 +13,7 @@ contract MammonMedian {
     // solhint-disable-next-line no-empty-blocks
     constructor() {}
 
-    function calculateMedian(int256[] calldata list)
+    function calculateWithChainLink(int256[] calldata list)
         external
         pure
         returns (int256)
@@ -21,7 +21,7 @@ contract MammonMedian {
         return Median.calculate(list);
     }
 
-    function calculateWeightedMedian(
+    function calculateWithWeightedMedian(
         int256[] memory list,
         int256[] memory weights
     ) external pure returns (int256) {
@@ -51,7 +51,11 @@ contract MammonMedian {
         }
     }
 
-    function calculateSortedLinkedMedian() external view returns (uint256) {
+    function calculateWithSortedLinkedMedian()
+        external
+        view
+        returns (uint256)
+    {
         return sortedLinkedList.getMedianValue();
     }
 }
