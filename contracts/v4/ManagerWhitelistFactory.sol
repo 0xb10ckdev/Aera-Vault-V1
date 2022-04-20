@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
-import "./dependencies/openzeppelin/Ownable.sol";
-import "./dependencies/openzeppelin/Create2.sol";
+import "../v1/dependencies/openzeppelin/Ownable.sol";
+import "../v1/dependencies/openzeppelin/Create2.sol";
 import "./ManagerWhitelist.sol";
 
 /// @title Factory to deploy ManagerWhitelist contract.
