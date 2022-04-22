@@ -182,6 +182,38 @@ describe("ChainLink Median Functionality", function () {
     }
   });
 
+  describe("uint weighted median", async () => {
+    for (let i = 3; i <= 20; i++) {
+      it(`should be possible to calculate with ${i} submitters`, async () => {
+        const list = Array.from({ length: i }, () =>
+          Math.floor(Math.random() * 10000),
+        );
+
+        const weights = [];
+        let totalShare = i;
+        Array.from(Array(i).keys()).forEach(i => (totalShare += i));
+
+        let weightSum = toWei("0");
+        for (let j = 0; j < i - 1; j++) {
+          weights.push(toWei((j + 1) / totalShare));
+          weightSum = weightSum.add(weights[j]);
+        }
+        weights[i - 1] = toWei("1").sub(weightSum);
+
+        gasEstimation[i]["Uint Weighted Median"] = (
+          await mammonMedian.estimateGas.calculateWithUintWeightedMedian(
+            list,
+            weights,
+          )
+        ).toNumber();
+
+        expect(
+          await mammonMedian.calculateWithUintWeightedMedian(list, weights),
+        ).to.be.equal(getWeightedMedian(list, weights));
+      });
+    }
+  });
+
   describe("sorted linked median", () => {
     for (let i = 3; i <= 20; i++) {
       it(`should be possible to calculate with ${i} submitters`, async () => {

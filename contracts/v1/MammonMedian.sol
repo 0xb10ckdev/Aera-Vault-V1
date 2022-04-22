@@ -6,6 +6,7 @@ import "./dependencies/median/chainlink/WeightedMedian.sol";
 import "./dependencies/median/celo-org/SortedLinkedListWithMedian.sol";
 import "./dependencies/median/MedianOracle.sol";
 import "./dependencies/median/UintMedian.sol";
+import "./dependencies/median/UintWeightedMedian.sol";
 
 contract MammonMedian {
     using SortedLinkedListWithMedian for SortedLinkedListWithMedian.List;
@@ -44,6 +45,13 @@ contract MammonMedian {
         returns (uint256)
     {
         return UintMedian.calculate(list);
+    }
+
+    function calculateWithUintWeightedMedian(
+        uint256[] memory list,
+        uint256[] memory weights
+    ) external pure returns (uint256) {
+        return UintWeightedMedian.calculate(list, weights);
     }
 
     function updateList(uint256[] calldata list) external {
