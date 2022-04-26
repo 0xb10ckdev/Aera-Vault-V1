@@ -9,6 +9,8 @@ describe("ChainLink Median Functionality", function () {
   let admin: SignerWithAddress;
   let mammonMedian: MammonMedian;
   let snapshot: unknown;
+  let testList: any[];
+  const testWeights: any = {};
   const gasEstimation: any = {};
 
   const getMedian = (list: number[]) => {
@@ -86,8 +88,25 @@ describe("ChainLink Median Functionality", function () {
   });
 
   this.beforeAll(() => {
+    testList = Array.from({ length: 20 }, () =>
+      Math.floor(Math.random() * 10000),
+    );
+
     for (let i = 3; i <= 20; i++) {
       gasEstimation[i] = {};
+
+      const weights = [];
+      let totalShare = i;
+      Array.from(Array(i).keys()).forEach(n => (totalShare += n));
+
+      let weightSum = toWei("0");
+      for (let j = 0; j < i - 1; j++) {
+        weights.push(toWei((j + 1) / totalShare));
+        weightSum = weightSum.add(weights[j]);
+      }
+      weights[i - 1] = toWei("1").sub(weightSum);
+
+      testWeights[i] = weights;
     }
   });
 
@@ -117,20 +136,8 @@ describe("ChainLink Median Functionality", function () {
   describe("weighted median", async () => {
     for (let i = 3; i <= 20; i++) {
       it(`should be possible to calculate with ${i} submitters`, async () => {
-        const list = Array.from({ length: i }, () =>
-          Math.floor(Math.random() * 10000),
-        );
-
-        const weights = [];
-        let totalShare = i;
-        Array.from(Array(i).keys()).forEach(i => (totalShare += i));
-
-        let weightSum = toWei("0");
-        for (let j = 0; j < i - 1; j++) {
-          weights.push(toWei((j + 1) / totalShare));
-          weightSum = weightSum.add(weights[j]);
-        }
-        weights[i - 1] = toWei("1").sub(weightSum);
+        const list = testList.slice(0, i);
+        const weights = testWeights[i];
 
         gasEstimation[i]["Weighted Median"] = (
           await mammonMedian.estimateGas.calculateWithWeightedMedian(
@@ -149,9 +156,7 @@ describe("ChainLink Median Functionality", function () {
   describe("median oracle", () => {
     for (let i = 3; i <= 20; i++) {
       it(`should be possible to calculate with ${i} submitters`, async () => {
-        const list = Array.from({ length: i }, () =>
-          Math.floor(Math.random() * 10000),
-        );
+        const list = testList.slice(0, i);
 
         gasEstimation[i]["Median Oracle"] = (
           await mammonMedian.estimateGas.calculateWithMedianOracle(list)
@@ -167,9 +172,7 @@ describe("ChainLink Median Functionality", function () {
   describe("uint median", () => {
     for (let i = 3; i <= 20; i++) {
       it(`should be possible to calculate with ${i} submitters`, async () => {
-        const list = Array.from({ length: i }, () =>
-          Math.floor(Math.random() * 10000),
-        );
+        const list = testList.slice(0, i);
 
         gasEstimation[i]["Uint Median"] = (
           await mammonMedian.estimateGas.calculateWithUintMedian(list)
@@ -185,20 +188,8 @@ describe("ChainLink Median Functionality", function () {
   describe("uint weighted median", async () => {
     for (let i = 3; i <= 20; i++) {
       it(`should be possible to calculate with ${i} submitters`, async () => {
-        const list = Array.from({ length: i }, () =>
-          Math.floor(Math.random() * 10000),
-        );
-
-        const weights = [];
-        let totalShare = i;
-        Array.from(Array(i).keys()).forEach(i => (totalShare += i));
-
-        let weightSum = toWei("0");
-        for (let j = 0; j < i - 1; j++) {
-          weights.push(toWei((j + 1) / totalShare));
-          weightSum = weightSum.add(weights[j]);
-        }
-        weights[i - 1] = toWei("1").sub(weightSum);
+        const list = testList.slice(0, i);
+        const weights = testWeights[i];
 
         gasEstimation[i]["Uint Weighted Median"] = (
           await mammonMedian.estimateGas.calculateWithUintWeightedMedian(
@@ -217,9 +208,7 @@ describe("ChainLink Median Functionality", function () {
   describe("sorted linked median", () => {
     for (let i = 3; i <= 20; i++) {
       it(`should be possible to calculate with ${i} submitters`, async () => {
-        const list = Array.from({ length: i }, () =>
-          Math.floor(Math.random() * 10000),
-        );
+        const list = testList.slice(0, i);
 
         const gasCost = (
           await mammonMedian.estimateGas.updateList(list)
