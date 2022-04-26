@@ -205,8 +205,8 @@ library Median {
     // larger than any feasible computer's memory.
     int256 pivot = list[(lo + hi) / 2];
     unchecked {
-        lo -= 1; // this can underflow. that's intentional.
-        hi += 1;
+      lo -= 1; // this can underflow. that's intentional.
+      hi += 1;
     }
     while (true) {
       do {

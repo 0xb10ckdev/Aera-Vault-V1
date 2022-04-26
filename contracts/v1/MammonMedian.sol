@@ -16,7 +16,7 @@ contract MammonMedian {
     // solhint-disable-next-line no-empty-blocks
     constructor() {}
 
-    function calculateWithChainLink(int256[] calldata list)
+    function calculateWithChainlinkMedian(int256[] calldata list)
         external
         pure
         returns (int256)
@@ -24,10 +24,10 @@ contract MammonMedian {
         return Median.calculate(list);
     }
 
-    function calculateWithWeightedMedian(
-        int256[] memory list,
-        int256[] memory weights
-    ) external pure returns (int256) {
+    function calculateWithChainlinkWeightedMedian(
+        uint256[] memory list,
+        uint256[] memory weights
+    ) external pure returns (uint256) {
         return WeightedMedian.calculate(list, weights);
     }
 
