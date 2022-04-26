@@ -1,8 +1,7 @@
 pragma solidity 0.8.11;
 
 library UintWeightedMedian {
-    uint256 constant ONE = 10 ** 18;
-    uint256 constant MEDIUM = ONE / 2;
+    uint256 constant MEDIUM = 10 ** 18 / 2;
 
     /**
     * @dev Returns the sorted middle, or the average of the two middle indexed
@@ -22,7 +21,7 @@ library UintWeightedMedian {
         uint256 rightLen;
         uint256 prevSum;
         uint256 sum;
-        uint256 pivot;
+        uint256 pivotIndex;
         uint256 i;
 
         for (i = 0; i < len; i++) {
@@ -30,15 +29,15 @@ library UintWeightedMedian {
         }
 
         while (true) {
-            pivot = len / 2;
+            pivotIndex = len / 2;
             leftLen = 0;
             rightLen = 0;
             for (i = 0; i < len; i++) {
-                if (_list[indexes[i]] < _list[indexes[pivot]]) {
+                if (_list[indexes[i]] < _list[indexes[pivotIndex]]) {
                     leftIndexes[leftLen] = indexes[i];
                     sum += _weights[indexes[i]];
                     leftLen++;
-                } else if (_list[indexes[i]] > _list[indexes[pivot]]) {
+                } else if (_list[indexes[i]] > _list[indexes[pivotIndex]]) {
                     rightIndexes[rightLen] = indexes[i];
                     rightLen++;
                 }
@@ -47,13 +46,13 @@ library UintWeightedMedian {
                 sum = prevSum;
                 len = leftLen;
                 (indexes, leftIndexes) = (leftIndexes, indexes);
-            } else if (ONE - sum - _weights[indexes[pivot]] > MEDIUM) {
-                sum += _weights[indexes[pivot]];
+            } else if (sum + _weights[indexes[pivotIndex]] < MEDIUM) {
+                sum += _weights[indexes[pivotIndex]];
                 prevSum = sum;
                 len = rightLen;
                 (indexes, rightIndexes) = (rightIndexes, indexes);
             } else {
-                return _list[indexes[pivot]];
+                return _list[indexes[pivotIndex]];
             }
         }
     }
