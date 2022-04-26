@@ -115,7 +115,7 @@ describe("ChainLink Median Functionality", function () {
     console.table(gasEstimation);
   });
 
-  describe("chainlink", () => {
+  describe("chainlink median", () => {
     for (let i = 3; i <= 20; i++) {
       it(`should be possible to calculate with ${i} submitters`, async () => {
         const list = Array.from({ length: i }, () =>
@@ -123,31 +123,34 @@ describe("ChainLink Median Functionality", function () {
         );
 
         gasEstimation[i]["Chainlink"] = (
-          await mammonMedian.estimateGas.calculateWithChainLink(list)
+          await mammonMedian.estimateGas.calculateWithChainlinkMedian(list)
         ).toNumber();
 
-        expect(await mammonMedian.calculateWithChainLink(list)).to.be.equal(
-          getMedian(list),
-        );
+        expect(
+          await mammonMedian.calculateWithChainlinkMedian(list),
+        ).to.be.equal(getMedian(list));
       });
     }
   });
 
-  describe("weighted median", async () => {
+  describe("chainlink weighted median", async () => {
     for (let i = 3; i <= 20; i++) {
       it(`should be possible to calculate with ${i} submitters`, async () => {
         const list = testList.slice(0, i);
         const weights = testWeights[i];
 
-        gasEstimation[i]["Weighted Median"] = (
-          await mammonMedian.estimateGas.calculateWithWeightedMedian(
+        gasEstimation[i]["Chainlink Weighted Median"] = (
+          await mammonMedian.estimateGas.calculateWithChainlinkWeightedMedian(
             list,
             weights,
           )
         ).toNumber();
 
         expect(
-          await mammonMedian.calculateWithWeightedMedian(list, weights),
+          await mammonMedian.calculateWithChainlinkWeightedMedian(
+            list,
+            weights,
+          ),
         ).to.be.equal(getWeightedMedian(list, weights));
       });
     }
