@@ -33,7 +33,7 @@ library WeightedMedian {
 
             (pivotIndex, weightSum) = partition(list, weights, lo, hi, weightSum);
 
-            if (weightSum > MEDIUM) {
+            if (weightSum + weights[pivotIndex]> MEDIUM) {
                 hi = pivotIndex;
                 weightSum = prevSum;
             } else if (weightSum + weights[pivotIndex] < MEDIUM) {
@@ -117,7 +117,7 @@ library WeightedMedian {
         // We don't care about overflow of the addition, because it would require a list
         // larger than any feasible computer's memory.
         uint256 weightSum = prevSum;
-        uint256 left = lo;
+        uint256 i = lo;
         uint256 pivot = list[(lo + hi) / 2];
         unchecked {
             lo -= 1; // this can underflow. that's intentional.
@@ -144,8 +144,8 @@ library WeightedMedian {
                 //   - lo will have to stop at least once in the interval
                 //     [orig_lo, (orig_lo + orig_hi)/2]
                 //   - (orig_lo + orig_hi)/2 < orig_hi
-                for (; left < hi; left++) {
-                    weightSum += weights[left];
+                for (; i < hi; i++) {
+                    weightSum += weights[i];
                 }
                 return (hi, weightSum);
             }
