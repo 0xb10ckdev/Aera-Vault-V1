@@ -2,8 +2,8 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import { MammonMedian } from "../../../typechain";
-import { ONE } from "../constants";
-import { toWei } from "../utils";
+import { ONE } from "../../v1/constants";
+import { toWei } from "../../v1/utils";
 
 describe("ChainLink Median Functionality", function () {
   let admin: SignerWithAddress;
