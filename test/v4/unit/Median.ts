@@ -156,22 +156,6 @@ describe("ChainLink Median Functionality", function () {
     }
   });
 
-  describe("median oracle", () => {
-    for (let i = 3; i <= 20; i++) {
-      it(`should be possible to calculate with ${i} submitters`, async () => {
-        const list = testList.slice(0, i);
-
-        gasEstimation[i]["Median Oracle"] = (
-          await mammonMedian.estimateGas.calculateWithMedianOracle(list)
-        ).toNumber();
-
-        expect(await mammonMedian.calculateWithMedianOracle(list)).to.be.equal(
-          getMedian(list),
-        );
-      });
-    }
-  });
-
   describe("uint median", () => {
     for (let i = 3; i <= 20; i++) {
       it(`should be possible to calculate with ${i} submitters`, async () => {
