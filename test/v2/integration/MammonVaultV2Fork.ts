@@ -122,6 +122,13 @@ describe("Mammon Vault V2 Mainnet Deployment", function () {
       );
     });
 
+    it("when oracle is zero address", async () => {
+      validParams.assets.oracles = Array(oracles.length).fill(ZERO_ADDRESS);
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Mammon__OracleIsZeroAddress",
+      );
+    });
+
     it("when management fee is greater than maximum", async () => {
       validParams.managementFee = MAX_MANAGEMENT_FEE.add(1);
       await expect(deployVault(validParams)).to.be.revertedWith(

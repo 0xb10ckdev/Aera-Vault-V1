@@ -21,6 +21,7 @@ contract MammonVaultV2 is MammonVaultV1, IProtocolAPIV2 {
 
     /// STORAGE ///
 
+    // slither-disable-next-line shadowing-state
     uint256 private constant ONE = 10**18;
 
     /// @dev Oracle addresses.
@@ -32,6 +33,7 @@ contract MammonVaultV2 is MammonVaultV1, IProtocolAPIV2 {
         uint256 tokenLength,
         uint256 oracleLength
     );
+    error Mammon__OracleIsZeroAddress(uint256 index);
 
     /// FUNCTIONS ///
 
@@ -80,13 +82,21 @@ contract MammonVaultV2 is MammonVaultV1, IProtocolAPIV2 {
             );
         }
 
+        for (uint256 i = 1; i < assets.oracles.length; i++) {
+            if (address(assets.oracles[i]) == address(0)) {
+                revert Mammon__OracleIsZeroAddress(i);
+            }
+        }
+
         oracles = assets.oracles;
     }
 
     /// @inheritdoc IProtocolAPIV2
+    // slither-disable-next-line calls-loop
     function enableTradingWithOraclePrice()
         external
         override
+        nonReentrant
         onlyManager
         whenInitialized
     {
