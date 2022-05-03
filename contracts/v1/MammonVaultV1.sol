@@ -252,10 +252,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param name Name of Pool Token.
     /// @param symbol Symbol of Pool Token.
     /// @param tokens Token addresses.
+    /// @param weights Token weights.
     /// @param swapFeePercentage Pool swap fee.
     /// @param manager_ Vault manager address.
     /// @param validator_ Withdrawal validator contract address.
     /// @param noticePeriod_ Notice period (in seconds).
+    /// @param managementFee_ Management fee earned proportion per second.
     /// @param description_ Simple vault text description.
     constructor(
         address factory,
