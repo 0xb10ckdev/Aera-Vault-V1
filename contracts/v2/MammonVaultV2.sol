@@ -5,7 +5,6 @@ import "../v1/MammonVaultV1.sol";
 import "../v1/dependencies/openzeppelin/SafeCast.sol";
 import "./dependencies/chainlink/interfaces/AggregatorV2V3Interface.sol";
 import "./interfaces/IProtocolAPIV2.sol";
-import "hardhat/console.sol";
 
 /// @title Risk-managed treasury vault.
 /// @notice Managed n-asset vault that supports withdrawals
@@ -95,6 +94,7 @@ contract MammonVaultV2 is MammonVaultV1, IProtocolAPIV2 {
         uint256[] memory weights = new uint256[](holdings.length);
         uint256 weightSum = ONE;
         weights[0] = ONE;
+
         for (uint256 i = 1; i < holdings.length; i++) {
             uint256 latestPrice = oracles[i].latestAnswer().toUint256();
             weights[i] =
