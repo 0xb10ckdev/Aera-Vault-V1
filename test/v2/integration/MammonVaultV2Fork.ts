@@ -6,9 +6,10 @@ import {
   IERC20,
   BaseManagedPoolFactory,
   BaseManagedPoolFactory__factory,
-  MammonVaultV1Mock,
+  MammonVaultV2Mock,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
+  OracleMock,
 } from "../../../typechain";
 import {
   BALANCER_ERRORS,
@@ -23,20 +24,22 @@ import {
   NOTICE_PERIOD,
   ONE,
   ZERO_ADDRESS,
-} from "../constants";
-import { deployToken, setupTokens } from "../fixtures";
+  PRICE_DEVIATION,
+} from "../../v2/constants";
+import { deployToken, setupTokens, setupOracles } from "../../v2/fixtures";
 import {
   deployFactory,
-  deployVault,
   getCurrentTime,
   getTimestamp,
   increaseTime,
   toWei,
   valueArray,
   VaultParams,
-} from "../utils";
+  deployVault,
+  toUnit,
+} from "../../v2/utils";
 
-describe("Mammon Vault V1 Mainnet Deployment", function () {
+describe("Mammon Vault V2 Mainnet Deployment", function () {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
   let validator: WithdrawalValidatorMock;
@@ -44,6 +47,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
   let tokens: IERC20[];
   let sortedTokens: string[];
   let unsortedTokens: string[];
+  let oracles: OracleMock[];
   let snapshot: unknown;
   let validWeights: string[];
   let validParams: VaultParams;
@@ -54,6 +58,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
       ({ admin, manager } = await ethers.getNamedSigners());
 
       ({ tokens, sortedTokens, unsortedTokens } = await setupTokens());
+      oracles = await setupOracles();
       validWeights = valueArray(ONE.div(tokens.length), tokens.length);
 
       await deployments.deploy("Validator", {
@@ -82,8 +87,11 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
         factory: factory.address,
         name: "Test",
         symbol: "TEST",
-        tokens: sortedTokens,
-        weights: validWeights,
+        assets: {
+          tokens: sortedTokens,
+          weights: validWeights,
+          oracles: oracles.map(oracle => oracle.address),
+        },
         swapFeePercentage: MIN_SWAP_FEE,
         manager: manager.address,
         validator: validator.address,
@@ -98,9 +106,19 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
     });
 
     it("when token and weight length is not same", async () => {
-      validParams.tokens = [...sortedTokens, tokens[0].address];
+      validParams.assets.tokens = [...sortedTokens, tokens[0].address];
       await expect(deployVault(validParams)).to.be.revertedWith(
         "Mammon__WeightLengthIsNotSame",
+      );
+    });
+
+    it("when token and oracle length is not same", async () => {
+      validParams.assets.oracles = [
+        ...oracles.map(oracle => oracle.address),
+        tokens[0].address,
+      ];
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Mammon__OracleLengthIsNotSame",
       );
     });
 
@@ -133,7 +151,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
     });
 
     it("when token is not sorted in ascending order", async () => {
-      validParams.tokens = unsortedTokens;
+      validParams.assets.tokens = unsortedTokens;
       await expect(deployVault(validParams)).to.be.revertedWith(
         BALANCER_ERRORS.UNSORTED_ARRAY,
       );
@@ -154,7 +172,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
     });
 
     it("when total sum of weights is not one", async () => {
-      validParams.weights = valueArray(MIN_WEIGHT, tokens.length);
+      validParams.assets.weights = valueArray(MIN_WEIGHT, tokens.length);
       await expect(deployVault(validParams)).to.be.revertedWith(
         BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT,
       );
@@ -162,15 +180,16 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
   });
 });
 
-describe("Mammon Vault V1 Mainnet Functionality", function () {
+describe("Mammon Vault V2 Mainnet Functionality", function () {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
   let user: SignerWithAddress;
-  let vault: MammonVaultV1Mock;
+  let vault: MammonVaultV2Mock;
   let validator: WithdrawalValidatorMock;
   let factory: BaseManagedPoolFactory;
   let tokens: IERC20[];
   let sortedTokens: string[];
+  let oracles: OracleMock[];
   let snapshot: unknown;
 
   const getAdminBalances = async () => {
@@ -208,6 +227,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
     ({ admin, manager, user } = await ethers.getNamedSigners());
     ({ tokens, sortedTokens } = await setupTokens());
+    oracles = await setupOracles();
 
     const validatorMock =
       await ethers.getContractFactory<WithdrawalValidatorMock__factory>(
@@ -224,12 +244,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
     const validWeights = valueArray(ONE.div(tokens.length), tokens.length);
 
-    vault = await hre.run("deploy:vault", {
+    vault = await hre.run("deploy:vaultV2", {
       factory: factory.address,
       name: "Test",
       symbol: "TEST",
       tokens: sortedTokens.join(","),
       weights: validWeights.join(","),
+      oracles: oracles.map(oracle => oracle.address).join(","),
       swapFee: MIN_SWAP_FEE.toString(),
       manager: manager.address,
       validator: validator.address,
@@ -1511,6 +1532,33 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           for (let i = 0; i < tokens.length; i++) {
             expect(newWeights[i]).to.be.closeTo(currentWeights[i], DEVIATION);
           }
+        });
+      });
+
+      describe("with enableTradingWithOraclePrice function", () => {
+        it("should be reverted to enable trading", async () => {
+          await expect(
+            vault.enableTradingWithOraclePrice(),
+          ).to.be.revertedWith("Mammon__CallerIsNotManager");
+        });
+
+        it("should be possible to enable trading", async () => {
+          const oraclePrices: any = [toUnit(1, 8)];
+          for (let i = 1; i < tokens.length; i++) {
+            oraclePrices.push(toUnit(Math.floor(Math.random() * 100), 8));
+            await oracles[i].setLatestAnswer(oraclePrices[i]);
+          }
+
+          await expect(vault.connect(manager).enableTradingWithOraclePrice())
+            .to.emit(vault, "SetSwapEnabled")
+            .withArgs(true);
+
+          for (let i = 0; i < tokens.length; i++) {
+            expect(
+              await vault.getSpotPrice(tokens[i].address, tokens[0].address),
+            ).to.be.closeTo(oraclePrices[i].mul(1e10), PRICE_DEVIATION);
+          }
+          expect(await vault.isSwapEnabled()).to.equal(true);
         });
       });
     });
