@@ -3,7 +3,6 @@ pragma solidity 0.8.11;
 
 import "./dependencies/openzeppelin/SafeERC20.sol";
 import "./dependencies/openzeppelin/IERC20.sol";
-import "./dependencies/openzeppelin/IERC165.sol";
 import "./dependencies/openzeppelin/Ownable.sol";
 import "./dependencies/openzeppelin/ReentrancyGuard.sol";
 import "./dependencies/openzeppelin/Math.sol";
@@ -368,16 +367,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             );
         }
 
-        /// must encode the userData for join as below
-        /// abi.encode(JoinKind.INIT, initBalances)
-        /// ManagedPool JoinKinds:
-        /// enum JoinKind {
-        ///     INIT,
-        ///     EXACT_TOKENS_IN_FOR_BPT_OUT,
-        ///     TOKEN_IN_FOR_EXACT_BPT_OUT,
-        ///     ALL_TOKENS_IN_FOR_EXACT_BPT_OUT
-        /// }
-        bytes memory initUserData = abi.encode(0, amounts);
+        bytes memory initUserData = abi.encode(IBVault.JoinKind.INIT, amounts);
 
         for (uint256 i = 0; i < tokens.length; i++) {
             depositToken(tokens[i], amounts[i]);
@@ -577,8 +567,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         onlyOwner
         whenInitialized
     {
-        uint256 timestamp = block.timestamp;
-        pool.updateWeightsGradually(timestamp, timestamp, weights);
+        pool.updateWeightsGradually(block.timestamp, block.timestamp, weights);
         setSwapEnabled(true);
     }
 
@@ -880,8 +869,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         newWeights[0] = newWeights[0] + ONE - adjustedSum;
 
-        uint256 timestamp = block.timestamp;
-        pool.updateWeightsGradually(timestamp, timestamp, newWeights);
+        pool.updateWeightsGradually(
+            block.timestamp,
+            block.timestamp,
+            newWeights
+        );
     }
 
     /// @notice Deposit token to the pool.
