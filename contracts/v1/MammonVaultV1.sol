@@ -69,11 +69,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @dev 10**18 is 100%
     uint256 public immutable managementFee;
 
+    /// STORAGE SLOT START ///
+
     /// @notice Describes vault purpose and modelling assumptions for differentiating between vaults
     /// @dev string cannot be immutable bytecode but only set in constructor
     string public description;
-
-    /// STORAGE SLOT START ///
 
     /// @notice Controls vault parameters.
     address public manager;
