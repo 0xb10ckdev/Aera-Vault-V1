@@ -483,7 +483,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 revert Mammon__AmountExceedAvailable(
                     address(tokens[i]),
                     amounts[i],
-                    holdings[i].min(allowances[i])
+                    Math.min(holdings[i], allowances[i])
                 );
             }
         }
