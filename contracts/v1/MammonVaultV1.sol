@@ -517,6 +517,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     function initiateFinalization()
         external
         override
+        nonReentrant
         onlyOwner
         whenInitialized
         whenNotFinalizing
@@ -810,7 +811,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @dev Will only be called by claimManagerFees(), setManager(),
     ///      initiateFinalization(), deposit() and withdraw().
     // slither-disable-next-line timestamp
-    function calculateAndDistributeManagerFees() internal nonReentrant {
+    function calculateAndDistributeManagerFees() internal {
         updateManagerFeeIndex();
 
         // slither-disable-next-line incorrect-equality
