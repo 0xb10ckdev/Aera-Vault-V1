@@ -93,19 +93,27 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Emitted when the vault is created.
     /// @param factory Balancer Managed Pool factory address.
+    /// @param name Name of Pool Token.
+    /// @param symbol Symbol of Pool Token.
     /// @param tokens Token addresses.
     /// @param weights Token weights.
+    /// @param swapFeePercentage Pool swap fee.
     /// @param manager Vault manager address.
     /// @param validator Withdrawal validator contract address.
     /// @param noticePeriod Notice period (in seconds).
+    /// @param managementFee Management fee earned proportion per second.
     /// @param description Vault description.
     event Created(
         address indexed factory,
+        string name,
+        string symbol,
         IERC20[] tokens,
         uint256[] weights,
-        address manager,
-        address validator,
+        uint256 swapFeePercentage,
+        address indexed manager,
+        address indexed validator,
         uint32 noticePeriod,
+        uint256 managementFee,
         string description
     );
 
@@ -251,10 +259,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param name Name of Pool Token.
     /// @param symbol Symbol of Pool Token.
     /// @param tokens Token addresses.
+    /// @param weights Token weights.
     /// @param swapFeePercentage Pool swap fee.
     /// @param manager_ Vault manager address.
     /// @param validator_ Withdrawal validator contract address.
     /// @param noticePeriod_ Notice period (in seconds).
+    /// @param managementFee_ Management fee earned proportion per second.
     /// @param description_ Simple vault text description.
     constructor(
         address factory,
@@ -295,6 +305,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 MAX_NOTICE_PERIOD
             );
         }
+        if (manager_ == address(0)) {
+            revert Mammon__ManagerIsZeroAddress();
+        }
 
         address[] memory managers = new address[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
@@ -332,11 +345,15 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         // slither-disable-next-line reentrancy-events
         emit Created(
             factory,
+            name,
+            symbol,
             tokens,
             weights,
+            swapFeePercentage,
             manager_,
             validator_,
             noticePeriod_,
+            managementFee_,
             description_
         );
         // slither-disable-next-line reentrancy-events
