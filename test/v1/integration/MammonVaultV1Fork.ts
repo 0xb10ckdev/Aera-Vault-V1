@@ -1145,9 +1145,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           );
         });
 
-        it("when finalization is not initialized", async () => {
+        it("when finalization is not initiated", async () => {
           await expect(vault.finalize()).to.be.revertedWith(
-            "Mammon__FinalizationNotInitialized",
+            "Mammon__FinalizationNotInitiated",
           );
         });
 

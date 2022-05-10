@@ -162,7 +162,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Emitted when initiateFinalization is called.
     /// @param noticeTimeoutAt Timestamp for notice timeout.
-    event FinalizationInitialized(uint64 noticeTimeoutAt);
+    event FinalizationInitiated(uint64 noticeTimeoutAt);
 
     /// @notice Emitted when vault is finalized.
     /// @param caller Address of finalizer.
@@ -204,7 +204,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 amount,
         uint256 available
     );
-    error Mammon__FinalizationNotInitialized();
+    error Mammon__FinalizationNotInitiated();
     error Mammon__VaultNotInitialized();
     error Mammon__VaultIsAlreadyInitialized();
     error Mammon__VaultIsFinalizing();
@@ -236,7 +236,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         _;
     }
 
-    /// @dev Throws if called before finalization is initialized.
+    /// @dev Throws if called before finalization is initiated.
     modifier whenNotFinalizing() {
         if (noticeTimeoutAt != 0) {
             revert Mammon__VaultIsFinalizing();
@@ -523,14 +523,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     {
         calculateAndDistributeManagerFees();
         noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
-        emit FinalizationInitialized(noticeTimeoutAt);
+        emit FinalizationInitiated(noticeTimeoutAt);
     }
 
     /// @inheritdoc IProtocolAPI
     // slither-disable-next-line timestamp
     function finalize() external override nonReentrant onlyOwner {
         if (noticeTimeoutAt == 0) {
-            revert Mammon__FinalizationNotInitialized();
+            revert Mammon__FinalizationNotInitiated();
         }
         if (noticeTimeoutAt > block.timestamp) {
             revert Mammon__NoticeTimeoutNotElapsed(noticeTimeoutAt);
