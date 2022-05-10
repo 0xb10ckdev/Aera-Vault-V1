@@ -528,7 +528,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IProtocolAPI
     // slither-disable-next-line timestamp
-    function finalize() external override nonReentrant onlyOwner {
+    function finalize()
+        external
+        override
+        nonReentrant
+        onlyOwner
+        whenInitialized
+    {
         if (noticeTimeoutAt == 0) {
             revert Mammon__FinalizationNotInitiated();
         }
