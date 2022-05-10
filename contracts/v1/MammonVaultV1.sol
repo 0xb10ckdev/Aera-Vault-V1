@@ -602,11 +602,18 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IManagerAPI
     // slither-disable-next-line timestamp
+    // prettier-ignore
     function updateWeightsGradually(
         uint256[] calldata targetWeights,
         uint256 startTime,
         uint256 endTime
-    ) external override onlyManager whenInitialized whenNotFinalizing {
+    )
+        external
+        override
+        onlyManager
+        whenInitialized
+        whenNotFinalizing
+    {
         if (
             Math.max(block.timestamp, startTime) +
                 MINIMUM_WEIGHT_CHANGE_DURATION >
