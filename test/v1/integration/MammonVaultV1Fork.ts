@@ -159,6 +159,13 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
         BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT,
       );
     });
+
+    it("when manager is zero address", async () => {
+      validParams.manager = ZERO_ADDRESS;
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Mammon__ManagerIsZeroAddress",
+      );
+    });
   });
 });
 
@@ -292,6 +299,12 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
       it("when call initiateFinalization", async () => {
         await expect(vault.initiateFinalization()).to.be.revertedWith(
+          "Mammon__VaultNotInitialized",
+        );
+      });
+
+      it("when call finalize", async () => {
+        await expect(vault.finalize()).to.be.revertedWith(
           "Mammon__VaultNotInitialized",
         );
       });
@@ -1145,9 +1158,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           );
         });
 
-        it("when finalization is not initialized", async () => {
+        it("when finalization is not initiated", async () => {
           await expect(vault.finalize()).to.be.revertedWith(
-            "Mammon__FinalizationNotInitialized",
+            "Mammon__FinalizationNotInitiated",
           );
         });
 

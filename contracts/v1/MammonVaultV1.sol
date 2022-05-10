@@ -3,7 +3,6 @@ pragma solidity 0.8.11;
 
 import "./dependencies/openzeppelin/SafeERC20.sol";
 import "./dependencies/openzeppelin/IERC20.sol";
-import "./dependencies/openzeppelin/IERC165.sol";
 import "./dependencies/openzeppelin/Ownable.sol";
 import "./dependencies/openzeppelin/ReentrancyGuard.sol";
 import "./dependencies/openzeppelin/Math.sol";
@@ -69,11 +68,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @dev 10**18 is 100%
     uint256 public immutable managementFee;
 
+    /// STORAGE SLOT START ///
+
     /// @notice Describes vault purpose and modelling assumptions for differentiating between vaults
     /// @dev string cannot be immutable bytecode but only set in constructor
     string public description;
-
-    /// STORAGE SLOT START ///
 
     /// @notice Controls vault parameters.
     address public manager;
@@ -94,19 +93,27 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Emitted when the vault is created.
     /// @param factory Balancer Managed Pool factory address.
+    /// @param name Name of Pool Token.
+    /// @param symbol Symbol of Pool Token.
     /// @param tokens Token addresses.
     /// @param weights Token weights.
+    /// @param swapFeePercentage Pool swap fee.
     /// @param manager Vault manager address.
     /// @param validator Withdrawal validator contract address.
     /// @param noticePeriod Notice period (in seconds).
+    /// @param managementFee Management fee earned proportion per second.
     /// @param description Vault description.
     event Created(
         address indexed factory,
+        string name,
+        string symbol,
         IERC20[] tokens,
         uint256[] weights,
-        address manager,
-        address validator,
+        uint256 swapFeePercentage,
+        address indexed manager,
+        address indexed validator,
         uint32 noticePeriod,
+        uint256 managementFee,
         string description
     );
 
@@ -162,7 +169,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Emitted when initiateFinalization is called.
     /// @param noticeTimeoutAt Timestamp for notice timeout.
-    event FinalizationInitialized(uint64 noticeTimeoutAt);
+    event FinalizationInitiated(uint64 noticeTimeoutAt);
 
     /// @notice Emitted when vault is finalized.
     /// @param caller Address of finalizer.
@@ -198,7 +205,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 amount,
         uint256 available
     );
-    error Mammon__FinalizationNotInitialized();
+    error Mammon__FinalizationNotInitiated();
     error Mammon__VaultNotInitialized();
     error Mammon__VaultIsAlreadyInitialized();
     error Mammon__VaultIsFinalizing();
@@ -230,7 +237,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         _;
     }
 
-    /// @dev Throws if called before finalization is initialized.
+    /// @dev Throws if called before finalization is initiated.
     modifier whenNotFinalizing() {
         if (noticeTimeoutAt != 0) {
             revert Mammon__VaultIsFinalizing();
@@ -246,10 +253,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param name Name of Pool Token.
     /// @param symbol Symbol of Pool Token.
     /// @param tokens Token addresses.
+    /// @param weights Token weights.
     /// @param swapFeePercentage Pool swap fee.
     /// @param manager_ Vault manager address.
     /// @param validator_ Withdrawal validator contract address.
     /// @param noticePeriod_ Notice period (in seconds).
+    /// @param managementFee_ Management fee earned proportion per second.
     /// @param description_ Simple vault text description.
     constructor(
         address factory,
@@ -290,6 +299,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 MAX_NOTICE_PERIOD
             );
         }
+        if (manager_ == address(0)) {
+            revert Mammon__ManagerIsZeroAddress();
+        }
 
         uint256 numTokens = tokens.length;
         address[] memory managers = new address[](numTokens);
@@ -328,11 +340,15 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         // slither-disable-next-line reentrancy-events
         emit Created(
             factory,
+            name,
+            symbol,
             tokens,
             weights,
+            swapFeePercentage,
             manager_,
             validator_,
             noticePeriod_,
+            managementFee_,
             description_
         );
         // slither-disable-next-line reentrancy-events
@@ -361,16 +377,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             revert Mammon__AmountLengthIsNotSame(numTokens, amounts.length);
         }
 
-        /// must encode the userData for join as below
-        /// abi.encode(JoinKind.INIT, initBalances)
-        /// ManagedPool JoinKinds:
-        /// enum JoinKind {
-        ///     INIT,
-        ///     EXACT_TOKENS_IN_FOR_BPT_OUT,
-        ///     TOKEN_IN_FOR_EXACT_BPT_OUT,
-        ///     ALL_TOKENS_IN_FOR_EXACT_BPT_OUT
-        /// }
-        bytes memory initUserData = abi.encode(0, amounts);
+        bytes memory initUserData = abi.encode(IBVault.JoinKind.INIT, amounts);
 
         for (uint256 i = 0; i < numTokens; i++) {
             depositToken(tokens[i], amounts[i]);
@@ -416,7 +423,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 weightSum;
 
         for (uint256 i = 0; i < numTokens; i++) {
-            if (amounts[i] > 0) {
+            if (amounts[i] != 0) {
                 depositToken(tokens[i], amounts[i]);
 
                 uint256 newBalance = holdings[i] + amounts[i];
@@ -472,7 +479,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 revert Mammon__AmountExceedAvailable(
                     address(tokens[i]),
                     amounts[i],
-                    holdings[i].min(allowances[i])
+                    Math.min(holdings[i], allowances[i])
                 );
             }
         }
@@ -482,7 +489,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 weightSum;
 
         for (uint256 i = 0; i < numTokens; i++) {
-            if (amounts[i] > 0) {
+            if (amounts[i] != 0) {
                 tokens[i].safeTransfer(owner(), amounts[i]);
 
                 uint256 newBalance = holdings[i] - amounts[i];
@@ -506,20 +513,27 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     function initiateFinalization()
         external
         override
+        nonReentrant
         onlyOwner
         whenInitialized
         whenNotFinalizing
     {
         calculateAndDistributeManagerFees();
         noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
-        emit FinalizationInitialized(noticeTimeoutAt);
+        emit FinalizationInitiated(noticeTimeoutAt);
     }
 
     /// @inheritdoc IProtocolAPI
     // slither-disable-next-line timestamp
-    function finalize() external override nonReentrant onlyOwner {
+    function finalize()
+        external
+        override
+        nonReentrant
+        onlyOwner
+        whenInitialized
+    {
         if (noticeTimeoutAt == 0) {
-            revert Mammon__FinalizationNotInitialized();
+            revert Mammon__FinalizationNotInitiated();
         }
         if (noticeTimeoutAt > block.timestamp) {
             revert Mammon__NoticeTimeoutNotElapsed(noticeTimeoutAt);
@@ -531,7 +545,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IProtocolAPI
     // slither-disable-next-line timestamp
-    function setManager(address newManager) external override onlyOwner {
+    function setManager(address newManager)
+        external
+        override
+        nonReentrant
+        onlyOwner
+    {
         if (newManager == address(0)) {
             revert Mammon__ManagerIsZeroAddress();
         }
@@ -566,8 +585,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         onlyOwner
         whenInitialized
     {
-        uint256 timestamp = block.timestamp;
-        pool.updateWeightsGradually(timestamp, timestamp, weights);
+        pool.updateWeightsGradually(block.timestamp, block.timestamp, weights);
         setSwapEnabled(true);
     }
 
@@ -584,12 +602,19 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// MANAGER API ///
 
     /// @inheritdoc IManagerAPI
+    // prettier-ignore
     // slither-disable-next-line timestamp
     function updateWeightsGradually(
         uint256[] calldata targetWeights,
         uint256 startTime,
         uint256 endTime
-    ) external override onlyManager whenInitialized whenNotFinalizing {
+    )
+        external
+        override
+        onlyManager
+        whenInitialized
+        whenNotFinalizing
+    {
         if (
             Math.max(block.timestamp, startTime) +
                 MINIMUM_WEIGHT_CHANGE_DURATION >
@@ -673,6 +698,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     function claimManagerFees()
         external
         override
+        nonReentrant
         whenInitialized
         whenNotFinalizing
         onlyManager
@@ -874,8 +900,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         newWeights[0] = newWeights[0] + ONE - adjustedSum;
 
-        uint256 timestamp = block.timestamp;
-        pool.updateWeightsGradually(timestamp, timestamp, newWeights);
+        pool.updateWeightsGradually(
+            block.timestamp,
+            block.timestamp,
+            newWeights
+        );
     }
 
     /// @notice Deposit token to the pool.
