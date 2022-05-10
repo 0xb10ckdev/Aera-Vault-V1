@@ -425,7 +425,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 weightSum;
 
         for (uint256 i = 0; i < amounts.length; i++) {
-            if (amounts[i] > 0) {
+            if (amounts[i] != 0) {
                 depositToken(tokens[i], amounts[i]);
 
                 uint256 newBalance = holdings[i] + amounts[i];
@@ -493,7 +493,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 weightSum;
 
         for (uint256 i = 0; i < amounts.length; i++) {
-            if (amounts[i] > 0) {
+            if (amounts[i] != 0) {
                 tokens[i].safeTransfer(owner(), amounts[i]);
 
                 uint256 newBalance = holdings[i] - amounts[i];
