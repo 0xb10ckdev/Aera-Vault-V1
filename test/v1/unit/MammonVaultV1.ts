@@ -151,6 +151,12 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           "Mammon__VaultNotInitialized",
         );
       });
+
+      it("when call finalize", async () => {
+        await expect(vault.finalize()).to.be.revertedWith(
+          "Mammon__VaultNotInitialized",
+        );
+      });
     });
 
     describe("should be reverted to initialize the vault", async () => {
