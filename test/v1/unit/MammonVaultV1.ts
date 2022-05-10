@@ -151,6 +151,12 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           "Mammon__VaultNotInitialized",
         );
       });
+
+      it("when call finalize", async () => {
+        await expect(vault.finalize()).to.be.revertedWith(
+          "Mammon__VaultNotInitialized",
+        );
+      });
     });
 
     describe("should be reverted to initialize the vault", async () => {
@@ -485,9 +491,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           );
         });
 
-        it("when finalization is not initialized", async () => {
+        it("when finalization is not initiated", async () => {
           await expect(vault.finalize()).to.be.revertedWith(
-            "Mammon__FinalizationNotInitialized",
+            "Mammon__FinalizationNotInitiated",
           );
         });
 
@@ -548,7 +554,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         const trx = await vault.initiateFinalization();
         const noticeTimeoutAt = await vault.noticeTimeoutAt();
         await expect(trx)
-          .to.emit(vault, "FinalizationInitialized")
+          .to.emit(vault, "FinalizationInitiated")
           .withArgs(noticeTimeoutAt);
 
         await ethers.provider.send("evm_increaseTime", [NOTICE_PERIOD + 1]);

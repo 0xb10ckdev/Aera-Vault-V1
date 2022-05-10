@@ -4,6 +4,13 @@ pragma solidity 0.8.11;
 import "../dependencies/openzeppelin/IERC20.sol";
 
 interface IBVault {
+    enum JoinKind {
+        INIT,
+        EXACT_TOKENS_IN_FOR_BPT_OUT,
+        TOKEN_IN_FOR_EXACT_BPT_OUT,
+        ALL_TOKENS_IN_FOR_EXACT_BPT_OUT
+    }
+
     function getPoolTokens(bytes32 poolId)
         external
         view
