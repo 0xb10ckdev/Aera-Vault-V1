@@ -542,7 +542,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IProtocolAPI
     // slither-disable-next-line timestamp
-    function setManager(address newManager) external override onlyOwner {
+    function setManager(address newManager)
+        external
+        override
+        nonReentrant
+        onlyOwner
+    {
         if (newManager == address(0)) {
             revert Mammon__ManagerIsZeroAddress();
         }
@@ -682,6 +687,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     function claimManagerFees()
         external
         override
+        nonReentrant
         whenInitialized
         whenNotFinalizing
         onlyManager
@@ -791,7 +797,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @dev Will only be called by claimManagerFees(), setManager(),
     ///      initiateFinalization(), deposit() and withdraw().
     // slither-disable-next-line timestamp
-    function calculateAndDistributeManagerFees() internal {
+    function calculateAndDistributeManagerFees() internal nonReentrant {
         updateManagerFeeIndex();
 
         // slither-disable-next-line incorrect-equality
