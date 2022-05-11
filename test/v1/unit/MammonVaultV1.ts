@@ -685,13 +685,17 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
 
         it("should be possible to enable trading", async () => {
-          await expect(
-            vault.enableTradingWithWeights(
-              valueArray(ONE.div(tokens.length), tokens.length),
-            ),
-          )
+          const trx = await vault.enableTradingWithWeights(
+            valueArray(ONE.div(tokens.length), tokens.length),
+          );
+          const currentTime = await getTimestamp(trx.blockNumber);
+
+          await expect(trx)
             .to.emit(vault, "EnabledTradingWithWeights")
-            .withArgs(valueArray(ONE.div(tokens.length), tokens.length));
+            .withArgs(
+              currentTime,
+              valueArray(ONE.div(tokens.length), tokens.length),
+            );
 
           expect(await vault.isSwapEnabled()).to.equal(true);
         });

@@ -164,8 +164,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     event SetSwapEnabled(bool swapEnabled);
 
     /// @notice Emitted when enableTradingWithWeights is called.
-    /// @param weights New weights of tokens.
-    event EnabledTradingWithWeights(uint256[] weights);
+    /// @param time timestamp of updates.
+    /// @param weights Target weights of tokens.
+    event EnabledTradingWithWeights(uint256 time, uint256[] weights);
 
     /// @notice Emitted when swap fee is updated.
     /// @param swapFee New swap fee.
@@ -592,7 +593,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         pool.updateWeightsGradually(block.timestamp, block.timestamp, weights);
         pool.setSwapEnabled(true);
         // slither-disable-next-line reentrancy-events
-        emit EnabledTradingWithWeights(weights);
+        emit EnabledTradingWithWeights(block.timestamp, weights);
     }
 
     /// @inheritdoc IProtocolAPI
