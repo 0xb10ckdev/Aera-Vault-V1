@@ -674,14 +674,26 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       describe("with enableTradingWithWeights function", () => {
-        it("should be reverted to enable trading", async () => {
-          await expect(
-            vault
-              .connect(manager)
-              .enableTradingWithWeights(
+        describe("should be reverted to enable trading", () => {
+          it("when called from non-owner", async () => {
+            await expect(
+              vault
+                .connect(manager)
+                .enableTradingWithWeights(
+                  valueArray(ONE.div(tokens.length), tokens.length),
+                ),
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+          });
+
+          it("when swap is already enabled", async () => {
+            await vault.enableTradingRiskingArbitrage();
+
+            await expect(
+              vault.enableTradingWithWeights(
                 valueArray(ONE.div(tokens.length), tokens.length),
               ),
-          ).to.be.revertedWith("Ownable: caller is not the owner");
+            ).to.be.revertedWith("Mammon__PoolSwapIsAlreadyEnabled");
+          });
         });
 
         it("should be possible to enable trading", async () => {
