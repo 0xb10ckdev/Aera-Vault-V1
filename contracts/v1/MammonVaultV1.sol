@@ -210,6 +210,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 amount,
         uint256 available
     );
+    error Mammon__PoolSwapIsAlreadyEnabled();
     error Mammon__FinalizationNotInitiated();
     error Mammon__VaultNotInitialized();
     error Mammon__VaultIsAlreadyInitialized();
@@ -590,6 +591,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         onlyOwner
         whenInitialized
     {
+        bool isSwapEnabled = pool.getSwapEnabled();
+        if (isSwapEnabled) {
+            revert Mammon__PoolSwapIsAlreadyEnabled();
+        }
+
         pool.updateWeightsGradually(block.timestamp, block.timestamp, weights);
         pool.setSwapEnabled(true);
         // slither-disable-next-line reentrancy-events

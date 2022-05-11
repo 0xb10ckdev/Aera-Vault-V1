@@ -1508,6 +1508,16 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               ),
             ).to.be.revertedWith(BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT);
           });
+
+          it("when swap is already enabled", async () => {
+            await vault.enableTradingRiskingArbitrage();
+
+            await expect(
+              vault.enableTradingWithWeights(
+                valueArray(ONE.div(tokens.length), tokens.length),
+              ),
+            ).to.be.revertedWith("Mammon__PoolSwapIsAlreadyEnabled");
+          });
         });
 
         it("should be possible to enable trading", async () => {
