@@ -690,8 +690,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               valueArray(ONE.div(tokens.length), tokens.length),
             ),
           )
-            .to.emit(vault, "SetSwapEnabled")
-            .withArgs(true);
+            .to.emit(vault, "EnabledTradingWithWeights")
+            .withArgs(valueArray(ONE.div(tokens.length), tokens.length));
 
           expect(await vault.isSwapEnabled()).to.equal(true);
         });
