@@ -312,9 +312,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             revert Mammon__ManagerIsZeroAddress();
         }
 
-        address[] memory managers = new address[](tokens.length);
+        address[] memory assetManagers = new address[](tokens.length);
         for (uint256 i = 0; i < tokens.length; i++) {
-            managers[i] = address(this);
+            assetManagers[i] = address(this);
         }
 
         pool = IBManagedPool(
@@ -325,7 +325,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                     symbol: symbol,
                     tokens: tokens,
                     normalizedWeights: weights,
-                    assetManagers: managers,
+                    assetManagers: assetManagers,
                     swapFeePercentage: swapFeePercentage,
                     pauseWindowDuration: 0,
                     bufferPeriodDuration: 0,
