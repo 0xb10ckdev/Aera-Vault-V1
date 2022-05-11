@@ -402,6 +402,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 fromInternalBalance: false
             });
         bVault.joinPool(poolId, address(this), address(this), joinPoolRequest);
+
+        setSwapEnabled(true);
     }
 
     /// @inheritdoc IProtocolAPI
