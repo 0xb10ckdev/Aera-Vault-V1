@@ -591,8 +591,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         onlyOwner
         whenInitialized
     {
-        bool isSwapEnabled = pool.getSwapEnabled();
-        if (isSwapEnabled) {
+        if (pool.getSwapEnabled()) {
             revert Mammon__PoolSwapIsAlreadyEnabled();
         }
 
