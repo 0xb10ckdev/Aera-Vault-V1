@@ -178,14 +178,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// ERRORS ///
 
-    error Mammon__WeightLengthIsNotSame(
-        uint256 tokenLength,
-        uint256 weightLength
-    );
-    error Mammon__AmountLengthIsNotSame(
-        uint256 tokenLength,
-        uint256 amountLength
-    );
+    error Mammon__WeightLengthIsNotSame(uint256 numTokens, uint256 numWeights);
+    error Mammon__AmountLengthIsNotSame(uint256 numTokens, uint256 numAmounts);
     error Mammon__ValidatorIsNotValid(address validator);
     error Mammon__ManagementFeeIsAboveMax(uint256 actual, uint256 max);
     error Mammon__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
@@ -309,8 +303,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             revert Mammon__ManagerIsZeroAddress();
         }
 
-        address[] memory managers = new address[](tokens.length);
-        for (uint256 i = 0; i < tokens.length; i++) {
+        uint256 numTokens = tokens.length;
+        address[] memory managers = new address[](numTokens);
+        for (uint256 i = 0; i < numTokens; i++) {
             managers[i] = address(this);
         }
 
@@ -376,17 +371,15 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         lastFeeCheckpoint = block.timestamp.toUint64();
 
         IERC20[] memory tokens = getTokens();
+        uint256 numTokens = tokens.length;
 
-        if (tokens.length != amounts.length) {
-            revert Mammon__AmountLengthIsNotSame(
-                tokens.length,
-                amounts.length
-            );
+        if (numTokens != amounts.length) {
+            revert Mammon__AmountLengthIsNotSame(numTokens, amounts.length);
         }
 
         bytes memory initUserData = abi.encode(IBVault.JoinKind.INIT, amounts);
 
-        for (uint256 i = 0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < numTokens; i++) {
             depositToken(tokens[i], amounts[i]);
         }
 
@@ -419,19 +412,17 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         IERC20[] memory tokens;
         uint256[] memory holdings;
         (tokens, holdings, ) = getTokensData();
+        uint256 numTokens = tokens.length;
 
-        if (tokens.length != amounts.length) {
-            revert Mammon__AmountLengthIsNotSame(
-                tokens.length,
-                amounts.length
-            );
+        if (numTokens != amounts.length) {
+            revert Mammon__AmountLengthIsNotSame(numTokens, amounts.length);
         }
 
         uint256[] memory weights = getNormalizedWeights();
-        uint256[] memory newWeights = new uint256[](tokens.length);
+        uint256[] memory newWeights = new uint256[](numTokens);
         uint256 weightSum;
 
-        for (uint256 i = 0; i < amounts.length; i++) {
+        for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] != 0) {
                 depositToken(tokens[i], amounts[i]);
 
@@ -473,19 +464,17 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         IERC20[] memory tokens;
         uint256[] memory holdings;
         (tokens, holdings, ) = getTokensData();
+        uint256 numTokens = tokens.length;
 
-        if (tokens.length != amounts.length) {
-            revert Mammon__AmountLengthIsNotSame(
-                tokens.length,
-                amounts.length
-            );
+        if (numTokens != amounts.length) {
+            revert Mammon__AmountLengthIsNotSame(numTokens, amounts.length);
         }
 
         uint256[] memory allowances = validator.allowance();
         uint256[] memory weights = getNormalizedWeights();
-        uint256[] memory newWeights = new uint256[](tokens.length);
+        uint256[] memory newWeights = new uint256[](numTokens);
 
-        for (uint256 i = 0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] > holdings[i] || amounts[i] > allowances[i]) {
                 revert Mammon__AmountExceedAvailable(
                     address(tokens[i]),
@@ -499,7 +488,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         uint256 weightSum;
 
-        for (uint256 i = 0; i < amounts.length; i++) {
+        for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] != 0) {
                 tokens[i].safeTransfer(owner(), amounts[i]);
 
@@ -638,11 +627,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         // Check if weight change ratio is exceeded
+        uint256 targetWeightLength = targetWeights.length;
         uint256[] memory weights = pool.getNormalizedWeights();
         IERC20[] memory tokens = getTokens();
         uint256 duration = endTime - startTime;
         uint256 maximumRatio = MAX_WEIGHT_CHANGE_RATIO * duration;
-        for (uint256 i = 0; i < targetWeights.length; i++) {
+        for (uint256 i = 0; i < targetWeightLength; i++) {
             uint256 changeRatio = getWeightChangeRatio(
                 weights[i],
                 targetWeights[i]
@@ -672,9 +662,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenNotFinalizing
     {
         uint256[] memory weights = pool.getNormalizedWeights();
+        uint256 numWeights = weights.length;
         uint256 weightSum;
 
-        for (uint256 i = 0; i < weights.length; i++) {
+        for (uint256 i = 0; i < numWeights; i++) {
             weightSum += weights[i];
         }
 
@@ -829,9 +820,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256[] memory holdings;
         (tokens, holdings, ) = getTokensData();
 
-        uint256[] memory amounts = new uint256[](tokens.length);
+        uint256 numTokens = tokens.length;
+        uint256[] memory amounts = new uint256[](numTokens);
 
-        for (uint256 i = 0; i < tokens.length; i++) {
+        for (uint256 i = 0; i < numTokens; i++) {
             amounts[i] = (holdings[i] * managerFeeIndex) / ONE;
         }
 
@@ -839,7 +831,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         withdrawFromPool(amounts);
 
-        for (uint256 i = 0; i < amounts.length; i++) {
+        for (uint256 i = 0; i < numTokens; i++) {
             tokens[i].safeTransfer(manager, amounts[i]);
         }
 
@@ -875,13 +867,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256[] memory amounts,
         IBVault.PoolBalanceOpKind kind
     ) internal {
+        uint256 numAmounts = amounts.length;
         IBVault.PoolBalanceOp[] memory ops = new IBVault.PoolBalanceOp[](
-            amounts.length
+            numAmounts
         );
         bytes32 poolId = getPoolId();
         IERC20[] memory tokens = getTokens();
 
-        for (uint256 i = 0; i < ops.length; i++) {
+        for (uint256 i = 0; i < numAmounts; i++) {
             ops[i].kind = kind;
             ops[i].poolId = poolId;
             ops[i].token = tokens[i];
@@ -896,10 +889,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     function updateWeights(uint256[] memory weights, uint256 weightSum)
         internal
     {
-        uint256[] memory newWeights = new uint256[](weights.length);
+        uint256 numWeights = weights.length;
+        uint256[] memory newWeights = new uint256[](numWeights);
 
         uint256 adjustedSum;
-        for (uint256 i = 0; i < weights.length; i++) {
+        for (uint256 i = 0; i < numWeights; i++) {
             newWeights[i] = (weights[i] * ONE) / weightSum;
             adjustedSum += newWeights[i];
         }
@@ -926,15 +920,22 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @dev Will only be called by finalize().
     /// @return amounts Exact returned amount of tokens.
     function returnFunds() internal returns (uint256[] memory amounts) {
-        uint256[] memory holdings = getHoldings();
-        IERC20[] memory tokens = getTokens();
+        IERC20[] memory tokens;
+        uint256[] memory holdings;
+        (tokens, holdings, ) = getTokensData();
+
+        uint256 numTokens = tokens.length;
+        amounts = new uint256[](numTokens);
 
         withdrawFromPool(holdings);
 
-        amounts = new uint256[](tokens.length);
-        for (uint256 i = 0; i < tokens.length; i++) {
-            amounts[i] = tokens[i].balanceOf(address(this));
-            tokens[i].safeTransfer(owner(), amounts[i]);
+        uint256 amount;
+        IERC20 token;
+        for (uint256 i = 0; i < numTokens; i++) {
+            token = tokens[i];
+            amount = token.balanceOf(address(this));
+            token.safeTransfer(owner(), amount);
+            amounts[i] = amount;
         }
     }
 
