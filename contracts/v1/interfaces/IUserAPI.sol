@@ -14,10 +14,6 @@ interface IUserAPI {
     /// @return Swap fee from underlying Balancer pool.
     function getSwapFee() external view returns (uint256);
 
-    /// @notice Get Pool ID.
-    /// @return Pool ID of Balancer pool on Vault.
-    function getPoolId() external view returns (bytes32);
-
     /// @notice Get Token Data of Balancer Pool.
     /// @return tokens IERC20 tokens of Balancer pool.
     /// @return balances Balances of tokens of Balancer pool.

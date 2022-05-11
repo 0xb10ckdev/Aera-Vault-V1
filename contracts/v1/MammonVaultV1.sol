@@ -58,6 +58,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Balancer Pool.
     IBManagedPool public immutable pool;
 
+    /// @notice Pool ID of Balancer pool on Vault.
+    bytes32 public immutable poolId;
+
     /// @notice Notice period for vault termination (in seconds).
     uint32 public immutable noticePeriod;
 
@@ -335,6 +338,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         );
 
         // slither-disable-next-line reentrancy-benign
+        poolId = pool.getPoolId();
         bVault = IBManagedPoolFactory(factory).getVault();
         manager = manager_;
         validator = IWithdrawalValidator(validator_);
@@ -397,12 +401,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 userData: initUserData,
                 fromInternalBalance: false
             });
-        bVault.joinPool(
-            getPoolId(),
-            address(this),
-            address(this),
-            joinPoolRequest
-        );
+        bVault.joinPool(poolId, address(this), address(this), joinPoolRequest);
     }
 
     /// @inheritdoc IProtocolAPI
@@ -746,11 +745,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IUserAPI
-    function getPoolId() public view override returns (bytes32) {
-        return pool.getPoolId();
-    }
-
-    /// @inheritdoc IUserAPI
     function getTokensData()
         public
         view
@@ -761,7 +755,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             uint256
         )
     {
-        return bVault.getPoolTokens(getPoolId());
+        return bVault.getPoolTokens(poolId);
     }
 
     /// @inheritdoc IUserAPI
@@ -878,7 +872,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         IBVault.PoolBalanceOp[] memory ops = new IBVault.PoolBalanceOp[](
             amounts.length
         );
-        bytes32 poolId = getPoolId();
         IERC20[] memory tokens = getTokens();
 
         for (uint256 i = 0; i < ops.length; i++) {
