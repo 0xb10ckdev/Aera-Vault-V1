@@ -616,6 +616,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         ).to.be.revertedWith("Ownable: caller is not the owner");
       });
 
+      it("when token is pool token", async () => {
+        const poolToken = await vault.pool();
+        await expect(vault.sweep(poolToken, toWei(1))).to.be.revertedWith(
+          "Mammon__CanNotSweepPoolToken",
+        );
+      });
+
       it("when amount exceeds balance", async () => {
         await expect(
           vault.sweep(TOKEN.address, toWei(1001)),
