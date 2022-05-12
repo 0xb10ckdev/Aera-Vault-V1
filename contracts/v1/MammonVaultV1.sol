@@ -77,6 +77,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Controls vault parameters.
     address public manager;
 
+    /// @notice Pending account to accept ownership of vault.
+    address public pendingOwner;
+
     /// @notice Timestamp when notice elapses or 0 if not yet set
     uint64 public noticeTimeoutAt;
 
@@ -216,6 +219,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__VaultIsAlreadyInitialized();
     error Mammon__VaultIsFinalizing();
     error Mammon__VaultIsNotRenounceable();
+    error Mammon__OwnerIsZeroAddress();
+    error Mammon__NotPendingOwner();
 
     /// MODIFIERS ///
 
@@ -790,6 +795,23 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Disable ownership renounceable
     function renounceOwnership() public override onlyOwner {
         revert Mammon__VaultIsNotRenounceable();
+    }
+
+    /// @notice Disable immediate transfer of ownership
+    function transferOwnership(address newOwner) public override onlyOwner {
+        if (newOwner == address(0)) {
+            revert Mammon__OwnerIsZeroAddress();
+        }
+        pendingOwner = newOwner;
+    }
+
+    /// @notice Accept ownership
+    function acceptOwnership() public {
+        if (msg.sender != pendingOwner) {
+            revert Mammon__NotPendingOwner();
+        }
+        _transferOwnership(pendingOwner);
+        pendingOwner = address(0);
     }
 
     /// INTERNAL FUNCTIONS ///

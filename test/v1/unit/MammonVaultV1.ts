@@ -787,18 +787,72 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
     });
 
-    describe("Renounce Ownership", () => {
-      describe("should be reverted", () => {
-        it("when called from non-owner", async () => {
-          await expect(
-            vault.connect(user).renounceOwnership(),
-          ).to.be.revertedWith("Ownable: caller is not the owner");
+    describe("Ownership", () => {
+      describe("Renounce Ownership", () => {
+        describe("should be reverted", () => {
+          it("when called from non-owner", async () => {
+            await expect(
+              vault.connect(user).renounceOwnership(),
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+          });
+
+          it("when called from owner", async () => {
+            await expect(vault.renounceOwnership()).to.be.revertedWith(
+              "Mammon__VaultIsNotRenounceable",
+            );
+          });
+        });
+      });
+
+      describe("Transfer Ownership", () => {
+        describe("should be reverted", () => {
+          it("when called from non-owner", async () => {
+            await expect(
+              vault.connect(user).transferOwnership(admin.address),
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+          });
+
+          it("when called from not accepted owner", async () => {
+            await vault.transferOwnership(user.address);
+            await expect(
+              vault.connect(user).transferOwnership(admin.address),
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+          });
+
+          it("when transferred ownership", async () => {
+            await vault.transferOwnership(user.address);
+            await vault.connect(user).acceptOwnership();
+            await expect(
+              vault.transferOwnership(user.address),
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+          });
+
+          it("when new owner is zero address", async () => {
+            await expect(
+              vault.transferOwnership(ZERO_ADDRESS),
+            ).to.be.revertedWith("Mammon__OwnerIsZeroAddress");
+          });
         });
 
-        it("when called from owner", async () => {
-          await expect(vault.renounceOwnership()).to.be.revertedWith(
-            "Mammon__VaultIsNotRenounceable",
-          );
+        it("should be possible to call", async () => {
+          await vault.transferOwnership(user.address);
+        });
+      });
+
+      describe("Accept Ownership", () => {
+        describe("should be reverted", () => {
+          it("when called from not pending owner", async () => {
+            await vault.transferOwnership(user.address);
+            await expect(vault.acceptOwnership()).to.be.revertedWith(
+              "Mammon__NotPendingOwner",
+            );
+          });
+        });
+
+        it("should be possible to accept", async () => {
+          await vault.transferOwnership(user.address);
+          await vault.connect(user).acceptOwnership();
+          await vault.connect(user).transferOwnership(admin.address);
         });
       });
     });
