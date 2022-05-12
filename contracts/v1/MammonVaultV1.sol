@@ -823,7 +823,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @notice Accept ownership
-    function acceptOwnership() public {
+    function acceptOwnership() external {
         if (msg.sender != pendingOwner) {
             revert Mammon__NotPendingOwner();
         }
