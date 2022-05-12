@@ -132,6 +132,20 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
       );
     });
 
+    it("when validator is not matched", async () => {
+      const validatorMock =
+        await ethers.getContractFactory<WithdrawalValidatorMock__factory>(
+          "WithdrawalValidatorMock",
+        );
+      const mismatchedValidator = await validatorMock
+        .connect(admin)
+        .deploy(tokens.length - 1);
+      validParams.validator = mismatchedValidator.address;
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Mammon__ValidatorIsNotMatched",
+      );
+    });
+
     it("when token is not sorted in ascending order", async () => {
       validParams.tokens = unsortedTokens;
       await expect(deployVault(validParams)).to.be.revertedWith(
