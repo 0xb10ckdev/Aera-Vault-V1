@@ -217,6 +217,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 amount,
         uint256 available
     );
+    error Mammon__CanNotSweepPoolToken();
     error Mammon__PoolSwapIsAlreadyEnabled();
     error Mammon__FinalizationNotInitiated();
     error Mammon__VaultNotInitialized();
@@ -589,6 +590,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IProtocolAPI
     function sweep(address token, uint256 amount) external override onlyOwner {
+        if (token == address(pool)) {
+            revert Mammon__CanNotSweepPoolToken();
+        }
         IERC20(token).safeTransfer(owner(), amount);
     }
 
