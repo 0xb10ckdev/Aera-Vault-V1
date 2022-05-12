@@ -188,6 +188,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     error Mammon__WeightLengthIsNotSame(uint256 numTokens, uint256 numWeights);
     error Mammon__AmountLengthIsNotSame(uint256 numTokens, uint256 numAmounts);
+    error Mammon__ValidatorIsNotMatched(
+        uint256 numTokens,
+        uint256 numAllowances
+    );
     error Mammon__ValidatorIsNotValid(address validator);
     error Mammon__ManagementFeeIsAboveMax(uint256 actual, uint256 max);
     error Mammon__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
@@ -297,6 +301,15 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             )
         ) {
             revert Mammon__ValidatorIsNotValid(validator_);
+        }
+        if (
+            IWithdrawalValidator(validator_).allowance().length !=
+            tokens.length
+        ) {
+            revert Mammon__ValidatorIsNotMatched(
+                tokens.length,
+                IWithdrawalValidator(validator_).allowance().length
+            );
         }
         if (managementFee_ > MAX_MANAGEMENT_FEE) {
             revert Mammon__ManagementFeeIsAboveMax(
