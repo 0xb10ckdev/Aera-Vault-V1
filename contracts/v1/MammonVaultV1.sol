@@ -530,6 +530,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     {
         calculateAndDistributeManagerFees();
         noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
+        setSwapEnabled(false);
         emit FinalizationInitiated(noticeTimeoutAt);
     }
 
