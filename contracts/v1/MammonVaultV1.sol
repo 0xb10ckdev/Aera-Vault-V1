@@ -184,6 +184,22 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param amounts Returned token amounts.
     event Finalized(address indexed caller, uint256[] amounts);
 
+    /// @notice Emitted when transferOwnership is called.
+    /// @param currentOwner Address of current owner.
+    /// @param pendingOwner Address of pending owner.
+    event OwnershipTransferOffered(
+        address indexed currentOwner,
+        address indexed pendingOwner
+    );
+
+    /// @notice Emitted when cancelOwnershipTransfer is called.
+    /// @param currentOwner Address of current owner.
+    /// @param canceledOwner Address of canceled owner.
+    event OwnershipTransferCanceled(
+        address indexed currentOwner,
+        address indexed canceledOwner
+    );
+
     /// ERRORS ///
 
     error Mammon__WeightLengthIsNotSame(uint256 numTokens, uint256 numWeights);
@@ -226,6 +242,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__VaultIsNotRenounceable();
     error Mammon__OwnerIsZeroAddress();
     error Mammon__NotPendingOwner();
+    error Mammon__NoPendingOwnershipTransfer();
 
     /// MODIFIERS ///
 
@@ -814,12 +831,24 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         revert Mammon__VaultIsNotRenounceable();
     }
 
-    /// @notice Disable immediate transfer of ownership
+    /// @notice Offer ownership to another address
+    /// @dev It disable immediate transfer of ownership
     function transferOwnership(address newOwner) public override onlyOwner {
         if (newOwner == address(0)) {
             revert Mammon__OwnerIsZeroAddress();
         }
         pendingOwner = newOwner;
+        emit OwnershipTransferOffered(owner(), newOwner);
+    }
+
+    /// @notice Cancel current pending ownership transfer
+    function cancelOwnershipTransfer() external onlyOwner {
+        if (pendingOwner == address(0)) {
+            revert Mammon__NoPendingOwnershipTransfer();
+        }
+        address canceledOwner = pendingOwner;
+        pendingOwner = address(0);
+        emit OwnershipTransferCanceled(owner(), canceledOwner);
     }
 
     /// @notice Accept ownership

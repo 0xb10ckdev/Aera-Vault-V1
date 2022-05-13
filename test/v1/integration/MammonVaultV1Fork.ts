@@ -1660,7 +1660,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
       });
 
-      describe("Transfer Ownership", () => {
+      describe("Offer Ownership Transfer", () => {
         describe("should be reverted", () => {
           it("when called from non-owner", async () => {
             await expect(
@@ -1691,7 +1691,37 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
 
         it("should be possible to call", async () => {
+          await expect(vault.transferOwnership(user.address)).to.emit(
+            vault,
+            "OwnershipTransferOffered",
+          );
+        });
+      });
+
+      describe("Cancel Ownership Transfer", () => {
+        describe("should be reverted", () => {
+          it("when called from non-owner", async () => {
+            await expect(
+              vault.connect(user).cancelOwnershipTransfer(),
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+          });
+
+          it("when there is no pending ownership transfer", async () => {
+            await expect(vault.cancelOwnershipTransfer()).to.be.revertedWith(
+              "Mammon__NoPendingOwnershipTransfer",
+            );
+          });
+        });
+
+        it("should be possible to cancel", async () => {
           await vault.transferOwnership(user.address);
+          await expect(vault.cancelOwnershipTransfer()).to.emit(
+            vault,
+            "OwnershipTransferCanceled",
+          );
+          await expect(
+            vault.connect(user).acceptOwnership(),
+          ).to.be.revertedWith("Mammon__NotPendingOwner");
         });
       });
 
@@ -1707,7 +1737,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
         it("should be possible to accept", async () => {
           await vault.transferOwnership(user.address);
-          await vault.connect(user).acceptOwnership();
+          await expect(vault.connect(user).acceptOwnership()).to.emit(
+            vault,
+            "OwnershipTransferred",
+          );
           await vault.connect(user).transferOwnership(admin.address);
         });
       });
