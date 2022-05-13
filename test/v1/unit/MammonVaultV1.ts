@@ -562,6 +562,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
       it("should be possible to finalize", async () => {
         const trx = await vault.initiateFinalization();
+        expect(await vault.isSwapEnabled()).to.equal(false);
+
         const noticeTimeoutAt = await vault.noticeTimeoutAt();
         await expect(trx)
           .to.emit(vault, "FinalizationInitiated")

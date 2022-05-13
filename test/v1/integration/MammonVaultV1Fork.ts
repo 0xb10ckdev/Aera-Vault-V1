@@ -1238,6 +1238,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         const lastFeeCheckpoint = await vault.lastFeeCheckpoint();
 
         const trx = await vault.initiateFinalization();
+        expect(await vault.isSwapEnabled()).to.equal(false);
 
         const currentTime = await getTimestamp(trx.blockNumber);
         const feeIndex = MAX_MANAGEMENT_FEE.mul(
