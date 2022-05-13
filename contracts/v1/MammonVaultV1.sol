@@ -428,7 +428,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             revert Mammon__AmountLengthIsNotSame(numTokens, amounts.length);
         }
 
-        uint256[] memory weights = getNormalizedWeights();
+        uint256[] memory weights = pool.getNormalizedWeights();
         uint256[] memory newWeights = new uint256[](numTokens);
         uint256 weightSum;
 
@@ -457,7 +457,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         updateWeights(newWeights, weightSum);
 
         // slither-disable-next-line reentrancy-events
-        emit Deposit(amounts, getNormalizedWeights());
+        emit Deposit(amounts, pool.getNormalizedWeights());
     }
 
     /// @inheritdoc IProtocolAPI
@@ -481,7 +481,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         uint256[] memory allowances = validator.allowance();
-        uint256[] memory weights = getNormalizedWeights();
+        uint256[] memory weights = pool.getNormalizedWeights();
         uint256[] memory newWeights = new uint256[](numTokens);
 
         for (uint256 i = 0; i < numTokens; i++) {
@@ -516,7 +516,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         updateWeights(newWeights, weightSum);
 
         // slither-disable-next-line reentrancy-events
-        emit Withdraw(amounts, allowances, getNormalizedWeights());
+        emit Withdraw(amounts, allowances, pool.getNormalizedWeights());
     }
 
     /// @inheritdoc IProtocolAPI
@@ -789,7 +789,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IUserAPI
     function getNormalizedWeights()
-        public
+        external
         view
         override
         returns (uint256[] memory)
