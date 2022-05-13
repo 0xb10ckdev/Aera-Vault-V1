@@ -846,9 +846,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         if (pendingOwner == address(0)) {
             revert Mammon__NoPendingOwnershipTransfer();
         }
-        address canceledOwner = pendingOwner;
+        emit OwnershipTransferCanceled(owner(), pendingOwner);
         pendingOwner = address(0);
-        emit OwnershipTransferCanceled(owner(), canceledOwner);
     }
 
     /// @notice Accept ownership
