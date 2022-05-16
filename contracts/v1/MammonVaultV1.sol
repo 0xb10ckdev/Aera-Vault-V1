@@ -306,11 +306,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 managementFee_,
         string memory description_
     ) {
-        if (tokens.length != weights.length) {
-            revert Mammon__WeightLengthIsNotSame(
-                tokens.length,
-                weights.length
-            );
+        uint256 numTokens = tokens.length;
+
+        if (numTokens != weights.length) {
+            revert Mammon__WeightLengthIsNotSame(numTokens, weights.length);
         }
         if (
             !ERC165Checker.supportsInterface(
@@ -325,11 +324,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             uint256 numAllowances = IWithdrawalValidator(validator_)
                 .allowance()
                 .length;
-            if (numAllowances != tokens.length) {
-                revert Mammon__ValidatorIsNotMatched(
-                    tokens.length,
-                    numAllowances
-                );
+            if (numAllowances != numTokens) {
+                revert Mammon__ValidatorIsNotMatched(numTokens, numAllowances);
             }
         }
         if (managementFee_ > MAX_MANAGEMENT_FEE) {
@@ -348,7 +344,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             revert Mammon__ManagerIsZeroAddress();
         }
 
-        uint256 numTokens = tokens.length;
         address[] memory managers = new address[](numTokens);
         for (uint256 i = 0; i < numTokens; i++) {
             managers[i] = address(this);
