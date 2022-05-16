@@ -22,5 +22,6 @@ interface IManagerAPI {
     function setSwapFee(uint256 newSwapFee) external;
 
     /// @notice Claim manager fee.
+    /// @dev This function shouldn't be called too frequently.
     function claimManagerFees() external;
 }
