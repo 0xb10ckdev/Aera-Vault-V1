@@ -834,9 +834,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         revert Mammon__VaultIsNotRenounceable();
     }
 
-    /// @notice Offer ownership to another address
-    /// @dev It disable immediate transfer of ownership
-    function transferOwnership(address newOwner) public override onlyOwner {
+    /// @inheritdoc IProtocolAPI
+    function transferOwnership(address newOwner)
+        public
+        override(IProtocolAPI, Ownable)
+        onlyOwner
+    {
         if (newOwner == address(0)) {
             revert Mammon__OwnerIsZeroAddress();
         }
@@ -844,8 +847,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         emit OwnershipTransferOffered(owner(), newOwner);
     }
 
-    /// @notice Cancel current pending ownership transfer
-    function cancelOwnershipTransfer() external onlyOwner {
+    /// @inheritdoc IProtocolAPI
+    function cancelOwnershipTransfer() external override onlyOwner {
         if (pendingOwner == address(0)) {
             revert Mammon__NoPendingOwnershipTransfer();
         }
@@ -853,8 +856,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         pendingOwner = address(0);
     }
 
-    /// @notice Accept ownership
-    function acceptOwnership() external {
+    /// @inheritdoc IUserAPI
+    function acceptOwnership() external override {
         if (msg.sender != pendingOwner) {
             revert Mammon__NotPendingOwner();
         }
