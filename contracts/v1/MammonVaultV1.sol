@@ -320,14 +320,17 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         ) {
             revert Mammon__ValidatorIsNotValid(validator_);
         }
-        if (
-            IWithdrawalValidator(validator_).allowance().length !=
-            tokens.length
-        ) {
-            revert Mammon__ValidatorIsNotMatched(
-                tokens.length,
-                IWithdrawalValidator(validator_).allowance().length
-            );
+        // Use new block to avoid stack too deep issue
+        {
+            uint256 numAllowances = IWithdrawalValidator(validator_)
+                .allowance()
+                .length;
+            if (numAllowances != tokens.length) {
+                revert Mammon__ValidatorIsNotMatched(
+                    tokens.length,
+                    numAllowances
+                );
+            }
         }
         if (managementFee_ > MAX_MANAGEMENT_FEE) {
             revert Mammon__ManagementFeeIsAboveMax(
