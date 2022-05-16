@@ -45,4 +45,11 @@ interface IProtocolAPI {
 
     /// @notice Disable swap.
     function disableTrading() external;
+
+    /// @notice Offer ownership to another address
+    /// @dev It disables immediate transfer of ownership
+    function transferOwnership(address newOwner) external;
+
+    /// @notice Cancel current pending ownership transfer
+    function cancelOwnershipTransfer() external;
 }

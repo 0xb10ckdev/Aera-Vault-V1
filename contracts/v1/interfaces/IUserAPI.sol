@@ -34,4 +34,7 @@ interface IUserAPI {
     /// @notice Get token weights.
     /// @return Normalized weights of tokens on Balancer pool.
     function getNormalizedWeights() external view returns (uint256[] memory);
+
+    /// @notice Accept ownership
+    function acceptOwnership() external;
 }

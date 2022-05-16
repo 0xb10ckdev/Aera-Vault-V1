@@ -80,6 +80,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Controls vault parameters.
     address public manager;
 
+    /// @notice Pending account to accept ownership of vault.
+    address public pendingOwner;
+
     /// @notice Timestamp when notice elapses or 0 if not yet set
     uint64 public noticeTimeoutAt;
 
@@ -166,6 +169,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param swapEnabled New state of swap.
     event SetSwapEnabled(bool swapEnabled);
 
+    /// @notice Emitted when enableTradingWithWeights is called.
+    /// @param time timestamp of updates.
+    /// @param weights Target weights of tokens.
+    event EnabledTradingWithWeights(uint256 time, uint256[] weights);
+
     /// @notice Emitted when swap fee is updated.
     /// @param swapFee New swap fee.
     event SetSwapFee(uint256 swapFee);
@@ -179,10 +187,30 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param amounts Returned token amounts.
     event Finalized(address indexed caller, uint256[] amounts);
 
+    /// @notice Emitted when transferOwnership is called.
+    /// @param currentOwner Address of current owner.
+    /// @param pendingOwner Address of pending owner.
+    event OwnershipTransferOffered(
+        address indexed currentOwner,
+        address indexed pendingOwner
+    );
+
+    /// @notice Emitted when cancelOwnershipTransfer is called.
+    /// @param currentOwner Address of current owner.
+    /// @param canceledOwner Address of canceled owner.
+    event OwnershipTransferCanceled(
+        address indexed currentOwner,
+        address indexed canceledOwner
+    );
+
     /// ERRORS ///
 
     error Mammon__WeightLengthIsNotSame(uint256 numTokens, uint256 numWeights);
     error Mammon__AmountLengthIsNotSame(uint256 numTokens, uint256 numAmounts);
+    error Mammon__ValidatorIsNotMatched(
+        uint256 numTokens,
+        uint256 numAllowances
+    );
     error Mammon__ValidatorIsNotValid(address validator);
     error Mammon__ManagementFeeIsAboveMax(uint256 actual, uint256 max);
     error Mammon__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
@@ -208,11 +236,16 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 amount,
         uint256 available
     );
+    error Mammon__CannotSweepPoolToken();
+    error Mammon__PoolSwapIsAlreadyEnabled();
     error Mammon__FinalizationNotInitiated();
     error Mammon__VaultNotInitialized();
     error Mammon__VaultIsAlreadyInitialized();
     error Mammon__VaultIsFinalizing();
     error Mammon__VaultIsNotRenounceable();
+    error Mammon__OwnerIsZeroAddress();
+    error Mammon__NotPendingOwner();
+    error Mammon__NoPendingOwnershipTransfer();
 
     /// MODIFIERS ///
 
@@ -276,11 +309,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 managementFee_,
         string memory description_
     ) {
-        if (tokens.length != weights.length) {
-            revert Mammon__WeightLengthIsNotSame(
-                tokens.length,
-                weights.length
-            );
+        uint256 numTokens = tokens.length;
+
+        if (numTokens != weights.length) {
+            revert Mammon__WeightLengthIsNotSame(numTokens, weights.length);
         }
         if (
             !ERC165Checker.supportsInterface(
@@ -289,6 +321,15 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             )
         ) {
             revert Mammon__ValidatorIsNotValid(validator_);
+        }
+        // Use new block to avoid stack too deep issue
+        {
+            uint256 numAllowances = IWithdrawalValidator(validator_)
+                .allowance()
+                .length;
+            if (numAllowances != numTokens) {
+                revert Mammon__ValidatorIsNotMatched(numTokens, numAllowances);
+            }
         }
         if (managementFee_ > MAX_MANAGEMENT_FEE) {
             revert Mammon__ManagementFeeIsAboveMax(
@@ -306,7 +347,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             revert Mammon__ManagerIsZeroAddress();
         }
 
-        uint256 numTokens = tokens.length;
         address[] memory assetManagers = new address[](numTokens);
         for (uint256 i = 0; i < numTokens; i++) {
             assetManagers[i] = address(this);
@@ -566,6 +606,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IProtocolAPI
     function sweep(address token, uint256 amount) external override onlyOwner {
+        if (token == address(pool)) {
+            revert Mammon__CannotSweepPoolToken();
+        }
         IERC20(token).safeTransfer(owner(), amount);
     }
 
@@ -586,8 +629,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         onlyOwner
         whenInitialized
     {
+        if (pool.getSwapEnabled()) {
+            revert Mammon__PoolSwapIsAlreadyEnabled();
+        }
+
         pool.updateWeightsGradually(block.timestamp, block.timestamp, weights);
-        setSwapEnabled(true);
+        pool.setSwapEnabled(true);
+        // slither-disable-next-line reentrancy-events
+        emit EnabledTradingWithWeights(block.timestamp, weights);
     }
 
     /// @inheritdoc IProtocolAPI
@@ -774,6 +823,37 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Disable ownership renounceable
     function renounceOwnership() public override onlyOwner {
         revert Mammon__VaultIsNotRenounceable();
+    }
+
+    /// @inheritdoc IProtocolAPI
+    function transferOwnership(address newOwner)
+        public
+        override(IProtocolAPI, Ownable)
+        onlyOwner
+    {
+        if (newOwner == address(0)) {
+            revert Mammon__OwnerIsZeroAddress();
+        }
+        pendingOwner = newOwner;
+        emit OwnershipTransferOffered(owner(), newOwner);
+    }
+
+    /// @inheritdoc IProtocolAPI
+    function cancelOwnershipTransfer() external override onlyOwner {
+        if (pendingOwner == address(0)) {
+            revert Mammon__NoPendingOwnershipTransfer();
+        }
+        emit OwnershipTransferCanceled(owner(), pendingOwner);
+        pendingOwner = address(0);
+    }
+
+    /// @inheritdoc IUserAPI
+    function acceptOwnership() external override {
+        if (msg.sender != pendingOwner) {
+            revert Mammon__NotPendingOwner();
+        }
+        _transferOwnership(pendingOwner);
+        pendingOwner = address(0);
     }
 
     /// INTERNAL FUNCTIONS ///
