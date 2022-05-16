@@ -418,6 +418,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IProtocolAPI
+    // slither-disable-next-line incorrect-equality
     function depositIfBalanceUnchanged(uint256[] calldata amounts)
         external
         override
@@ -448,6 +449,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IProtocolAPI
+    // slither-disable-next-line incorrect-equality
     function withdrawIfBalanceUnchanged(uint256[] calldata amounts)
         external
         override
