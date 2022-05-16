@@ -1523,6 +1523,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           });
 
           it("when total sum of weights is not one", async () => {
+            await vault.disableTrading();
+
             await expect(
               vault.enableTradingWithWeights(
                 valueArray(ONE.div(tokens.length).sub(1), tokens.length),
@@ -1531,8 +1533,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           });
 
           it("when swap is already enabled", async () => {
-            await vault.enableTradingRiskingArbitrage();
-
             await expect(
               vault.enableTradingWithWeights(
                 valueArray(ONE.div(tokens.length), tokens.length),
@@ -1542,6 +1542,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
 
         it("should be possible to enable trading", async () => {
+          await vault.disableTrading();
+
           const newWeights = [];
           const avgWeights = ONE.div(tokens.length);
           for (let i = 0; i < tokens.length; i += 2) {
@@ -1583,10 +1585,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       it("should be possible to disable trading", async () => {
-        await vault.enableTradingWithWeights(
-          valueArray(ONE.div(tokens.length), tokens.length),
-        );
-
         expect(await vault.isSwapEnabled()).to.equal(true);
 
         expect(await vault.estimateGas.disableTrading()).to.below(48000);
