@@ -266,9 +266,21 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         ).to.be.revertedWith("Mammon__VaultNotInitialized");
       });
 
+      it("when call depositIfBalanceUnchanged", async () => {
+        await expect(
+          vault.depositIfBalanceUnchanged(valueArray(ONE, tokens.length)),
+        ).to.be.revertedWith("Mammon__VaultNotInitialized");
+      });
+
       it("when call withdraw", async () => {
         await expect(
           vault.withdraw(valueArray(ONE, tokens.length)),
+        ).to.be.revertedWith("Mammon__VaultNotInitialized");
+      });
+
+      it("when call withdrawIfBalanceUnchanged", async () => {
+        await expect(
+          vault.withdrawIfBalanceUnchanged(valueArray(ONE, tokens.length)),
         ).to.be.revertedWith("Mammon__VaultNotInitialized");
       });
 
