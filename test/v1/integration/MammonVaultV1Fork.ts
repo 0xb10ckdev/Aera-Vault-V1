@@ -1318,7 +1318,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       it("when token is pool token", async () => {
         const poolToken = await vault.pool();
         await expect(vault.sweep(poolToken, toWei(1))).to.be.revertedWith(
-          "Mammon__CanNotSweepPoolToken",
+          "Mammon__CannotSweepPoolToken",
         );
       });
 
