@@ -89,6 +89,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Indicates that the Vault has been initialized
     bool public initialized;
 
+    /// @notice Indicates that the Vault has been finalized
+    bool public finalized;
+
     /// @notice Last timestamp where manager fee index was locked.
     uint64 public lastFeeCheckpoint = type(uint64).max;
 
@@ -242,6 +245,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__VaultNotInitialized();
     error Mammon__VaultIsAlreadyInitialized();
     error Mammon__VaultIsFinalizing();
+    error Mammon__VaultIsAlreadyFinalized();
     error Mammon__VaultIsNotRenounceable();
     error Mammon__OwnerIsZeroAddress();
     error Mammon__NotPendingOwner();
@@ -459,7 +463,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             revert Mammon__AmountLengthIsNotSame(numTokens, amounts.length);
         }
 
-        uint256[] memory weights = getNormalizedWeights();
+        uint256[] memory weights = pool.getNormalizedWeights();
         uint256[] memory newWeights = new uint256[](numTokens);
         uint256 weightSum;
 
@@ -488,7 +492,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         updateWeights(newWeights, weightSum);
 
         // slither-disable-next-line reentrancy-events
-        emit Deposit(amounts, getNormalizedWeights());
+        emit Deposit(amounts, pool.getNormalizedWeights());
     }
 
     /// @inheritdoc IProtocolAPI
@@ -512,7 +516,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         uint256[] memory allowances = validator.allowance();
-        uint256[] memory weights = getNormalizedWeights();
+        uint256[] memory weights = pool.getNormalizedWeights();
         uint256[] memory newWeights = new uint256[](numTokens);
 
         for (uint256 i = 0; i < numTokens; i++) {
@@ -547,7 +551,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         updateWeights(newWeights, weightSum);
 
         // slither-disable-next-line reentrancy-events
-        emit Withdraw(amounts, allowances, getNormalizedWeights());
+        emit Withdraw(amounts, allowances, pool.getNormalizedWeights());
     }
 
     /// @inheritdoc IProtocolAPI
@@ -561,6 +565,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     {
         calculateAndDistributeManagerFees();
         noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
+        setSwapEnabled(false);
         emit FinalizationInitiated(noticeTimeoutAt);
     }
 
@@ -573,12 +578,17 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         onlyOwner
         whenInitialized
     {
+        if (finalized) {
+            revert Mammon__VaultIsAlreadyFinalized();
+        }
         if (noticeTimeoutAt == 0) {
             revert Mammon__FinalizationNotInitiated();
         }
         if (noticeTimeoutAt > block.timestamp) {
             revert Mammon__NoticeTimeoutNotElapsed(noticeTimeoutAt);
         }
+
+        finalized = true;
 
         uint256[] memory amounts = returnFunds();
         emit Finalized(owner(), amounts);
@@ -812,7 +822,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IUserAPI
     function getNormalizedWeights()
-        public
+        external
         view
         override
         returns (uint256[] memory)

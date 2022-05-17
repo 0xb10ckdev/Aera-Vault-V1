@@ -1186,6 +1186,16 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             `Mammon__NoticeTimeoutNotElapsed(${noticeTimeoutAt})`,
           );
         });
+
+        it("when already finalized", async () => {
+          await vault.initiateFinalization();
+          await ethers.provider.send("evm_increaseTime", [NOTICE_PERIOD + 1]);
+
+          await vault.finalize();
+          await expect(vault.finalize()).to.be.revertedWith(
+            "Mammon__VaultIsAlreadyFinalized",
+          );
+        });
       });
 
       describe("should be reverted to call functions when finalizing", async () => {
@@ -1242,6 +1252,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         const lastFeeCheckpoint = await vault.lastFeeCheckpoint();
 
         const trx = await vault.initiateFinalization();
+        expect(await vault.isSwapEnabled()).to.equal(false);
 
         const currentTime = await getTimestamp(trx.blockNumber);
         const feeIndex = MAX_MANAGEMENT_FEE.mul(
