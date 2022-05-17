@@ -505,6 +505,16 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             `Mammon__NoticeTimeoutNotElapsed(${noticeTimeoutAt})`,
           );
         });
+
+        it("when already finalized", async () => {
+          await vault.initiateFinalization();
+          await ethers.provider.send("evm_increaseTime", [NOTICE_PERIOD + 1]);
+
+          await vault.finalize();
+          await expect(vault.finalize()).to.be.revertedWith(
+            "Mammon__VaultIsAlreadyFinalized",
+          );
+        });
       });
 
       describe("should be reverted to call functions when finalizing", async () => {
@@ -552,6 +562,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
       it("should be possible to finalize", async () => {
         const trx = await vault.initiateFinalization();
+        expect(await vault.isSwapEnabled()).to.equal(false);
+
         const noticeTimeoutAt = await vault.noticeTimeoutAt();
         await expect(trx)
           .to.emit(vault, "FinalizationInitiated")
