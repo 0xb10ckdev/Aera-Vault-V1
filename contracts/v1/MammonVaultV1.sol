@@ -58,6 +58,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Balancer Pool.
     IBManagedPool public immutable pool;
 
+    /// @notice Pool ID of Balancer pool on Vault.
+    bytes32 public immutable poolId;
+
     /// @notice Notice period for vault termination (in seconds).
     uint32 public immutable noticePeriod;
 
@@ -344,9 +347,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             revert Mammon__ManagerIsZeroAddress();
         }
 
-        address[] memory managers = new address[](numTokens);
+        address[] memory assetManagers = new address[](numTokens);
         for (uint256 i = 0; i < numTokens; i++) {
-            managers[i] = address(this);
+            assetManagers[i] = address(this);
         }
 
         pool = IBManagedPool(
@@ -357,7 +360,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                     symbol: symbol,
                     tokens: tokens,
                     normalizedWeights: weights,
-                    assetManagers: managers,
+                    assetManagers: assetManagers,
                     swapFeePercentage: swapFeePercentage,
                     pauseWindowDuration: 0,
                     bufferPeriodDuration: 0,
@@ -370,6 +373,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         );
 
         // slither-disable-next-line reentrancy-benign
+        poolId = pool.getPoolId();
         bVault = IBManagedPoolFactory(factory).getVault();
         manager = manager_;
         validator = IWithdrawalValidator(validator_);
@@ -430,12 +434,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 userData: initUserData,
                 fromInternalBalance: false
             });
-        bVault.joinPool(
-            getPoolId(),
-            address(this),
-            address(this),
-            joinPoolRequest
-        );
+        bVault.joinPool(poolId, address(this), address(this), joinPoolRequest);
+
+        setSwapEnabled(true);
     }
 
     /// @inheritdoc IProtocolAPI
@@ -786,11 +787,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IUserAPI
-    function getPoolId() public view override returns (bytes32) {
-        return pool.getPoolId();
-    }
-
-    /// @inheritdoc IUserAPI
     function getTokensData()
         public
         view
@@ -801,7 +797,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             uint256
         )
     {
-        return bVault.getPoolTokens(getPoolId());
+        return bVault.getPoolTokens(poolId);
     }
 
     /// @inheritdoc IUserAPI
@@ -951,7 +947,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         IBVault.PoolBalanceOp[] memory ops = new IBVault.PoolBalanceOp[](
             numAmounts
         );
-        bytes32 poolId = getPoolId();
         IERC20[] memory tokens = getTokens();
 
         for (uint256 i = 0; i < numAmounts; i++) {

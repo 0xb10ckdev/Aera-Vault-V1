@@ -693,8 +693,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           });
 
           it("when swap is already enabled", async () => {
-            await vault.enableTradingRiskingArbitrage();
-
             await expect(
               vault.enableTradingWithWeights(
                 valueArray(ONE.div(tokens.length), tokens.length),
@@ -704,6 +702,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
 
         it("should be possible to enable trading", async () => {
+          await vault.disableTrading();
+
           const trx = await vault.enableTradingWithWeights(
             valueArray(ONE.div(tokens.length), tokens.length),
           );
@@ -736,6 +736,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       it("should be possible to disable trading", async () => {
+        expect(await vault.isSwapEnabled()).to.equal(true);
+
         await expect(vault.connect(manager).disableTrading())
           .to.emit(vault, "SetSwapEnabled")
           .withArgs(false);
