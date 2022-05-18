@@ -48,6 +48,7 @@ contract MammonMedian {
     function updateList(uint256[] calldata list) external {
         // slither-disable-next-line uninitialized-local
         uint256 lesserKey;
+        // slither-disable-next-line uninitialized-local
         uint256 greaterKey;
         uint256 len = list.length;
         for (uint256 i = 0; i < len; i++) {
