@@ -58,6 +58,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Balancer Pool.
     IBManagedPool public immutable pool;
 
+    /// @notice Pool ID of Balancer pool on Vault.
+    bytes32 public immutable poolId;
+
     /// @notice Notice period for vault termination (in seconds).
     uint32 public immutable noticePeriod;
 
@@ -85,6 +88,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Indicates that the Vault has been initialized
     bool public initialized;
+
+    /// @notice Indicates that the Vault has been finalized
+    bool public finalized;
 
     /// @notice Last timestamp where manager fee index was locked.
     uint64 public lastFeeCheckpoint = type(uint64).max;
@@ -240,6 +246,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__VaultNotInitialized();
     error Mammon__VaultIsAlreadyInitialized();
     error Mammon__VaultIsFinalizing();
+    error Mammon__VaultIsAlreadyFinalized();
     error Mammon__VaultIsNotRenounceable();
     error Mammon__OwnerIsZeroAddress();
     error Mammon__NotPendingOwner();
@@ -345,9 +352,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             revert Mammon__ManagerIsZeroAddress();
         }
 
-        address[] memory managers = new address[](numTokens);
+        address[] memory assetManagers = new address[](numTokens);
         for (uint256 i = 0; i < numTokens; i++) {
-            managers[i] = address(this);
+            assetManagers[i] = address(this);
         }
 
         pool = IBManagedPool(
@@ -358,7 +365,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                     symbol: symbol,
                     tokens: tokens,
                     normalizedWeights: weights,
-                    assetManagers: managers,
+                    assetManagers: assetManagers,
                     swapFeePercentage: swapFeePercentage,
                     pauseWindowDuration: 0,
                     bufferPeriodDuration: 0,
@@ -371,6 +378,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         );
 
         // slither-disable-next-line reentrancy-benign
+        poolId = pool.getPoolId();
         bVault = IBManagedPoolFactory(factory).getVault();
         manager = manager_;
         validator = IWithdrawalValidator(validator_);
@@ -431,12 +439,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 userData: initUserData,
                 fromInternalBalance: false
             });
-        bVault.joinPool(
-            getPoolId(),
-            address(this),
-            address(this),
-            joinPoolRequest
-        );
+        bVault.joinPool(poolId, address(this), address(this), joinPoolRequest);
+
+        setSwapEnabled(true);
     }
 
     /// @inheritdoc IProtocolAPI
@@ -512,6 +517,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     {
         calculateAndDistributeManagerFees();
         noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
+        setSwapEnabled(false);
         emit FinalizationInitiated(noticeTimeoutAt);
     }
 
@@ -524,12 +530,17 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         onlyOwner
         whenInitialized
     {
+        if (finalized) {
+            revert Mammon__VaultIsAlreadyFinalized();
+        }
         if (noticeTimeoutAt == 0) {
             revert Mammon__FinalizationNotInitiated();
         }
         if (noticeTimeoutAt > block.timestamp) {
             revert Mammon__NoticeTimeoutNotElapsed(noticeTimeoutAt);
         }
+
+        finalized = true;
 
         uint256[] memory amounts = returnFunds();
         emit Finalized(owner(), amounts);
@@ -738,11 +749,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IUserAPI
-    function getPoolId() public view override returns (bytes32) {
-        return pool.getPoolId();
-    }
-
-    /// @inheritdoc IUserAPI
     function getTokensData()
         public
         view
@@ -753,7 +759,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             uint256
         )
     {
-        return bVault.getPoolTokens(getPoolId());
+        return bVault.getPoolTokens(poolId);
     }
 
     /// @inheritdoc IUserAPI
@@ -768,7 +774,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IUserAPI
     function getNormalizedWeights()
-        public
+        external
         view
         override
         returns (uint256[] memory)
@@ -831,7 +837,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             revert Mammon__AmountLengthIsNotSame(numTokens, amounts.length);
         }
 
-        uint256[] memory weights = getNormalizedWeights();
+        uint256[] memory weights = pool.getNormalizedWeights();
         uint256[] memory newWeights = new uint256[](numTokens);
         uint256 weightSum;
 
@@ -860,7 +866,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         updateWeights(newWeights, weightSum);
 
         // slither-disable-next-line reentrancy-events
-        emit Deposit(amounts, getNormalizedWeights());
+        emit Deposit(amounts, pool.getNormalizedWeights());
     }
 
     /// @notice Withdraw tokens up to requested amounts.
@@ -881,7 +887,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         uint256[] memory allowances = validator.allowance();
-        uint256[] memory weights = getNormalizedWeights();
+        uint256[] memory weights = pool.getNormalizedWeights();
         uint256[] memory newWeights = new uint256[](numTokens);
 
         for (uint256 i = 0; i < numTokens; i++) {
@@ -916,7 +922,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         updateWeights(newWeights, weightSum);
 
         // slither-disable-next-line reentrancy-events
-        emit Withdraw(amounts, allowances, getNormalizedWeights());
+        emit Withdraw(amounts, allowances, pool.getNormalizedWeights());
     }
 
     /// @notice Calculate manager fee index.
@@ -1008,7 +1014,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         IBVault.PoolBalanceOp[] memory ops = new IBVault.PoolBalanceOp[](
             numAmounts
         );
-        bytes32 poolId = getPoolId();
         IERC20[] memory tokens = getTokens();
 
         for (uint256 i = 0; i < numAmounts; i++) {
