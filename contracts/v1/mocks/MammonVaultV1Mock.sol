@@ -51,7 +51,7 @@ contract MammonVaultV1Mock is MammonVaultV1 {
         IERC20[] memory tokens;
         uint256[] memory holdings;
         (tokens, holdings, ) = getTokensData();
-        uint256[] memory weights = getNormalizedWeights();
+        uint256[] memory weights = pool.getNormalizedWeights();
 
         uint256 tokenInId = type(uint256).max;
         uint256 tokenOutId = type(uint256).max;
@@ -94,7 +94,7 @@ contract MammonVaultV1Mock is MammonVaultV1 {
         IERC20[] memory tokens;
         uint256[] memory holdings;
         (tokens, holdings, ) = getTokensData();
-        uint256[] memory weights = getNormalizedWeights();
+        uint256[] memory weights = pool.getNormalizedWeights();
         spotPrices = new uint256[](tokens.length);
 
         uint256 tokenInId = type(uint256).max;

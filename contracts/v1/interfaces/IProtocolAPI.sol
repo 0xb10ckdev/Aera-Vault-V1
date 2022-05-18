@@ -6,6 +6,9 @@ interface IProtocolAPI {
     /// @notice Initialize Vault with first deposit.
     /// @dev Initial deposit must be performed before
     ///      calling withdraw() or deposit() functions.
+    ///      It enables trading, so weights and balances should be in line
+    ///      with market spot prices, otherwise there is a significant risk
+    ///      of arbitrage.
     /// @param amounts Deposit amount of tokens.
     function initialDeposit(uint256[] memory amounts) external;
 
