@@ -19,7 +19,6 @@ import "./interfaces/IWithdrawalValidator.sol";
 ///         in line with a pre-defined validator contract.
 /// @dev Vault owner is the asset owner.
 contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
-    using SafeERC20 for IERC20;
     using Math for uint256;
     using SafeCast for uint256;
 
