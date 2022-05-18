@@ -23,7 +23,13 @@ import {
   ZERO_ADDRESS,
 } from "../constants";
 import { deployToken, setupTokens } from "../fixtures";
-import { getCurrentTime, getTimestamp, toWei, valueArray } from "../utils";
+import {
+  getCurrentTime,
+  getTimestamp,
+  increaseTime,
+  toWei,
+  valueArray,
+} from "../utils";
 
 describe("Mammon Vault V1 Mainnet Functionality", function () {
   let admin: SignerWithAddress;
@@ -569,7 +575,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           .to.emit(vault, "FinalizationInitiated")
           .withArgs(noticeTimeoutAt);
 
-        await ethers.provider.send("evm_increaseTime", [NOTICE_PERIOD + 1]);
+        await increaseTime(NOTICE_PERIOD + 1);
 
         const { holdings, balances } = await getState();
 
