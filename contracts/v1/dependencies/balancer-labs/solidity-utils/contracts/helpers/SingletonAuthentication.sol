@@ -13,45 +13,43 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
 
+import "../../../interfaces/contracts/liquidity-mining/IAuthorizerAdaptor.sol";
 import "../../../interfaces/contracts/vault/IVault.sol";
 
-import "../../../solidity-utils/contracts/helpers/BaseSplitCodeFactory.sol";
+import "./Authentication.sol";
 
-/**
- * @dev Same as `BasePoolFactory`, for Pools whose creation code is so large that the factory cannot hold it.
- */
-abstract contract BasePoolSplitCodeFactory is BaseSplitCodeFactory {
+abstract contract SingletonAuthentication is Authentication {
     IVault private immutable _vault;
-    mapping(address => bool) private _isPoolFromFactory;
 
-    event PoolCreated(address indexed pool);
-
-    constructor(IVault vault, bytes memory creationCode) BaseSplitCodeFactory(creationCode) {
+    // Use the contract's own address to disambiguate action identifiers
+    constructor(IVault vault) Authentication(bytes32(uint256(address(this)))) {
         _vault = vault;
     }
 
     /**
-     * @dev Returns the Vault's address.
+     * @notice Returns the Balancer Vault
      */
     function getVault() public view returns (IVault) {
         return _vault;
     }
 
     /**
-     * @dev Returns true if `pool` was created by this factory.
+     * @notice Returns the Authorizer
      */
-    function isPoolFromFactory(address pool) external view returns (bool) {
-        return _isPoolFromFactory[pool];
+    function getAuthorizer() public view returns (IAuthorizer) {
+        return getVault().getAuthorizer();
     }
 
-    function _create(bytes memory constructorArgs) internal override returns (address) {
-        address pool = super._create(constructorArgs);
+    function _canPerform(bytes32 actionId, address account) internal view override returns (bool) {
+        return getAuthorizer().canPerform(actionId, account, address(this));
+    }
 
-        _isPoolFromFactory[pool] = true;
-        emit PoolCreated(pool);
-
-        return pool;
+    function _canPerform(
+        bytes32 actionId,
+        address account,
+        address where
+    ) internal view returns (bool) {
+        return getAuthorizer().canPerform(actionId, account, where);
     }
 }

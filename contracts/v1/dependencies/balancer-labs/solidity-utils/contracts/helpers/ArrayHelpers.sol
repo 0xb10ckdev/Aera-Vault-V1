@@ -14,22 +14,10 @@
 
 pragma solidity ^0.7.0;
 
-import "./IControlledPool.sol";
-
-interface IControlledManagedPool is IControlledPool {
-    function updateWeightsGradually(
-        uint256 startTime,
-        uint256 endTime,
-        uint256[] calldata endWeights
-    ) external;
-
-    function setSwapEnabled(bool swapEnabled) external;
-
-    function addAllowedAddress(address member) external;
-
-    function removeAllowedAddress(address member) external;
-
-    function setMustAllowlistLPs(bool mustAllowlistLPs) external;
-
-    function withdrawCollectedManagementFees(address recipient) external;
+library ArrayHelpers {
+    function arrayFill(uint256 a, uint256 b) internal pure returns (uint256[] memory result) {
+        result = new uint256[](2);
+        result[0] = a;
+        result[1] = b;
+    }
 }
