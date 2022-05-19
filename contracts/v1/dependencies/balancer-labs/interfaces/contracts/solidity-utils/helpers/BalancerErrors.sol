@@ -112,6 +112,7 @@ library Errors {
     uint256 internal constant BPT_OUT_MIN_AMOUNT = 208;
     uint256 internal constant EXPIRED_PERMIT = 209;
     uint256 internal constant NOT_TWO_TOKENS = 210;
+    uint256 internal constant DISABLED = 211;
 
     // Pools
     uint256 internal constant MIN_AMP = 300;
@@ -160,6 +161,13 @@ library Errors {
     uint256 internal constant OUT_OF_NEW_TARGET_RANGE = 343;
     uint256 internal constant UNAUTHORIZED_OPERATION = 344;
     uint256 internal constant UNINITIALIZED_POOL_CONTROLLER = 345;
+    uint256 internal constant SET_SWAP_FEE_DURING_FEE_CHANGE = 346;
+    uint256 internal constant SET_SWAP_FEE_PENDING_FEE_CHANGE = 347;
+    uint256 internal constant CHANGE_TOKENS_DURING_WEIGHT_CHANGE = 348;
+    uint256 internal constant CHANGE_TOKENS_PENDING_WEIGHT_CHANGE = 349;
+    uint256 internal constant MAX_WEIGHT = 350;
+    uint256 internal constant UNAUTHORIZED_JOIN = 351;
+    uint256 internal constant MAX_MANAGEMENT_AUM_FEE_PERCENTAGE = 352;
 
     // Lib
     uint256 internal constant REENTRANCY = 400;
@@ -196,6 +204,8 @@ library Errors {
     uint256 internal constant NOT_PAUSED = 431;
     uint256 internal constant ADDRESS_ALREADY_ALLOWLISTED = 432;
     uint256 internal constant ADDRESS_NOT_ALLOWLISTED = 433;
+    uint256 internal constant ERC20_BURN_EXCEEDS_BALANCE = 434;
+    uint256 internal constant INVALID_OPERATION = 435;
 
     // Vault
     uint256 internal constant INVALID_POOL_ID = 500;
@@ -232,4 +242,5 @@ library Errors {
     uint256 internal constant SWAP_FEE_PERCENTAGE_TOO_HIGH = 600;
     uint256 internal constant FLASH_LOAN_FEE_PERCENTAGE_TOO_HIGH = 601;
     uint256 internal constant INSUFFICIENT_FLASH_LOAN_FEE_AMOUNT = 602;
+    uint256 internal constant AUM_FEE_PERCENTAGE_TOO_HIGH = 603;
 }

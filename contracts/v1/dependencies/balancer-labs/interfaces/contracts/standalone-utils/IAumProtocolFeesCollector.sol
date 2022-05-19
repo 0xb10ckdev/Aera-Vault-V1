@@ -14,10 +14,10 @@
 
 pragma solidity ^0.7.0;
 
-import "../../../solidity-utils/contracts/openzeppelin/IERC20.sol";
+interface IAumProtocolFeesCollector {
+    event AumFeePercentageChanged(uint256 newAumFeePercentage);
 
-interface IControlledPool {
-    function setSwapFeePercentage(uint256 swapFeePercentage) external;
+    function getAumFeePercentage() external view returns (uint256);
 
-    function setAssetManagerPoolConfig(IERC20 token, bytes memory poolConfig) external;
+    function setAumFeePercentage(uint256 newSwapFeePercentage) external;
 }
