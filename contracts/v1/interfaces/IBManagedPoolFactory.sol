@@ -6,24 +6,40 @@ import "./IBVault.sol";
 
 interface IBManagedPoolFactory {
     struct NewPoolParams {
-        IBVault vault;
         string name;
         string symbol;
         IERC20[] tokens;
         uint256[] normalizedWeights;
         address[] assetManagers;
         uint256 swapFeePercentage;
-        uint256 pauseWindowDuration;
-        uint256 bufferPeriodDuration;
-        address owner;
         bool swapEnabledOnStart;
         bool mustAllowlistLPs;
+        uint256 protocolSwapFeePercentage;
         uint256 managementSwapFeePercentage;
+        uint256 managementAumFeePercentage;
+        address aumProtocolFeesCollector;
     }
 
-    function create(NewPoolParams memory poolParams)
-        external
-        returns (address);
+    struct BasePoolRights {
+        bool canTransferOwnership;
+        bool canChangeSwapFee;
+        bool canUpdateMetadata;
+    }
 
-    function getVault() external view returns (IBVault);
+    struct ManagedPoolRights {
+        bool canChangeWeights;
+        bool canDisableSwaps;
+        bool canSetMustAllowlistLPs;
+        bool canSetCircuitBreakers;
+        bool canChangeTokens;
+        bool canChangeMgmtFees;
+    }
+
+    function create(
+        NewPoolParams memory poolParams,
+        BasePoolRights memory basePoolRights,
+        ManagedPoolRights memory managedPoolRights,
+        uint256 minWeightChangeDuration,
+        address manager
+    ) external returns (address);
 }

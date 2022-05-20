@@ -6,8 +6,9 @@ import { DEFAULT_NOTICE_PERIOD } from "../../../scripts/config";
 import {
   BalancerVaultMock__factory,
   IERC20,
-  BaseManagedPoolFactory,
   BaseManagedPoolFactory__factory,
+  ManagedPoolFactory,
+  ManagedPoolFactory__factory,
   MammonVaultV1Mock,
   MammonVaultV1Mock__factory,
   WithdrawalValidatorMock,
@@ -31,7 +32,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
   let user: SignerWithAddress;
   let vault: MammonVaultV1Mock;
   let validator: WithdrawalValidatorMock;
-  let factory: BaseManagedPoolFactory;
+  let factory: ManagedPoolFactory;
   let tokens: IERC20[];
   let sortedTokens: string[];
   let snapshot: unknown;
@@ -68,17 +69,27 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
     validator = await validatorMock.connect(admin).deploy(tokens.length);
 
-    const bVaultVactory =
+    const bVaultContract =
       await ethers.getContractFactory<BalancerVaultMock__factory>(
         "BalancerVaultMock",
       );
-    const bVault = await bVaultVactory.connect(admin).deploy(ZERO_ADDRESS);
+    const bVault = await bVaultContract.connect(admin).deploy(ZERO_ADDRESS);
 
-    const factoryV1Factory =
+    const baseManagedPoolFactoryContract =
       await ethers.getContractFactory<BaseManagedPoolFactory__factory>(
         "BaseManagedPoolFactory",
       );
-    factory = await factoryV1Factory.connect(admin).deploy(bVault.address);
+    const baseManagedPoolFactory = await baseManagedPoolFactoryContract
+      .connect(admin)
+      .deploy(bVault.address);
+
+    const managedPoolFactoryContract =
+      await ethers.getContractFactory<ManagedPoolFactory__factory>(
+        "ManagedPoolFactory",
+      );
+    factory = await managedPoolFactoryContract
+      .connect(admin)
+      .deploy(baseManagedPoolFactory.address);
 
     const validWeights = valueArray(ONE.div(tokens.length), tokens.length);
 
@@ -752,7 +763,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       describe("when called by manager", () => {
-        const maxFeeDelta = toWei(0.0005);
+        const maxFeeDelta = toWei(0.005);
 
         let managerVault: MammonVaultV1Mock;
         beforeEach(async () => {

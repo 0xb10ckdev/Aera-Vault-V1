@@ -4,8 +4,9 @@ import hre, { deployments, ethers } from "hardhat";
 import { DEFAULT_NOTICE_PERIOD, getConfig } from "../../../scripts/config";
 import {
   IERC20,
-  BaseManagedPoolFactory,
   BaseManagedPoolFactory__factory,
+  ManagedPoolFactory,
+  ManagedPoolFactory__factory,
   MammonVaultV1Mock,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
@@ -40,7 +41,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
   let validator: WithdrawalValidatorMock;
-  let factory: BaseManagedPoolFactory;
+  let factory: ManagedPoolFactory;
   let tokens: IERC20[];
   let sortedTokens: string[];
   let unsortedTokens: string[];
@@ -189,7 +190,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
   let user: SignerWithAddress;
   let vault: MammonVaultV1Mock;
   let validator: WithdrawalValidatorMock;
-  let factory: BaseManagedPoolFactory;
+  let factory: ManagedPoolFactory;
   let tokens: IERC20[];
   let sortedTokens: string[];
   let snapshot: unknown;
@@ -237,11 +238,21 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
     validator = await validatorMock.connect(admin).deploy(tokens.length);
 
-    const factoryV1Factory =
+    const baseManagedPoolFactoryContract =
       await ethers.getContractFactory<BaseManagedPoolFactory__factory>(
         "BaseManagedPoolFactory",
       );
-    factory = await factoryV1Factory.connect(admin).deploy(config.bVault);
+    const baseManagedPoolFactory = await baseManagedPoolFactoryContract
+      .connect(admin)
+      .deploy(config.bVault);
+
+    const managedPoolFactoryContract =
+      await ethers.getContractFactory<ManagedPoolFactory__factory>(
+        "ManagedPoolFactory",
+      );
+    factory = await managedPoolFactoryContract
+      .connect(admin)
+      .deploy(baseManagedPoolFactory.address);
 
     const validWeights = valueArray(ONE.div(tokens.length), tokens.length);
 
@@ -1589,7 +1600,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
         expect(await vault.isSwapEnabled()).to.equal(true);
 
-        expect(await vault.estimateGas.disableTrading()).to.below(48000);
+        expect(await vault.estimateGas.disableTrading()).to.below(50000);
         await vault.connect(manager).disableTrading();
 
         expect(await vault.isSwapEnabled()).to.equal(false);
@@ -1597,7 +1608,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     });
 
     describe("Set Swap Fee", () => {
-      const maxFeeDelta = toWei(0.0005);
+      const maxFeeDelta = toWei(0.005);
 
       describe("should be reverted to set swap fee", async () => {
         it("when called from non-manager", async () => {
@@ -1607,26 +1618,24 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
 
         it("when swap fee is greater than balancer maximum", async () => {
-          const maxFee = toWei(0.1);
           let newFee = await vault.getSwapFee();
-          while (newFee.lte(maxFee)) {
+          while (newFee.lte(MAX_SWAP_FEE)) {
             await vault.connect(manager).setSwapFee(newFee);
             newFee = newFee.add(maxFeeDelta);
           }
           await expect(
-            vault.connect(manager).setSwapFee(maxFee.add(1)),
+            vault.connect(manager).setSwapFee(MAX_SWAP_FEE.add(1)),
           ).to.be.revertedWith(BALANCER_ERRORS.MAX_SWAP_FEE_PERCENTAGE);
         });
 
         it("when swap fee is less than balancer minimum", async () => {
-          const minFee = toWei(0.000001);
           let newFee = await vault.getSwapFee();
-          while (newFee.gte(minFee)) {
+          while (newFee.gte(MIN_SWAP_FEE)) {
             await vault.connect(manager).setSwapFee(newFee);
             newFee = newFee.sub(maxFeeDelta);
           }
           await expect(
-            vault.connect(manager).setSwapFee(minFee.sub(1)),
+            vault.connect(manager).setSwapFee(MIN_SWAP_FEE.sub(1)),
           ).to.be.revertedWith(BALANCER_ERRORS.MIN_SWAP_FEE_PERCENTAGE);
         });
       });
@@ -1636,7 +1645,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         const newFee = fee.add(maxFeeDelta);
         expect(
           await vault.connect(manager).estimateGas.setSwapFee(newFee),
-        ).to.below(50000);
+        ).to.below(53000);
         await vault.connect(manager).setSwapFee(newFee);
 
         expect(await vault.getSwapFee()).to.equal(newFee);
