@@ -516,6 +516,16 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             `Mammon__NoticeTimeoutNotElapsed(${noticeTimeoutAt})`,
           );
         });
+
+        it("when already finalized", async () => {
+          await vault.initiateFinalization();
+          await ethers.provider.send("evm_increaseTime", [NOTICE_PERIOD + 1]);
+
+          await vault.finalize();
+          await expect(vault.finalize()).to.be.revertedWith(
+            "Mammon__VaultIsAlreadyFinalized",
+          );
+        });
       });
 
       describe("should be reverted to call functions when finalizing", async () => {
@@ -563,6 +573,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
       it("should be possible to finalize", async () => {
         const trx = await vault.initiateFinalization();
+        expect(await vault.isSwapEnabled()).to.equal(false);
+
         const noticeTimeoutAt = await vault.noticeTimeoutAt();
         await expect(trx)
           .to.emit(vault, "FinalizationInitiated")
@@ -704,8 +716,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           });
 
           it("when swap is already enabled", async () => {
-            await vault.enableTradingRiskingArbitrage();
-
             await expect(
               vault.enableTradingWithWeights(
                 valueArray(ONE.div(tokens.length), tokens.length),
@@ -715,6 +725,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
 
         it("should be possible to enable trading", async () => {
+          await vault.disableTrading();
+
           const trx = await vault.enableTradingWithWeights(
             valueArray(ONE.div(tokens.length), tokens.length),
           );
@@ -747,6 +759,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       it("should be possible to disable trading", async () => {
+        expect(await vault.isSwapEnabled()).to.equal(true);
+
         await expect(vault.connect(manager).disableTrading())
           .to.emit(vault, "SetSwapEnabled")
           .withArgs(false);
