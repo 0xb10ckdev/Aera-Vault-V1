@@ -280,9 +280,21 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         ).to.be.revertedWith("Mammon__VaultNotInitialized");
       });
 
+      it("when call depositIfBalanceUnchanged", async () => {
+        await expect(
+          vault.depositIfBalanceUnchanged(valueArray(ONE, tokens.length)),
+        ).to.be.revertedWith("Mammon__VaultNotInitialized");
+      });
+
       it("when call withdraw", async () => {
         await expect(
           vault.withdraw(valueArray(ONE, tokens.length)),
+        ).to.be.revertedWith("Mammon__VaultNotInitialized");
+      });
+
+      it("when call withdrawIfBalanceUnchanged", async () => {
+        await expect(
+          vault.withdrawIfBalanceUnchanged(valueArray(ONE, tokens.length)),
         ).to.be.revertedWith("Mammon__VaultNotInitialized");
       });
 
@@ -401,6 +413,44 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           await expect(
             vault.deposit(valueArray(toWei(100), tokens.length)),
           ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
+        });
+
+        it("when balance is changed in the same block", async () => {
+          const amounts = tokens.map(_ =>
+            toWei(Math.floor(Math.random() * 100)),
+          );
+
+          for (let i = 0; i < tokens.length; i++) {
+            await tokens[i].approve(vault.address, amounts[i].mul(2));
+          }
+
+          await ethers.provider.send("evm_setAutomine", [false]);
+          await ethers.provider.send("evm_setIntervalMining", [0]);
+
+          const trx1 = await vault.deposit(amounts);
+          const trx2 = await vault.depositIfBalanceUnchanged(amounts);
+
+          await ethers.provider.send("evm_mine", []);
+
+          try {
+            await trx1.wait();
+            await trx2.wait();
+          } catch {
+            // empty
+          }
+
+          const receipt1 = await ethers.provider.getTransactionReceipt(
+            trx1.hash,
+          );
+          const receipt2 = await ethers.provider.getTransactionReceipt(
+            trx2.hash,
+          );
+
+          expect(receipt1.status).to.be.equal(1);
+          expect(receipt2.status).to.be.equal(0);
+
+          await ethers.provider.send("evm_setAutomine", [true]);
+          await ethers.provider.send("evm_setIntervalMining", [0]);
         });
       });
 
@@ -549,6 +599,45 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 ...valueArray(ONE, tokens.length - 1),
               ]),
             ).to.be.revertedWith("Mammon__AmountExceedAvailable");
+          });
+
+          it("when balance is changed in the same block", async () => {
+            for (let i = 0; i < tokens.length; i++) {
+              await tokens[i].approve(vault.address, toWei(100000));
+            }
+            await vault.deposit(valueArray(toWei(10000), tokens.length));
+
+            const amounts = tokens.map(_ =>
+              toWei(Math.floor(Math.random() * 100)),
+            );
+
+            await ethers.provider.send("evm_setAutomine", [false]);
+            await ethers.provider.send("evm_setIntervalMining", [0]);
+
+            const trx1 = await vault.withdraw(amounts);
+            const trx2 = await vault.withdrawIfBalanceUnchanged(amounts);
+
+            await ethers.provider.send("evm_mine", []);
+
+            try {
+              await trx1.wait();
+              await trx2.wait();
+            } catch {
+              // empty
+            }
+
+            const receipt1 = await ethers.provider.getTransactionReceipt(
+              trx1.hash,
+            );
+            const receipt2 = await ethers.provider.getTransactionReceipt(
+              trx2.hash,
+            );
+
+            expect(receipt1.status).to.be.equal(1);
+            expect(receipt2.status).to.be.equal(0);
+
+            await ethers.provider.send("evm_setAutomine", [true]);
+            await ethers.provider.send("evm_setIntervalMining", [0]);
           });
         });
 
