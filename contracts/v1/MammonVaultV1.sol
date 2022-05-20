@@ -238,6 +238,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 amount,
         uint256 available
     );
+    error Mammon__BalanceChangedInCurrentBlock();
     error Mammon__CannotSweepPoolToken();
     error Mammon__PoolSwapIsAlreadyEnabled();
     error Mammon__FinalizationNotInitiated();
@@ -451,47 +452,26 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
-        calculateAndDistributeManagerFees();
+        depositTokens(amounts);
+    }
 
-        IERC20[] memory tokens;
-        uint256[] memory holdings;
-        (tokens, holdings, ) = getTokensData();
-        uint256 numTokens = tokens.length;
+    /// @inheritdoc IProtocolAPI
+    // slither-disable-next-line incorrect-equality
+    function depositIfBalanceUnchanged(uint256[] calldata amounts)
+        external
+        override
+        nonReentrant
+        onlyOwner
+        whenInitialized
+        whenNotFinalizing
+    {
+        (, , uint256 lastChangeBlock) = getTokensData();
 
-        if (numTokens != amounts.length) {
-            revert Mammon__AmountLengthIsNotSame(numTokens, amounts.length);
+        if (lastChangeBlock == block.number) {
+            revert Mammon__BalanceChangedInCurrentBlock();
         }
 
-        uint256[] memory weights = pool.getNormalizedWeights();
-        uint256[] memory newWeights = new uint256[](numTokens);
-        uint256 weightSum;
-
-        for (uint256 i = 0; i < numTokens; i++) {
-            if (amounts[i] != 0) {
-                depositToken(tokens[i], amounts[i]);
-
-                uint256 newBalance = holdings[i] + amounts[i];
-                newWeights[i] = (weights[i] * newBalance) / holdings[i];
-            } else {
-                newWeights[i] = weights[i];
-            }
-
-            weightSum += newWeights[i];
-        }
-
-        /// Set managed balance of pool as amounts
-        /// i.e. Deposit amounts of tokens to pool from Mammon Vault
-        updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.UPDATE);
-        /// Decrease managed balance and increase cash balance of pool
-        /// i.e. Move amounts from managed balance to cash balance
-        updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
-
-        /// It cancels current active weights change schedule
-        /// and update weights with newWeights
-        updateWeights(newWeights, weightSum);
-
-        // slither-disable-next-line reentrancy-events
-        emit Deposit(amounts, pool.getNormalizedWeights());
+        depositTokens(amounts);
     }
 
     /// @inheritdoc IProtocolAPI
@@ -503,54 +483,26 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
-        calculateAndDistributeManagerFees();
+        withdrawTokens(amounts);
+    }
 
-        IERC20[] memory tokens;
-        uint256[] memory holdings;
-        (tokens, holdings, ) = getTokensData();
-        uint256 numTokens = tokens.length;
+    /// @inheritdoc IProtocolAPI
+    // slither-disable-next-line incorrect-equality
+    function withdrawIfBalanceUnchanged(uint256[] calldata amounts)
+        external
+        override
+        nonReentrant
+        onlyOwner
+        whenInitialized
+        whenNotFinalizing
+    {
+        (, , uint256 lastChangeBlock) = getTokensData();
 
-        if (numTokens != amounts.length) {
-            revert Mammon__AmountLengthIsNotSame(numTokens, amounts.length);
+        if (lastChangeBlock == block.number) {
+            revert Mammon__BalanceChangedInCurrentBlock();
         }
 
-        uint256[] memory allowances = validator.allowance();
-        uint256[] memory weights = pool.getNormalizedWeights();
-        uint256[] memory newWeights = new uint256[](numTokens);
-
-        for (uint256 i = 0; i < numTokens; i++) {
-            if (amounts[i] > holdings[i] || amounts[i] > allowances[i]) {
-                revert Mammon__AmountExceedAvailable(
-                    address(tokens[i]),
-                    amounts[i],
-                    Math.min(holdings[i], allowances[i])
-                );
-            }
-        }
-
-        withdrawFromPool(amounts);
-
-        uint256 weightSum;
-
-        for (uint256 i = 0; i < numTokens; i++) {
-            if (amounts[i] != 0) {
-                tokens[i].safeTransfer(owner(), amounts[i]);
-
-                uint256 newBalance = holdings[i] - amounts[i];
-                newWeights[i] = (weights[i] * newBalance) / holdings[i];
-            } else {
-                newWeights[i] = weights[i];
-            }
-
-            weightSum += newWeights[i];
-        }
-
-        /// It cancels current active weights change schedule
-        /// and update weights with newWeights
-        updateWeights(newWeights, weightSum);
-
-        // slither-disable-next-line reentrancy-events
-        emit Withdraw(amounts, allowances, pool.getNormalizedWeights());
+        withdrawTokens(amounts);
     }
 
     /// @inheritdoc IProtocolAPI
@@ -867,6 +819,111 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// INTERNAL FUNCTIONS ///
 
+    /// @notice Deposit amount of tokens.
+    /// @dev Will only be called by deposit() and depositIfBalanceUnchanged()
+    ///      It calls updateWeights() function which cancels
+    ///      current active weights change schedule.
+    /// @param amounts Token amounts to deposit.
+    function depositTokens(uint256[] calldata amounts) internal {
+        calculateAndDistributeManagerFees();
+
+        IERC20[] memory tokens;
+        uint256[] memory holdings;
+        (tokens, holdings, ) = getTokensData();
+        uint256 numTokens = tokens.length;
+
+        if (numTokens != amounts.length) {
+            revert Mammon__AmountLengthIsNotSame(numTokens, amounts.length);
+        }
+
+        uint256[] memory weights = pool.getNormalizedWeights();
+        uint256[] memory newWeights = new uint256[](numTokens);
+        uint256 weightSum;
+
+        for (uint256 i = 0; i < numTokens; i++) {
+            if (amounts[i] != 0) {
+                depositToken(tokens[i], amounts[i]);
+
+                uint256 newBalance = holdings[i] + amounts[i];
+                newWeights[i] = (weights[i] * newBalance) / holdings[i];
+            } else {
+                newWeights[i] = weights[i];
+            }
+
+            weightSum += newWeights[i];
+        }
+
+        /// Set managed balance of pool as amounts
+        /// i.e. Deposit amounts of tokens to pool from Mammon Vault
+        updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.UPDATE);
+        /// Decrease managed balance and increase cash balance of pool
+        /// i.e. Move amounts from managed balance to cash balance
+        updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
+
+        /// It cancels current active weights change schedule
+        /// and update weights with newWeights
+        updateWeights(newWeights, weightSum);
+
+        // slither-disable-next-line reentrancy-events
+        emit Deposit(amounts, pool.getNormalizedWeights());
+    }
+
+    /// @notice Withdraw tokens up to requested amounts.
+    /// @dev Will only be called by withdraw() and withdrawIfBalanceUnchanged()
+    ///      It calls updateWeights() function which cancels
+    ///      current active weights change schedule.
+    /// @param amounts Requested token amounts.
+    function withdrawTokens(uint256[] calldata amounts) internal {
+        calculateAndDistributeManagerFees();
+
+        IERC20[] memory tokens;
+        uint256[] memory holdings;
+        (tokens, holdings, ) = getTokensData();
+        uint256 numTokens = tokens.length;
+
+        if (numTokens != amounts.length) {
+            revert Mammon__AmountLengthIsNotSame(numTokens, amounts.length);
+        }
+
+        uint256[] memory allowances = validator.allowance();
+        uint256[] memory weights = pool.getNormalizedWeights();
+        uint256[] memory newWeights = new uint256[](numTokens);
+
+        for (uint256 i = 0; i < numTokens; i++) {
+            if (amounts[i] > holdings[i] || amounts[i] > allowances[i]) {
+                revert Mammon__AmountExceedAvailable(
+                    address(tokens[i]),
+                    amounts[i],
+                    Math.min(holdings[i], allowances[i])
+                );
+            }
+        }
+
+        withdrawFromPool(amounts);
+
+        uint256 weightSum;
+
+        for (uint256 i = 0; i < numTokens; i++) {
+            if (amounts[i] != 0) {
+                tokens[i].safeTransfer(owner(), amounts[i]);
+
+                uint256 newBalance = holdings[i] - amounts[i];
+                newWeights[i] = (weights[i] * newBalance) / holdings[i];
+            } else {
+                newWeights[i] = weights[i];
+            }
+
+            weightSum += newWeights[i];
+        }
+
+        /// It cancels current active weights change schedule
+        /// and update weights with newWeights
+        updateWeights(newWeights, weightSum);
+
+        // slither-disable-next-line reentrancy-events
+        emit Withdraw(amounts, allowances, pool.getNormalizedWeights());
+    }
+
     /// @notice Calculate manager fee index.
     function updateManagerFeeIndex() internal {
         managerFeeIndex +=
@@ -876,7 +933,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @notice Withdraw tokens from Balancer Pool to Mammon Vault
-    /// @dev Will only be called by withdraw(), returnFunds
+    /// @dev Will only be called by withdraw(), returnFunds()
     ///      and calculateAndDistributeManagerFees()
     function withdrawFromPool(uint256[] memory amounts) internal {
         uint256[] memory managed = new uint256[](amounts.length);
