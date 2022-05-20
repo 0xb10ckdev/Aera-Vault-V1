@@ -1609,7 +1609,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       it("should be possible to disable trading", async () => {
         expect(await vault.isSwapEnabled()).to.equal(true);
 
-        expect(await vault.estimateGas.disableTrading()).to.below(50000);
+        expect(await vault.estimateGas.disableTrading()).to.below(52000);
         await vault.connect(manager).disableTrading();
 
         expect(await vault.isSwapEnabled()).to.equal(false);
@@ -1654,7 +1654,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         const newFee = fee.add(maxFeeDelta);
         expect(
           await vault.connect(manager).estimateGas.setSwapFee(newFee),
-        ).to.below(53000);
+        ).to.below(58000);
         await vault.connect(manager).setSwapFee(newFee);
 
         expect(await vault.getSwapFee()).to.equal(newFee);
