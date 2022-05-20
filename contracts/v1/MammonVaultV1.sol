@@ -64,7 +64,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Pool ID of Balancer pool on Vault.
     bytes32 public immutable poolId;
 
-
     /// @notice Notice period for vault termination (in seconds).
     uint32 public immutable noticePeriod;
 
