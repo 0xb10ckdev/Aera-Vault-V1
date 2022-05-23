@@ -294,7 +294,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @dev First token and second token shouldn't be same. Validator should conform to interface.
     ///      These are checked by Balancer in internal transactions:
     ///       If tokens are sorted in ascending order.
-    ///       If swapFeePercengate is greater than minimum and less than maximum.
+    ///       If swapFeePercentage is greater than minimum and less than maximum.
     ///       If total sum of weights is one.
     /// @param factory Balancer Managed Pool Factory address.
     /// @param name Name of Pool Token.
@@ -363,6 +363,18 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             assetManagers[i] = address(this);
         }
 
+        // Deploys a new ManagedPool from ManagedPoolFactory
+        // create(
+        //     ManagedPool.NewPoolParams memory poolParams,
+        //     BasePoolController.BasePoolRights calldata basePoolRights,
+        //     ManagedPoolController.ManagedPoolRights calldata managedPoolRights,
+        //     uint256 minWeightChangeDuration,
+        //     address manager
+        // )
+        //
+        // - minWeightChangeDuration should be zero so that weights can be updated immediately
+        //   in deposit, withdraw, cancelWeightUpdates and enableTradingWithWeights.
+        // - manager should be MammonVault(this).
         pool = IBManagedPool(
             IBManagedPoolFactory(factory).create(
                 IBManagedPoolFactory.NewPoolParams({
