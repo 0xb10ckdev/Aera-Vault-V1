@@ -9,6 +9,7 @@ import "./dependencies/openzeppelin/Math.sol";
 import "./dependencies/openzeppelin/SafeCast.sol";
 import "./dependencies/openzeppelin/ERC165Checker.sol";
 import "./interfaces/IBManagedPoolFactory.sol";
+import "./interfaces/IBManagedPoolController.sol";
 import "./interfaces/IBVault.sol";
 import "./interfaces/IBManagedPool.sol";
 import "./interfaces/IMammonVaultV1.sol";
@@ -30,7 +31,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     uint256 private constant MINIMUM_WEIGHT_CHANGE_DURATION = 1 days;
 
     /// @notice Maximum absolute change in swap fee.
-    uint256 private constant MAXIMUM_SWAP_FEE_PERCENT_CHANGE = 0.0005e18;
+    uint256 private constant MAXIMUM_SWAP_FEE_PERCENT_CHANGE = 0.005e18;
 
     /// @dev Address to represent unset manager in events.
     address private constant UNSET_MANAGER_ADDRESS = address(0);
@@ -54,8 +55,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Balancer Vault.
     IBVault public immutable bVault;
 
-    /// @notice Balancer Pool.
+    /// @notice Balancer Managed Pool.
     IBManagedPool public immutable pool;
+
+    /// @notice Balancer Managed Pool Controller.
+    IBManagedPoolController public immutable poolController;
 
     /// @notice Pool ID of Balancer pool on Vault.
     bytes32 public immutable poolId;
@@ -289,6 +293,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Initialize the contract by deploying new Balancer pool using the provided factory.
     /// @dev First token and second token shouldn't be same. Validator should conform to interface.
+    ///      These are checked by Balancer in internal transactions:
+    ///       If tokens are sorted in ascending order.
+    ///       If swapFeePercentage is greater than minimum and less than maximum.
+    ///       If total sum of weights is one.
     /// @param factory Balancer Managed Pool Factory address.
     /// @param name Name of Pool Token.
     /// @param symbol Symbol of Pool Token.
@@ -356,29 +364,56 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             assetManagers[i] = address(this);
         }
 
+        // Deploys a new ManagedPool from ManagedPoolFactory
+        // create(
+        //     ManagedPool.NewPoolParams memory poolParams,
+        //     BasePoolController.BasePoolRights calldata basePoolRights,
+        //     ManagedPoolController.ManagedPoolRights calldata managedPoolRights,
+        //     uint256 minWeightChangeDuration,
+        //     address manager
+        // )
+        //
+        // - minWeightChangeDuration should be zero so that weights can be updated immediately
+        //   in deposit, withdraw, cancelWeightUpdates and enableTradingWithWeights.
+        // - manager should be MammonVault(this).
         pool = IBManagedPool(
             IBManagedPoolFactory(factory).create(
                 IBManagedPoolFactory.NewPoolParams({
-                    vault: IBVault(address(0)),
                     name: name,
                     symbol: symbol,
                     tokens: tokens,
                     normalizedWeights: weights,
                     assetManagers: assetManagers,
                     swapFeePercentage: swapFeePercentage,
-                    pauseWindowDuration: 0,
-                    bufferPeriodDuration: 0,
-                    owner: address(this),
                     swapEnabledOnStart: false,
                     mustAllowlistLPs: true,
-                    managementSwapFeePercentage: 0
-                })
+                    protocolSwapFeePercentage: 0,
+                    managementSwapFeePercentage: 0,
+                    managementAumFeePercentage: 0,
+                    aumProtocolFeesCollector: address(0)
+                }),
+                IBManagedPoolFactory.BasePoolRights({
+                    canTransferOwnership: false,
+                    canChangeSwapFee: true,
+                    canUpdateMetadata: false
+                }),
+                IBManagedPoolFactory.ManagedPoolRights({
+                    canChangeWeights: true,
+                    canDisableSwaps: true,
+                    canSetMustAllowlistLPs: false,
+                    canSetCircuitBreakers: false,
+                    canChangeTokens: false,
+                    canChangeMgmtFees: false
+                }),
+                0,
+                address(this)
             )
         );
 
         // slither-disable-next-line reentrancy-benign
+        bVault = pool.getVault();
+        poolController = IBManagedPoolController(pool.getOwner());
         poolId = pool.getPoolId();
-        bVault = IBManagedPoolFactory(factory).getVault();
         manager = manager_;
         validator = IWithdrawalValidator(validator_);
         noticePeriod = noticePeriod_;
@@ -594,8 +629,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             revert Mammon__PoolSwapIsAlreadyEnabled();
         }
 
-        pool.updateWeightsGradually(block.timestamp, block.timestamp, weights);
-        pool.setSwapEnabled(true);
+        poolController.updateWeightsGradually(
+            block.timestamp,
+            block.timestamp,
+            weights
+        );
+        poolController.setSwapEnabled(true);
         // slither-disable-next-line reentrancy-events
         emit EnabledTradingWithWeights(block.timestamp, weights);
     }
@@ -658,7 +697,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             }
         }
 
-        pool.updateWeightsGradually(startTime, endTime, targetWeights);
+        poolController.updateWeightsGradually(startTime, endTime, targetWeights);
 
         // slither-disable-next-line reentrancy-events
         emit UpdateWeightsGradually(startTime, endTime, targetWeights);
@@ -700,7 +739,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             );
         }
 
-        pool.setSwapFeePercentage(newSwapFee);
+        poolController.setSwapFeePercentage(newSwapFee);
         // slither-disable-next-line reentrancy-events
         emit SetSwapFee(newSwapFee);
     }
@@ -1041,7 +1080,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         newWeights[0] = newWeights[0] + ONE - adjustedSum;
 
-        pool.updateWeightsGradually(
+        poolController.updateWeightsGradually(
             block.timestamp,
             block.timestamp,
             newWeights
@@ -1085,7 +1124,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     ///      and disableTrading().
     /// @param swapEnabled Swap status.
     function setSwapEnabled(bool swapEnabled) internal {
-        pool.setSwapEnabled(swapEnabled);
+        poolController.setSwapEnabled(swapEnabled);
         // slither-disable-next-line reentrancy-events
         emit SetSwapEnabled(swapEnabled);
     }
