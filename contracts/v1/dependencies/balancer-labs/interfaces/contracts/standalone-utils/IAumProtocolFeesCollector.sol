@@ -14,22 +14,10 @@
 
 pragma solidity ^0.7.0;
 
-import "./IControlledPool.sol";
+interface IAumProtocolFeesCollector {
+    event AumFeePercentageChanged(uint256 newAumFeePercentage);
 
-interface IControlledManagedPool is IControlledPool {
-    function updateWeightsGradually(
-        uint256 startTime,
-        uint256 endTime,
-        uint256[] calldata endWeights
-    ) external;
+    function getAumFeePercentage() external view returns (uint256);
 
-    function setSwapEnabled(bool swapEnabled) external;
-
-    function addAllowedAddress(address member) external;
-
-    function removeAllowedAddress(address member) external;
-
-    function setMustAllowlistLPs(bool mustAllowlistLPs) external;
-
-    function withdrawCollectedManagementFees(address recipient) external;
+    function setAumFeePercentage(uint256 newSwapFeePercentage) external;
 }

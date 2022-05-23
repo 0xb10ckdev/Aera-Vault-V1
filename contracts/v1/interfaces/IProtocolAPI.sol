@@ -9,6 +9,8 @@ interface IProtocolAPI {
     ///      It enables trading, so weights and balances should be in line
     ///      with market spot prices, otherwise there is a significant risk
     ///      of arbitrage.
+    ///      This is checked by Balancer in internal transactions:
+    ///       If token amount is not zero when join pool.
     /// @param amounts Deposit amount of tokens.
     function initialDeposit(uint256[] memory amounts) external;
 
@@ -54,6 +56,10 @@ interface IProtocolAPI {
     function enableTradingRiskingArbitrage() external;
 
     /// @notice Enable swap with updating weights.
+    /// @dev These are checked by Balancer in internal transactions:
+    ///       If weight length and token length match.
+    ///       If total sum of weights is one.
+    ///       If weight is greater than minimum.
     /// @param weights New weights of tokens.
     function enableTradingWithWeights(uint256[] memory weights) external;
 

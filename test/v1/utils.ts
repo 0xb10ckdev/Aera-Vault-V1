@@ -6,8 +6,9 @@ import {
   getConfig,
 } from "../../scripts/config";
 import {
-  BaseManagedPoolFactory,
   BaseManagedPoolFactory__factory,
+  ManagedPoolFactory,
+  ManagedPoolFactory__factory,
   MammonVaultV1Mock,
   MammonVaultV1Mock__factory,
   ManagerWhitelist,
@@ -59,16 +60,27 @@ export const deployVault = async (
 
 export const deployFactory = async (
   signer: Signer,
-): Promise<BaseManagedPoolFactory> => {
+): Promise<ManagedPoolFactory> => {
   const chainId = getChainId(process.env.HARDHAT_FORK);
   const config = getConfig(chainId);
 
-  const factory =
+  const baseManagedPoolFactoryContract =
     await ethers.getContractFactory<BaseManagedPoolFactory__factory>(
       "BaseManagedPoolFactory",
     );
 
-  return await factory.connect(signer).deploy(config.bVault);
+  const baseManagedPoolFactory = await baseManagedPoolFactoryContract
+    .connect(signer)
+    .deploy(config.bVault);
+
+  const managedPoolFactoryContract =
+    await ethers.getContractFactory<ManagedPoolFactory__factory>(
+      "ManagedPoolFactory",
+    );
+
+  return await managedPoolFactoryContract
+    .connect(signer)
+    .deploy(baseManagedPoolFactory.address);
 };
 
 export const deployManagerWhitelist = async (
