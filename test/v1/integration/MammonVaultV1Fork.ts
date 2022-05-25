@@ -78,6 +78,8 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
     });
 
     beforeEach(async function () {
+      const config = getConfig(hre.network.config.chainId || 1);
+
       validParams = {
         signer: admin,
         factory: factory.address,
@@ -90,6 +92,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
         validator: validator.address,
         noticePeriod: MAX_NOTICE_PERIOD,
         managementFee: MAX_MANAGEMENT_FEE,
+        merkleOrchard: config.merkleOrchard,
         description: "",
       };
     });

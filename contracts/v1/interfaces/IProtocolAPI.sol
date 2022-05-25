@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
+import "./IBMerkleOrchard.sol";
+
 /// @title Interface for protocol that owns treasury.
 interface IProtocolAPI {
     /// @notice Initialize Vault with first deposit.
@@ -65,6 +67,17 @@ interface IProtocolAPI {
 
     /// @notice Disable swap.
     function disableTrading() external;
+
+    /// @notice Claim Balancer rewards.
+    /// @dev It calls claimDistributions() function of Balancer MerkleOrchard.
+    ///      Once this function is called, the tokens will be transferred to
+    ///      the Vault and it can be distributed via sweep function.
+    /// @param claims An array of the claim structs that describes the claim.
+    /// @param tokens An array of the set of all tokens to be claimed.
+    function claimRewards(
+        IBMerkleOrchard.Claim[] memory claims,
+        IERC20[] memory tokens
+    ) external;
 
     /// @notice Offer ownership to another address
     /// @dev It disables immediate transfer of ownership
