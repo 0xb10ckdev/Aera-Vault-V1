@@ -662,7 +662,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
-        startTime =  Math.max(block.timestamp, startTime);
+        startTime = Math.max(block.timestamp, startTime);
         if ( startTime > endTime ) {
             revert Mammon__WeightChangeEndBeforeStart();
         }
