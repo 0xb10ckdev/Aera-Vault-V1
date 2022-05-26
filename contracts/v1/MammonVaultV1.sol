@@ -640,8 +640,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IProtocolAPI
     function claimRewards(
-        IBMerkleOrchard.Claim[] memory claims,
-        IERC20[] memory tokens
+        IBMerkleOrchard.Claim[] calldata claims,
+        IERC20[] calldata tokens
     ) external override onlyOwner whenInitialized {
         merkleOrchard.claimDistributions(owner(), claims, tokens);
     }
