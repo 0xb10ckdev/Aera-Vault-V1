@@ -1,6 +1,6 @@
 import { chainIds } from "../hardhat.config";
 
-// Addresses are taken from https://dev.balancer.fi/references/contracts/contract-addresses
+// Addresses are taken from https://dev.balancer.fi/references/contracts/deployment-addresses
 // Shouldn't change the gas price and gas limit.
 // Otherwise the deployment address will be changed.
 
