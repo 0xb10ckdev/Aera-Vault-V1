@@ -234,6 +234,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 max
     );
     error Mammon__CallerIsNotOwnerOrManager();
+    error Mammon__WeightChangeEndBeforeStart();
     error Mammon__WeightChangeDurationIsBelowMin(uint256 actual, uint256 min);
     error Mammon__WeightChangeRatioIsAboveMax(
         address token,
@@ -661,8 +662,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
+        startTime =  Math.max(block.timestamp, startTime);
+        if ( startTime > endTime ) {
+            revert Mammon__WeightChangeEndBeforeStart();
+        }
         if (
-            Math.max(block.timestamp, startTime) +
+            startTime +
                 MINIMUM_WEIGHT_CHANGE_DURATION >
             endTime
         ) {
