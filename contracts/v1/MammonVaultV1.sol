@@ -303,7 +303,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     ///       If tokens are sorted in ascending order.
     ///       If swapFeePercentage is greater than minimum and less than maximum.
     ///       If total sum of weights is one.
-    constructor(VaultParams memory vaultParams) {
+    constructor(NewVaultParams memory vaultParams) {
         uint256 numTokens = vaultParams.tokens.length;
 
         if (numTokens != vaultParams.weights.length) {
