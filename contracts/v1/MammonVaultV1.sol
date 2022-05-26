@@ -228,6 +228,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 max
     );
     error Mammon__CallerIsNotOwnerOrManager();
+    error Mammon__WeightChangeStartTimeIsAboveMax(uint256 actual, uint256 max);
+    error Mammon__WeightChangeEndTimeIsAboveMax(uint256 actual, uint256 max);
     error Mammon__WeightChangeDurationIsBelowMin(uint256 actual, uint256 min);
     error Mammon__WeightChangeRatioIsAboveMax(
         address token,
@@ -665,6 +667,18 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
+        if (startTime > type(uint32).max) {
+            revert Mammon__WeightChangeStartTimeIsAboveMax(
+                startTime,
+                type(uint32).max
+            );
+        }
+        if (endTime > type(uint32).max) {
+            revert Mammon__WeightChangeEndTimeIsAboveMax(
+                endTime,
+                type(uint32).max
+            );
+        }
         if (
             Math.max(block.timestamp, startTime) +
                 MINIMUM_WEIGHT_CHANGE_DURATION >
@@ -697,7 +711,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             }
         }
 
-        poolController.updateWeightsGradually(startTime, endTime, targetWeights);
+        poolController.updateWeightsGradually(
+            startTime,
+            endTime,
+            targetWeights
+        );
 
         // slither-disable-next-line reentrancy-events
         emit UpdateWeightsGradually(startTime, endTime, targetWeights);
