@@ -11,7 +11,9 @@ contract MammonVaultV1Mock is MammonVaultV1 {
     uint256 private constant ONE = 10**18;
 
     // solhint-disable no-empty-blocks
-    constructor(VaultParams memory vaultParams) MammonVaultV1(vaultParams) {}
+    constructor(NewVaultParams memory vaultParams)
+        MammonVaultV1(vaultParams)
+    {}
 
     function getSpotPrice(address tokenIn, address tokenOut)
         external

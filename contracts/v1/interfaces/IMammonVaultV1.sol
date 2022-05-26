@@ -27,7 +27,7 @@ interface IMammonVaultV1 is
     // managementFee: Management fee earned proportion per second.
     // merkleOrchard: Merkle Orchard address.
     // description: Simple vault text description.
-    struct VaultParams {
+    struct NewVaultParams {
         address factory;
         string name;
         string symbol;
