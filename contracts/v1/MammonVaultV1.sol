@@ -130,16 +130,23 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     );
 
     /// @notice Emitted when tokens are deposited.
-    /// @param amounts Token amounts.
+    /// @param requestedAmounts Requested amounts to deposit.
+    /// @param amounts Deposited amounts.
     /// @param weights Token weights following deposit.
-    event Deposit(uint256[] amounts, uint256[] weights);
+    event Deposit(
+        uint256[] requestedAmounts,
+        uint256[] amounts,
+        uint256[] weights
+    );
 
     /// @notice Emitted when tokens are withdrawn.
-    /// @param requestedAmounts Requested token amounts.
+    /// @param requestedAmounts Requested amounts to withdraw.
+    /// @param amounts Withdrawn amounts.
     /// @param allowances Token withdrawal allowances.
     /// @param weights Token weights following withdrawal.
     event Withdraw(
         uint256[] requestedAmounts,
+        uint256[] amounts,
         uint256[] allowances,
         uint256[] weights
     );
@@ -899,6 +906,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] != 0) {
                 newWeights[i] = (weights[i] * newHoldings[i]) / holdings[i];
+                newBalances[i] = newHoldings[i] - holdings[i];
             } else {
                 newWeights[i] = weights[i];
             }
@@ -911,7 +919,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         updateWeights(newWeights, weightSum);
 
         // slither-disable-next-line reentrancy-events
-        emit Deposit(amounts, pool.getNormalizedWeights());
+        emit Deposit(amounts, newBalances, pool.getNormalizedWeights());
     }
 
     /// @notice Withdraw tokens up to requested amounts.
@@ -933,7 +941,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         uint256[] memory allowances = validator.allowance();
         uint256[] memory weights = pool.getNormalizedWeights();
-        uint256[] memory newWeights = new uint256[](numTokens);
         uint256[] memory balances = new uint256[](numTokens);
 
         for (uint256 i = 0; i < numTokens; i++) {
@@ -950,14 +957,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         withdrawFromPool(amounts);
 
+        uint256[] memory newWeights = new uint256[](numTokens);
         uint256 weightSum;
 
         for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] != 0) {
-                tokens[i].safeTransfer(
-                    owner(),
-                    tokens[i].balanceOf(address(this)) - balances[i]
-                );
+                balances[i] = tokens[i].balanceOf(address(this)) - balances[i];
+                tokens[i].safeTransfer(owner(), balances[i]);
 
                 uint256 newBalance = holdings[i] - amounts[i];
                 newWeights[i] = (weights[i] * newBalance) / holdings[i];
@@ -973,7 +979,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         updateWeights(newWeights, weightSum);
 
         // slither-disable-next-line reentrancy-events
-        emit Withdraw(amounts, allowances, pool.getNormalizedWeights());
+        emit Withdraw(
+            amounts,
+            balances,
+            allowances,
+            pool.getNormalizedWeights()
+        );
     }
 
     /// @notice Calculate manager fee index.
@@ -1029,14 +1040,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         withdrawFromPool(amounts);
 
         for (uint256 i = 0; i < numTokens; i++) {
-            tokens[i].safeTransfer(
-                manager,
-                tokens[i].balanceOf(address(this)) - balances[i]
-            );
+            balances[i] = tokens[i].balanceOf(address(this)) - balances[i];
+            tokens[i].safeTransfer(manager, balances[i]);
         }
 
         // slither-disable-next-line reentrancy-events
-        emit DistributeManagerFees(manager, amounts);
+        emit DistributeManagerFees(manager, balances);
     }
 
     /// @notice Calculate change ratio for weight upgrade.

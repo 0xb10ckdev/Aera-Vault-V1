@@ -264,7 +264,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
             await expect(trx)
               .to.emit(vault, "Deposit")
-              .withArgs(amounts, weights);
+              .withArgs(amounts, amounts, weights);
             await expect(trx)
               .to.emit(vault, "DistributeManagerFees")
               .withArgs(
@@ -296,7 +296,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
           await expect(trx)
             .to.emit(vault, "Deposit")
-            .withArgs(amounts, weights);
+            .withArgs(amounts, amounts, weights);
           await expect(trx)
             .to.emit(vault, "DistributeManagerFees")
             .withArgs(
@@ -369,6 +369,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 .to.emit(vault, "Withdraw")
                 .withArgs(
                   amounts,
+                  amounts,
                   valueArray(toWei(100000), tokens.length),
                   weights,
                 );
@@ -404,6 +405,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             await expect(trx)
               .to.emit(vault, "Withdraw")
               .withArgs(
+                amounts,
                 amounts,
                 valueArray(toWei(100000), tokens.length),
                 weights,
