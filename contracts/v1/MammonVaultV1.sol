@@ -461,15 +461,16 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         bytes memory initUserData = abi.encode(IBVault.JoinKind.INIT, amounts);
+        uint256[] memory newBalances = new uint256[](numTokens);
 
         for (uint256 i = 0; i < numTokens; i++) {
-            depositToken(tokens[i], amounts[i]);
+            newBalances[i] = depositToken(tokens[i], amounts[i]);
         }
 
         IBVault.JoinPoolRequest memory joinPoolRequest = IBVault
             .JoinPoolRequest({
                 assets: tokens,
-                maxAmountsIn: amounts,
+                maxAmountsIn: newBalances,
                 userData: initUserData,
                 fromInternalBalance: false
             });
@@ -876,28 +877,34 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         uint256[] memory weights = pool.getNormalizedWeights();
+        uint256[] memory newBalances = new uint256[](numTokens);
+
+        for (uint256 i = 0; i < numTokens; i++) {
+            if (amounts[i] != 0) {
+                newBalances[i] = depositToken(tokens[i], amounts[i]);
+            }
+        }
+
+        /// Set managed balance of pool as amounts
+        /// i.e. Deposit amounts of tokens to pool from Mammon Vault
+        updatePoolBalance(newBalances, IBVault.PoolBalanceOpKind.UPDATE);
+        /// Decrease managed balance and increase cash balance of pool
+        /// i.e. Move amounts from managed balance to cash balance
+        updatePoolBalance(newBalances, IBVault.PoolBalanceOpKind.DEPOSIT);
+
+        uint256[] memory newHoldings = getHoldings();
         uint256[] memory newWeights = new uint256[](numTokens);
         uint256 weightSum;
 
         for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] != 0) {
-                depositToken(tokens[i], amounts[i]);
-
-                uint256 newBalance = holdings[i] + amounts[i];
-                newWeights[i] = (weights[i] * newBalance) / holdings[i];
+                newWeights[i] = (weights[i] * newHoldings[i]) / holdings[i];
             } else {
                 newWeights[i] = weights[i];
             }
 
             weightSum += newWeights[i];
         }
-
-        /// Set managed balance of pool as amounts
-        /// i.e. Deposit amounts of tokens to pool from Mammon Vault
-        updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.UPDATE);
-        /// Decrease managed balance and increase cash balance of pool
-        /// i.e. Move amounts from managed balance to cash balance
-        updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
 
         /// It cancels current active weights change schedule
         /// and update weights with newWeights
@@ -927,6 +934,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256[] memory allowances = validator.allowance();
         uint256[] memory weights = pool.getNormalizedWeights();
         uint256[] memory newWeights = new uint256[](numTokens);
+        uint256[] memory balances = new uint256[](numTokens);
 
         for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] > holdings[i] || amounts[i] > allowances[i]) {
@@ -936,6 +944,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                     Math.min(holdings[i], allowances[i])
                 );
             }
+
+            balances[i] = tokens[i].balanceOf(address(this));
         }
 
         withdrawFromPool(amounts);
@@ -944,7 +954,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] != 0) {
-                tokens[i].safeTransfer(owner(), amounts[i]);
+                tokens[i].safeTransfer(
+                    owner(),
+                    tokens[i].balanceOf(address(this)) - balances[i]
+                );
 
                 uint256 newBalance = holdings[i] - amounts[i];
                 newWeights[i] = (weights[i] * newBalance) / holdings[i];
@@ -1003,9 +1016,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         uint256 numTokens = tokens.length;
         uint256[] memory amounts = new uint256[](numTokens);
+        uint256[] memory balances = new uint256[](numTokens);
 
         for (uint256 i = 0; i < numTokens; i++) {
             amounts[i] = (holdings[i] * managerFeeIndex) / ONE;
+
+            balances[i] = tokens[i].balanceOf(address(this));
         }
 
         managerFeeIndex = 0;
@@ -1013,7 +1029,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         withdrawFromPool(amounts);
 
         for (uint256 i = 0; i < numTokens; i++) {
-            tokens[i].safeTransfer(manager, amounts[i]);
+            tokens[i].safeTransfer(
+                manager,
+                tokens[i].balanceOf(address(this)) - balances[i]
+            );
         }
 
         // slither-disable-next-line reentrancy-events
@@ -1091,9 +1110,16 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @dev Will only be called by deposit().
     /// @param token Address of the token to deposit.
     /// @param amount Amount to deposit.
-    function depositToken(IERC20 token, uint256 amount) internal {
+    function depositToken(IERC20 token, uint256 amount)
+        internal
+        returns (uint256)
+    {
+        uint256 balance = token.balanceOf(address(this));
         token.safeTransferFrom(owner(), address(this), amount);
-        token.safeApprove(address(bVault), amount);
+        balance = token.balanceOf(address(this)) - balance;
+        token.safeApprove(address(bVault), balance);
+
+        return balance;
     }
 
     /// @notice Return all funds to owner.
