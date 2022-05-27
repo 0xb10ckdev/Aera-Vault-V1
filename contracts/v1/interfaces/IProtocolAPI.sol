@@ -72,8 +72,9 @@ interface IProtocolAPI {
     /// @dev It calls claimDistributions() function of Balancer MerkleOrchard.
     ///      Once this function is called, the tokens will be transferred to
     ///      the Vault and it can be distributed via sweep function.
-    /// @param claims An array of the claim structs that describes the claim.
-    /// @param tokens An array of the set of all tokens to be claimed.
+    /// @param claims An array of claims provided as a claim struct.
+    ///        See https://docs.balancer.fi/products/merkle-orchard/claiming-tokens#claiming-from-the-contract-directly.
+    /// @param tokens An array consisting of tokens to be claimed.
     function claimRewards(
         IBMerkleOrchard.Claim[] memory claims,
         IERC20[] memory tokens

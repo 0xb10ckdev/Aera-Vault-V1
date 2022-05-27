@@ -25,7 +25,7 @@ interface IMammonVaultV1 is
     // validator: Withdrawal validator contract address.
     // noticePeriod: Notice period (in seconds).
     // managementFee: Management fee earned proportion per second.
-    // merkleOrchard: Merkle Orchard address.
+    // merkleOrchard: Balancer Merkle Orchard address.
     // description: Simple vault text description.
     struct NewVaultParams {
         address factory;
