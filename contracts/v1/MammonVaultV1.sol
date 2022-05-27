@@ -299,7 +299,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// FUNCTIONS ///
 
     /// @notice Initialize the contract by deploying new Balancer pool using the provided factory.
-    /// @dev Validator should conform to interface.
+    /// @dev Tokens should be unique. Validator should conform to interface.
     ///      These are checked by Balancer in internal transactions:
     ///       If tokens are sorted in ascending order.
     ///       If swapFeePercentage is greater than minimum and less than maximum.
