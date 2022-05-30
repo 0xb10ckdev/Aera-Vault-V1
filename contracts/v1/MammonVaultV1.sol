@@ -380,6 +380,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         //     address manager
         // )
         //
+        // - poolParams.mustAllowlistLPs should be true to prevent other accounts
+        //   to use joinPool
         // - minWeightChangeDuration should be zero so that weights can be updated immediately
         //   in deposit, withdraw, cancelWeightUpdates and enableTradingWithWeights.
         // - manager should be MammonVault(this).
