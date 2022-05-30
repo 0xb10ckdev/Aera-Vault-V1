@@ -1107,7 +1107,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param amount Amount to deposit.
     function depositToken(IERC20 token, uint256 amount) internal {
         token.safeTransferFrom(owner(), address(this), amount);
-        token.safeApprove(address(bVault), amount);
+        uint256 allowance = token.allowance(address(this), address(bVault));
+        if (allowance > 0) {
+            token.safeDecreaseAllowance(address(bVault), allowance);
+        }
+        token.safeIncreaseAllowance(address(bVault), amount);
     }
 
     /// @notice Return all funds to owner.
