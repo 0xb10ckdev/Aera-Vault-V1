@@ -78,6 +78,8 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
     });
 
     beforeEach(async function () {
+      const config = getConfig(hre.network.config.chainId || 1);
+
       validParams = {
         signer: admin,
         factory: factory.address,
@@ -90,6 +92,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
         validator: validator.address,
         noticePeriod: MAX_NOTICE_PERIOD,
         managementFee: MAX_MANAGEMENT_FEE,
+        merkleOrchard: config.merkleOrchard,
         description: "",
       };
     });
@@ -927,6 +930,19 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 2 ** 32,
               ),
           ).to.be.revertedWith("Mammon__WeightChangeEndTimeIsAboveMax");
+        });
+
+        it("when end time is earlier than start time", async () => {
+          const timestamp = await getCurrentTime();
+          await expect(
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                valueArray(ONE.div(tokens.length), tokens.length),
+                timestamp - 2,
+                timestamp - 1,
+              ),
+          ).to.be.revertedWith("Mammon__WeightChangeEndBeforeStart");
         });
 
         it("when duration is less than minimum", async () => {

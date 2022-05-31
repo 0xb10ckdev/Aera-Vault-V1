@@ -103,21 +103,20 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       await ethers.getContractFactory<MammonVaultV1Mock__factory>(
         "MammonVaultV1Mock",
       );
-    vault = await vaultFactory
-      .connect(admin)
-      .deploy(
-        factory.address,
-        "Test",
-        "TEST",
-        sortedTokens,
-        validWeights,
-        MIN_SWAP_FEE,
-        manager.address,
-        validator.address,
-        DEFAULT_NOTICE_PERIOD,
-        MAX_MANAGEMENT_FEE,
-        "Test vault description",
-      );
+    vault = await vaultFactory.connect(admin).deploy({
+      factory: factory.address,
+      name: "Test",
+      symbol: "TEST",
+      tokens: sortedTokens,
+      weights: validWeights,
+      swapFeePercentage: MIN_SWAP_FEE,
+      manager: manager.address,
+      validator: validator.address,
+      noticePeriod: DEFAULT_NOTICE_PERIOD,
+      managementFee: MAX_MANAGEMENT_FEE,
+      merkleOrchard: ZERO_ADDRESS,
+      description: "Test vault description",
+    });
   });
 
   afterEach(async () => {
@@ -460,6 +459,19 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 2 ** 32,
               ),
           ).to.be.revertedWith("Mammon__WeightChangeEndTimeIsAboveMax");
+        });
+
+        it("when end time is earlier than start time", async () => {
+          const timestamp = await getCurrentTime();
+          await expect(
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                valueArray(ONE.div(tokens.length), tokens.length),
+                timestamp - 2,
+                timestamp - 1,
+              ),
+          ).to.be.revertedWith("Mammon__WeightChangeEndBeforeStart");
         });
 
         it("when duration is less than minimum", async () => {
