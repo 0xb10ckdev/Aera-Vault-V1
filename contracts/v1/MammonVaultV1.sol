@@ -235,6 +235,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     );
     error Mammon__CallerIsNotOwnerOrManager();
     error Mammon__WeightChangeEndBeforeStart();
+    error Mammon__WeightChangeStartTimeIsAboveMax(uint256 actual, uint256 max);
+    error Mammon__WeightChangeEndTimeIsAboveMax(uint256 actual, uint256 max);
     error Mammon__WeightChangeDurationIsBelowMin(uint256 actual, uint256 min);
     error Mammon__WeightChangeRatioIsAboveMax(
         address token,
@@ -662,6 +664,21 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
+        // These are to protect against the following vulnerability
+        // https://forum.balancer.fi/t/vulnerability-disclosure/3179
+        if (startTime > type(uint32).max) {
+            revert Mammon__WeightChangeStartTimeIsAboveMax(
+                startTime,
+                type(uint32).max
+            );
+        }
+        if (endTime > type(uint32).max) {
+            revert Mammon__WeightChangeEndTimeIsAboveMax(
+                endTime,
+                type(uint32).max
+            );
+        }
+
         startTime = Math.max(block.timestamp, startTime);
         if (startTime > endTime) {
             revert Mammon__WeightChangeEndBeforeStart();
@@ -698,7 +715,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             }
         }
 
-        poolController.updateWeightsGradually(startTime, endTime, targetWeights);
+        poolController.updateWeightsGradually(
+            startTime,
+            endTime,
+            targetWeights
+        );
 
         // slither-disable-next-line reentrancy-events
         emit UpdateWeightsGradually(startTime, endTime, targetWeights);
@@ -964,14 +985,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         emit Withdraw(amounts, allowances, pool.getNormalizedWeights());
     }
 
-    /// @notice Calculate manager fee index.
-    function updateManagerFeeIndex() internal {
-        managerFeeIndex +=
-            (block.timestamp - lastFeeCheckpoint) *
-            managementFee;
-        lastFeeCheckpoint = block.timestamp.toUint64();
-    }
-
     /// @notice Withdraw tokens from Balancer Pool to Mammon Vault
     /// @dev Will only be called by withdraw(), returnFunds()
     ///      and calculateAndDistributeManagerFees()
@@ -991,12 +1004,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     ///      initiateFinalization(), deposit() and withdraw().
     // slither-disable-next-line timestamp
     function calculateAndDistributeManagerFees() internal {
-        updateManagerFeeIndex();
-
-        // slither-disable-next-line incorrect-equality
-        if (managerFeeIndex == 0) {
+        if (block.timestamp <= lastFeeCheckpoint) {
             return;
         }
+
+        managerFeeIndex =
+            (block.timestamp - lastFeeCheckpoint) *
+            managementFee;
+        lastFeeCheckpoint = block.timestamp.toUint64();
 
         IERC20[] memory tokens;
         uint256[] memory holdings;
@@ -1008,8 +1023,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < numTokens; i++) {
             amounts[i] = (holdings[i] * managerFeeIndex) / ONE;
         }
-
-        managerFeeIndex = 0;
 
         withdrawFromPool(amounts);
 
