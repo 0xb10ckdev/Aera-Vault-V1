@@ -903,6 +903,32 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           ).to.be.revertedWith("Mammon__CallerIsNotManager");
         });
 
+        it("when start time is greater than maximum", async () => {
+          const timestamp = await getCurrentTime();
+          await expect(
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                valueArray(ONE.div(tokens.length), tokens.length),
+                2 ** 32,
+                timestamp,
+              ),
+          ).to.be.revertedWith("Mammon__WeightChangeStartTimeIsAboveMax");
+        });
+
+        it("when end time is greater than maximum", async () => {
+          const timestamp = await getCurrentTime();
+          await expect(
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                valueArray(ONE.div(tokens.length), tokens.length),
+                timestamp,
+                2 ** 32,
+              ),
+          ).to.be.revertedWith("Mammon__WeightChangeEndTimeIsAboveMax");
+        });
+
         it("when duration is less than minimum", async () => {
           const timestamp = await getCurrentTime();
           await expect(
