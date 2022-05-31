@@ -14,7 +14,7 @@ import {
   ManagerWhitelist,
   ManagerWhitelist__factory,
 } from "../../typechain";
-import { MAX_MANAGEMENT_FEE } from "./constants";
+import { MAX_MANAGEMENT_FEE, ZERO_ADDRESS } from "./constants";
 
 export type VaultParams = {
   signer: Signer;
@@ -28,6 +28,7 @@ export type VaultParams = {
   validator?: string;
   noticePeriod?: number;
   managementFee?: BigNumber;
+  merkleOrchard?: string;
   description?: string;
 };
 
@@ -41,21 +42,20 @@ export const deployVault = async (
   if (!params.validator) {
     params.validator = (await deployments.get("Validator")).address;
   }
-  return await vault
-    .connect(params.signer)
-    .deploy(
-      params.factory,
-      params.name,
-      params.symbol,
-      params.tokens,
-      params.weights,
-      params.swapFeePercentage,
-      params.manager,
-      params.validator,
-      params.noticePeriod || DEFAULT_NOTICE_PERIOD,
-      params.managementFee || MAX_MANAGEMENT_FEE,
-      params.description || "",
-    );
+  return await vault.connect(params.signer).deploy({
+    factory: params.factory,
+    name: params.name,
+    symbol: params.symbol,
+    tokens: params.tokens,
+    weights: params.weights,
+    swapFeePercentage: params.swapFeePercentage,
+    manager: params.manager,
+    validator: params.validator,
+    noticePeriod: params.noticePeriod || DEFAULT_NOTICE_PERIOD,
+    managementFee: params.managementFee || MAX_MANAGEMENT_FEE,
+    merkleOrchard: params.merkleOrchard || ZERO_ADDRESS,
+    description: params.description || "",
+  });
 };
 
 export const deployFactory = async (

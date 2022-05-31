@@ -1,6 +1,6 @@
 import { chainIds } from "../hardhat.config";
 
-// Addresses are taken from https://dev.balancer.fi/references/contracts/contract-addresses
+// Addresses are taken from https://dev.balancer.fi/references/contracts/deployment-addresses
 // Shouldn't change the gas price and gas limit.
 // Otherwise the deployment address will be changed.
 
@@ -8,9 +8,17 @@ export const getConfig = (
   chainId: number,
 ): {
   bVault: string; // Balancer Vault address
+  merkleOrchard?: string;
   proxyDeployGasPrice: number;
   proxyDeployGasLimit: number;
 } => {
+  const merkleOrchards = {
+    [chainIds.mainnet]: "0xdAE7e32ADc5d490a43cCba1f0c736033F2b4eFca",
+    [chainIds.polygon]: "0x0F3e0c4218b7b0108a3643cFe9D3ec0d4F57c54e",
+    [chainIds.kovan]: "0xc33e0fE411322009947931c32d2273ee645cDb5B",
+    [chainIds.rinkeby]: "0x0F3e0c4218b7b0108a3643cFe9D3ec0d4F57c54e",
+  };
+
   switch (chainId) {
     case chainIds.mainnet:
     case chainIds.polygon:
@@ -19,6 +27,7 @@ export const getConfig = (
     case chainIds.goerli:
       return {
         bVault: "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
+        merkleOrchard: merkleOrchards[chainId],
         proxyDeployGasPrice: 100000000000,
         proxyDeployGasLimit: 1100000,
       };
