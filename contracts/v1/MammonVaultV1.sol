@@ -667,6 +667,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
+        // These are to protect against the following vulnerability
+        // https://forum.balancer.fi/t/vulnerability-disclosure/3179
         if (startTime > type(uint32).max) {
             revert Mammon__WeightChangeStartTimeIsAboveMax(
                 startTime,
@@ -679,6 +681,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 type(uint32).max
             );
         }
+
         if (
             Math.max(block.timestamp, startTime) +
                 MINIMUM_WEIGHT_CHANGE_DURATION >
