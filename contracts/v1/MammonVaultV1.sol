@@ -10,6 +10,7 @@ import "./dependencies/openzeppelin/SafeCast.sol";
 import "./dependencies/openzeppelin/ERC165Checker.sol";
 import "./interfaces/IBManagedPoolFactory.sol";
 import "./interfaces/IBManagedPoolController.sol";
+import "./interfaces/IBMerkleOrchard.sol";
 import "./interfaces/IBVault.sol";
 import "./interfaces/IBManagedPool.sol";
 import "./interfaces/IMammonVaultV1.sol";
@@ -60,6 +61,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Balancer Managed Pool Controller.
     IBManagedPoolController public immutable poolController;
+
+    /// @notice Balancer Merkle Orchard.
+    IBMerkleOrchard public immutable merkleOrchard;
 
     /// @notice Pool ID of Balancer pool on Vault.
     bytes32 public immutable poolId;
@@ -114,6 +118,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param validator Withdrawal validator contract address.
     /// @param noticePeriod Notice period (in seconds).
     /// @param managementFee Management fee earned proportion per second.
+    /// @param merkleOrchard Merkle Orchard address.
     /// @param description Vault description.
     event Created(
         address indexed factory,
@@ -126,6 +131,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         address indexed validator,
         uint32 noticePeriod,
         uint256 managementFee,
+        address merkleOrchard,
         string description
     );
 
@@ -235,6 +241,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 max
     );
     error Mammon__CallerIsNotOwnerOrManager();
+    error Mammon__WeightChangeEndBeforeStart();
+    error Mammon__WeightChangeStartTimeIsAboveMax(uint256 actual, uint256 max);
+    error Mammon__WeightChangeEndTimeIsAboveMax(uint256 actual, uint256 max);
     error Mammon__WeightChangeDurationIsBelowMin(uint256 actual, uint256 min);
     error Mammon__WeightChangeRatioIsAboveMax(
         address token,
@@ -304,65 +313,45 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     ///       If tokens are sorted in ascending order.
     ///       If swapFeePercentage is greater than minimum and less than maximum.
     ///       If total sum of weights is one.
-    /// @param factory Balancer Managed Pool Factory address.
-    /// @param name Name of Pool Token.
-    /// @param symbol Symbol of Pool Token.
-    /// @param tokens Token addresses.
-    /// @param weights Token weights.
-    /// @param swapFeePercentage Pool swap fee.
-    /// @param manager_ Vault manager address.
-    /// @param validator_ Withdrawal validator contract address.
-    /// @param noticePeriod_ Notice period (in seconds).
-    /// @param managementFee_ Management fee earned proportion per second.
-    /// @param description_ Simple vault text description.
-    constructor(
-        address factory,
-        string memory name,
-        string memory symbol,
-        IERC20[] memory tokens,
-        uint256[] memory weights,
-        uint256 swapFeePercentage,
-        address manager_,
-        address validator_,
-        uint32 noticePeriod_,
-        uint256 managementFee_,
-        string memory description_
-    ) {
-        uint256 numTokens = tokens.length;
+    constructor(NewVaultParams memory vaultParams) {
+        uint256 numTokens = vaultParams.tokens.length;
 
-        if (numTokens != weights.length) {
-            revert Mammon__WeightLengthIsNotSame(numTokens, weights.length);
+        if (numTokens != vaultParams.weights.length) {
+            revert Mammon__WeightLengthIsNotSame(
+                numTokens,
+                vaultParams.weights.length
+            );
         }
         if (
             !ERC165Checker.supportsInterface(
-                validator_,
+                vaultParams.validator,
                 type(IWithdrawalValidator).interfaceId
             )
         ) {
-            revert Mammon__ValidatorIsNotValid(validator_);
+            revert Mammon__ValidatorIsNotValid(vaultParams.validator);
         }
         // Use new block to avoid stack too deep issue
         {
-            uint256 numAllowances = IWithdrawalValidator(validator_)
+            uint256 numAllowances = IWithdrawalValidator(vaultParams.validator)
                 .allowance()
                 .length;
             if (numAllowances != numTokens) {
                 revert Mammon__ValidatorIsNotMatched(numTokens, numAllowances);
             }
         }
-        if (managementFee_ > MAX_MANAGEMENT_FEE) {
+        if (vaultParams.managementFee > MAX_MANAGEMENT_FEE) {
             revert Mammon__ManagementFeeIsAboveMax(
-                managementFee_,
+                vaultParams.managementFee,
                 MAX_MANAGEMENT_FEE
             );
         }
-        if (noticePeriod_ > MAX_NOTICE_PERIOD) {
+        if (vaultParams.noticePeriod > MAX_NOTICE_PERIOD) {
             revert Mammon__NoticePeriodIsAboveMax(
-                noticePeriod_,
+                vaultParams.noticePeriod,
                 MAX_NOTICE_PERIOD
             );
         }
-        if (manager_ == address(0)) {
+        if (vaultParams.manager == address(0)) {
             revert Mammon__ManagerIsZeroAddress();
         }
 
@@ -386,14 +375,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         //   in deposit, withdraw, cancelWeightUpdates and enableTradingWithWeights.
         // - manager should be MammonVault(this).
         pool = IBManagedPool(
-            IBManagedPoolFactory(factory).create(
+            IBManagedPoolFactory(vaultParams.factory).create(
                 IBManagedPoolFactory.NewPoolParams({
-                    name: name,
-                    symbol: symbol,
-                    tokens: tokens,
-                    normalizedWeights: weights,
+                    name: vaultParams.name,
+                    symbol: vaultParams.symbol,
+                    tokens: vaultParams.tokens,
+                    normalizedWeights: vaultParams.weights,
                     assetManagers: assetManagers,
-                    swapFeePercentage: swapFeePercentage,
+                    swapFeePercentage: vaultParams.swapFeePercentage,
                     swapEnabledOnStart: false,
                     mustAllowlistLPs: true,
                     protocolSwapFeePercentage: 0,
@@ -422,29 +411,31 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         // slither-disable-next-line reentrancy-benign
         bVault = pool.getVault();
         poolController = IBManagedPoolController(pool.getOwner());
+        merkleOrchard = IBMerkleOrchard(vaultParams.merkleOrchard);
         poolId = pool.getPoolId();
-        manager = manager_;
-        validator = IWithdrawalValidator(validator_);
-        noticePeriod = noticePeriod_;
-        description = description_;
-        managementFee = managementFee_;
+        manager = vaultParams.manager;
+        validator = IWithdrawalValidator(vaultParams.validator);
+        noticePeriod = vaultParams.noticePeriod;
+        description = vaultParams.description;
+        managementFee = vaultParams.managementFee;
 
         // slither-disable-next-line reentrancy-events
         emit Created(
-            factory,
-            name,
-            symbol,
-            tokens,
-            weights,
-            swapFeePercentage,
-            manager_,
-            validator_,
-            noticePeriod_,
-            managementFee_,
-            description_
+            vaultParams.factory,
+            vaultParams.name,
+            vaultParams.symbol,
+            vaultParams.tokens,
+            vaultParams.weights,
+            vaultParams.swapFeePercentage,
+            vaultParams.manager,
+            vaultParams.validator,
+            vaultParams.noticePeriod,
+            vaultParams.managementFee,
+            vaultParams.merkleOrchard,
+            vaultParams.description
         );
         // slither-disable-next-line reentrancy-events
-        emit ManagerChanged(UNSET_MANAGER_ADDRESS, manager_);
+        emit ManagerChanged(UNSET_MANAGER_ADDRESS, vaultParams.manager);
     }
 
     /// PROTOCOL API ///
@@ -659,6 +650,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         setSwapEnabled(false);
     }
 
+    /// @inheritdoc IProtocolAPI
+    function claimRewards(
+        IBMerkleOrchard.Claim[] calldata claims,
+        IERC20[] calldata tokens
+    ) external override onlyOwner whenInitialized {
+        merkleOrchard.claimDistributions(owner(), claims, tokens);
+    }
+
     /// MANAGER API ///
 
     /// @inheritdoc IManagerAPI
@@ -675,8 +674,27 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
+        // These are to protect against the following vulnerability
+        // https://forum.balancer.fi/t/vulnerability-disclosure/3179
+        if (startTime > type(uint32).max) {
+            revert Mammon__WeightChangeStartTimeIsAboveMax(
+                startTime,
+                type(uint32).max
+            );
+        }
+        if (endTime > type(uint32).max) {
+            revert Mammon__WeightChangeEndTimeIsAboveMax(
+                endTime,
+                type(uint32).max
+            );
+        }
+
+        startTime = Math.max(block.timestamp, startTime);
+        if (startTime > endTime) {
+            revert Mammon__WeightChangeEndBeforeStart();
+        }
         if (
-            Math.max(block.timestamp, startTime) +
+            startTime +
                 MINIMUM_WEIGHT_CHANGE_DURATION >
             endTime
         ) {
@@ -707,7 +725,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             }
         }
 
-        poolController.updateWeightsGradually(startTime, endTime, targetWeights);
+        poolController.updateWeightsGradually(
+            startTime,
+            endTime,
+            targetWeights
+        );
 
         // slither-disable-next-line reentrancy-events
         emit UpdateWeightsGradually(startTime, endTime, targetWeights);
@@ -989,14 +1011,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         );
     }
 
-    /// @notice Calculate manager fee index.
-    function updateManagerFeeIndex() internal {
-        managerFeeIndex +=
-            (block.timestamp - lastFeeCheckpoint) *
-            managementFee;
-        lastFeeCheckpoint = block.timestamp.toUint64();
-    }
-
     /// @notice Withdraw tokens from Balancer Pool to Mammon Vault
     /// @dev Will only be called by withdraw(), returnFunds()
     ///      and calculateAndDistributeManagerFees()
@@ -1016,12 +1030,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     ///      initiateFinalization(), deposit() and withdraw().
     // slither-disable-next-line timestamp
     function calculateAndDistributeManagerFees() internal {
-        updateManagerFeeIndex();
-
-        // slither-disable-next-line incorrect-equality
-        if (managerFeeIndex == 0) {
+        if (block.timestamp <= lastFeeCheckpoint) {
             return;
         }
+
+        managerFeeIndex =
+            (block.timestamp - lastFeeCheckpoint) *
+            managementFee;
+        lastFeeCheckpoint = block.timestamp.toUint64();
 
         IERC20[] memory tokens;
         uint256[] memory holdings;
@@ -1036,8 +1052,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
             balances[i] = tokens[i].balanceOf(address(this));
         }
-
-        managerFeeIndex = 0;
 
         withdrawFromPool(amounts);
 
