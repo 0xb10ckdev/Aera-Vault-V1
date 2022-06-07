@@ -105,6 +105,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Manager fee earned proportion
     uint256 public managerFeeIndex;
 
+    /// @notice Fee earned amount for each manager
+    mapping(address => uint256[]) public managersFee;
+
+    /// @notice Total manager fee earned amount
+    uint256[] public managersFeeTotal;
+
     /// EVENTS ///
 
     /// @notice Emitted when the vault is created.
@@ -258,6 +264,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 amount,
         uint256 available
     );
+    error Mammon__NoAvailableFeeForCaller(address caller);
     error Mammon__BalanceChangedInCurrentBlock();
     error Mammon__CannotSweepPoolToken();
     error Mammon__PoolSwapIsAlreadyEnabled();
@@ -335,7 +342,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             uint256 numAllowances = IWithdrawalValidator(vaultParams.validator)
                 .allowance()
                 .length;
-            if (numAllowances != numTokens) {
+            if (numTokens != numAllowances) {
                 revert Mammon__ValidatorIsNotMatched(numTokens, numAllowances);
             }
         }
@@ -418,6 +425,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         noticePeriod = vaultParams.noticePeriod;
         description = vaultParams.description;
         managementFee = vaultParams.managementFee;
+        managersFee[manager] = new uint256[](numTokens);
+        managersFeeTotal = new uint256[](numTokens);
 
         // slither-disable-next-line reentrancy-events
         emit Created(
@@ -461,16 +470,16 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         bytes memory initUserData = abi.encode(IBVault.JoinKind.INIT, amounts);
-        uint256[] memory newBalances = new uint256[](numTokens);
+        uint256[] memory balances = new uint256[](numTokens);
 
         for (uint256 i = 0; i < numTokens; i++) {
-            newBalances[i] = depositToken(tokens[i], amounts[i]);
+            balances[i] = depositToken(tokens[i], amounts[i]);
         }
 
         IBVault.JoinPoolRequest memory joinPoolRequest = IBVault
             .JoinPoolRequest({
                 assets: tokens,
-                maxAmountsIn: newBalances,
+                maxAmountsIn: balances,
                 userData: initUserData,
                 fromInternalBalance: false
             });
@@ -550,7 +559,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
-        calculateAndDistributeManagerFees();
+        lockManagerFees();
         noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
         setSwapEnabled(false);
         emit FinalizationInitiated(noticeTimeoutAt);
@@ -594,7 +603,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         if (initialized && noticeTimeoutAt == 0) {
-            calculateAndDistributeManagerFees();
+            lockManagerFees();
+        }
+
+        if (managersFee[newManager].length == 0) {
+            managersFee[newManager] = new uint256[](getTokens().length);
         }
 
         emit ManagerChanged(manager, newManager);
@@ -783,9 +796,34 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         nonReentrant
         whenInitialized
         whenNotFinalizing
-        onlyManager
     {
-        calculateAndDistributeManagerFees();
+        if (msg.sender == manager) {
+            lockManagerFees();
+        }
+
+        if (managersFee[msg.sender].length == 0) {
+            revert Mammon__NoAvailableFeeForCaller(msg.sender);
+        }
+
+        IERC20[] memory tokens;
+        uint256[] memory holdings;
+        (tokens, holdings, ) = getTokensData();
+
+        uint256 numTokens = tokens.length;
+        uint256[] memory managerFees = managersFee[msg.sender];
+
+        for (uint256 i = 0; i < numTokens; i++) {
+            managersFeeTotal[i] -= managerFees[i];
+            managersFee[msg.sender][i] = 0;
+            tokens[i].safeTransfer(msg.sender, managerFees[i]);
+        }
+
+        if (msg.sender != manager) {
+            delete managersFee[msg.sender];
+        }
+
+        // slither-disable-next-line reentrancy-events
+        emit DistributeManagerFees(msg.sender, managerFees);
     }
 
     /// MULTI ASSET VAULT INTERFACE ///
@@ -896,7 +934,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     ///      current active weights change schedule.
     /// @param amounts Token amounts to deposit.
     function depositTokens(uint256[] calldata amounts) internal {
-        calculateAndDistributeManagerFees();
+        lockManagerFees();
 
         IERC20[] memory tokens;
         uint256[] memory holdings;
@@ -952,7 +990,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     ///      current active weights change schedule.
     /// @param amounts Requested token amounts.
     function withdrawTokens(uint256[] calldata amounts) internal {
-        calculateAndDistributeManagerFees();
+        lockManagerFees();
 
         IERC20[] memory tokens;
         uint256[] memory holdings;
@@ -976,7 +1014,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 );
             }
 
-            balances[i] = tokens[i].balanceOf(address(this));
+            if (amounts[i] != 0) {
+                balances[i] = tokens[i].balanceOf(address(this));
+            }
         }
 
         withdrawFromPool(amounts);
@@ -1013,7 +1053,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Withdraw tokens from Balancer Pool to Mammon Vault
     /// @dev Will only be called by withdraw(), returnFunds()
-    ///      and calculateAndDistributeManagerFees()
+    ///      and claimManagerFees()
     function withdrawFromPool(uint256[] memory amounts) internal {
         uint256[] memory managed = new uint256[](amounts.length);
 
@@ -1025,11 +1065,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
     }
 
-    /// @notice Calculate manager fee index and distribute.
+    /// @notice Calculate manager fees and lock the tokens in Vault.
     /// @dev Will only be called by claimManagerFees(), setManager(),
     ///      initiateFinalization(), deposit() and withdraw().
     // slither-disable-next-line timestamp
-    function calculateAndDistributeManagerFees() internal {
+    function lockManagerFees() internal {
         if (block.timestamp <= lastFeeCheckpoint) {
             return;
         }
@@ -1044,24 +1084,21 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         (tokens, holdings, ) = getTokensData();
 
         uint256 numTokens = tokens.length;
-        uint256[] memory amounts = new uint256[](numTokens);
+        uint256[] memory newFees = new uint256[](numTokens);
         uint256[] memory balances = new uint256[](numTokens);
 
         for (uint256 i = 0; i < numTokens; i++) {
-            amounts[i] = (holdings[i] * managerFeeIndex) / ONE;
-
             balances[i] = tokens[i].balanceOf(address(this));
+            newFees[i] = (holdings[i] * managerFeeIndex) / ONE;
         }
 
-        withdrawFromPool(amounts);
+        withdrawFromPool(newFees);
 
         for (uint256 i = 0; i < numTokens; i++) {
-            balances[i] = tokens[i].balanceOf(address(this)) - balances[i];
-            tokens[i].safeTransfer(manager, balances[i]);
+            newFees[i] = tokens[i].balanceOf(address(this)) - balances[i];
+            managersFee[manager][i] += newFees[i];
+            managersFeeTotal[i] += newFees[i];
         }
-
-        // slither-disable-next-line reentrancy-events
-        emit DistributeManagerFees(manager, balances);
     }
 
     /// @notice Calculate change ratio for weight upgrade.
@@ -1164,7 +1201,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         IERC20 token;
         for (uint256 i = 0; i < numTokens; i++) {
             token = tokens[i];
-            amount = token.balanceOf(address(this));
+            amount = token.balanceOf(address(this)) - managersFeeTotal[i];
             token.safeTransfer(owner(), amount);
             amounts[i] = amount;
         }
