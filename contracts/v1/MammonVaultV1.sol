@@ -560,6 +560,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenNotFinalizing
     {
         lockManagerFees();
+        // slither-disable-next-line reentrancy-benign
+        // slither-disable-next-line reentrancy-no-eth
         noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
         setSwapEnabled(false);
         emit FinalizationInitiated(noticeTimeoutAt);
@@ -607,10 +609,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         if (managersFee[newManager].length == 0) {
+            // slither-disable-next-line reentrancy-no-eth
             managersFee[newManager] = new uint256[](getTokens().length);
         }
 
+        // slither-disable-next-line reentrancy-events
         emit ManagerChanged(manager, newManager);
+        // slither-disable-next-line reentrancy-no-eth
         manager = newManager;
     }
 
@@ -810,20 +815,22 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         (tokens, holdings, ) = getTokensData();
 
         uint256 numTokens = tokens.length;
-        uint256[] memory managerFees = managersFee[msg.sender];
+        uint256[] memory fees = managersFee[msg.sender];
 
         for (uint256 i = 0; i < numTokens; i++) {
-            managersFeeTotal[i] -= managerFees[i];
+            // slither-disable-next-line reentrancy-no-eth
+            managersFeeTotal[i] -= fees[i];
             managersFee[msg.sender][i] = 0;
-            tokens[i].safeTransfer(msg.sender, managerFees[i]);
+            tokens[i].safeTransfer(msg.sender, fees[i]);
         }
 
+        // slither-disable-next-line reentrancy-no-eth
         if (msg.sender != manager) {
             delete managersFee[msg.sender];
         }
 
         // slither-disable-next-line reentrancy-events
-        emit DistributeManagerFees(msg.sender, managerFees);
+        emit DistributeManagerFees(msg.sender, fees);
     }
 
     /// MULTI ASSET VAULT INTERFACE ///
@@ -1096,6 +1103,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         for (uint256 i = 0; i < numTokens; i++) {
             newFees[i] = tokens[i].balanceOf(address(this)) - balances[i];
+            // slither-disable-next-line reentrancy-benign
             managersFee[manager][i] += newFees[i];
             managersFeeTotal[i] += newFees[i];
         }
@@ -1125,7 +1133,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// Update - don't affect the Pool's cash balance, but change the managed balance,
     ///          so it does alter the total. The external amount can be either
     ///          increased or decreased by this call (i.e., reporting a gain or a loss).
-    // slither-disable-next-line reentrancy-benign
     function updatePoolBalance(
         uint256[] memory amounts,
         IBVault.PoolBalanceOpKind kind
@@ -1174,12 +1181,15 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @param token Address of the token to deposit.
     /// @param amount Amount to deposit.
     /// @return Actual deposited amount excluding fee on transfer.
+    // slither-disable-next-line timestamp
     function depositToken(IERC20 token, uint256 amount)
         internal
         returns (uint256)
     {
+        // slither-disable-next-line calls-loop
         uint256 balance = token.balanceOf(address(this));
         token.safeTransferFrom(owner(), address(this), amount);
+        // slither-disable-next-line calls-loop
         balance = token.balanceOf(address(this)) - balance;
         token.safeApprove(address(bVault), balance);
 
