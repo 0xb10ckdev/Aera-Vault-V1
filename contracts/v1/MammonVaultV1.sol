@@ -1125,6 +1125,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// Update - don't affect the Pool's cash balance, but change the managed balance,
     ///          so it does alter the total. The external amount can be either
     ///          increased or decreased by this call (i.e., reporting a gain or a loss).
+    // slither-disable-next-line reentrancy-benign
     function updatePoolBalance(
         uint256[] memory amounts,
         IBVault.PoolBalanceOpKind kind
@@ -1172,6 +1173,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @dev Will only be called by deposit().
     /// @param token Address of the token to deposit.
     /// @param amount Amount to deposit.
+    /// @return Actual deposited amount excluding fee on transfer.
     function depositToken(IERC20 token, uint256 amount)
         internal
         returns (uint256)
