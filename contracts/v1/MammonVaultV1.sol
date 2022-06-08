@@ -1145,9 +1145,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         );
         IERC20[] memory tokens = getTokens();
 
+        bytes32 balancerPoolId = poolId;
         for (uint256 i = 0; i < numAmounts; i++) {
             ops[i].kind = kind;
-            ops[i].poolId = poolId;
+            ops[i].poolId = balancerPoolId;
             ops[i].token = tokens[i];
             ops[i].amount = amounts[i];
         }
