@@ -43,6 +43,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
   let factory: ManagedPoolFactory;
   let tokens: IERC20[];
   let sortedTokens: string[];
+  let unsortedTokens: string[];
   let snapshot: unknown;
 
   const getBalances = async () => {
@@ -68,7 +69,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     snapshot = await ethers.provider.send("evm_snapshot", []);
 
     ({ admin, manager, user } = await ethers.getNamedSigners());
-    ({ tokens, sortedTokens } = await setupTokens());
+    ({ tokens, sortedTokens, unsortedTokens } = await setupTokens());
 
     const validatorMock =
       await ethers.getContractFactory<WithdrawalValidatorMock__factory>(
@@ -202,6 +203,14 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         ).to.be.revertedWith("Mammon__AmountLengthIsNotSame");
       });
 
+      it("when token is not sorted", async () => {
+        await expect(
+          vault.initialDeposit(
+            amountArray(unsortedTokens, ONE, tokens.length),
+          ),
+        ).to.be.revertedWith("Mammon__TokenOrderIsNotSame");
+      });
+
       it("when amount exceeds allowance", async () => {
         const validAmounts = amountArray(sortedTokens, ONE, tokens.length);
 
@@ -266,6 +275,12 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           await expect(
             vault.deposit(amountArray(sortedTokens, ONE, tokens.length + 1)),
           ).to.be.revertedWith("Mammon__AmountLengthIsNotSame");
+        });
+
+        it("when token is not sorted", async () => {
+          await expect(
+            vault.deposit(amountArray(unsortedTokens, ONE, tokens.length)),
+          ).to.be.revertedWith("Mammon__TokenOrderIsNotSame");
         });
 
         it("when amount exceeds allowance", async () => {
@@ -382,6 +397,12 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             ).to.be.revertedWith("Mammon__AmountLengthIsNotSame");
           });
 
+          it("when token is not sorted", async () => {
+            await expect(
+              vault.withdraw(amountArray(unsortedTokens, ONE, tokens.length)),
+            ).to.be.revertedWith("Mammon__TokenOrderIsNotSame");
+          });
+
           it("when amount exceeds holdings", async () => {
             const { holdings } = await getState();
             await expect(
@@ -492,6 +513,23 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               1,
             ),
           ).to.be.revertedWith("Mammon__CallerIsNotManager");
+        });
+
+        it("when token is not sorted", async () => {
+          const timestamp = await getCurrentTime();
+          await expect(
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                weightArray(
+                  unsortedTokens,
+                  ONE.div(tokens.length),
+                  tokens.length,
+                ),
+                timestamp + 10,
+                timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 10,
+              ),
+          ).to.be.revertedWith("Mammon__TokenOrderIsNotSame");
         });
 
         it("when start time is greater than maximum", async () => {
@@ -861,6 +899,20 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                   ),
                 ),
             ).to.be.revertedWith("Ownable: caller is not the owner");
+          });
+
+          it("when token is not sorted", async () => {
+            await vault.disableTrading();
+
+            await expect(
+              vault.enableTradingWithWeights(
+                weightArray(
+                  unsortedTokens,
+                  ONE.div(tokens.length),
+                  tokens.length,
+                ),
+              ),
+            ).to.be.revertedWith("Mammon__TokenOrderIsNotSame");
           });
 
           it("when swap is already enabled", async () => {
