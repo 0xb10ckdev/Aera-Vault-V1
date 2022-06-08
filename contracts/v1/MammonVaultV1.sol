@@ -1081,6 +1081,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     ///      initiateFinalization(), deposit() and withdraw().
     // slither-disable-next-line timestamp
     function calculateAndDistributeManagerFees() internal {
+        if (managementFee == 0) {
+            return;
+        }
         if (block.timestamp <= lastFeeCheckpoint) {
             return;
         }
