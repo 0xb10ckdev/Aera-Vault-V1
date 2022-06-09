@@ -560,7 +560,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenNotFinalizing
     {
         lockManagerFees();
-        // slither-disable-next-line reentrancy-benign
         // slither-disable-next-line reentrancy-no-eth
         noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
         setSwapEnabled(false);
