@@ -208,7 +208,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           vault.initialDeposit(
             amountArray(unsortedTokens, ONE, tokens.length),
           ),
-        ).to.be.revertedWith("Mammon__TokenOrderIsNotSame");
+        ).to.be.revertedWith("Mammon__DifferentTokensInPosition");
       });
 
       it("when amount exceeds allowance", async () => {
@@ -280,7 +280,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         it("when token is not sorted", async () => {
           await expect(
             vault.deposit(amountArray(unsortedTokens, ONE, tokens.length)),
-          ).to.be.revertedWith("Mammon__TokenOrderIsNotSame");
+          ).to.be.revertedWith("Mammon__DifferentTokensInPosition");
         });
 
         it("when amount exceeds allowance", async () => {
@@ -400,7 +400,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           it("when token is not sorted", async () => {
             await expect(
               vault.withdraw(amountArray(unsortedTokens, ONE, tokens.length)),
-            ).to.be.revertedWith("Mammon__TokenOrderIsNotSame");
+            ).to.be.revertedWith("Mammon__DifferentTokensInPosition");
           });
 
           it("when amount exceeds holdings", async () => {
@@ -529,7 +529,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 timestamp + 10,
                 timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 10,
               ),
-          ).to.be.revertedWith("Mammon__TokenOrderIsNotSame");
+          ).to.be.revertedWith("Mammon__DifferentTokensInPosition");
         });
 
         it("when start time is greater than maximum", async () => {
@@ -912,7 +912,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                   tokens.length,
                 ),
               ),
-            ).to.be.revertedWith("Mammon__TokenOrderIsNotSame");
+            ).to.be.revertedWith("Mammon__DifferentTokensInPosition");
           });
 
           it("when swap is already enabled", async () => {

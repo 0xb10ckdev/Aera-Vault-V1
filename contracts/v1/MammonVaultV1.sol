@@ -219,7 +219,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     error Mammon__WeightLengthIsNotSame(uint256 numTokens, uint256 numWeights);
     error Mammon__AmountLengthIsNotSame(uint256 numTokens, uint256 numAmounts);
-    error Mammon__TokenOrderIsNotSame(
+    error Mammon__DifferentTokensInPosition(
         address actual,
         address sortedToken,
         uint256 index
@@ -462,7 +462,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256[] memory amounts = new uint256[](numTokens);
         for (uint256 i = 0; i < numTokens; i++) {
             if (address(tokenWithAmount[i].token) != address(tokens[i])) {
-                revert Mammon__TokenOrderIsNotSame(
+                revert Mammon__DifferentTokensInPosition(
                     address(tokenWithAmount[i].token),
                     address(tokens[i]),
                     i
@@ -651,7 +651,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         for (uint256 i = 0; i < numTokens; i++) {
             if (address(tokenWithWeight[i].token) != address(tokens[i])) {
-                revert Mammon__TokenOrderIsNotSame(
+                revert Mammon__DifferentTokensInPosition(
                     address(tokenWithWeight[i].token),
                     address(tokens[i]),
                     i
@@ -744,7 +744,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         for (uint256 i = 0; i < targetWeightLength; i++) {
             if (address(tokenWithWeight[i].token) != address(tokens[i])) {
-                revert Mammon__TokenOrderIsNotSame(
+                revert Mammon__DifferentTokensInPosition(
                     address(tokenWithWeight[i].token),
                     address(tokens[i]),
                     i
@@ -958,7 +958,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         for (uint256 i = 0; i < numTokens; i++) {
             if (address(tokenWithAmount[i].token) != address(tokens[i])) {
-                revert Mammon__TokenOrderIsNotSame(
+                revert Mammon__DifferentTokensInPosition(
                     address(tokenWithAmount[i].token),
                     address(tokens[i]),
                     i
@@ -1020,7 +1020,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         for (uint256 i = 0; i < numTokens; i++) {
             if (address(tokenWithAmount[i].token) != address(tokens[i])) {
-                revert Mammon__TokenOrderIsNotSame(
+                revert Mammon__DifferentTokensInPosition(
                     address(tokenWithAmount[i].token),
                     address(tokens[i]),
                     i
