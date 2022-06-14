@@ -13,5 +13,5 @@ interface IWithdrawalValidator {
     ///         can be withdrawn from the vault.
     /// @dev Token quantity value should be interpreted with the same
     ///      decimals as the token ERC20 balance.
-    function allowance() external view returns (uint256[] memory);
+    function allowance() external returns (uint256[] memory);
 }
