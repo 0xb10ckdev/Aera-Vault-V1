@@ -385,7 +385,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             },
             ...validAmounts.slice(1),
           ]),
-        ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
+        ).to.be.revertedWith("ERC20: insufficient allowance");
 
         await expect(
           vault.initialDeposit([
@@ -395,7 +395,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               amount: toWei(3),
             },
           ]),
-        ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
+        ).to.be.revertedWith("ERC20: insufficient allowance");
       });
 
       it("when amount is zero", async () => {
@@ -481,7 +481,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             vault.deposit(
               amountArray(sortedTokens, toWei(100), tokens.length),
             ),
-          ).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
+          ).to.be.revertedWith("ERC20: insufficient allowance");
         });
 
         it("when balance is changed in the same block", async () => {
