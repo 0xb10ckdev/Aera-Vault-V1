@@ -23,7 +23,7 @@ contract WithdrawalValidatorMock is ERC165, IWithdrawalValidator, Ownable {
         allowances = amounts;
     }
 
-    function allowance() external view override returns (uint256[] memory) {
+    function allowance() external override returns (uint256[] memory) {
         return allowances;
     }
 

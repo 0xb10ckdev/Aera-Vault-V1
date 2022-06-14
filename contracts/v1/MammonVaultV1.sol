@@ -1190,7 +1190,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         token.safeTransferFrom(owner(), address(this), amount);
         // slither-disable-next-line calls-loop
         balance = token.balanceOf(address(this)) - balance;
-        token.safeApprove(address(bVault), balance);
+
+        uint256 allowance = token.allowance(address(this), address(bVault));
+        if (allowance > 0) {
+            token.safeDecreaseAllowance(address(bVault), allowance);
+        }
+        token.safeIncreaseAllowance(address(bVault), balance);
 
         return balance;
     }
