@@ -2,16 +2,15 @@
 pragma solidity 0.8.11;
 
 import "./IBMerkleOrchard.sol";
-import "./IManagerAPI.sol";
 
 /// @title Interface for protocol that owns treasury.
 interface IProtocolAPI {
     // Use struct parameter to prevent human error.
     // token: Token address.
-    // amount: Amount of token.
-    struct TokenAmount {
+    // value: Amount of weight of token.
+    struct TokenValue {
         IERC20 token;
-        uint256 amount;
+        uint256 value;
     }
 
     /// @notice Initialize Vault with first deposit.
@@ -23,34 +22,34 @@ interface IProtocolAPI {
     ///      This is checked by Balancer in internal transactions:
     ///       If token amount is not zero when join pool.
     /// @param tokenWithAmount Deposit tokens with amount.
-    function initialDeposit(TokenAmount[] memory tokenWithAmount) external;
+    function initialDeposit(TokenValue[] memory tokenWithAmount) external;
 
     /// @notice Deposit tokens into vault.
     /// @dev It calls updateWeights() function
     ///      which cancels current active weights change schedule.
     /// @param tokenWithAmount Deposit tokens with amount.
-    function deposit(TokenAmount[] memory tokenWithAmount) external;
+    function deposit(TokenValue[] memory tokenWithAmount) external;
 
     /// @notice Deposit tokens into vault.
     /// @dev It calls updateWeights() function
     ///      which cancels current active weights change schedule.
     ///      It reverts if balances were updated in the current block.
     /// @param tokenWithAmount Deposit token with amount.
-    function depositIfBalanceUnchanged(TokenAmount[] memory tokenWithAmount)
+    function depositIfBalanceUnchanged(TokenValue[] memory tokenWithAmount)
         external;
 
     /// @notice Withdraw tokens up to requested amounts.
     /// @dev It calls updateWeights() function
     ///      which cancels current active weights change schedule.
     /// @param tokenWithAmount Requested tokens with amount.
-    function withdraw(TokenAmount[] memory tokenWithAmount) external;
+    function withdraw(TokenValue[] memory tokenWithAmount) external;
 
     /// @notice Withdraw tokens up to requested amounts.
     /// @dev It calls updateWeights() function
     ///      which cancels current active weights change schedule.
     ///      It reverts if balances were updated in the current block.
     /// @param tokenWithAmount Requested tokens with amount.
-    function withdrawIfBalanceUnchanged(TokenAmount[] memory tokenWithAmount)
+    function withdrawIfBalanceUnchanged(TokenValue[] memory tokenWithAmount)
         external;
 
     /// @notice Initiate vault destruction and return all funds to treasury owner.
@@ -74,9 +73,8 @@ interface IProtocolAPI {
     ///       If total sum of weights is one.
     ///       If weight is greater than minimum.
     /// @param tokenWithWeight Tokens with new weights.
-    function enableTradingWithWeights(
-        IManagerAPI.TokenWeight[] memory tokenWithWeight
-    ) external;
+    function enableTradingWithWeights(TokenValue[] memory tokenWithWeight)
+        external;
 
     /// @notice Disable swap.
     function disableTrading() external;

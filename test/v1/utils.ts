@@ -99,25 +99,14 @@ export const toWei = (value: number | string): BigNumber => {
   return ethers.utils.parseEther(value.toString());
 };
 
-export const amountArray = (
+export const tokenValueArray = (
   tokens: string[],
   value: number | string | BigNumber,
   length: number,
-): { token: string; amount: string }[] => {
+): { token: string; value: string }[] => {
   return Array.from({ length }, (_: any, i: number) => ({
     token: tokens[i] || ZERO_ADDRESS,
-    amount: value.toString(),
-  }));
-};
-
-export const weightArray = (
-  tokens: string[],
-  value: number | string | BigNumber,
-  length: number,
-): { token: string; weight: string }[] => {
-  return Array.from({ length }, (_: any, i: number) => ({
-    token: tokens[i] || ZERO_ADDRESS,
-    weight: value.toString(),
+    value: value.toString(),
   }));
 };
 

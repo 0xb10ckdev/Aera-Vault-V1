@@ -2,18 +2,11 @@
 pragma solidity 0.8.11;
 
 import "../dependencies/openzeppelin/IERC20.sol";
+import "./IProtocolAPI.sol";
 
 /// @title Interface for vault manager.
 /// @notice Supports parameter submission.
 interface IManagerAPI {
-    // Use struct parameter to prevent human error.
-    // token: Token address.
-    // weight: Weight of token.
-    struct TokenWeight {
-        IERC20 token;
-        uint256 weight;
-    }
-
     /// @notice Initiate weight move to target in given update window.
     /// @dev These are checked by Balancer in internal transactions:
     ///       If target weight length and token length match.
@@ -23,7 +16,7 @@ interface IManagerAPI {
     /// @param startTime Timestamp at which weight movement should start.
     /// @param endTime Timestamp at which the weights should reach target values.
     function updateWeightsGradually(
-        TokenWeight[] memory tokenWithWeight,
+        IProtocolAPI.TokenValue[] memory tokenWithWeight,
         uint256 startTime,
         uint256 endTime
     ) external;
