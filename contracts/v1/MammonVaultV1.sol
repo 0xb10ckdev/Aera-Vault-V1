@@ -228,11 +228,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
     error Mammon__NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
     error Mammon__ManagerIsZeroAddress();
+    error Mammon__ManagerIsOwner();
     error Mammon__CallerIsNotManager();
     error Mammon__SwapFeePercentageChangeIsAboveMax(
         uint256 actual,
         uint256 max
     );
+    error Mammon__DescriptionIsEmpty();
     error Mammon__CallerIsNotOwnerOrManager();
     error Mammon__WeightChangeEndBeforeStart();
     error Mammon__WeightChangeStartTimeIsAboveMax(uint256 actual, uint256 max);
@@ -306,6 +308,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     ///       If tokens are sorted in ascending order.
     ///       If swapFeePercentage is greater than minimum and less than maximum.
     ///       If total sum of weights is one.
+    /// @param vaultParams Struct vault parameter.
     constructor(NewVaultParams memory vaultParams) {
         uint256 numTokens = vaultParams.tokens.length;
 
@@ -344,9 +347,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 MAX_NOTICE_PERIOD
             );
         }
-        if (vaultParams.manager == address(0)) {
-            revert Mammon__ManagerIsZeroAddress();
+        if (bytes(vaultParams.description).length == 0) {
+            revert Mammon__DescriptionIsEmpty();
         }
+        isValidManager(vaultParams.manager);
 
         address[] memory assetManagers = new address[](numTokens);
         for (uint256 i = 0; i < numTokens; i++) {
@@ -579,9 +583,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         nonReentrant
         onlyOwner
     {
-        if (newManager == address(0)) {
-            revert Mammon__ManagerIsZeroAddress();
-        }
+        isValidManager(newManager);
 
         if (initialized && noticeTimeoutAt == 0) {
             calculateAndDistributeManagerFees();
@@ -1146,5 +1148,17 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         poolController.setSwapEnabled(swapEnabled);
         // slither-disable-next-line reentrancy-events
         emit SetSwapEnabled(swapEnabled);
+    }
+
+    /// @notice Check if the address can be a manager.
+    /// @dev Will only be called by constructor and setManager()
+    /// @param newManager Address to check.
+    function isValidManager(address newManager) internal {
+        if (newManager == address(0)) {
+            revert Mammon__ManagerIsZeroAddress();
+        }
+        if (newManager == owner()) {
+            revert Mammon__ManagerIsOwner();
+        }
     }
 }
