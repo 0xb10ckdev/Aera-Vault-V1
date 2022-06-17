@@ -157,6 +157,13 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
       );
     });
 
+    it("when token is duplicated", async () => {
+      validParams.tokens = [sortedTokens[0], ...sortedTokens.slice(0, -1)];
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        BALANCER_ERRORS.UNSORTED_ARRAY,
+      );
+    });
+
     it("when swap fee is greater than maximum", async () => {
       validParams.swapFeePercentage = MAX_SWAP_FEE.add(1);
       await expect(deployVault(validParams)).to.be.revertedWith(
