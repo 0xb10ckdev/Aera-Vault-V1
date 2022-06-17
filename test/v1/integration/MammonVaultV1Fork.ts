@@ -93,7 +93,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
         noticePeriod: MAX_NOTICE_PERIOD,
         managementFee: MAX_MANAGEMENT_FEE,
         merkleOrchard: config.merkleOrchard,
-        description: "",
+        description: "Test Vault",
       };
     });
 
@@ -189,6 +189,20 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
       validParams.manager = ZERO_ADDRESS;
       await expect(deployVault(validParams)).to.be.revertedWith(
         "Mammon__ManagerIsZeroAddress",
+      );
+    });
+
+    it("when manager is deployer", async () => {
+      validParams.manager = admin.address;
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Mammon__ManagerIsOwner",
+      );
+    });
+
+    it("when description is empty", async () => {
+      validParams.description = "";
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Mammon__DescriptionIsEmpty",
       );
     });
   });
@@ -1554,6 +1568,12 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         it("when parameter(new manager) is zero address", async () => {
           await expect(vault.setManager(ZERO_ADDRESS)).to.be.revertedWith(
             "Mammon__ManagerIsZeroAddress",
+          );
+        });
+
+        it("when parameter(new manager) is owner", async () => {
+          await expect(vault.setManager(admin.address)).to.be.revertedWith(
+            "Mammon__ManagerIsOwner",
           );
         });
       });

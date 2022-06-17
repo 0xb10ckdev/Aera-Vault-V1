@@ -724,6 +724,12 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             "Mammon__ManagerIsZeroAddress",
           );
         });
+
+        it("when parameter(new manager) is owner", async () => {
+          await expect(vault.setManager(admin.address)).to.be.revertedWith(
+            "Mammon__ManagerIsOwner",
+          );
+        });
       });
 
       it("should be possible to change manager", async () => {
