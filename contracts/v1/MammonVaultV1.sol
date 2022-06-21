@@ -357,7 +357,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         if (bytes(vaultParams.description).length == 0) {
             revert Mammon__DescriptionIsEmpty();
         }
-        isValidManager(vaultParams.manager);
+        checkManagerAddress(vaultParams.manager);
 
         address[] memory assetManagers = new address[](numTokens);
         for (uint256 i = 0; i < numTokens; i++) {
@@ -590,13 +590,15 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         nonReentrant
         onlyOwner
     {
-        isValidManager(newManager);
+        checkManagerAddress(newManager);
 
         if (initialized && noticeTimeoutAt == 0) {
             calculateAndDistributeManagerFees();
         }
 
         emit ManagerChanged(manager, newManager);
+
+        // slither-disable-next-line missing-zero-check
         manager = newManager;
     }
 
@@ -1170,7 +1172,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Check if the address can be a manager.
     /// @dev Will only be called by constructor and setManager()
     /// @param newManager Address to check.
-    function isValidManager(address newManager) internal {
+    function checkManagerAddress(address newManager) internal {
         if (newManager == address(0)) {
             revert Mammon__ManagerIsZeroAddress();
         }
