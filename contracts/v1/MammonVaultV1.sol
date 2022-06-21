@@ -40,6 +40,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Largest possible notice period for vault termination (2 months).
     uint256 private constant MAX_NOTICE_PERIOD = 60 days;
 
+    /// @notice Cooldown period for updating swap fee (1 minute).
+    uint256 private constant SWAP_FEE_COOLDOWN_PERIOD = 1 minutes;
+
     /// @notice Largest possible weight change ratio per one second.
     /// @dev It's the increment/decrement factor per one second.
     ///      increment/decrement factor per n seconds: Fn = f * n
@@ -104,6 +107,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Manager fee earned proportion
     uint256 public managerFeeIndex;
+
+    /// @notice Last timestamp where swap fee was updated.
+    uint256 public lastSwapFeeCheckpoint;
 
     /// EVENTS ///
 
@@ -256,6 +262,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__BalanceChangedInCurrentBlock();
     error Mammon__CannotSweepPoolToken();
     error Mammon__PoolSwapIsAlreadyEnabled();
+    error Mammon__CannotSetSwapFeeBeforeCooldown();
     error Mammon__FinalizationNotInitiated();
     error Mammon__VaultNotInitialized();
     error Mammon__VaultIsAlreadyInitialized();
@@ -751,6 +758,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IManagerAPI
     function setSwapFee(uint256 newSwapFee) external override onlyManager {
+        if (
+            block.timestamp < lastSwapFeeCheckpoint + SWAP_FEE_COOLDOWN_PERIOD
+        ) {
+            revert Mammon__CannotSetSwapFeeBeforeCooldown();
+        }
+        lastSwapFeeCheckpoint = block.timestamp;
+
         uint256 oldSwapFee = pool.getSwapFeePercentage();
 
         uint256 absoluteDelta = (newSwapFee > oldSwapFee)
