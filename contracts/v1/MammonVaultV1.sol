@@ -754,6 +754,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IManagerAPI
+    // slither-disable-next-line timestamp
     function setSwapFee(uint256 newSwapFee)
         external
         override
