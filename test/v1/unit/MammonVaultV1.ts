@@ -16,11 +16,13 @@ import {
 } from "../../../typechain";
 import {
   MAX_MANAGEMENT_FEE,
+  MAXIMUM_SWAP_FEE_PERCENT_CHANGE,
   MINIMUM_WEIGHT_CHANGE_DURATION,
   MIN_SWAP_FEE,
   MIN_WEIGHT,
   NOTICE_PERIOD,
   ONE,
+  SWAP_FEE_COOLDOWN_PERIOD,
   ZERO_ADDRESS,
 } from "../constants";
 import { deployToken, setupTokens } from "../fixtures";
@@ -832,52 +834,49 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     });
 
     describe("Set Swap Fee", () => {
-      it("should revert when called from non-manager", async () => {
-        await expect(vault.setSwapFee(toWei(3))).to.be.revertedWith(
-          "Mammon__CallerIsNotManager()",
-        );
+      describe("should be reverted", () => {
+        it("when called from non-manager", async () => {
+          await expect(vault.setSwapFee(toWei(3))).to.be.revertedWith(
+            "Mammon__CallerIsNotManager()",
+          );
+        });
+
+        it("when called before cooldown", async () => {
+          const newFee = MIN_SWAP_FEE.add(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
+          await vault.connect(manager).setSwapFee(newFee);
+          await expect(
+            vault.connect(manager).setSwapFee(newFee.add(1)),
+          ).to.be.revertedWith("Mammon__CannotSetSwapFeeBeforeCooldown");
+        });
+
+        it("when positive change exceeds max", async () => {
+          const invalidFee = MIN_SWAP_FEE.add(
+            MAXIMUM_SWAP_FEE_PERCENT_CHANGE,
+          ).add(1);
+          await expect(
+            vault.connect(manager).setSwapFee(invalidFee),
+          ).to.be.revertedWith("Mammon__SwapFeePercentageChangeIsAboveMax");
+        });
+
+        it("when negative change exceeds max", async () => {
+          const newFee = MIN_SWAP_FEE.add(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
+          await vault.connect(manager).setSwapFee(newFee);
+          await increaseTime(60);
+          const invalidFee = newFee
+            .sub(MAXIMUM_SWAP_FEE_PERCENT_CHANGE)
+            .sub(1);
+          await expect(
+            vault.connect(manager).setSwapFee(invalidFee),
+          ).to.be.revertedWith("Mammon__SwapFeePercentageChangeIsAboveMax");
+        });
       });
 
-      describe("when called by manager", () => {
-        const maxFeeDelta = toWei(0.005);
-
-        let managerVault: MammonVaultV1Mock;
-        beforeEach(async () => {
-          managerVault = vault.connect(manager);
-        });
-
-        it("should emit SetSwapFee event", async () => {
-          const newFee = MIN_SWAP_FEE.add(1);
-          await expect(managerVault.setSwapFee(newFee))
-            .to.emit(managerVault, "SetSwapFee")
-            .withArgs(newFee);
-        });
-
-        it("should update underlying pool fee", async () => {
-          const newFee = MIN_SWAP_FEE.add(1);
-          await managerVault.setSwapFee(newFee);
-          expect(await managerVault.getSwapFee()).to.equal(newFee);
-        });
-
-        it("should revert when positive change exceeds max", async () => {
-          const newFee = MIN_SWAP_FEE.add(maxFeeDelta);
-          await managerVault.setSwapFee(newFee);
-          const invalidFee = newFee.add(maxFeeDelta).add(1);
-          await expect(managerVault.setSwapFee(invalidFee)).to.be.revertedWith(
-            "Mammon__SwapFeePercentageChangeIsAboveMax",
-          );
-        });
-
-        it("should revert when negative change exceeds max", async () => {
-          const feeOne = MIN_SWAP_FEE.add(maxFeeDelta);
-          await managerVault.setSwapFee(feeOne);
-          const feeTwo = feeOne.add(maxFeeDelta);
-          await managerVault.setSwapFee(feeTwo);
-          const invalidFee = feeTwo.sub(maxFeeDelta).sub(1);
-          await expect(managerVault.setSwapFee(invalidFee)).to.be.revertedWith(
-            "Mammon__SwapFeePercentageChangeIsAboveMax",
-          );
-        });
+      it("should be possible to set swap fee", async () => {
+        const newFee = MIN_SWAP_FEE.add(1);
+        await expect(vault.connect(manager).setSwapFee(newFee))
+          .to.emit(vault.connect(manager), "SetSwapFee")
+          .withArgs(newFee);
+        expect(await vault.connect(manager).getSwapFee()).to.equal(newFee);
       });
     });
 
