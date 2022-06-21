@@ -14,6 +14,7 @@ import {
 import {
   BALANCER_ERRORS,
   DEVIATION,
+  MAXIMUM_SWAP_FEE_PERCENT_CHANGE,
   MAX_MANAGEMENT_FEE,
   MAX_NOTICE_PERIOD,
   MAX_SWAP_FEE,
@@ -1775,8 +1776,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     });
 
     describe("Set Swap Fee", () => {
-      const maxFeeDelta = toWei(0.005);
-
       describe("should be reverted to set swap fee", async () => {
         it("when called from non-manager", async () => {
           await expect(vault.setSwapFee(toWei(3))).to.be.revertedWith(
@@ -1788,7 +1787,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           let newFee = await vault.getSwapFee();
           while (newFee.lte(MAX_SWAP_FEE)) {
             await vault.connect(manager).setSwapFee(newFee);
-            newFee = newFee.add(maxFeeDelta);
+            newFee = newFee.add(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
           }
           await expect(
             vault.connect(manager).setSwapFee(MAX_SWAP_FEE.add(1)),
@@ -1799,7 +1798,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           let newFee = await vault.getSwapFee();
           while (newFee.gte(MIN_SWAP_FEE)) {
             await vault.connect(manager).setSwapFee(newFee);
-            newFee = newFee.sub(maxFeeDelta);
+            newFee = newFee.sub(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
           }
           await expect(
             vault.connect(manager).setSwapFee(MIN_SWAP_FEE.sub(1)),
@@ -1809,7 +1808,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
       it("should be possible to set swap fee", async () => {
         const fee = await vault.getSwapFee();
-        const newFee = fee.add(maxFeeDelta);
+        const newFee = fee.add(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
         expect(
           await vault.connect(manager).estimateGas.setSwapFee(newFee),
         ).to.below(58000);
