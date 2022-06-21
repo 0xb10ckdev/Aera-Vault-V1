@@ -15,6 +15,7 @@ import {
   BALANCER_ERRORS,
   DEVIATION,
   MAXIMUM_SWAP_FEE_PERCENT_CHANGE,
+  SWAP_FEE_COOLDOWN_PERIOD,
   MAX_MANAGEMENT_FEE,
   MAX_NOTICE_PERIOD,
   MAX_SWAP_FEE,
@@ -1787,6 +1788,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           let newFee = await vault.getSwapFee();
           while (newFee.lte(MAX_SWAP_FEE)) {
             await vault.connect(manager).setSwapFee(newFee);
+            await increaseTime(SWAP_FEE_COOLDOWN_PERIOD);
             newFee = newFee.add(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
           }
           await expect(
@@ -1798,6 +1800,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           let newFee = await vault.getSwapFee();
           while (newFee.gte(MIN_SWAP_FEE)) {
             await vault.connect(manager).setSwapFee(newFee);
+            await increaseTime(SWAP_FEE_COOLDOWN_PERIOD);
             newFee = newFee.sub(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
           }
           await expect(
@@ -1811,7 +1814,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         const newFee = fee.add(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
         expect(
           await vault.connect(manager).estimateGas.setSwapFee(newFee),
-        ).to.below(58000);
+        ).to.below(90000);
         await vault.connect(manager).setSwapFee(newFee);
 
         expect(await vault.getSwapFee()).to.equal(newFee);

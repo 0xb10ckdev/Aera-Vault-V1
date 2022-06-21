@@ -17,12 +17,12 @@ import {
 import {
   MAX_MANAGEMENT_FEE,
   MAXIMUM_SWAP_FEE_PERCENT_CHANGE,
+  SWAP_FEE_COOLDOWN_PERIOD,
   MINIMUM_WEIGHT_CHANGE_DURATION,
   MIN_SWAP_FEE,
   MIN_WEIGHT,
   NOTICE_PERIOD,
   ONE,
-  SWAP_FEE_COOLDOWN_PERIOD,
   ZERO_ADDRESS,
 } from "../constants";
 import { deployToken, setupTokens } from "../fixtures";
@@ -861,7 +861,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         it("when negative change exceeds max", async () => {
           const newFee = MIN_SWAP_FEE.add(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
           await vault.connect(manager).setSwapFee(newFee);
-          await increaseTime(60);
+          await increaseTime(SWAP_FEE_COOLDOWN_PERIOD);
           const invalidFee = newFee
             .sub(MAXIMUM_SWAP_FEE_PERCENT_CHANGE)
             .sub(1);
