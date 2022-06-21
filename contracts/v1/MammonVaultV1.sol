@@ -660,7 +660,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// MANAGER API ///
 
     /// @inheritdoc IManagerAPI
-    // prettier-ignore
     // slither-disable-next-line timestamp
     function updateWeightsGradually(
         uint256[] calldata targetWeights,
@@ -669,6 +668,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     )
         external
         override
+        nonReentrant
         onlyManager
         whenInitialized
         whenNotFinalizing
@@ -692,11 +692,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         if (startTime > endTime) {
             revert Mammon__WeightChangeEndBeforeStart();
         }
-        if (
-            startTime +
-                MINIMUM_WEIGHT_CHANGE_DURATION >
-            endTime
-        ) {
+        if (startTime + MINIMUM_WEIGHT_CHANGE_DURATION > endTime) {
             revert Mammon__WeightChangeDurationIsBelowMin(
                 endTime - startTime,
                 MINIMUM_WEIGHT_CHANGE_DURATION
@@ -738,6 +734,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     function cancelWeightUpdates()
         external
         override
+        nonReentrant
         onlyManager
         whenInitialized
         whenNotFinalizing
@@ -757,7 +754,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IManagerAPI
-    function setSwapFee(uint256 newSwapFee) external override onlyManager {
+    function setSwapFee(uint256 newSwapFee)
+        external
+        override
+        nonReentrant
+        onlyManager
+    {
         if (
             block.timestamp < lastSwapFeeCheckpoint + SWAP_FEE_COOLDOWN_PERIOD
         ) {
@@ -787,9 +789,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         external
         override
         nonReentrant
+        onlyManager
         whenInitialized
         whenNotFinalizing
-        onlyManager
     {
         calculateAndDistributeManagerFees();
     }
