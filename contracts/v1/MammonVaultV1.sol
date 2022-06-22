@@ -1171,12 +1171,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Check if the address can be a manager.
     /// @dev Will only be called by constructor and setManager()
-    /// @param newManager Address to check.
-    function checkManagerAddress(address newManager) internal {
-        if (newManager == address(0)) {
+    /// @param manager Address to check.
+    function checkManagerAddress(address manager) internal {
+        if (manager == address(0)) {
             revert Mammon__ManagerIsZeroAddress();
         }
-        if (newManager == owner()) {
+        if (manager == owner()) {
             revert Mammon__ManagerIsOwner();
         }
     }
