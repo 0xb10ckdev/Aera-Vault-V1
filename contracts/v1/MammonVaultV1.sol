@@ -1058,8 +1058,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @notice Withdraw tokens from Balancer Pool to Mammon Vault
-    /// @dev Will only be called by withdraw(), returnFunds()
-    ///      and claimManagerFees()
+    /// @dev Will only be called by withdrawTokens(), returnFunds()
+    ///      and lockManagerFees()
     function withdrawFromPool(uint256[] memory amounts) internal {
         uint256[] memory managed = new uint256[](amounts.length);
 
