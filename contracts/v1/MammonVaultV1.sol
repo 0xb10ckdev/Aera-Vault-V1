@@ -1066,7 +1066,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 : (ONE * targetWeight) / weight;
     }
 
-    /// @notice Return an array of vaules from given tokenWithValues.
+    /// @notice Return an array of values from given tokenWithValues.
     /// @dev Will only be called by enableTradingWithWeights(), updateWeightsGradually().
     ///      initialDeposit(), depositTokens() and withdrawTokens().
     ///      The values could be amounts or weights.
