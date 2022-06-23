@@ -234,7 +234,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
     error Mammon__NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
     error Mammon__ManagerIsZeroAddress();
-    error Mammon__ManagerIsOwner();
+    error Mammon__ManagerIsOwner(address newManager);
     error Mammon__CallerIsNotManager();
     error Mammon__SwapFeePercentageChangeIsAboveMax(
         uint256 actual,
@@ -1177,7 +1177,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             revert Mammon__ManagerIsZeroAddress();
         }
         if (manager == owner()) {
-            revert Mammon__ManagerIsOwner();
+            revert Mammon__ManagerIsOwner(manager);
         }
     }
 }
