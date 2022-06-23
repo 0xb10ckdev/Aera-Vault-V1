@@ -102,9 +102,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Last timestamp where manager fee index was locked.
     uint64 public lastFeeCheckpoint = type(uint64).max;
 
-    /// @notice Manager fee earned proportion
-    uint256 public managerFeeIndex;
-
     /// @notice Fee earned amount for each manager
     mapping(address => uint256[]) public managersFee;
 
@@ -1080,11 +1077,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             return;
         }
 
-        managerFeeIndex =
-            (block.timestamp - lastFeeCheckpoint) *
-            managementFee;
-        lastFeeCheckpoint = block.timestamp.toUint64();
-
         IERC20[] memory tokens;
         uint256[] memory holdings;
         (tokens, holdings, ) = getTokensData();
@@ -1095,8 +1087,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         for (uint256 i = 0; i < numTokens; i++) {
             balances[i] = tokens[i].balanceOf(address(this));
-            newFees[i] = (holdings[i] * managerFeeIndex) / ONE;
+            newFees[i] =
+                (holdings[i] *
+                    (block.timestamp - lastFeeCheckpoint) *
+                    managementFee) /
+                ONE;
         }
+
+        lastFeeCheckpoint = block.timestamp.toUint64();
 
         withdrawFromPool(newFees);
 
