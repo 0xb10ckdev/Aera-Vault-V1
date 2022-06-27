@@ -40,6 +40,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Largest possible notice period for vault termination (2 months).
     uint256 private constant MAX_NOTICE_PERIOD = 60 days;
 
+    /// @notice Cooldown period for updating swap fee (1 minute).
+    uint256 private constant SWAP_FEE_COOLDOWN_PERIOD = 1 minutes;
+
     /// @notice Largest possible weight change ratio per one second.
     /// @dev It's the increment/decrement factor per one second.
     ///      increment/decrement factor per n seconds: Fn = f * n
@@ -104,6 +107,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Manager fee earned proportion
     uint256 public managerFeeIndex;
+
+    /// @notice Last timestamp where swap fee was updated.
+    uint256 public lastSwapFeeCheckpoint;
 
     /// EVENTS ///
 
@@ -232,11 +238,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
     error Mammon__NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
     error Mammon__ManagerIsZeroAddress();
+    error Mammon__ManagerIsOwner(address newManager);
     error Mammon__CallerIsNotManager();
     error Mammon__SwapFeePercentageChangeIsAboveMax(
         uint256 actual,
         uint256 max
     );
+    error Mammon__DescriptionIsEmpty();
     error Mammon__CallerIsNotOwnerOrManager();
     error Mammon__WeightChangeEndBeforeStart();
     error Mammon__WeightChangeStartTimeIsAboveMax(uint256 actual, uint256 max);
@@ -258,6 +266,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__BalanceChangedInCurrentBlock();
     error Mammon__CannotSweepPoolToken();
     error Mammon__PoolSwapIsAlreadyEnabled();
+    error Mammon__CannotSetSwapFeeBeforeCooldown();
     error Mammon__FinalizationNotInitiated();
     error Mammon__VaultNotInitialized();
     error Mammon__VaultIsAlreadyInitialized();
@@ -310,6 +319,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     ///       If tokens are sorted in ascending order.
     ///       If swapFeePercentage is greater than minimum and less than maximum.
     ///       If total sum of weights is one.
+    /// @param vaultParams Struct vault parameter.
     constructor(NewVaultParams memory vaultParams) {
         uint256 numTokens = vaultParams.tokens.length;
 
@@ -348,9 +358,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 MAX_NOTICE_PERIOD
             );
         }
-        if (vaultParams.manager == address(0)) {
-            revert Mammon__ManagerIsZeroAddress();
+        if (bytes(vaultParams.description).length == 0) {
+            revert Mammon__DescriptionIsEmpty();
         }
+        checkManagerAddress(vaultParams.manager);
 
         address[] memory assetManagers = new address[](numTokens);
         for (uint256 i = 0; i < numTokens; i++) {
@@ -584,15 +595,15 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         nonReentrant
         onlyOwner
     {
-        if (newManager == address(0)) {
-            revert Mammon__ManagerIsZeroAddress();
-        }
+        checkManagerAddress(newManager);
 
         if (initialized && noticeTimeoutAt == 0) {
             calculateAndDistributeManagerFees();
         }
 
         emit ManagerChanged(manager, newManager);
+
+        // slither-disable-next-line missing-zero-check
         manager = newManager;
     }
 
@@ -663,7 +674,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// MANAGER API ///
 
     /// @inheritdoc IManagerAPI
-    // prettier-ignore
     // slither-disable-next-line timestamp
     function updateWeightsGradually(
         TokenValue[] calldata tokenWithWeight,
@@ -672,6 +682,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     )
         external
         override
+        nonReentrant
         onlyManager
         whenInitialized
         whenNotFinalizing
@@ -742,6 +753,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     function cancelWeightUpdates()
         external
         override
+        nonReentrant
         onlyManager
         whenInitialized
         whenNotFinalizing
@@ -761,7 +773,20 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IManagerAPI
-    function setSwapFee(uint256 newSwapFee) external override onlyManager {
+    // slither-disable-next-line timestamp
+    function setSwapFee(uint256 newSwapFee)
+        external
+        override
+        nonReentrant
+        onlyManager
+    {
+        if (
+            block.timestamp < lastSwapFeeCheckpoint + SWAP_FEE_COOLDOWN_PERIOD
+        ) {
+            revert Mammon__CannotSetSwapFeeBeforeCooldown();
+        }
+        lastSwapFeeCheckpoint = block.timestamp;
+
         uint256 oldSwapFee = pool.getSwapFeePercentage();
 
         uint256 absoluteDelta = (newSwapFee > oldSwapFee)
@@ -784,9 +809,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         external
         override
         nonReentrant
+        onlyManager
         whenInitialized
         whenNotFinalizing
-        onlyManager
     {
         calculateAndDistributeManagerFees();
     }
@@ -1198,5 +1223,17 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         poolController.setSwapEnabled(swapEnabled);
         // slither-disable-next-line reentrancy-events
         emit SetSwapEnabled(swapEnabled);
+    }
+
+    /// @notice Check if the address can be a manager.
+    /// @dev Will only be called by constructor and setManager()
+    /// @param newManager Address to check.
+    function checkManagerAddress(address newManager) internal {
+        if (newManager == address(0)) {
+            revert Mammon__ManagerIsZeroAddress();
+        }
+        if (newManager == owner()) {
+            revert Mammon__ManagerIsOwner(newManager);
+        }
     }
 }

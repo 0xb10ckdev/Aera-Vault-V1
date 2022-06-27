@@ -14,6 +14,8 @@ import {
 import {
   BALANCER_ERRORS,
   DEVIATION,
+  MAXIMUM_SWAP_FEE_PERCENT_CHANGE,
+  SWAP_FEE_COOLDOWN_PERIOD,
   MAX_MANAGEMENT_FEE,
   MAX_NOTICE_PERIOD,
   MAX_SWAP_FEE,
@@ -94,7 +96,7 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
         noticePeriod: MAX_NOTICE_PERIOD,
         managementFee: MAX_MANAGEMENT_FEE,
         merkleOrchard: config.merkleOrchard,
-        description: "",
+        description: "Test Vault",
       };
     });
 
@@ -158,6 +160,13 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
       );
     });
 
+    it("when token is duplicated", async () => {
+      validParams.tokens = [sortedTokens[0], ...sortedTokens.slice(0, -1)];
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        BALANCER_ERRORS.UNSORTED_ARRAY,
+      );
+    });
+
     it("when swap fee is greater than maximum", async () => {
       validParams.swapFeePercentage = MAX_SWAP_FEE.add(1);
       await expect(deployVault(validParams)).to.be.revertedWith(
@@ -183,6 +192,20 @@ describe("Mammon Vault V1 Mainnet Deployment", function () {
       validParams.manager = ZERO_ADDRESS;
       await expect(deployVault(validParams)).to.be.revertedWith(
         "Mammon__ManagerIsZeroAddress",
+      );
+    });
+
+    it("when manager is deployer", async () => {
+      validParams.manager = admin.address;
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Mammon__ManagerIsOwner",
+      );
+    });
+
+    it("when description is empty", async () => {
+      validParams.description = "";
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Mammon__DescriptionIsEmpty",
       );
     });
   });
@@ -1772,6 +1795,12 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             "Mammon__ManagerIsZeroAddress",
           );
         });
+
+        it("when parameter(new manager) is owner", async () => {
+          await expect(vault.setManager(admin.address)).to.be.revertedWith(
+            "Mammon__ManagerIsOwner",
+          );
+        });
       });
 
       describe("should be possible to change manager", async () => {
@@ -2010,8 +2039,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     });
 
     describe("Set Swap Fee", () => {
-      const maxFeeDelta = toWei(0.005);
-
       describe("should be reverted to set swap fee", async () => {
         it("when called from non-manager", async () => {
           await expect(vault.setSwapFee(toWei(3))).to.be.revertedWith(
@@ -2023,7 +2050,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           let newFee = await vault.getSwapFee();
           while (newFee.lte(MAX_SWAP_FEE)) {
             await vault.connect(manager).setSwapFee(newFee);
-            newFee = newFee.add(maxFeeDelta);
+            await increaseTime(SWAP_FEE_COOLDOWN_PERIOD);
+            newFee = newFee.add(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
           }
           await expect(
             vault.connect(manager).setSwapFee(MAX_SWAP_FEE.add(1)),
@@ -2034,7 +2062,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           let newFee = await vault.getSwapFee();
           while (newFee.gte(MIN_SWAP_FEE)) {
             await vault.connect(manager).setSwapFee(newFee);
-            newFee = newFee.sub(maxFeeDelta);
+            await increaseTime(SWAP_FEE_COOLDOWN_PERIOD);
+            newFee = newFee.sub(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
           }
           await expect(
             vault.connect(manager).setSwapFee(MIN_SWAP_FEE.sub(1)),
@@ -2044,10 +2073,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
       it("should be possible to set swap fee", async () => {
         const fee = await vault.getSwapFee();
-        const newFee = fee.add(maxFeeDelta);
+        const newFee = fee.add(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
         expect(
           await vault.connect(manager).estimateGas.setSwapFee(newFee),
-        ).to.below(58000);
+        ).to.below(90000);
         await vault.connect(manager).setSwapFee(newFee);
 
         expect(await vault.getSwapFee()).to.equal(newFee);
