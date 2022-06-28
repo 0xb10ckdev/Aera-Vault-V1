@@ -16,6 +16,8 @@ import {
 } from "../../../typechain";
 import {
   MAX_MANAGEMENT_FEE,
+  MAXIMUM_SWAP_FEE_PERCENT_CHANGE,
+  SWAP_FEE_COOLDOWN_PERIOD,
   MINIMUM_WEIGHT_CHANGE_DURATION,
   MIN_SWAP_FEE,
   MIN_WEIGHT,
@@ -29,6 +31,7 @@ import {
   getTimestamp,
   increaseTime,
   toWei,
+  tokenValueArray,
   valueArray,
 } from "../utils";
 
@@ -41,6 +44,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
   let factory: ManagedPoolFactory;
   let tokens: IERC20[];
   let sortedTokens: string[];
+  let unsortedTokens: string[];
   let snapshot: unknown;
 
   const getBalances = async () => {
@@ -66,7 +70,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     snapshot = await ethers.provider.send("evm_snapshot", []);
 
     ({ admin, manager, user } = await ethers.getNamedSigners());
-    ({ tokens, sortedTokens } = await setupTokens());
+    ({ tokens, sortedTokens, unsortedTokens } = await setupTokens());
 
     const validatorMock =
       await ethers.getContractFactory<WithdrawalValidatorMock__factory>(
@@ -133,25 +137,29 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     describe("should be reverted to call functions", async () => {
       it("when call deposit", async () => {
         await expect(
-          vault.deposit(valueArray(ONE, tokens.length)),
+          vault.deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
         ).to.be.revertedWith("Mammon__VaultNotInitialized");
       });
 
       it("when call depositIfBalanceUnchanged", async () => {
         await expect(
-          vault.depositIfBalanceUnchanged(valueArray(ONE, tokens.length)),
+          vault.depositIfBalanceUnchanged(
+            tokenValueArray(sortedTokens, ONE, tokens.length),
+          ),
         ).to.be.revertedWith("Mammon__VaultNotInitialized");
       });
 
       it("when call withdraw", async () => {
         await expect(
-          vault.withdraw(valueArray(ONE, tokens.length)),
+          vault.withdraw(tokenValueArray(sortedTokens, ONE, tokens.length)),
         ).to.be.revertedWith("Mammon__VaultNotInitialized");
       });
 
       it("when call withdrawIfBalanceUnchanged", async () => {
         await expect(
-          vault.withdrawIfBalanceUnchanged(valueArray(ONE, tokens.length)),
+          vault.withdrawIfBalanceUnchanged(
+            tokenValueArray(sortedTokens, ONE, tokens.length),
+          ),
         ).to.be.revertedWith("Mammon__VaultNotInitialized");
       });
 
@@ -161,7 +169,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           vault
             .connect(manager)
             .updateWeightsGradually(
-              [MIN_WEIGHT, MIN_WEIGHT],
+              tokenValueArray(
+                sortedTokens,
+                ONE.div(tokens.length),
+                tokens.length,
+              ),
               blocknumber + 1,
               blocknumber + 1000,
             ),
@@ -196,25 +208,49 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     describe("should be reverted to initialize the vault", async () => {
       it("when token and amount length is not same", async () => {
         await expect(
-          vault.initialDeposit(valueArray(ONE, tokens.length + 1)),
-        ).to.be.revertedWith("Mammon__AmountLengthIsNotSame");
+          vault.initialDeposit(
+            tokenValueArray(sortedTokens, ONE, tokens.length + 1),
+          ),
+        ).to.be.revertedWith("Mammon__ValueLengthIsNotSame");
+      });
+
+      it("when token is not sorted", async () => {
+        await expect(
+          vault.initialDeposit(
+            tokenValueArray(unsortedTokens, ONE, tokens.length),
+          ),
+        ).to.be.revertedWith("Mammon__DifferentTokensInPosition");
       });
 
       it("when amount exceeds allowance", async () => {
-        const validAmounts = valueArray(ONE, tokens.length - 1);
+        const validAmounts = tokenValueArray(sortedTokens, ONE, tokens.length);
 
         await expect(
-          vault.initialDeposit([toWei(3), ...validAmounts]),
+          vault.initialDeposit([
+            {
+              token: sortedTokens[0],
+              value: toWei(3),
+            },
+            ...validAmounts.slice(1),
+          ]),
         ).to.be.revertedWith("ERC20: insufficient allowance");
 
         await expect(
-          vault.initialDeposit([...validAmounts, toWei(3)]),
+          vault.initialDeposit([
+            ...validAmounts.slice(0, -1),
+            {
+              token: sortedTokens[tokens.length - 1],
+              value: toWei(3),
+            },
+          ]),
         ).to.be.revertedWith("ERC20: insufficient allowance");
       });
     });
 
     it("should be possible to initialize the vault", async () => {
-      await vault.initialDeposit(valueArray(ONE, tokens.length));
+      await vault.initialDeposit(
+        tokenValueArray(sortedTokens, ONE, tokens.length),
+      );
 
       expect(await vault.initialized()).to.equal(true);
     });
@@ -225,12 +261,16 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       for (let i = 0; i < tokens.length; i++) {
         await tokens[i].approve(vault.address, toWei(100));
       }
-      await vault.initialDeposit(valueArray(ONE, tokens.length));
+      await vault.initialDeposit(
+        tokenValueArray(sortedTokens, ONE, tokens.length),
+      );
     });
 
     it("should be reverted to initialize the vault again", async () => {
       await expect(
-        vault.initialDeposit(valueArray(ONE, tokens.length)),
+        vault.initialDeposit(
+          tokenValueArray(sortedTokens, ONE, tokens.length),
+        ),
       ).to.be.revertedWith("Mammon__VaultIsAlreadyInitialized");
     });
 
@@ -238,19 +278,31 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       describe("should be reverted to deposit tokens", async () => {
         it("when called from non-owner", async () => {
           await expect(
-            vault.connect(user).deposit(valueArray(ONE, tokens.length)),
+            vault
+              .connect(user)
+              .deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
           ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
         it("when token and amount length is not same", async () => {
           await expect(
-            vault.deposit(valueArray(ONE, tokens.length + 1)),
-          ).to.be.revertedWith("Mammon__AmountLengthIsNotSame");
+            vault.deposit(
+              tokenValueArray(sortedTokens, ONE, tokens.length + 1),
+            ),
+          ).to.be.revertedWith("Mammon__ValueLengthIsNotSame");
+        });
+
+        it("when token is not sorted", async () => {
+          await expect(
+            vault.deposit(tokenValueArray(unsortedTokens, ONE, tokens.length)),
+          ).to.be.revertedWith("Mammon__DifferentTokensInPosition");
         });
 
         it("when amount exceeds allowance", async () => {
           await expect(
-            vault.deposit(valueArray(toWei(100), tokens.length)),
+            vault.deposit(
+              tokenValueArray(sortedTokens, toWei(100), tokens.length),
+            ),
           ).to.be.revertedWith("ERC20: insufficient allowance");
         });
       });
@@ -261,7 +313,12 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             const amounts = new Array(tokens.length).fill(0);
             amounts[i] = toWei(5);
 
-            const trx = await vault.deposit(amounts);
+            const trx = await vault.deposit(
+              amounts.map((amount: BigNumber, index: number) => ({
+                token: sortedTokens[index],
+                value: amount,
+              })),
+            );
             const weights = await vault.getNormalizedWeights();
 
             await expect(trx)
@@ -279,7 +336,12 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             await tokens[i].approve(vault.address, amounts[i]);
           }
 
-          const trx = await vault.deposit(amounts);
+          const trx = await vault.deposit(
+            amounts.map((amount: BigNumber, index: number) => ({
+              token: sortedTokens[index],
+              value: amount,
+            })),
+          );
           const weights = await vault.getNormalizedWeights();
 
           await expect(trx)
@@ -296,7 +358,12 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             await tokens[i].approve(vault.address, amounts[i]);
           }
 
-          const trx = await vault.depositIfBalanceUnchanged(amounts);
+          const trx = await vault.depositIfBalanceUnchanged(
+            amounts.map((amount: BigNumber, index: number) => ({
+              token: sortedTokens[index],
+              value: amount,
+            })),
+          );
           const weights = await vault.getNormalizedWeights();
 
           await expect(trx)
@@ -310,7 +377,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       describe("when allowance on validator is invalid", () => {
         it("should revert to withdraw tokens", async () => {
           await expect(
-            vault.withdraw(valueArray(toWei(5), tokens.length)),
+            vault.withdraw(
+              tokenValueArray(sortedTokens, toWei(5), tokens.length),
+            ),
           ).to.be.revertedWith("Mammon__AmountExceedAvailable");
         });
       });
@@ -325,22 +394,41 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         describe("should be reverted to withdraw tokens", async () => {
           it("when called from non-owner", async () => {
             await expect(
-              vault.connect(user).withdraw(valueArray(ONE, tokens.length)),
+              vault
+                .connect(user)
+                .withdraw(tokenValueArray(sortedTokens, ONE, tokens.length)),
             ).to.be.revertedWith("Ownable: caller is not the owner");
           });
 
           it("when token and amount length is not same", async () => {
             await expect(
-              vault.withdraw(valueArray(ONE, tokens.length + 1)),
-            ).to.be.revertedWith("Mammon__AmountLengthIsNotSame");
+              vault.withdraw(
+                tokenValueArray(sortedTokens, ONE, tokens.length + 1),
+              ),
+            ).to.be.revertedWith("Mammon__ValueLengthIsNotSame");
+          });
+
+          it("when token is not sorted", async () => {
+            await expect(
+              vault.withdraw(
+                tokenValueArray(unsortedTokens, ONE, tokens.length),
+              ),
+            ).to.be.revertedWith("Mammon__DifferentTokensInPosition");
           });
 
           it("when amount exceeds holdings", async () => {
             const { holdings } = await getState();
             await expect(
               vault.withdraw([
-                holdings[0].add(1),
-                ...valueArray(ONE, tokens.length - 1),
+                {
+                  token: sortedTokens[0],
+                  value: holdings[0].add(1),
+                },
+                ...tokenValueArray(
+                  sortedTokens.slice(1),
+                  ONE,
+                  tokens.length - 1,
+                ),
               ]),
             ).to.be.revertedWith("Mammon__AmountExceedAvailable");
           });
@@ -348,13 +436,21 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
         describe("should be possible to withdraw ", async () => {
           it("when withdrawing one token", async () => {
-            await vault.deposit(valueArray(toWei(5), tokens.length));
+            await vault.deposit(
+              tokenValueArray(sortedTokens, toWei(5), tokens.length),
+            );
 
             for (let i = 0; i < tokens.length; i++) {
               const amounts = new Array(tokens.length).fill(0);
               amounts[i] = toWei(5);
 
-              const trx = await vault.withdraw(amounts);
+              const trx = await vault.withdraw(
+                amounts.map((amount: BigNumber, index: number) => ({
+                  token: sortedTokens[index],
+                  value: amount,
+                })),
+              );
+
               const weights = await vault.getNormalizedWeights();
               await expect(trx)
                 .to.emit(vault, "Withdraw")
@@ -371,13 +467,21 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             for (let i = 0; i < tokens.length; i++) {
               await tokens[i].approve(vault.address, toWei(100000));
             }
-            await vault.deposit(valueArray(toWei(10000), tokens.length));
+            await vault.deposit(
+              tokenValueArray(sortedTokens, toWei(10000), tokens.length),
+            );
 
             const amounts = tokens.map(_ =>
               toWei(Math.floor(Math.random() * 100)),
             );
 
-            const trx = await vault.withdraw(amounts);
+            const trx = await vault.withdraw(
+              amounts.map((amount: BigNumber, index: number) => ({
+                token: sortedTokens[index],
+                value: amount,
+              })),
+            );
+
             const weights = await vault.getNormalizedWeights();
             await expect(trx)
               .to.emit(vault, "Withdraw")
@@ -393,13 +497,20 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             for (let i = 0; i < tokens.length; i++) {
               await tokens[i].approve(vault.address, toWei(100000));
             }
-            await vault.deposit(valueArray(toWei(10000), tokens.length));
+            await vault.deposit(
+              tokenValueArray(sortedTokens, toWei(10000), tokens.length),
+            );
 
             const amounts = tokens.map(_ =>
               toWei(Math.floor(Math.random() * 100)),
             );
 
-            const trx = await vault.withdrawIfBalanceUnchanged(amounts);
+            const trx = await vault.withdrawIfBalanceUnchanged(
+              amounts.map((amount: BigNumber, index: number) => ({
+                token: sortedTokens[index],
+                value: amount,
+              })),
+            );
             const weights = await vault.getNormalizedWeights();
             await expect(trx)
               .to.emit(vault, "Withdraw")
@@ -419,11 +530,32 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         it("when called from non-manager", async () => {
           await expect(
             vault.updateWeightsGradually(
-              valueArray(ONE.div(tokens.length), tokens.length),
+              tokenValueArray(
+                sortedTokens,
+                ONE.div(tokens.length),
+                tokens.length,
+              ),
               0,
               1,
             ),
           ).to.be.revertedWith("Mammon__CallerIsNotManager");
+        });
+
+        it("when token is not sorted", async () => {
+          const timestamp = await getCurrentTime();
+          await expect(
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                tokenValueArray(
+                  unsortedTokens,
+                  ONE.div(tokens.length),
+                  tokens.length,
+                ),
+                timestamp + 10,
+                timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 10,
+              ),
+          ).to.be.revertedWith("Mammon__DifferentTokensInPosition");
         });
 
         it("when start time is greater than maximum", async () => {
@@ -432,7 +564,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                valueArray(ONE.div(tokens.length), tokens.length),
+                tokenValueArray(
+                  sortedTokens,
+                  ONE.div(tokens.length),
+                  tokens.length,
+                ),
                 2 ** 32,
                 timestamp,
               ),
@@ -445,7 +581,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                valueArray(ONE.div(tokens.length), tokens.length),
+                tokenValueArray(
+                  sortedTokens,
+                  ONE.div(tokens.length),
+                  tokens.length,
+                ),
                 timestamp,
                 2 ** 32,
               ),
@@ -458,7 +598,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                valueArray(ONE.div(tokens.length), tokens.length),
+                tokenValueArray(
+                  sortedTokens,
+                  ONE.div(tokens.length),
+                  tokens.length,
+                ),
                 timestamp - 2,
                 timestamp - 1,
               ),
@@ -471,7 +615,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                valueArray(ONE.div(tokens.length), tokens.length),
+                tokenValueArray(
+                  sortedTokens,
+                  ONE.div(tokens.length),
+                  tokens.length,
+                ),
                 timestamp,
                 timestamp + 1,
               ),
@@ -484,7 +632,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                valueArray(ONE.div(tokens.length), tokens.length),
+                tokenValueArray(
+                  sortedTokens,
+                  ONE.div(tokens.length),
+                  tokens.length,
+                ),
                 timestamp - 2,
                 timestamp + MINIMUM_WEIGHT_CHANGE_DURATION - 1,
               ),
@@ -508,9 +660,14 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         }
 
         await expect(
-          vault
-            .connect(manager)
-            .updateWeightsGradually(endWeights, startTime, endTime),
+          vault.connect(manager).updateWeightsGradually(
+            endWeights.map((weight: BigNumber, index: number) => ({
+              token: sortedTokens[index],
+              value: weight,
+            })),
+            startTime,
+            endTime,
+          ),
         )
           .to.emit(vault, "UpdateWeightsGradually")
           .withArgs(startTime, endTime, endWeights);
@@ -582,13 +739,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
         it("when call deposit", async () => {
           await expect(
-            vault.deposit(valueArray(ONE, tokens.length)),
+            vault.deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
           ).to.be.revertedWith("Mammon__VaultIsFinalizing");
         });
 
         it("when call withdraw", async () => {
           await expect(
-            vault.withdraw(valueArray(ONE, tokens.length)),
+            vault.withdraw(tokenValueArray(sortedTokens, ONE, tokens.length)),
           ).to.be.revertedWith("Mammon__VaultIsFinalizing");
         });
 
@@ -598,7 +755,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                valueArray(MIN_WEIGHT, tokens.length),
+                tokenValueArray(sortedTokens, MIN_WEIGHT, tokens.length),
                 blocknumber + 1,
                 blocknumber + 1000,
               ),
@@ -657,7 +814,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       for (let i = 0; i < tokens.length; i++) {
         await tokens[i].approve(vault.address, ONE);
       }
-      await vault.initialDeposit(valueArray(ONE, tokens.length));
+      await vault.initialDeposit(
+        tokenValueArray(sortedTokens, ONE, tokens.length),
+      );
     });
 
     it("should return zero for invalid token", async () => {
@@ -712,14 +871,18 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       for (let i = 0; i < tokens.length; i++) {
         await tokens[i].approve(vault.address, ONE);
       }
-      await vault.initialDeposit(valueArray(ONE, tokens.length));
+      await vault.initialDeposit(
+        tokenValueArray(sortedTokens, ONE, tokens.length),
+      );
     });
 
     it("should be reverted to claim manager fees when no available fee", async () => {
       for (let i = 0; i < tokens.length; i++) {
         await tokens[i].approve(vault.address, toWei(100000));
       }
-      await vault.deposit(valueArray(toWei(10000), tokens.length));
+      await vault.deposit(
+        tokenValueArray(sortedTokens, toWei(10000), tokens.length),
+      );
 
       await expect(vault.claimManagerFees()).to.be.revertedWith(
         "Mammon__NoAvailableFeeForCaller",
@@ -735,7 +898,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         let lastFeeCheckpoint = (await vault.lastFeeCheckpoint()).toNumber();
         let holdings = await vault.getHoldings();
         const depositTrx = await vault.deposit(
-          valueArray(toWei(10000), tokens.length),
+          tokenValueArray(sortedTokens, toWei(10000), tokens.length),
         );
 
         let currentTime = await getTimestamp(depositTrx.blockNumber);
@@ -773,7 +936,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         let lastFeeCheckpoint = (await vault.lastFeeCheckpoint()).toNumber();
         let holdings = await vault.getHoldings();
         const depositTrx = await vault.deposit(
-          valueArray(toWei(10000), tokens.length),
+          tokenValueArray(sortedTokens, toWei(10000), tokens.length),
         );
 
         let currentTime = await getTimestamp(depositTrx.blockNumber);
@@ -821,6 +984,12 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             "Mammon__ManagerIsZeroAddress",
           );
         });
+
+        it("when parameter(new manager) is owner", async () => {
+          await expect(vault.setManager(admin.address)).to.be.revertedWith(
+            "Mammon__ManagerIsOwner",
+          );
+        });
       });
 
       it("should be possible to change manager", async () => {
@@ -837,7 +1006,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         for (let i = 0; i < tokens.length; i++) {
           await tokens[i].approve(vault.address, ONE);
         }
-        await vault.initialDeposit(valueArray(ONE, tokens.length));
+        await vault.initialDeposit(
+          tokenValueArray(sortedTokens, ONE, tokens.length),
+        );
       });
 
       describe("with enableTradingRiskingArbitrage function", () => {
@@ -863,15 +1034,37 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               vault
                 .connect(manager)
                 .enableTradingWithWeights(
-                  valueArray(ONE.div(tokens.length), tokens.length),
+                  tokenValueArray(
+                    sortedTokens,
+                    ONE.div(tokens.length),
+                    tokens.length,
+                  ),
                 ),
             ).to.be.revertedWith("Ownable: caller is not the owner");
+          });
+
+          it("when token is not sorted", async () => {
+            await vault.disableTrading();
+
+            await expect(
+              vault.enableTradingWithWeights(
+                tokenValueArray(
+                  unsortedTokens,
+                  ONE.div(tokens.length),
+                  tokens.length,
+                ),
+              ),
+            ).to.be.revertedWith("Mammon__DifferentTokensInPosition");
           });
 
           it("when swap is already enabled", async () => {
             await expect(
               vault.enableTradingWithWeights(
-                valueArray(ONE.div(tokens.length), tokens.length),
+                tokenValueArray(
+                  sortedTokens,
+                  ONE.div(tokens.length),
+                  tokens.length,
+                ),
               ),
             ).to.be.revertedWith("Mammon__PoolSwapIsAlreadyEnabled");
           });
@@ -881,7 +1074,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           await vault.disableTrading();
 
           const trx = await vault.enableTradingWithWeights(
-            valueArray(ONE.div(tokens.length), tokens.length),
+            tokenValueArray(
+              sortedTokens,
+              ONE.div(tokens.length),
+              tokens.length,
+            ),
           );
           const currentTime = await getTimestamp(trx.blockNumber);
 
@@ -902,7 +1099,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         for (let i = 0; i < tokens.length; i++) {
           await tokens[i].approve(vault.address, ONE);
         }
-        await vault.initialDeposit(valueArray(ONE, tokens.length));
+        await vault.initialDeposit(
+          tokenValueArray(sortedTokens, ONE, tokens.length),
+        );
       });
 
       it("should be reverted to disable trading", async () => {
@@ -923,52 +1122,49 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     });
 
     describe("Set Swap Fee", () => {
-      it("should revert when called from non-manager", async () => {
-        await expect(vault.setSwapFee(toWei(3))).to.be.revertedWith(
-          "Mammon__CallerIsNotManager()",
-        );
+      describe("should be reverted", () => {
+        it("when called from non-manager", async () => {
+          await expect(vault.setSwapFee(toWei(3))).to.be.revertedWith(
+            "Mammon__CallerIsNotManager()",
+          );
+        });
+
+        it("when called before cooldown", async () => {
+          const newFee = MIN_SWAP_FEE.add(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
+          await vault.connect(manager).setSwapFee(newFee);
+          await expect(
+            vault.connect(manager).setSwapFee(newFee.add(1)),
+          ).to.be.revertedWith("Mammon__CannotSetSwapFeeBeforeCooldown");
+        });
+
+        it("when positive change exceeds max", async () => {
+          const invalidFee = MIN_SWAP_FEE.add(
+            MAXIMUM_SWAP_FEE_PERCENT_CHANGE,
+          ).add(1);
+          await expect(
+            vault.connect(manager).setSwapFee(invalidFee),
+          ).to.be.revertedWith("Mammon__SwapFeePercentageChangeIsAboveMax");
+        });
+
+        it("when negative change exceeds max", async () => {
+          const newFee = MIN_SWAP_FEE.add(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
+          await vault.connect(manager).setSwapFee(newFee);
+          await increaseTime(SWAP_FEE_COOLDOWN_PERIOD);
+          const invalidFee = newFee
+            .sub(MAXIMUM_SWAP_FEE_PERCENT_CHANGE)
+            .sub(1);
+          await expect(
+            vault.connect(manager).setSwapFee(invalidFee),
+          ).to.be.revertedWith("Mammon__SwapFeePercentageChangeIsAboveMax");
+        });
       });
 
-      describe("when called by manager", () => {
-        const maxFeeDelta = toWei(0.005);
-
-        let managerVault: MammonVaultV1Mock;
-        beforeEach(async () => {
-          managerVault = vault.connect(manager);
-        });
-
-        it("should emit SetSwapFee event", async () => {
-          const newFee = MIN_SWAP_FEE.add(1);
-          await expect(managerVault.setSwapFee(newFee))
-            .to.emit(managerVault, "SetSwapFee")
-            .withArgs(newFee);
-        });
-
-        it("should update underlying pool fee", async () => {
-          const newFee = MIN_SWAP_FEE.add(1);
-          await managerVault.setSwapFee(newFee);
-          expect(await managerVault.getSwapFee()).to.equal(newFee);
-        });
-
-        it("should revert when positive change exceeds max", async () => {
-          const newFee = MIN_SWAP_FEE.add(maxFeeDelta);
-          await managerVault.setSwapFee(newFee);
-          const invalidFee = newFee.add(maxFeeDelta).add(1);
-          await expect(managerVault.setSwapFee(invalidFee)).to.be.revertedWith(
-            "Mammon__SwapFeePercentageChangeIsAboveMax",
-          );
-        });
-
-        it("should revert when negative change exceeds max", async () => {
-          const feeOne = MIN_SWAP_FEE.add(maxFeeDelta);
-          await managerVault.setSwapFee(feeOne);
-          const feeTwo = feeOne.add(maxFeeDelta);
-          await managerVault.setSwapFee(feeTwo);
-          const invalidFee = feeTwo.sub(maxFeeDelta).sub(1);
-          await expect(managerVault.setSwapFee(invalidFee)).to.be.revertedWith(
-            "Mammon__SwapFeePercentageChangeIsAboveMax",
-          );
-        });
+      it("should be possible to set swap fee", async () => {
+        const newFee = MIN_SWAP_FEE.add(1);
+        await expect(vault.connect(manager).setSwapFee(newFee))
+          .to.emit(vault.connect(manager), "SetSwapFee")
+          .withArgs(newFee);
+        expect(await vault.connect(manager).getSwapFee()).to.equal(newFee);
       });
     });
 

@@ -99,6 +99,17 @@ export const toWei = (value: number | string): BigNumber => {
   return ethers.utils.parseEther(value.toString());
 };
 
+export const tokenValueArray = (
+  tokens: string[],
+  value: number | string | BigNumber,
+  length: number,
+): { token: string; value: string }[] => {
+  return Array.from({ length }, (_: any, i: number) => ({
+    token: tokens[i] || ZERO_ADDRESS,
+    value: value.toString(),
+  }));
+};
+
 export const valueArray = (
   value: number | string | BigNumber,
   length: number,
