@@ -1001,23 +1001,20 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         updatePoolBalance(newBalances, IBVault.PoolBalanceOpKind.DEPOSIT);
 
         uint256[] memory newHoldings = getHoldings();
-        uint256[] memory newWeights = new uint256[](numTokens);
         uint256 weightSum;
 
         for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] != 0) {
-                newWeights[i] = (weights[i] * newHoldings[i]) / holdings[i];
+                weights[i] = (weights[i] * newHoldings[i]) / holdings[i];
                 newBalances[i] = newHoldings[i] - holdings[i];
-            } else {
-                newWeights[i] = weights[i];
             }
 
-            weightSum += newWeights[i];
+            weightSum += weights[i];
         }
 
         /// It cancels current active weights change schedule
         /// and update weights with newWeights
-        updateWeights(newWeights, weightSum);
+        updateWeights(weights, weightSum);
 
         // slither-disable-next-line reentrancy-events
         emit Deposit(amounts, newBalances, pool.getNormalizedWeights());
@@ -1039,7 +1036,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256[] memory allowances = validator.allowance();
         uint256[] memory weights = pool.getNormalizedWeights();
         uint256[] memory balances = new uint256[](numTokens);
-        uint256[] memory newWeights = new uint256[](numTokens);
         uint256[] memory amounts = getValuesFromTokenWithValues(
             tokenWithAmount,
             tokens
@@ -1069,17 +1065,15 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 tokens[i].safeTransfer(owner(), balances[i]);
 
                 uint256 newBalance = holdings[i] - amounts[i];
-                newWeights[i] = (weights[i] * newBalance) / holdings[i];
-            } else {
-                newWeights[i] = weights[i];
+                weights[i] = (weights[i] * newBalance) / holdings[i];
             }
 
-            weightSum += newWeights[i];
+            weightSum += weights[i];
         }
 
         /// It cancels current active weights change schedule
         /// and update weights with newWeights
-        updateWeights(newWeights, weightSum);
+        updateWeights(weights, weightSum);
 
         // slither-disable-next-line reentrancy-events
         emit Withdraw(
