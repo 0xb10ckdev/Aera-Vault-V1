@@ -110,6 +110,16 @@ export const tokenValueArray = (
   }));
 };
 
+export const tokenWithValues = (
+  tokens: string[],
+  values: (string | BigNumber)[],
+): { token: string; value: string | BigNumber }[] => {
+  return values.map((value: string | BigNumber, i: number) => ({
+    token: tokens[i],
+    value,
+  }));
+};
+
 export const valueArray = (
   value: number | string | BigNumber,
   length: number,

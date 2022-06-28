@@ -37,6 +37,7 @@ import {
   increaseTime,
   toWei,
   tokenValueArray,
+  tokenWithValues,
   valueArray,
   VaultParams,
 } from "../utils";
@@ -533,16 +534,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           await ethers.provider.send("evm_setIntervalMining", [0]);
 
           const trx1 = await vault.deposit(
-            amounts.map((amount: BigNumber, index: number) => ({
-              token: sortedTokens[index],
-              value: amount,
-            })),
+            tokenWithValues(sortedTokens, amounts),
           );
           const trx2 = await vault.depositIfBalanceUnchanged(
-            amounts.map((amount: BigNumber, index: number) => ({
-              token: sortedTokens[index],
-              value: amount,
-            })),
+            tokenWithValues(sortedTokens, amounts),
           );
 
           await ethers.provider.send("evm_mine", []);
@@ -580,12 +575,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
             const spotPrices = await vault.getSpotPrices(tokens[i].address);
 
-            await vault.deposit(
-              amounts.map((amount: BigNumber, index: number) => ({
-                token: sortedTokens[index],
-                value: amount,
-              })),
-            );
+            await vault.deposit(tokenWithValues(sortedTokens, amounts));
             const newManagersFeeTotal = await getManagersFeeTotal();
 
             const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
@@ -627,12 +617,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             spotPrices.push(await vault.getSpotPrices(tokens[i].address));
           }
 
-          await vault.deposit(
-            amounts.map((amount: BigNumber, index: number) => ({
-              token: sortedTokens[index],
-              value: amount,
-            })),
-          );
+          await vault.deposit(tokenWithValues(sortedTokens, amounts));
           const managersFeeTotal = await getManagersFeeTotal();
 
           const { holdings: newHoldings, adminBalances: newAdminBalances } =
@@ -743,16 +728,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             await ethers.provider.send("evm_setIntervalMining", [0]);
 
             const trx1 = await vault.withdraw(
-              amounts.map((amount: BigNumber, index: number) => ({
-                token: sortedTokens[index],
-                value: amount,
-              })),
+              tokenWithValues(sortedTokens, amounts),
             );
             const trx2 = await vault.withdrawIfBalanceUnchanged(
-              amounts.map((amount: BigNumber, index: number) => ({
-                token: sortedTokens[index],
-                value: amount,
-              })),
+              tokenWithValues(sortedTokens, amounts),
             );
 
             await ethers.provider.send("evm_mine", []);
@@ -793,12 +772,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
               const spotPrices = await vault.getSpotPrices(tokens[i].address);
 
-              await vault.withdraw(
-                amounts.map((amount: BigNumber, index: number) => ({
-                  token: sortedTokens[index],
-                  value: amount,
-                })),
-              );
+              await vault.withdraw(tokenWithValues(sortedTokens, amounts));
               const newManagersFeeTotal = await getManagersFeeTotal();
 
               const newSpotPrices = await vault.getSpotPrices(
@@ -851,12 +825,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               spotPrices.push(await vault.getSpotPrices(tokens[i].address));
             }
 
-            await vault.withdraw(
-              amounts.map((amount: BigNumber, index: number) => ({
-                token: sortedTokens[index],
-                value: amount,
-              })),
-            );
+            await vault.withdraw(tokenWithValues(sortedTokens, amounts));
             const newManagersFeeTotal = await getManagersFeeTotal();
 
             const { holdings: newHoldings, adminBalances: newAdminBalances } =
@@ -914,18 +883,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
           const spotPrices = await vault.getSpotPrices(tokens[i].address);
 
-          await vault.deposit(
-            amounts.map((amount: BigNumber, index: number) => ({
-              token: sortedTokens[index],
-              value: amount,
-            })),
-          );
-          await vault.withdraw(
-            amounts.map((amount: BigNumber, index: number) => ({
-              token: sortedTokens[index],
-              value: amount,
-            })),
-          );
+          await vault.deposit(tokenWithValues(sortedTokens, amounts));
+          await vault.withdraw(tokenWithValues(sortedTokens, amounts));
           const newManagersFeeTotal = await getManagersFeeTotal();
 
           const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
@@ -962,18 +921,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           spotPrices.push(await vault.getSpotPrices(tokens[i].address));
         }
 
-        await vault.deposit(
-          amounts.map((amount: BigNumber, index: number) => ({
-            token: sortedTokens[index],
-            value: amount,
-          })),
-        );
-        await vault.withdraw(
-          amounts.map((amount: BigNumber, index: number) => ({
-            token: sortedTokens[index],
-            value: amount,
-          })),
-        );
+        await vault.deposit(tokenWithValues(sortedTokens, amounts));
+        await vault.withdraw(tokenWithValues(sortedTokens, amounts));
         const managersFeeTotal = await getManagersFeeTotal();
 
         const { holdings: newHoldings, adminBalances: newAdminBalances } =
@@ -1165,16 +1114,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           );
 
           await expect(
-            vault.connect(manager).updateWeightsGradually(
-              targetWeights.map(
-                (weight: string | BigNumber, index: number) => ({
-                  token: sortedTokens[index],
-                  value: weight,
-                }),
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                tokenWithValues(sortedTokens, targetWeights),
+                timestamp,
+                timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
               ),
-              timestamp,
-              timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
-            ),
           ).to.be.revertedWith("Mammon__WeightChangeRatioIsAboveMax");
         });
 
@@ -1216,14 +1162,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           }
         }
 
-        await vault.connect(manager).updateWeightsGradually(
-          endWeights.map((weight: BigNumber, index: number) => ({
-            token: sortedTokens[index],
-            value: weight,
-          })),
-          startTime,
-          endTime,
-        );
+        await vault
+          .connect(manager)
+          .updateWeightsGradually(
+            tokenWithValues(sortedTokens, endWeights),
+            startTime,
+            endTime,
+          );
 
         await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION);
 
@@ -1262,14 +1207,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             }
           }
 
-          await vault.connect(manager).updateWeightsGradually(
-            endWeights.map((weight: BigNumber, index: number) => ({
-              token: sortedTokens[index],
-              value: weight,
-            })),
-            startTime,
-            endTime,
-          );
+          await vault
+            .connect(manager)
+            .updateWeightsGradually(
+              tokenWithValues(sortedTokens, endWeights),
+              startTime,
+              endTime,
+            );
 
           await vault.deposit(
             tokenValueArray(sortedTokens, toWei(50), tokens.length),
@@ -1310,14 +1254,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             }
           }
 
-          await vault.connect(manager).updateWeightsGradually(
-            endWeights.map((weight: BigNumber, index: number) => ({
-              token: sortedTokens[index],
-              value: weight,
-            })),
-            startTime,
-            endTime,
-          );
+          await vault
+            .connect(manager)
+            .updateWeightsGradually(
+              tokenWithValues(sortedTokens, endWeights),
+              startTime,
+              endTime,
+            );
 
           await vault.withdraw(
             tokenValueArray(sortedTokens, toWei(50), tokens.length),
@@ -1360,14 +1303,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           }
         }
 
-        await vault.connect(manager).updateWeightsGradually(
-          endWeights.map((weight: BigNumber, index: number) => ({
-            token: sortedTokens[index],
-            value: weight,
-          })),
-          startTime,
-          endTime,
-        );
+        await vault
+          .connect(manager)
+          .updateWeightsGradually(
+            tokenWithValues(sortedTokens, endWeights),
+            startTime,
+            endTime,
+          );
 
         await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION / 2);
 
@@ -1818,10 +1760,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           }
 
           await vault.enableTradingWithWeights(
-            newWeights.map((weight: BigNumber, index: number) => ({
-              token: sortedTokens[index],
-              value: weight,
-            })),
+            tokenWithValues(sortedTokens, newWeights),
           );
 
           const currentWeights = await vault.getNormalizedWeights();
