@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
+import "../dependencies/openzeppelin/IERC20.sol";
+import "./IProtocolAPI.sol";
+
 /// @title Interface for vault manager.
 /// @notice Supports parameter submission.
 interface IManagerAPI {
@@ -9,11 +12,11 @@ interface IManagerAPI {
     ///       If target weight length and token length match.
     ///       If total sum of target weights is one.
     ///       If target weight is greater than minimum.
-    /// @param targetWeights Target token weights.
+    /// @param tokenWithWeight Tokens with target weights.
     /// @param startTime Timestamp at which weight movement should start.
     /// @param endTime Timestamp at which the weights should reach target values.
     function updateWeightsGradually(
-        uint256[] memory targetWeights,
+        IProtocolAPI.TokenValue[] memory tokenWithWeight,
         uint256 startTime,
         uint256 endTime
     ) external;
