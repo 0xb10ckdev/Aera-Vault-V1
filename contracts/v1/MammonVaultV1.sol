@@ -40,6 +40,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @notice Largest possible notice period for vault termination (2 months).
     uint256 private constant MAX_NOTICE_PERIOD = 60 days;
 
+    /// @notice Cooldown period for updating swap fee (1 minute).
+    uint256 private constant SWAP_FEE_COOLDOWN_PERIOD = 1 minutes;
+
     /// @notice Largest possible weight change ratio per one second.
     /// @dev It's the increment/decrement factor per one second.
     ///      increment/decrement factor per n seconds: Fn = f * n
@@ -107,6 +110,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Total manager fee earned amount
     uint256[] public managersFeeTotal;
+
+    /// @notice Last timestamp where swap fee was updated.
+    uint256 public lastSwapFeeCheckpoint;
 
     /// EVENTS ///
 
@@ -227,8 +233,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// ERRORS ///
 
-    error Mammon__WeightLengthIsNotSame(uint256 numTokens, uint256 numWeights);
-    error Mammon__AmountLengthIsNotSame(uint256 numTokens, uint256 numAmounts);
+    error Mammon__ValueLengthIsNotSame(uint256 numTokens, uint256 numValues);
+    error Mammon__DifferentTokensInPosition(
+        address actual,
+        address sortedToken,
+        uint256 index
+    );
     error Mammon__ValidatorIsNotMatched(
         uint256 numTokens,
         uint256 numAllowances
@@ -238,11 +248,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
     error Mammon__NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
     error Mammon__ManagerIsZeroAddress();
+    error Mammon__ManagerIsOwner(address newManager);
     error Mammon__CallerIsNotManager();
     error Mammon__SwapFeePercentageChangeIsAboveMax(
         uint256 actual,
         uint256 max
     );
+    error Mammon__DescriptionIsEmpty();
     error Mammon__CallerIsNotOwnerOrManager();
     error Mammon__WeightChangeEndBeforeStart();
     error Mammon__WeightChangeStartTimeIsAboveMax(uint256 actual, uint256 max);
@@ -265,6 +277,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__BalanceChangedInCurrentBlock();
     error Mammon__CannotSweepPoolToken();
     error Mammon__PoolSwapIsAlreadyEnabled();
+    error Mammon__CannotSetSwapFeeBeforeCooldown();
     error Mammon__FinalizationNotInitiated();
     error Mammon__VaultNotInitialized();
     error Mammon__VaultIsAlreadyInitialized();
@@ -317,11 +330,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     ///       If tokens are sorted in ascending order.
     ///       If swapFeePercentage is greater than minimum and less than maximum.
     ///       If total sum of weights is one.
+    /// @param vaultParams Struct vault parameter.
     constructor(NewVaultParams memory vaultParams) {
         uint256 numTokens = vaultParams.tokens.length;
 
         if (numTokens != vaultParams.weights.length) {
-            revert Mammon__WeightLengthIsNotSame(
+            revert Mammon__ValueLengthIsNotSame(
                 numTokens,
                 vaultParams.weights.length
             );
@@ -355,9 +369,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 MAX_NOTICE_PERIOD
             );
         }
-        if (vaultParams.manager == address(0)) {
-            revert Mammon__ManagerIsZeroAddress();
+        if (bytes(vaultParams.description).length == 0) {
+            revert Mammon__DescriptionIsEmpty();
         }
+        checkManagerAddress(vaultParams.manager);
 
         address[] memory assetManagers = new address[](numTokens);
         for (uint256 i = 0; i < numTokens; i++) {
@@ -447,7 +462,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// PROTOCOL API ///
 
     /// @inheritdoc IProtocolAPI
-    function initialDeposit(uint256[] calldata amounts)
+    function initialDeposit(TokenValue[] calldata tokenWithAmount)
         external
         override
         onlyOwner
@@ -461,17 +476,17 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         IERC20[] memory tokens = getTokens();
         uint256 numTokens = tokens.length;
-
-        if (numTokens != amounts.length) {
-            revert Mammon__AmountLengthIsNotSame(numTokens, amounts.length);
-        }
-
-        bytes memory initUserData = abi.encode(IBVault.JoinKind.INIT, amounts);
         uint256[] memory balances = new uint256[](numTokens);
+        uint256[] memory amounts = getValuesFromTokenWithValues(
+            tokenWithAmount,
+            tokens
+        );
 
         for (uint256 i = 0; i < numTokens; i++) {
             balances[i] = depositToken(tokens[i], amounts[i]);
         }
+
+        bytes memory initUserData = abi.encode(IBVault.JoinKind.INIT, amounts);
 
         IBVault.JoinPoolRequest memory joinPoolRequest = IBVault
             .JoinPoolRequest({
@@ -486,7 +501,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IProtocolAPI
-    function deposit(uint256[] calldata amounts)
+    function deposit(TokenValue[] calldata tokenWithAmount)
         external
         override
         nonReentrant
@@ -494,12 +509,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
-        depositTokens(amounts);
+        depositTokens(tokenWithAmount);
     }
 
     /// @inheritdoc IProtocolAPI
     // slither-disable-next-line incorrect-equality
-    function depositIfBalanceUnchanged(uint256[] calldata amounts)
+    function depositIfBalanceUnchanged(TokenValue[] calldata tokenWithAmount)
         external
         override
         nonReentrant
@@ -513,11 +528,11 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             revert Mammon__BalanceChangedInCurrentBlock();
         }
 
-        depositTokens(amounts);
+        depositTokens(tokenWithAmount);
     }
 
     /// @inheritdoc IProtocolAPI
-    function withdraw(uint256[] calldata amounts)
+    function withdraw(TokenValue[] calldata tokenWithAmount)
         external
         override
         nonReentrant
@@ -525,12 +540,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
-        withdrawTokens(amounts);
+        withdrawTokens(tokenWithAmount);
     }
 
     /// @inheritdoc IProtocolAPI
     // slither-disable-next-line incorrect-equality
-    function withdrawIfBalanceUnchanged(uint256[] calldata amounts)
+    function withdrawIfBalanceUnchanged(TokenValue[] calldata tokenWithAmount)
         external
         override
         nonReentrant
@@ -544,7 +559,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
             revert Mammon__BalanceChangedInCurrentBlock();
         }
 
-        withdrawTokens(amounts);
+        withdrawTokens(tokenWithAmount);
     }
 
     /// @inheritdoc IProtocolAPI
@@ -596,9 +611,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         nonReentrant
         onlyOwner
     {
-        if (newManager == address(0)) {
-            revert Mammon__ManagerIsZeroAddress();
-        }
+        checkManagerAddress(newManager);
 
         if (initialized && noticeTimeoutAt == 0) {
             lockManagerFees();
@@ -611,7 +624,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         // slither-disable-next-line reentrancy-events
         emit ManagerChanged(manager, newManager);
-        // slither-disable-next-line reentrancy-no-eth
+
+        // slither-disable-next-line missing-zero-check
         manager = newManager;
     }
 
@@ -634,7 +648,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IProtocolAPI
-    function enableTradingWithWeights(uint256[] calldata weights)
+    function enableTradingWithWeights(TokenValue[] calldata tokenWithWeight)
         external
         override
         onlyOwner
@@ -643,6 +657,13 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         if (pool.getSwapEnabled()) {
             revert Mammon__PoolSwapIsAlreadyEnabled();
         }
+
+        IERC20[] memory tokens = getTokens();
+
+        uint256[] memory weights = getValuesFromTokenWithValues(
+            tokenWithWeight,
+            tokens
+        );
 
         poolController.updateWeightsGradually(
             block.timestamp,
@@ -675,15 +696,15 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// MANAGER API ///
 
     /// @inheritdoc IManagerAPI
-    // prettier-ignore
     // slither-disable-next-line timestamp
     function updateWeightsGradually(
-        uint256[] calldata targetWeights,
+        TokenValue[] calldata tokenWithWeight,
         uint256 startTime,
         uint256 endTime
     )
         external
         override
+        nonReentrant
         onlyManager
         whenInitialized
         whenNotFinalizing
@@ -707,11 +728,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         if (startTime > endTime) {
             revert Mammon__WeightChangeEndBeforeStart();
         }
-        if (
-            startTime +
-                MINIMUM_WEIGHT_CHANGE_DURATION >
-            endTime
-        ) {
+        if (startTime + MINIMUM_WEIGHT_CHANGE_DURATION > endTime) {
             revert Mammon__WeightChangeDurationIsBelowMin(
                 endTime - startTime,
                 MINIMUM_WEIGHT_CHANGE_DURATION
@@ -719,12 +736,17 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         // Check if weight change ratio is exceeded
-        uint256 targetWeightLength = targetWeights.length;
         uint256[] memory weights = pool.getNormalizedWeights();
         IERC20[] memory tokens = getTokens();
+        uint256 numTokens = tokens.length;
+        uint256[] memory targetWeights = getValuesFromTokenWithValues(
+            tokenWithWeight,
+            tokens
+        );
         uint256 duration = endTime - startTime;
         uint256 maximumRatio = MAX_WEIGHT_CHANGE_RATIO * duration;
-        for (uint256 i = 0; i < targetWeightLength; i++) {
+
+        for (uint256 i = 0; i < numTokens; i++) {
             uint256 changeRatio = getWeightChangeRatio(
                 weights[i],
                 targetWeights[i]
@@ -753,6 +775,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     function cancelWeightUpdates()
         external
         override
+        nonReentrant
         onlyManager
         whenInitialized
         whenNotFinalizing
@@ -772,7 +795,20 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IManagerAPI
-    function setSwapFee(uint256 newSwapFee) external override onlyManager {
+    // slither-disable-next-line timestamp
+    function setSwapFee(uint256 newSwapFee)
+        external
+        override
+        nonReentrant
+        onlyManager
+    {
+        if (
+            block.timestamp < lastSwapFeeCheckpoint + SWAP_FEE_COOLDOWN_PERIOD
+        ) {
+            revert Mammon__CannotSetSwapFeeBeforeCooldown();
+        }
+        lastSwapFeeCheckpoint = block.timestamp;
+
         uint256 oldSwapFee = pool.getSwapFeePercentage();
 
         uint256 absoluteDelta = (newSwapFee > oldSwapFee)
@@ -935,8 +971,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @dev Will only be called by deposit() and depositIfBalanceUnchanged()
     ///      It calls updateWeights() function which cancels
     ///      current active weights change schedule.
-    /// @param amounts Token amounts to deposit.
-    function depositTokens(uint256[] calldata amounts) internal {
+    /// @param tokenWithAmount Deposit tokens with amount.
+    function depositTokens(TokenValue[] calldata tokenWithAmount) internal {
         lockManagerFees();
 
         IERC20[] memory tokens;
@@ -944,12 +980,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         (tokens, holdings, ) = getTokensData();
         uint256 numTokens = tokens.length;
 
-        if (numTokens != amounts.length) {
-            revert Mammon__AmountLengthIsNotSame(numTokens, amounts.length);
-        }
-
         uint256[] memory weights = pool.getNormalizedWeights();
         uint256[] memory newBalances = new uint256[](numTokens);
+        uint256[] memory amounts = getValuesFromTokenWithValues(
+            tokenWithAmount,
+            tokens
+        );
 
         for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] != 0) {
@@ -991,8 +1027,8 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @dev Will only be called by withdraw() and withdrawIfBalanceUnchanged()
     ///      It calls updateWeights() function which cancels
     ///      current active weights change schedule.
-    /// @param amounts Requested token amounts.
-    function withdrawTokens(uint256[] calldata amounts) internal {
+    /// @param tokenWithAmount Requested tokens with amount.
+    function withdrawTokens(TokenValue[] calldata tokenWithAmount) internal {
         lockManagerFees();
 
         IERC20[] memory tokens;
@@ -1000,13 +1036,14 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         (tokens, holdings, ) = getTokensData();
         uint256 numTokens = tokens.length;
 
-        if (numTokens != amounts.length) {
-            revert Mammon__AmountLengthIsNotSame(numTokens, amounts.length);
-        }
-
         uint256[] memory allowances = validator.allowance();
         uint256[] memory weights = pool.getNormalizedWeights();
         uint256[] memory balances = new uint256[](numTokens);
+        uint256[] memory newWeights = new uint256[](numTokens);
+        uint256[] memory amounts = getValuesFromTokenWithValues(
+            tokenWithAmount,
+            tokens
+        );
 
         for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] > holdings[i] || amounts[i] > allowances[i]) {
@@ -1024,7 +1061,6 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
         withdrawFromPool(amounts);
 
-        uint256[] memory newWeights = new uint256[](numTokens);
         uint256 weightSum;
 
         for (uint256 i = 0; i < numTokens; i++) {
@@ -1073,6 +1109,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     ///      initiateFinalization(), deposit() and withdraw().
     // slither-disable-next-line timestamp
     function lockManagerFees() internal {
+        if (managementFee == 0) {
+            return;
+        }
         if (block.timestamp <= lastFeeCheckpoint) {
             return;
         }
@@ -1122,6 +1161,41 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                 : (ONE * targetWeight) / weight;
     }
 
+    /// @notice Return an array of values from given tokenWithValues.
+    /// @dev Will only be called by enableTradingWithWeights(), updateWeightsGradually().
+    ///      initialDeposit(), depositTokens() and withdrawTokens().
+    ///      The values could be amounts or weights.
+    /// @param tokenWithValues Tokens with values.
+    /// @param tokens Array of pool tokens.
+    /// @return Array of values.
+    function getValuesFromTokenWithValues(
+        TokenValue[] calldata tokenWithValues,
+        IERC20[] memory tokens
+    ) internal pure returns (uint256[] memory) {
+        uint256 numTokens = tokens.length;
+
+        if (numTokens != tokenWithValues.length) {
+            revert Mammon__ValueLengthIsNotSame(
+                numTokens,
+                tokenWithValues.length
+            );
+        }
+
+        uint256[] memory values = new uint256[](numTokens);
+        for (uint256 i = 0; i < numTokens; i++) {
+            if (address(tokenWithValues[i].token) != address(tokens[i])) {
+                revert Mammon__DifferentTokensInPosition(
+                    address(tokenWithValues[i].token),
+                    address(tokens[i]),
+                    i
+                );
+            }
+            values[i] = tokenWithValues[i].value;
+        }
+
+        return values;
+    }
+
     /// @dev PoolBalanceOpKind has three kinds
     /// Withdrawal - decrease the Pool's cash, but increase its managed balance,
     ///              leaving the total balance unchanged.
@@ -1140,9 +1214,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         );
         IERC20[] memory tokens = getTokens();
 
+        bytes32 balancerPoolId = poolId;
         for (uint256 i = 0; i < numAmounts; i++) {
             ops[i].kind = kind;
-            ops[i].poolId = poolId;
+            ops[i].poolId = balancerPoolId;
             ops[i].token = tokens[i];
             ops[i].amount = amounts[i];
         }
@@ -1230,5 +1305,17 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         poolController.setSwapEnabled(swapEnabled);
         // slither-disable-next-line reentrancy-events
         emit SetSwapEnabled(swapEnabled);
+    }
+
+    /// @notice Check if the address can be a manager.
+    /// @dev Will only be called by constructor and setManager()
+    /// @param newManager Address to check.
+    function checkManagerAddress(address newManager) internal {
+        if (newManager == address(0)) {
+            revert Mammon__ManagerIsZeroAddress();
+        }
+        if (newManager == owner()) {
+            revert Mammon__ManagerIsOwner(newManager);
+        }
     }
 }
