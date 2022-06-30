@@ -6,7 +6,6 @@ import "./dependencies/openzeppelin/IERC20.sol";
 import "./dependencies/openzeppelin/Ownable.sol";
 import "./dependencies/openzeppelin/ReentrancyGuard.sol";
 import "./dependencies/openzeppelin/Math.sol";
-import "./dependencies/openzeppelin/SafeCast.sol";
 import "./dependencies/openzeppelin/ERC165Checker.sol";
 import "./interfaces/IBManagedPoolFactory.sol";
 import "./interfaces/IBManagedPoolController.sol";
@@ -22,7 +21,6 @@ import "./interfaces/IWithdrawalValidator.sol";
 /// @dev Vault owner is the asset owner.
 contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
-    using SafeCast for uint256;
 
     /// STORAGE ///
 
@@ -72,7 +70,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     bytes32 public immutable poolId;
 
     /// @notice Notice period for vault termination (in seconds).
-    uint32 public immutable noticePeriod;
+    uint256 public immutable noticePeriod;
 
     /// @notice Verifies withdraw limits.
     IWithdrawalValidator public immutable validator;
@@ -87,6 +85,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// @dev string cannot be immutable bytecode but only set in constructor
     string public description;
 
+    /// @notice Indicates that the Vault has been initialized
+    bool public initialized;
+
+    /// @notice Indicates that the Vault has been finalized
+    bool public finalized;
+
     /// @notice Controls vault parameters.
     address public manager;
 
@@ -94,16 +98,10 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     address public pendingOwner;
 
     /// @notice Timestamp when notice elapses or 0 if not yet set
-    uint64 public noticeTimeoutAt;
-
-    /// @notice Indicates that the Vault has been initialized
-    bool public initialized;
-
-    /// @notice Indicates that the Vault has been finalized
-    bool public finalized;
+    uint256 public noticeTimeoutAt;
 
     /// @notice Last timestamp where manager fee index was locked.
-    uint64 public lastFeeCheckpoint = type(uint64).max;
+    uint256 public lastFeeCheckpoint = type(uint256).max;
 
     /// @notice Manager fee earned proportion
     uint256 public managerFeeIndex;
@@ -135,7 +133,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         uint256 swapFeePercentage,
         address indexed manager,
         address indexed validator,
-        uint32 noticePeriod,
+        uint256 noticePeriod,
         uint256 managementFee,
         address merkleOrchard,
         string description
@@ -198,7 +196,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Emitted when initiateFinalization is called.
     /// @param noticeTimeoutAt Timestamp for notice timeout.
-    event FinalizationInitiated(uint64 noticeTimeoutAt);
+    event FinalizationInitiated(uint256 noticeTimeoutAt);
 
     /// @notice Emitted when vault is finalized.
     /// @param caller Address of finalizer.
@@ -236,7 +234,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     error Mammon__ValidatorIsNotValid(address validator);
     error Mammon__ManagementFeeIsAboveMax(uint256 actual, uint256 max);
     error Mammon__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
-    error Mammon__NoticeTimeoutNotElapsed(uint64 noticeTimeoutAt);
+    error Mammon__NoticeTimeoutNotElapsed(uint256 noticeTimeoutAt);
     error Mammon__ManagerIsZeroAddress();
     error Mammon__ManagerIsOwner(address newManager);
     error Mammon__CallerIsNotManager();
@@ -457,7 +455,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         }
 
         initialized = true;
-        lastFeeCheckpoint = block.timestamp.toUint64();
+        lastFeeCheckpoint = block.timestamp;
 
         IERC20[] memory tokens = getTokens();
         uint256 numTokens = tokens.length;
@@ -557,7 +555,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         whenNotFinalizing
     {
         calculateAndDistributeManagerFees();
-        noticeTimeoutAt = block.timestamp.toUint64() + noticePeriod;
+        noticeTimeoutAt = block.timestamp + noticePeriod;
         setSwapEnabled(false);
         emit FinalizationInitiated(noticeTimeoutAt);
     }
@@ -608,7 +606,12 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IProtocolAPI
-    function sweep(address token, uint256 amount) external override onlyOwner {
+    // prettier-ignore
+    function sweep(address token, uint256 amount)
+        external
+        override
+        onlyOwner
+    {
         if (token == address(pool)) {
             revert Mammon__CannotSweepPoolToken();
         }
@@ -664,10 +667,16 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     }
 
     /// @inheritdoc IProtocolAPI
+    // prettier-ignore
     function claimRewards(
         IBMerkleOrchard.Claim[] calldata claims,
         IERC20[] calldata tokens
-    ) external override onlyOwner whenInitialized {
+    )
+        external
+        override
+        onlyOwner
+        whenInitialized
+    {
         merkleOrchard.claimDistributions(owner(), claims, tokens);
     }
 
@@ -837,12 +846,24 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     /// USER API ///
 
     /// @inheritdoc IUserAPI
-    function isSwapEnabled() external view override returns (bool) {
+    // prettier-ignore
+    function isSwapEnabled()
+        external
+        view
+        override
+        returns (bool)
+    {
         return pool.getSwapEnabled();
     }
 
     /// @inheritdoc IUserAPI
-    function getSwapFee() external view override returns (uint256) {
+    // prettier-ignore
+    function getSwapFee()
+        external
+        view
+        override
+        returns (uint256)
+    {
         return pool.getSwapFeePercentage();
     }
 
@@ -1052,7 +1073,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         managerFeeIndex =
             (block.timestamp - lastFeeCheckpoint) *
             managementFee;
-        lastFeeCheckpoint = block.timestamp.toUint64();
+        lastFeeCheckpoint = block.timestamp;
 
         IERC20[] memory tokens;
         uint256[] memory holdings;

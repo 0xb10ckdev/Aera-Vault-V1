@@ -250,7 +250,6 @@ const config: HardhatUserConfig = {
       "Ownable",
       "Pausable",
       "ReentrancyGuard",
-      "SafeCast",
       "SafeERC20",
       "Strings",
     ],
