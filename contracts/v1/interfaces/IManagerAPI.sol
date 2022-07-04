@@ -34,4 +34,9 @@ interface IManagerAPI {
     /// @notice Claim manager fee.
     /// @dev This function shouldn't be called too frequently.
     function claimManagerFees() external;
+
+    /*
+    /// @notice Disable swap.
+    function disableTrading() external;
+    */
 }
