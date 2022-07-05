@@ -35,7 +35,7 @@ interface IManagerAPI {
     /// @dev This function shouldn't be called too frequently.
     function claimManagerFees() external;
 
-    /*
+    /* This function is defined in IProtocolAPI.sol
     /// @notice Disable swap.
     function disableTrading() external;
     */
