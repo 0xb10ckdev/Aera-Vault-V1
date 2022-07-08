@@ -104,7 +104,7 @@ export const tokenValueArray = (
   value: number | string | BigNumber,
   length: number,
 ): { token: string; value: string }[] => {
-  return Array.from({ length }, (_: any, i: number) => ({
+  return Array.from({ length }, (_, i: number) => ({
     token: tokens[i] || ZERO_ADDRESS,
     value: value.toString(),
   }));
