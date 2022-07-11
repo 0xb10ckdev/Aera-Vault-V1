@@ -1,34 +1,18 @@
-import { BigNumber, Signer } from "ethers";
+import { BigNumber } from "ethers";
 import { deployments, ethers } from "hardhat";
 import { DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
 import {
   MammonVaultV2Mock,
   MammonVaultV2Mock__factory,
 } from "../../typechain";
-import { MAX_MANAGEMENT_FEE } from "../v1/constants";
+import { MAX_MANAGEMENT_FEE, ZERO_ADDRESS } from "../v1/constants";
+import { VaultParams } from "../v1/utils";
 
 export * from "../v1/utils";
 
-export type VaultParams = {
-  signer: Signer;
-  factory: string;
-  name: string;
-  symbol: string;
-  assets: {
-    tokens: string[];
-    weights: string[];
-    oracles: string[];
-  };
-  swapFeePercentage: BigNumber;
-  manager: string;
-  validator?: string;
-  noticePeriod?: number;
-  managementFee?: BigNumber;
-  description?: string;
-};
-
 export const deployVault = async (
   params: VaultParams,
+  oracles: string[],
 ): Promise<MammonVaultV2Mock> => {
   const vault = await ethers.getContractFactory<MammonVaultV2Mock__factory>(
     "MammonVaultV2Mock",
@@ -37,20 +21,23 @@ export const deployVault = async (
   if (!params.validator) {
     params.validator = (await deployments.get("Validator")).address;
   }
-  return await vault
-    .connect(params.signer)
-    .deploy(
-      params.factory,
-      params.name,
-      params.symbol,
-      params.assets,
-      params.swapFeePercentage,
-      params.manager,
-      params.validator,
-      params.noticePeriod || DEFAULT_NOTICE_PERIOD,
-      params.managementFee || MAX_MANAGEMENT_FEE,
-      params.description || "",
-    );
+  return await vault.connect(params.signer).deploy(
+    {
+      factory: params.factory,
+      name: params.name,
+      symbol: params.symbol,
+      tokens: params.tokens,
+      weights: params.weights,
+      swapFeePercentage: params.swapFeePercentage,
+      manager: params.manager,
+      validator: params.validator,
+      noticePeriod: params.noticePeriod || DEFAULT_NOTICE_PERIOD,
+      managementFee: params.managementFee || MAX_MANAGEMENT_FEE,
+      merkleOrchard: params.merkleOrchard || ZERO_ADDRESS,
+      description: params.description || "",
+    },
+    oracles,
+  );
 };
 
 export const toUnit = (

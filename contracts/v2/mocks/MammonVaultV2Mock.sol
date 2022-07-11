@@ -12,30 +12,9 @@ contract MammonVaultV2Mock is MammonVaultV2 {
 
     // solhint-disable no-empty-blocks
     constructor(
-        address factory,
-        string memory name,
-        string memory symbol,
-        Assets memory assets,
-        uint256 swapFeePercentage,
-        address manager,
-        address validator,
-        uint32 noticePeriod,
-        uint256 managementFee,
-        string memory description
-    )
-        MammonVaultV2(
-            factory,
-            name,
-            symbol,
-            assets,
-            swapFeePercentage,
-            manager,
-            validator,
-            noticePeriod,
-            managementFee,
-            description
-        )
-    {}
+        NewVaultParams memory vaultParams,
+        AggregatorV2V3Interface[] memory oracles
+    ) MammonVaultV2(vaultParams, oracles) {}
 
     function getSpotPrice(address tokenIn, address tokenOut)
         external
@@ -49,7 +28,7 @@ contract MammonVaultV2Mock is MammonVaultV2 {
         IERC20[] memory tokens;
         uint256[] memory holdings;
         (tokens, holdings, ) = getTokensData();
-        uint256[] memory weights = getNormalizedWeights();
+        uint256[] memory weights = pool.getNormalizedWeights();
 
         uint256 tokenInId = type(uint256).max;
         uint256 tokenOutId = type(uint256).max;
@@ -92,7 +71,7 @@ contract MammonVaultV2Mock is MammonVaultV2 {
         IERC20[] memory tokens;
         uint256[] memory holdings;
         (tokens, holdings, ) = getTokensData();
-        uint256[] memory weights = getNormalizedWeights();
+        uint256[] memory weights = pool.getNormalizedWeights();
         spotPrices = new uint256[](tokens.length);
 
         uint256 tokenInId = type(uint256).max;

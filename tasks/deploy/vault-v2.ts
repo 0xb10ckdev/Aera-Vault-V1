@@ -1,5 +1,6 @@
 import { AssetHelpers } from "@balancer-labs/balancer-js";
 import { task, types } from "hardhat/config";
+import { getConfig } from "../../scripts/config";
 
 // https://github.com/balancer-labs/balancer-v2-monorepo/blob/master/pkg/balancer-js/test/tokens.test.ts
 const wethAddress = "0x000000000000000000000000000000000000000F";
@@ -36,19 +37,22 @@ task("deploy:vaultV2", "Deploys a Mammon vault v2 with the given parameters")
     false,
     types.boolean,
   )
-  .setAction(async (taskArgs, { ethers }) => {
+  .setAction(async (taskArgs, { ethers, network }) => {
+    const config = getConfig(network.config.chainId || 1);
+
     const factory = taskArgs.factory;
     const name = taskArgs.name;
     const symbol = taskArgs.symbol;
     const tokens = taskArgs.tokens.split(",");
     const weights = taskArgs.weights.split(",");
     const oracles = taskArgs.oracles.split(",");
-    const swapFee = taskArgs.swapFee;
+    const swapFeePercentage = taskArgs.swapFee;
     const manager = taskArgs.manager;
     const validator = taskArgs.validator;
     const noticePeriod = taskArgs.noticePeriod;
     const managementFee = taskArgs.managementFee;
     const description = taskArgs.description;
+    const merkleOrchard = config.merkleOrchard || ethers.constants.AddressZero;
 
     if (tokens.length < 2) {
       console.error("Number of Tokens should be at least two");
@@ -73,11 +77,12 @@ task("deploy:vaultV2", "Deploys a Mammon vault v2 with the given parameters")
       console.log("Tokens:\n", tokens.join("\n"));
       console.log("Weights:\n", weights.join("\n"));
       console.log("oracles:\n", oracles.join("\n"));
-      console.log(`Swap Fee: ${swapFee}`);
+      console.log(`Swap Fee: ${swapFeePercentage}`);
       console.log(`Manager: ${manager}`);
       console.log(`Validator: ${validator}`);
       console.log(`Notice Period: ${noticePeriod}`);
       console.log(`Management Fee: ${managementFee}`);
+      console.log(`Merkle Orchard: ${merkleOrchard}`);
       console.log(`Description: ${description}`);
     }
 
@@ -86,20 +91,21 @@ task("deploy:vaultV2", "Deploys a Mammon vault v2 with the given parameters")
     const vaultFactory = await ethers.getContractFactory(contract);
 
     const vault = await vaultFactory.connect(admin).deploy(
-      factory,
-      name,
-      symbol,
       {
+        factory,
+        name,
+        symbol,
         tokens,
         weights,
-        oracles,
+        swapFeePercentage,
+        manager,
+        validator,
+        noticePeriod,
+        managementFee,
+        merkleOrchard,
+        description,
       },
-      swapFee,
-      manager,
-      validator,
-      noticePeriod,
-      managementFee,
-      description,
+      oracles,
     );
 
     if (!taskArgs.silent) {
