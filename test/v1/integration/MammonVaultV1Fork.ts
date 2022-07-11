@@ -583,10 +583,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               await getState();
 
             for (let j = 0; j < tokens.length; j++) {
-              expect(newSpotPrices[j]).to.closeTo(
-                spotPrices[j],
-                DEVIATION,
-              );
+              expect(newSpotPrices[j]).to.closeTo(spotPrices[j], DEVIATION);
               expect(newHoldings[j]).to.equal(
                 holdings[j]
                   .add(amounts[j])
@@ -784,10 +781,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               } = await getState();
 
               for (let j = 0; j < tokens.length; j++) {
-                expect(newSpotPrices[j]).to.closeTo(
-                  spotPrices[j],
-                  DEVIATION,
-                );
+                expect(newSpotPrices[j]).to.closeTo(spotPrices[j], DEVIATION);
                 expect(newHoldings[j]).to.equal(
                   holdings[j]
                     .sub(amounts[j])
@@ -892,10 +886,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             await getState();
 
           for (let j = 0; j < tokens.length; j++) {
-            expect(newSpotPrices[j]).to.closeTo(
-              spotPrices[j],
-              DEVIATION,
-            );
+            expect(newSpotPrices[j]).to.closeTo(spotPrices[j], DEVIATION);
             expect(newHoldings[j]).to.equal(
               holdings[j].sub(newManagersFeeTotal[j]).add(managersFeeTotal[j]),
             );
