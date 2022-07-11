@@ -4,7 +4,7 @@ pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
 import "../dependencies/balancer-labs/pool-utils/contracts/test/MockVault.sol";
-import "../dependencies/balancer-labs/vault/contracts/interfaces/IVault.sol";
+import "../dependencies/balancer-labs/interfaces/contracts/vault/IVault.sol";
 import "../dependencies/balancer-labs/solidity-utils/contracts/openzeppelin/SafeERC20.sol";
 
 /**

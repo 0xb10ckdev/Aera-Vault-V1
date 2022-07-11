@@ -6,14 +6,15 @@ import {
   getConfig,
 } from "../../scripts/config";
 import {
-  BaseManagedPoolFactory,
   BaseManagedPoolFactory__factory,
+  ManagedPoolFactory,
+  ManagedPoolFactory__factory,
   MammonVaultV1Mock,
   MammonVaultV1Mock__factory,
   ManagerWhitelist,
   ManagerWhitelist__factory,
 } from "../../typechain";
-import { MAX_MANAGEMENT_FEE } from "./constants";
+import { MAX_MANAGEMENT_FEE, ZERO_ADDRESS } from "./constants";
 
 export type VaultParams = {
   signer: Signer;
@@ -27,6 +28,7 @@ export type VaultParams = {
   validator?: string;
   noticePeriod?: number;
   managementFee?: BigNumber;
+  merkleOrchard?: string;
   description?: string;
 };
 
@@ -40,35 +42,45 @@ export const deployVault = async (
   if (!params.validator) {
     params.validator = (await deployments.get("Validator")).address;
   }
-  return await vault
-    .connect(params.signer)
-    .deploy(
-      params.factory,
-      params.name,
-      params.symbol,
-      params.tokens,
-      params.weights,
-      params.swapFeePercentage,
-      params.manager,
-      params.validator,
-      params.noticePeriod || DEFAULT_NOTICE_PERIOD,
-      params.managementFee || MAX_MANAGEMENT_FEE,
-      params.description || "",
-    );
+  return await vault.connect(params.signer).deploy({
+    factory: params.factory,
+    name: params.name,
+    symbol: params.symbol,
+    tokens: params.tokens,
+    weights: params.weights,
+    swapFeePercentage: params.swapFeePercentage,
+    manager: params.manager,
+    validator: params.validator,
+    noticePeriod: params.noticePeriod || DEFAULT_NOTICE_PERIOD,
+    managementFee: params.managementFee || MAX_MANAGEMENT_FEE,
+    merkleOrchard: params.merkleOrchard || ZERO_ADDRESS,
+    description: params.description || "",
+  });
 };
 
 export const deployFactory = async (
   signer: Signer,
-): Promise<BaseManagedPoolFactory> => {
+): Promise<ManagedPoolFactory> => {
   const chainId = getChainId(process.env.HARDHAT_FORK);
   const config = getConfig(chainId);
 
-  const factory =
+  const baseManagedPoolFactoryContract =
     await ethers.getContractFactory<BaseManagedPoolFactory__factory>(
       "BaseManagedPoolFactory",
     );
 
-  return await factory.connect(signer).deploy(config.bVault);
+  const baseManagedPoolFactory = await baseManagedPoolFactoryContract
+    .connect(signer)
+    .deploy(config.bVault);
+
+  const managedPoolFactoryContract =
+    await ethers.getContractFactory<ManagedPoolFactory__factory>(
+      "ManagedPoolFactory",
+    );
+
+  return await managedPoolFactoryContract
+    .connect(signer)
+    .deploy(baseManagedPoolFactory.address);
 };
 
 export const deployManagerWhitelist = async (
@@ -85,6 +97,27 @@ export const deployManagerWhitelist = async (
 
 export const toWei = (value: number | string): BigNumber => {
   return ethers.utils.parseEther(value.toString());
+};
+
+export const tokenValueArray = (
+  tokens: string[],
+  value: number | string | BigNumber,
+  length: number,
+): { token: string; value: string }[] => {
+  return Array.from({ length }, (_, i: number) => ({
+    token: tokens[i] || ZERO_ADDRESS,
+    value: value.toString(),
+  }));
+};
+
+export const tokenWithValues = (
+  tokens: string[],
+  values: (string | BigNumber)[],
+): { token: string; value: string | BigNumber }[] => {
+  return values.map((value: string | BigNumber, i: number) => ({
+    token: tokens[i],
+    value,
+  }));
 };
 
 export const valueArray = (
