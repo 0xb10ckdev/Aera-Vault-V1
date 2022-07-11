@@ -70,6 +70,7 @@ contract MammonVaultV2 is MammonVaultV1, IProtocolAPIV2 {
         weights[0] = ONE;
 
         for (uint256 i = 1; i < holdings.length; i++) {
+            // slither-disable-next-line uninitialized-local
             uint256 latestPrice;
             latestAnswer = oracles[i].latestAnswer();
             if (latestAnswer > 0) {
