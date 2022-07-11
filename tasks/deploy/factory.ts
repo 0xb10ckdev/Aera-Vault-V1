@@ -18,15 +18,29 @@ task("deploy:factory", "Deploys a Mammon Pool Factory")
       console.log(`Balancer Vault: ${config.bVault}`);
     }
 
-    const contract = "BaseManagedPoolFactory";
-    const result = await deployments.deploy(contract, {
-      contract,
-      args: [config.bVault],
-      from: admin.address,
-      log: true,
-    });
+    const baseManagedPoolFactoryContract = "BaseManagedPoolFactory";
+    const baseManagedPoolFactory = await deployments.deploy(
+      baseManagedPoolFactoryContract,
+      {
+        contract: baseManagedPoolFactoryContract,
+        args: [config.bVault],
+        from: admin.address,
+        log: true,
+      },
+    );
+
+    const managedPoolFactoryContract = "ManagedPoolFactory";
+    const managedPoolFactory = await deployments.deploy(
+      managedPoolFactoryContract,
+      {
+        contract: managedPoolFactoryContract,
+        args: [baseManagedPoolFactory.address],
+        from: admin.address,
+        log: true,
+      },
+    );
 
     if (!taskArgs.silent) {
-      console.log("Factory is deployed to:", result.address);
+      console.log("Factory is deployed to:", managedPoolFactory.address);
     }
   });

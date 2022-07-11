@@ -16,7 +16,7 @@ interface IUserAPI {
 
     /// @notice Get Pool ID.
     /// @return Pool ID of Balancer pool on Vault.
-    function getPoolId() external view returns (bytes32);
+    function poolId() external view returns (bytes32);
 
     /// @notice Get Token Data of Balancer Pool.
     /// @return tokens IERC20 tokens of Balancer pool.
@@ -38,4 +38,7 @@ interface IUserAPI {
     /// @notice Get token weights.
     /// @return Normalized weights of tokens on Balancer pool.
     function getNormalizedWeights() external view returns (uint256[] memory);
+
+    /// @notice Accept ownership
+    function acceptOwnership() external;
 }

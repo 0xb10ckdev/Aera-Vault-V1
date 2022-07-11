@@ -12,12 +12,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.7.0;
+pragma solidity 0.8.11;
 
-import "../../../solidity-utils/contracts/openzeppelin/IERC20.sol";
+interface IBManagedPoolController {
+    function updateWeightsGradually(
+        uint256 startTime,
+        uint256 endTime,
+        uint256[] memory endWeights
+    ) external;
 
-interface IControlledPool {
+    function setSwapEnabled(bool swapEnabled) external;
+
     function setSwapFeePercentage(uint256 swapFeePercentage) external;
-
-    function setAssetManagerPoolConfig(IERC20 token, bytes memory poolConfig) external;
 }
