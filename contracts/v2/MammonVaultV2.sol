@@ -45,6 +45,8 @@ contract MammonVaultV2 is MammonVaultV1, IProtocolAPIV2 {
             revert Mammon__OracleLengthIsNotSame(numTokens, oracles_.length);
         }
 
+        // Check if oracle address is zero address.
+        // oracles_[0] could be specified as zero address.
         for (uint256 i = 1; i < numTokens; i++) {
             if (address(oracles_[i]) == address(0)) {
                 revert Mammon__OracleIsZeroAddress(i);
@@ -64,12 +66,13 @@ contract MammonVaultV2 is MammonVaultV1, IProtocolAPIV2 {
         whenInitialized
     {
         uint256[] memory holdings = getHoldings();
-        uint256[] memory weights = new uint256[](holdings.length);
+        uint256 numHoldings = holdings.length;
+        uint256[] memory weights = new uint256[](numHoldings);
         uint256 weightSum = ONE;
         int256 latestAnswer;
         weights[0] = ONE;
 
-        for (uint256 i = 1; i < holdings.length; i++) {
+        for (uint256 i = 1; i < numHoldings; i++) {
             // slither-disable-next-line uninitialized-local
             uint256 latestPrice;
             latestAnswer = oracles[i].latestAnswer();
