@@ -50,6 +50,7 @@ contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
     ///       If total sum of weights is one.
     /// @param vaultParams Struct vault parameter.
     /// @param oracles_ Chainlink oracle addresses.
+    ///                 All oracles should be in reference to the same asset.
     /// @param numeraireAssetIndex_ Index of base token for oracles.
     constructor(
         NewVaultParams memory vaultParams,
@@ -99,26 +100,28 @@ contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
         weights[numeraireAssetIndex] = ONE;
 
         for (uint256 i = 0; i < numHoldings; i++) {
-            if (i != numeraireAssetIndex) {
-                latestAnswer = oracles[i].latestAnswer();
-
-                // Check if the price from the Oracle is valid as Aave does
-                // https://docs.aave.com/developers/v/1.0/developing-on-aave/the-protocol/price-oracle
-                // https://github.com/aave/aave-protocol/blob/4b4545fb583fd4f400507b10f3c3114f45b8a037/
-                // contracts/misc/ChainlinkProxyPriceProvider.sol#L77
-                if (latestAnswer <= 0) {
-                    revert Aera__OraclePriceIsInvalid(i, latestAnswer);
-                }
-
-                // slither-disable-next-line divide-before-multiply
-                holdingsRatio =
-                    (holdings[i] * ONE) /
-                    holdings[numeraireAssetIndex];
-                weights[i] =
-                    (holdingsRatio * (10**oracles[i].decimals())) /
-                    uint256(latestAnswer);
-                weightSum += weights[i];
+            if (i == numeraireAssetIndex) {
+                continue;
             }
+
+            latestAnswer = oracles[i].latestAnswer();
+
+            // Check if the price from the Oracle is valid as Aave does
+            // https://docs.aave.com/developers/v/1.0/developing-on-aave/the-protocol/price-oracle
+            // https://github.com/aave/aave-protocol/blob/4b4545fb583fd4f400507b10f3c3114f45b8a037/
+            // contracts/misc/ChainlinkProxyPriceProvider.sol#L77
+            if (latestAnswer <= 0) {
+                revert Aera__OraclePriceIsInvalid(i, latestAnswer);
+            }
+
+            // slither-disable-next-line divide-before-multiply
+            holdingsRatio =
+                (holdings[i] * ONE) /
+                holdings[numeraireAssetIndex];
+            weights[i] =
+                (holdingsRatio * (10**oracles[i].decimals())) /
+                uint256(latestAnswer);
+            weightSum += weights[i];
         }
 
         updateWeights(weights, weightSum);
