@@ -131,6 +131,7 @@ describe("Mammon Vault V2 Mainnet Functionality", function () {
         description: "Test vault description",
       },
       oracleAddresses,
+      0,
     );
   });
 
@@ -1086,10 +1087,19 @@ describe("Mammon Vault V2 Mainnet Functionality", function () {
       });
 
       describe("with enableTradingWithOraclePrice function", () => {
-        it("should be reverted to enable trading", async () => {
-          await expect(
-            vault.enableTradingWithOraclePrice(),
-          ).to.be.revertedWith("Mammon__CallerIsNotManager");
+        describe("should be reverted to enable trading", async () => {
+          it("when called from non-manager", async () => {
+            await expect(
+              vault.enableTradingWithOraclePrice(),
+            ).to.be.revertedWith("Mammon__CallerIsNotManager");
+          });
+
+          it("when oracle price is not greater than zero", async () => {
+            await oracles[1].setLatestAnswer(0);
+            await expect(
+              vault.connect(manager).enableTradingWithOraclePrice(),
+            ).to.be.revertedWith("Mammon__OraclePriceIsInvalid");
+          });
         });
 
         it("should be possible to enable trading", async () => {

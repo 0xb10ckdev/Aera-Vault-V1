@@ -13,8 +13,9 @@ contract MammonVaultV2Mock is MammonVaultV2 {
     // solhint-disable no-empty-blocks
     constructor(
         NewVaultParams memory vaultParams,
-        AggregatorV2V3Interface[] memory oracles
-    ) MammonVaultV2(vaultParams, oracles) {}
+        AggregatorV2V3Interface[] memory oracles,
+        uint256 numeraireAssetIndex
+    ) MammonVaultV2(vaultParams, oracles, numeraireAssetIndex) {}
 
     function getSpotPrice(address tokenIn, address tokenOut)
         external
