@@ -129,7 +129,7 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
     it("when numeraire asset index exceeds token length", async () => {
       await expect(
         deployVault(validParams, oracleAddress, tokens.length),
-      ).to.be.revertedWith("Mammon__NumeraireAssetIndexExceedTokenLength");
+      ).to.be.revertedWith("Aera__NumeraireAssetIndexExceedTokenLength");
     });
 
     it("when oracle is zero address", async () => {
