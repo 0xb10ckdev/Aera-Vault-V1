@@ -9,7 +9,7 @@ import "./interfaces/IProtocolAPIV2.sol";
 /// @notice Managed n-asset vault that supports withdrawals
 ///         in line with a pre-defined validator contract.
 /// @dev Vault owner is the asset owner.
-contract MammonVaultV2 is MammonVaultV1, IProtocolAPIV2 {
+contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
     /// STORAGE ///
 
     // slither-disable-next-line shadowing-state
@@ -23,16 +23,16 @@ contract MammonVaultV2 is MammonVaultV1, IProtocolAPIV2 {
 
     /// ERRORS ///
 
-    error Mammon__OracleLengthIsNotSame(
+    error Aera__OracleLengthIsNotSame(
         uint256 tokenLength,
         uint256 oracleLength
     );
-    error Mammon__NumeraireAssetIndexExceedTokenLength(
+    error Aera__NumeraireAssetIndexExceedTokenLength(
         uint256 tokenLength,
         uint256 index
     );
-    error Mammon__OracleIsZeroAddress(uint256 index);
-    error Mammon__OraclePriceIsInvalid(uint256 index, int256 actual);
+    error Aera__OracleIsZeroAddress(uint256 index);
+    error Aera__OraclePriceIsInvalid(uint256 index, int256 actual);
 
     /// FUNCTIONS ///
 
@@ -52,10 +52,10 @@ contract MammonVaultV2 is MammonVaultV1, IProtocolAPIV2 {
     ) MammonVaultV1(vaultParams) {
         uint256 numTokens = vaultParams.tokens.length;
         if (numTokens != oracles_.length) {
-            revert Mammon__OracleLengthIsNotSame(numTokens, oracles_.length);
+            revert Aera__OracleLengthIsNotSame(numTokens, oracles_.length);
         }
         if (numeraireAssetIndex_ >= numTokens) {
-            revert Mammon__NumeraireAssetIndexExceedTokenLength(
+            revert Aera__NumeraireAssetIndexExceedTokenLength(
                 numTokens,
                 numeraireAssetIndex_
             );
@@ -67,7 +67,7 @@ contract MammonVaultV2 is MammonVaultV1, IProtocolAPIV2 {
             if (
                 i != numeraireAssetIndex_ && address(oracles_[i]) == address(0)
             ) {
-                revert Mammon__OracleIsZeroAddress(i);
+                revert Aera__OracleIsZeroAddress(i);
             }
         }
 
@@ -96,7 +96,7 @@ contract MammonVaultV2 is MammonVaultV1, IProtocolAPIV2 {
             if (i != numeraireAssetIndex) {
                 latestAnswer = oracles[i].latestAnswer();
                 if (latestAnswer <= 0) {
-                    revert Mammon__OraclePriceIsInvalid(i, latestAnswer);
+                    revert Aera__OraclePriceIsInvalid(i, latestAnswer);
                 }
 
                 holdingsRatio =

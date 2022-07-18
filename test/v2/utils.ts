@@ -1,10 +1,7 @@
 import { BigNumber } from "ethers";
 import { deployments, ethers } from "hardhat";
 import { DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
-import {
-  MammonVaultV2Mock,
-  MammonVaultV2Mock__factory,
-} from "../../typechain";
+import { AeraVaultV2Mock, AeraVaultV2Mock__factory } from "../../typechain";
 import { MAX_MANAGEMENT_FEE, ZERO_ADDRESS } from "../v1/constants";
 import { VaultParams } from "../v1/utils";
 
@@ -14,9 +11,9 @@ export const deployVault = async (
   params: VaultParams,
   oracles: string[],
   numeraireAssetIndex: number,
-): Promise<MammonVaultV2Mock> => {
-  const vault = await ethers.getContractFactory<MammonVaultV2Mock__factory>(
-    "MammonVaultV2Mock",
+): Promise<AeraVaultV2Mock> => {
+  const vault = await ethers.getContractFactory<AeraVaultV2Mock__factory>(
+    "AeraVaultV2Mock",
   );
 
   if (!params.validator) {

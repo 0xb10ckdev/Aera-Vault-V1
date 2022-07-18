@@ -8,7 +8,7 @@ import {
   BaseManagedPoolFactory__factory,
   ManagedPoolFactory,
   ManagedPoolFactory__factory,
-  MammonVaultV2Mock,
+  AeraVaultV2Mock,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
   OracleMock,
@@ -45,7 +45,7 @@ import {
   VaultParams,
 } from "../utils";
 
-describe("Mammon Vault V2 Mainnet Deployment", function () {
+describe("Aera Vault V2 Mainnet Deployment", function () {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
   let validator: WithdrawalValidatorMock;
@@ -123,7 +123,7 @@ describe("Mammon Vault V2 Mainnet Deployment", function () {
     it("when token and oracle length is not same", async () => {
       await expect(
         deployVault(validParams, [...oracleAddress, oracleAddress[0]], 0),
-      ).to.be.revertedWith("Mammon__OracleLengthIsNotSame");
+      ).to.be.revertedWith("Aera__OracleLengthIsNotSame");
     });
 
     it("when numeraire asset index exceeds token length", async () => {
@@ -135,7 +135,7 @@ describe("Mammon Vault V2 Mainnet Deployment", function () {
     it("when oracle is zero address", async () => {
       await expect(
         deployVault(validParams, [...oracleAddress.slice(1), ZERO_ADDRESS], 0),
-      ).to.be.revertedWith("Mammon__OracleIsZeroAddress");
+      ).to.be.revertedWith("Aera__OracleIsZeroAddress");
     });
 
     it("when management fee is greater than maximum", async () => {
@@ -238,11 +238,11 @@ describe("Mammon Vault V2 Mainnet Deployment", function () {
   });
 });
 
-describe("Mammon Vault V2 Mainnet Functionality", function () {
+describe("Aera Vault V2 Mainnet Functionality", function () {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
   let user: SignerWithAddress;
-  let vault: MammonVaultV2Mock;
+  let vault: AeraVaultV2Mock;
   let validator: WithdrawalValidatorMock;
   let factory: ManagedPoolFactory;
   let tokens: IERC20[];
@@ -1806,7 +1806,7 @@ describe("Mammon Vault V2 Mainnet Functionality", function () {
             await oracles[1].setLatestAnswer(0);
             await expect(
               vault.connect(manager).enableTradingWithOraclePrice(),
-            ).to.be.revertedWith("Mammon__OraclePriceIsInvalid");
+            ).to.be.revertedWith("Aera__OraclePriceIsInvalid");
           });
         });
 
