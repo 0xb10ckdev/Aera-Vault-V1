@@ -1,6 +1,6 @@
-# Mammon Protocol
+# Aera Protocol
 
-[![Unit Tests](https://github.com/GauntletNetworks/mammon-contracts/actions/workflows/unit.yml/badge.svg)](https://github.com/GauntletNetworks/mammon-contracts/actions/workflows/unit.yml)
+[![Unit Tests](https://github.com/GauntletNetworks/aera-contracts/actions/workflows/unit.yml/badge.svg)](https://github.com/GauntletNetworks/aera-contracts/actions/workflows/unit.yml)
 
 Tools used:
 

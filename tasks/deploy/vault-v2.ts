@@ -6,7 +6,7 @@ import { getConfig } from "../../scripts/config";
 const wethAddress = "0x000000000000000000000000000000000000000F";
 const assetHelpers = new AssetHelpers(wethAddress);
 
-task("deploy:vaultV2", "Deploys a Mammon vault v2 with the given parameters")
+task("deploy:vaultV2", "Deploys a Aera vault v2 with the given parameters")
   .addParam("factory", "Balancer Managed Pool Factory address")
   .addParam("name", "Pool Token's name")
   .addParam("symbol", "Pool Token's symbol")
@@ -34,7 +34,7 @@ task("deploy:vaultV2", "Deploys a Mammon vault v2 with the given parameters")
   )
   .addOptionalParam(
     "test",
-    "Deploy Mammon Vault V1 Mock contract",
+    "Deploy Aera Vault V1 Mock contract",
     false,
     types.boolean,
   )
@@ -89,7 +89,7 @@ task("deploy:vaultV2", "Deploys a Mammon vault v2 with the given parameters")
       console.log(`Description: ${description}`);
     }
 
-    const contract = taskArgs.test ? "MammonVaultV2Mock" : "MammonVaultV2";
+    const contract = taskArgs.test ? "AeraVaultV2Mock" : "AeraVaultV2";
 
     const vaultFactory = await ethers.getContractFactory(contract);
 

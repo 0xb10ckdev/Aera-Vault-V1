@@ -179,7 +179,7 @@ const config: HardhatUserConfig = {
         },
       },
       {
-        // these settings are for Mammon contracts
+        // these settings are for Aera contracts
         version: "0.8.11",
         settings: {
           // You should disable the optimizer when debugging

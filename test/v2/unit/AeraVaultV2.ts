@@ -9,8 +9,8 @@ import {
   BaseManagedPoolFactory__factory,
   ManagedPoolFactory,
   ManagedPoolFactory__factory,
-  MammonVaultV2Mock,
-  MammonVaultV2Mock__factory,
+  AeraVaultV2Mock,
+  AeraVaultV2Mock__factory,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
   OracleMock,
@@ -39,11 +39,11 @@ import {
   toUnit,
 } from "../utils";
 
-describe("Mammon Vault V2 Mainnet Functionality", function () {
+describe("Aera Vault V2 Mainnet Functionality", function () {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
   let user: SignerWithAddress;
-  let vault: MammonVaultV2Mock;
+  let vault: AeraVaultV2Mock;
   let validator: WithdrawalValidatorMock;
   let factory: ManagedPoolFactory;
   let tokens: IERC20[];
@@ -112,8 +112,8 @@ describe("Mammon Vault V2 Mainnet Functionality", function () {
     const validWeights = valueArray(ONE.div(tokens.length), tokens.length);
 
     const vaultFactory =
-      await ethers.getContractFactory<MammonVaultV2Mock__factory>(
-        "MammonVaultV2Mock",
+      await ethers.getContractFactory<AeraVaultV2Mock__factory>(
+        "AeraVaultV2Mock",
       );
     vault = await vaultFactory.connect(admin).deploy(
       {
@@ -1098,7 +1098,7 @@ describe("Mammon Vault V2 Mainnet Functionality", function () {
             await oracles[1].setLatestAnswer(0);
             await expect(
               vault.connect(manager).enableTradingWithOraclePrice(),
-            ).to.be.revertedWith("Mammon__OraclePriceIsInvalid");
+            ).to.be.revertedWith("Aera__OraclePriceIsInvalid");
           });
         });
 

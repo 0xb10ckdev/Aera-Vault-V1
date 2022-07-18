@@ -2,7 +2,7 @@
 pragma solidity 0.8.11;
 
 /**
- * @dev Mock MammonVaultV2 with getting spot prices.
+ * @dev Mock Oracle with setLatestAnswer.
  *      THIS CONTRACT IS FOR TESTING PURPOSES ONLY. DO NOT USE IN PRODUCTION.
  */
 contract OracleMock {
