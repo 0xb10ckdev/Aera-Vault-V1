@@ -22,7 +22,7 @@ contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
     uint256 public immutable numeraireAssetIndex;
 
     /// EVENTS ///
-    
+
     /// @notice Emitted when enableTradingWithOraclePrice is called.
     /// @param weights Updated weights of tokens.
     event UpdateWeightsWithOraclePrice(uint256[] weights);
@@ -101,6 +101,11 @@ contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
         for (uint256 i = 0; i < numHoldings; i++) {
             if (i != numeraireAssetIndex) {
                 latestAnswer = oracles[i].latestAnswer();
+
+                // Check if the price from the Oracle is valid as Aave does
+                // https://docs.aave.com/developers/v/1.0/developing-on-aave/the-protocol/price-oracle
+                // https://github.com/aave/aave-protocol/blob/4b4545fb583fd4f400507b10f3c3114f45b8a037/
+                // contracts/misc/ChainlinkProxyPriceProvider.sol#L77
                 if (latestAnswer <= 0) {
                     revert Aera__OraclePriceIsInvalid(i, latestAnswer);
                 }
