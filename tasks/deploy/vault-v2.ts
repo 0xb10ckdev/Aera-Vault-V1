@@ -13,6 +13,7 @@ task("deploy:vaultV2", "Deploys a Mammon vault v2 with the given parameters")
   .addParam("tokens", "Tokens' addresses")
   .addParam("weights", "Tokens' weights")
   .addParam("oracles", "Oracles for token prices vs ETH")
+  .addParam("numeraireIndex", "Index of base token for oracles")
   .addParam("swapFee", "Swap Fee Percentage")
   .addParam("manager", "Manager's address")
   .addParam("validator", "Validator's address")
@@ -46,6 +47,7 @@ task("deploy:vaultV2", "Deploys a Mammon vault v2 with the given parameters")
     const tokens = taskArgs.tokens.split(",");
     const weights = taskArgs.weights.split(",");
     const oracles = taskArgs.oracles.split(",");
+    const numeraireAssetIndex = taskArgs.numeraireIndex;
     const swapFeePercentage = taskArgs.swapFee;
     const manager = taskArgs.manager;
     const validator = taskArgs.validator;
@@ -76,7 +78,8 @@ task("deploy:vaultV2", "Deploys a Mammon vault v2 with the given parameters")
       console.log(`Symbol: ${symbol}`);
       console.log("Tokens:\n", tokens.join("\n"));
       console.log("Weights:\n", weights.join("\n"));
-      console.log("oracles:\n", oracles.join("\n"));
+      console.log("Oracles:\n", oracles.join("\n"));
+      console.log("Numeraire Asset Index:\n", numeraireAssetIndex);
       console.log(`Swap Fee: ${swapFeePercentage}`);
       console.log(`Manager: ${manager}`);
       console.log(`Validator: ${validator}`);
@@ -106,6 +109,7 @@ task("deploy:vaultV2", "Deploys a Mammon vault v2 with the given parameters")
         description,
       },
       oracles,
+      numeraireAssetIndex,
     );
 
     if (!taskArgs.silent) {

@@ -18,13 +18,21 @@ contract MammonVaultV2 is MammonVaultV1, IProtocolAPIV2 {
     /// @dev Oracle addresses.
     AggregatorV2V3Interface[] public oracles;
 
+    /// @dev Index of asset to be used as base token for oracles.
+    uint256 public numeraireAssetIndex;
+
     /// ERRORS ///
 
     error Mammon__OracleLengthIsNotSame(
         uint256 tokenLength,
         uint256 oracleLength
     );
+    error Mammon__NumeraireAssetIndexExceedTokenLength(
+        uint256 tokenLength,
+        uint256 index
+    );
     error Mammon__OracleIsZeroAddress(uint256 index);
+    error Mammon__OraclePriceIsInvalid(uint256 index, int256 actual);
 
     /// FUNCTIONS ///
 
@@ -36,24 +44,35 @@ contract MammonVaultV2 is MammonVaultV1, IProtocolAPIV2 {
     ///       If total sum of weights is one.
     /// @param vaultParams Struct vault parameter.
     /// @param oracles_ Chainlink oracle addresses.
+    /// @param numeraireAssetIndex_ Index of base token for oracles.
     constructor(
         NewVaultParams memory vaultParams,
-        AggregatorV2V3Interface[] memory oracles_
+        AggregatorV2V3Interface[] memory oracles_,
+        uint256 numeraireAssetIndex_
     ) MammonVaultV1(vaultParams) {
         uint256 numTokens = vaultParams.tokens.length;
         if (numTokens != oracles_.length) {
             revert Mammon__OracleLengthIsNotSame(numTokens, oracles_.length);
         }
+        if (numeraireAssetIndex_ >= numTokens) {
+            revert Mammon__NumeraireAssetIndexExceedTokenLength(
+                numTokens,
+                numeraireAssetIndex_
+            );
+        }
 
         // Check if oracle address is zero address.
-        // oracles_[0] could be specified as zero address.
-        for (uint256 i = 1; i < numTokens; i++) {
-            if (address(oracles_[i]) == address(0)) {
+        // Oracle for base token could be specified as zero address.
+        for (uint256 i = 0; i < numTokens; i++) {
+            if (
+                i != numeraireAssetIndex_ && address(oracles_[i]) == address(0)
+            ) {
                 revert Mammon__OracleIsZeroAddress(i);
             }
         }
 
         oracles = oracles_;
+        numeraireAssetIndex = numeraireAssetIndex_;
     }
 
     /// @inheritdoc IProtocolAPIV2
@@ -70,20 +89,24 @@ contract MammonVaultV2 is MammonVaultV1, IProtocolAPIV2 {
         uint256[] memory weights = new uint256[](numHoldings);
         uint256 weightSum = ONE;
         int256 latestAnswer;
-        weights[0] = ONE;
+        uint256 holdingsRatio;
+        weights[numeraireAssetIndex] = ONE;
 
-        for (uint256 i = 1; i < numHoldings; i++) {
-            // slither-disable-next-line uninitialized-local
-            uint256 latestPrice;
-            latestAnswer = oracles[i].latestAnswer();
-            if (latestAnswer > 0) {
-                latestPrice = uint256(latestAnswer);
+        for (uint256 i = 0; i < numHoldings; i++) {
+            if (i != numeraireAssetIndex) {
+                latestAnswer = oracles[i].latestAnswer();
+                if (latestAnswer <= 0) {
+                    revert Mammon__OraclePriceIsInvalid(i, latestAnswer);
+                }
+
+                holdingsRatio =
+                    (holdings[i] * ONE) /
+                    holdings[numeraireAssetIndex];
+                weights[i] =
+                    (holdingsRatio * (10**oracles[i].decimals())) /
+                    uint256(latestAnswer);
+                weightSum += weights[i];
             }
-            weights[i] =
-                (ONE * holdings[i] * (10**oracles[i].decimals())) /
-                holdings[0] /
-                latestPrice;
-            weightSum += weights[i];
         }
 
         updateWeights(weights, weightSum);

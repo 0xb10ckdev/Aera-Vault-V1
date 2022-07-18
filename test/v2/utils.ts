@@ -13,6 +13,7 @@ export * from "../v1/utils";
 export const deployVault = async (
   params: VaultParams,
   oracles: string[],
+  numeraireAssetIndex: number,
 ): Promise<MammonVaultV2Mock> => {
   const vault = await ethers.getContractFactory<MammonVaultV2Mock__factory>(
     "MammonVaultV2Mock",
@@ -37,6 +38,7 @@ export const deployVault = async (
       description: params.description || "",
     },
     oracles,
+    numeraireAssetIndex,
   );
 };
 

@@ -115,49 +115,55 @@ describe("Mammon Vault V2 Mainnet Deployment", function () {
 
     it("when token and weight length is not same", async () => {
       validParams.tokens = [...sortedTokens, tokens[0].address];
-      await expect(deployVault(validParams, oracleAddress)).to.be.revertedWith(
-        "Mammon__ValueLengthIsNotSame",
-      );
+      await expect(
+        deployVault(validParams, oracleAddress, 0),
+      ).to.be.revertedWith("Mammon__ValueLengthIsNotSame");
     });
 
     it("when token and oracle length is not same", async () => {
       await expect(
-        deployVault(validParams, [...oracleAddress, oracleAddress[0]]),
+        deployVault(validParams, [...oracleAddress, oracleAddress[0]], 0),
       ).to.be.revertedWith("Mammon__OracleLengthIsNotSame");
+    });
+
+    it("when numeraire asset index exceeds token length", async () => {
+      await expect(
+        deployVault(validParams, oracleAddress, tokens.length),
+      ).to.be.revertedWith("Mammon__NumeraireAssetIndexExceedTokenLength");
     });
 
     it("when oracle is zero address", async () => {
       await expect(
-        deployVault(validParams, [...oracleAddress.slice(1), ZERO_ADDRESS]),
+        deployVault(validParams, [...oracleAddress.slice(1), ZERO_ADDRESS], 0),
       ).to.be.revertedWith("Mammon__OracleIsZeroAddress");
     });
 
     it("when management fee is greater than maximum", async () => {
       validParams.managementFee = MAX_MANAGEMENT_FEE.add(1);
-      await expect(deployVault(validParams, oracleAddress)).to.be.revertedWith(
-        "Mammon__ManagementFeeIsAboveMax",
-      );
+      await expect(
+        deployVault(validParams, oracleAddress, 0),
+      ).to.be.revertedWith("Mammon__ManagementFeeIsAboveMax");
     });
 
     it("when notice period is greater than maximum", async () => {
       validParams.noticePeriod = MAX_NOTICE_PERIOD + 1;
-      await expect(deployVault(validParams, oracleAddress)).to.be.revertedWith(
-        "Mammon__NoticePeriodIsAboveMax",
-      );
+      await expect(
+        deployVault(validParams, oracleAddress, 0),
+      ).to.be.revertedWith("Mammon__NoticePeriodIsAboveMax");
     });
 
     it("when validator is not valid", async () => {
       validParams.validator = manager.address;
-      await expect(deployVault(validParams, oracleAddress)).to.be.revertedWith(
-        "Mammon__ValidatorIsNotValid",
-      );
+      await expect(
+        deployVault(validParams, oracleAddress, 0),
+      ).to.be.revertedWith("Mammon__ValidatorIsNotValid");
 
       validParams.validator = (
         await deployments.get("InvalidValidator")
       ).address;
-      await expect(deployVault(validParams, oracleAddress)).to.be.revertedWith(
-        "Mammon__ValidatorIsNotValid",
-      );
+      await expect(
+        deployVault(validParams, oracleAddress, 0),
+      ).to.be.revertedWith("Mammon__ValidatorIsNotValid");
     });
 
     it("when validator is not matched", async () => {
@@ -169,65 +175,65 @@ describe("Mammon Vault V2 Mainnet Deployment", function () {
         .connect(admin)
         .deploy(tokens.length - 1);
       validParams.validator = mismatchedValidator.address;
-      await expect(deployVault(validParams, oracleAddress)).to.be.revertedWith(
-        "Mammon__ValidatorIsNotMatched",
-      );
+      await expect(
+        deployVault(validParams, oracleAddress, 0),
+      ).to.be.revertedWith("Mammon__ValidatorIsNotMatched");
     });
 
     it("when token is not sorted in ascending order", async () => {
       validParams.tokens = unsortedTokens;
-      await expect(deployVault(validParams, oracleAddress)).to.be.revertedWith(
-        BALANCER_ERRORS.UNSORTED_ARRAY,
-      );
+      await expect(
+        deployVault(validParams, oracleAddress, 0),
+      ).to.be.revertedWith(BALANCER_ERRORS.UNSORTED_ARRAY);
     });
 
     it("when token is duplicated", async () => {
       validParams.tokens = [sortedTokens[0], ...sortedTokens.slice(0, -1)];
-      await expect(deployVault(validParams, oracleAddress)).to.be.revertedWith(
-        BALANCER_ERRORS.UNSORTED_ARRAY,
-      );
+      await expect(
+        deployVault(validParams, oracleAddress, 0),
+      ).to.be.revertedWith(BALANCER_ERRORS.UNSORTED_ARRAY);
     });
 
     it("when swap fee is greater than maximum", async () => {
       validParams.swapFeePercentage = MAX_SWAP_FEE.add(1);
-      await expect(deployVault(validParams, oracleAddress)).to.be.revertedWith(
-        BALANCER_ERRORS.MAX_SWAP_FEE_PERCENTAGE,
-      );
+      await expect(
+        deployVault(validParams, oracleAddress, 0),
+      ).to.be.revertedWith(BALANCER_ERRORS.MAX_SWAP_FEE_PERCENTAGE);
     });
 
     it("when swap fee is less than minimum", async () => {
       validParams.swapFeePercentage = MIN_SWAP_FEE.sub(1);
-      await expect(deployVault(validParams, oracleAddress)).to.be.revertedWith(
-        BALANCER_ERRORS.MIN_SWAP_FEE_PERCENTAGE,
-      );
+      await expect(
+        deployVault(validParams, oracleAddress, 0),
+      ).to.be.revertedWith(BALANCER_ERRORS.MIN_SWAP_FEE_PERCENTAGE);
     });
 
     it("when total sum of weights is not one", async () => {
       validParams.weights = valueArray(MIN_WEIGHT, tokens.length);
-      await expect(deployVault(validParams, oracleAddress)).to.be.revertedWith(
-        BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT,
-      );
+      await expect(
+        deployVault(validParams, oracleAddress, 0),
+      ).to.be.revertedWith(BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT);
     });
 
     it("when manager is zero address", async () => {
       validParams.manager = ZERO_ADDRESS;
-      await expect(deployVault(validParams, oracleAddress)).to.be.revertedWith(
-        "Mammon__ManagerIsZeroAddress",
-      );
+      await expect(
+        deployVault(validParams, oracleAddress, 0),
+      ).to.be.revertedWith("Mammon__ManagerIsZeroAddress");
     });
 
     it("when manager is deployer", async () => {
       validParams.manager = admin.address;
-      await expect(deployVault(validParams, oracleAddress)).to.be.revertedWith(
-        "Mammon__ManagerIsOwner",
-      );
+      await expect(
+        deployVault(validParams, oracleAddress, 0),
+      ).to.be.revertedWith("Mammon__ManagerIsOwner");
     });
 
     it("when description is empty", async () => {
       validParams.description = "";
-      await expect(deployVault(validParams, oracleAddress)).to.be.revertedWith(
-        "Mammon__DescriptionIsEmpty",
-      );
+      await expect(
+        deployVault(validParams, oracleAddress, 0),
+      ).to.be.revertedWith("Mammon__DescriptionIsEmpty");
     });
   });
 });
@@ -321,6 +327,7 @@ describe("Mammon Vault V2 Mainnet Functionality", function () {
       tokens: sortedTokens.join(","),
       weights: validWeights.join(","),
       oracles: oracleAddresses.join(","),
+      numeraireIndex: "0",
       swapFee: MIN_SWAP_FEE.toString(),
       manager: manager.address,
       validator: validator.address,
@@ -1788,10 +1795,19 @@ describe("Mammon Vault V2 Mainnet Functionality", function () {
       });
 
       describe("with enableTradingWithOraclePrice function", () => {
-        it("should be reverted to enable trading", async () => {
-          await expect(
-            vault.enableTradingWithOraclePrice(),
-          ).to.be.revertedWith("Mammon__CallerIsNotManager");
+        describe("should be reverted to enable trading", async () => {
+          it("when called from non-manager", async () => {
+            await expect(
+              vault.enableTradingWithOraclePrice(),
+            ).to.be.revertedWith("Mammon__CallerIsNotManager");
+          });
+
+          it("when oracle price is not greater than zero", async () => {
+            await oracles[1].setLatestAnswer(0);
+            await expect(
+              vault.connect(manager).enableTradingWithOraclePrice(),
+            ).to.be.revertedWith("Mammon__OraclePriceIsInvalid");
+          });
         });
 
         it("should be possible to enable trading", async () => {
