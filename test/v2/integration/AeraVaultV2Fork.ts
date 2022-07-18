@@ -1813,7 +1813,9 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         it("should be possible to enable trading", async () => {
           const oraclePrices: BigNumber[] = [toUnit(1, 8)];
           for (let i = 1; i < tokens.length; i++) {
-            oraclePrices.push(toUnit(Math.floor(Math.random() * 100), 8));
+            oraclePrices.push(
+              toUnit(Math.floor((0.1 + Math.random()) * 50), 8),
+            );
             await oracles[i].setLatestAnswer(oraclePrices[i]);
           }
 
