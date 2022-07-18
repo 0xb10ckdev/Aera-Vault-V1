@@ -19,7 +19,13 @@ contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
     AggregatorV2V3Interface[] public oracles;
 
     /// @dev Index of asset to be used as base token for oracles.
-    uint256 public numeraireAssetIndex;
+    uint256 public immutable numeraireAssetIndex;
+
+    /// EVENTS ///
+    
+    /// @notice Emitted when enableTradingWithOraclePrice is called.
+    /// @param weights Updated weights of tokens.
+    event UpdateWeightsWithOraclePrice(uint256[] weights);
 
     /// ERRORS ///
 
@@ -99,6 +105,7 @@ contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
                     revert Aera__OraclePriceIsInvalid(i, latestAnswer);
                 }
 
+                // slither-disable-next-line divide-before-multiply
                 holdingsRatio =
                     (holdings[i] * ONE) /
                     holdings[numeraireAssetIndex];
@@ -111,5 +118,7 @@ contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
 
         updateWeights(weights, weightSum);
         setSwapEnabled(true);
+
+        emit UpdateWeightsWithOraclePrice(pool.getNormalizedWeights());
     }
 }

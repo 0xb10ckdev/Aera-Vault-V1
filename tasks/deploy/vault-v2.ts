@@ -13,7 +13,7 @@ task("deploy:vaultV2", "Deploys a Aera vault v2 with the given parameters")
   .addParam("tokens", "Tokens' addresses")
   .addParam("weights", "Tokens' weights")
   .addParam("oracles", "Oracles for token prices vs ETH")
-  .addParam("numeraireIndex", "Index of base token for oracles")
+  .addParam("numeraireAssetIndex", "Index of base token for oracles")
   .addParam("swapFee", "Swap Fee Percentage")
   .addParam("manager", "Manager's address")
   .addParam("validator", "Validator's address")
@@ -47,7 +47,7 @@ task("deploy:vaultV2", "Deploys a Aera vault v2 with the given parameters")
     const tokens = taskArgs.tokens.split(",");
     const weights = taskArgs.weights.split(",");
     const oracles = taskArgs.oracles.split(",");
-    const numeraireAssetIndex = taskArgs.numeraireIndex;
+    const numeraireAssetIndex = taskArgs.numeraireAssetIndex;
     const swapFeePercentage = taskArgs.swapFee;
     const manager = taskArgs.manager;
     const validator = taskArgs.validator;

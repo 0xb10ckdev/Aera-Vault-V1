@@ -1111,7 +1111,8 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
           await expect(vault.connect(manager).enableTradingWithOraclePrice())
             .to.emit(vault, "SetSwapEnabled")
-            .withArgs(true);
+            .withArgs(true)
+            .to.emit(vault, "UpdateWeightsWithOraclePrice");
 
           for (let i = 0; i < tokens.length; i++) {
             expect(

@@ -327,7 +327,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       tokens: sortedTokens.join(","),
       weights: validWeights.join(","),
       oracles: oracleAddresses.join(","),
-      numeraireIndex: "0",
+      numeraireAssetIndex: "0",
       swapFee: MIN_SWAP_FEE.toString(),
       manager: manager.address,
       validator: validator.address,
