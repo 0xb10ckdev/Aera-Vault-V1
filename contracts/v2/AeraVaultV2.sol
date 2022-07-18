@@ -18,6 +18,9 @@ contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
     /// @dev Oracle addresses.
     AggregatorV2V3Interface[] public oracles;
 
+    /// @dev Units in oracle decimals.
+    uint256[] public oracleUnits;
+
     /// @dev Index of asset to be used as base token for oracles.
     uint256 public immutable numeraireAssetIndex;
 
@@ -68,13 +71,15 @@ contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
             );
         }
 
+        oracleUnits = new uint256[](numTokens);
         // Check if oracle address is zero address.
         // Oracle for base token could be specified as zero address.
         for (uint256 i = 0; i < numTokens; i++) {
-            if (
-                i != numeraireAssetIndex_ && address(oracles_[i]) == address(0)
-            ) {
-                revert Aera__OracleIsZeroAddress(i);
+            if (i != numeraireAssetIndex_) {
+                if (address(oracles_[i]) == address(0)) {
+                    revert Aera__OracleIsZeroAddress(i);
+                }
+                oracleUnits[i] = 10**oracles_[i].decimals();
             }
         }
 
@@ -97,6 +102,7 @@ contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
         uint256 weightSum = ONE;
         int256 latestAnswer;
         uint256 holdingsRatio;
+        uint256 numeraireAssetHolding = holdings[numeraireAssetIndex];
         weights[numeraireAssetIndex] = ONE;
 
         for (uint256 i = 0; i < numHoldings; i++) {
@@ -115,11 +121,9 @@ contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
             }
 
             // slither-disable-next-line divide-before-multiply
-            holdingsRatio =
-                (holdings[i] * ONE) /
-                holdings[numeraireAssetIndex];
+            holdingsRatio = (holdings[i] * ONE) / numeraireAssetHolding;
             weights[i] =
-                (holdingsRatio * (10**oracles[i].decimals())) /
+                (holdingsRatio * (oracleUnits[i])) /
                 uint256(latestAnswer);
             weightSum += weights[i];
         }
