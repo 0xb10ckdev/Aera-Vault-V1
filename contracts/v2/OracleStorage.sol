@@ -61,7 +61,12 @@ contract OracleStorage {
     /// @notice Initialize the oracle information.
     /// @param oracles Chainlink oracle addresses.
     ///                All oracles should be in reference to the same asset.
-    constructor(AggregatorV2V3Interface[] memory oracles) {
+    /// @param numeraireAssetIndex Index of base token for oracles.
+    // prettier-ignore
+    constructor(
+        AggregatorV2V3Interface[] memory oracles,
+        uint256 numeraireAssetIndex
+    ) {
         numOracles = oracles.length;
 
         AggregatorV2V3Interface invalidAggregator = AggregatorV2V3Interface(
@@ -89,29 +94,31 @@ contract OracleStorage {
         oracle18 = numOracles > 18 ? oracles[18] : invalidAggregator;
         oracle19 = numOracles > 19 ? oracles[19] : invalidAggregator;
 
-        oracleUnit0 = 10**oracles[0].decimals();
-        oracleUnit1 = 10**oracles[1].decimals();
-        oracleUnit2 = numOracles > 2 ? 10**oracles[2].decimals() : 0;
-        oracleUnit3 = numOracles > 3 ? 10**oracles[3].decimals() : 0;
-        oracleUnit4 = numOracles > 4 ? 10**oracles[4].decimals() : 0;
-        oracleUnit5 = numOracles > 5 ? 10**oracles[5].decimals() : 0;
-        oracleUnit6 = numOracles > 6 ? 10**oracles[6].decimals() : 0;
-        oracleUnit7 = numOracles > 7 ? 10**oracles[7].decimals() : 0;
-        oracleUnit8 = numOracles > 8 ? 10**oracles[8].decimals() : 0;
-        oracleUnit9 = numOracles > 9 ? 10**oracles[9].decimals() : 0;
-        oracleUnit10 = numOracles > 10 ? 10**oracles[10].decimals() : 0;
-        oracleUnit11 = numOracles > 11 ? 10**oracles[11].decimals() : 0;
-        oracleUnit12 = numOracles > 12 ? 10**oracles[12].decimals() : 0;
-        oracleUnit13 = numOracles > 13 ? 10**oracles[13].decimals() : 0;
-        oracleUnit14 = numOracles > 14 ? 10**oracles[14].decimals() : 0;
-        oracleUnit15 = numOracles > 15 ? 10**oracles[15].decimals() : 0;
-        oracleUnit16 = numOracles > 16 ? 10**oracles[16].decimals() : 0;
-        oracleUnit17 = numOracles > 17 ? 10**oracles[17].decimals() : 0;
-        oracleUnit18 = numOracles > 18 ? 10**oracles[18].decimals() : 0;
-        oracleUnit19 = numOracles > 19 ? 10**oracles[19].decimals() : 0;
+        oracleUnit0 = numeraireAssetIndex > 0 ? 10**oracles[0].decimals() : 0;
+        oracleUnit1 = numeraireAssetIndex != 1 ? 10**oracles[1].decimals() : 0;
+        oracleUnit2 = numOracles > 2 && numeraireAssetIndex != 2 ? 10**oracles[2].decimals() : 0;
+        oracleUnit3 = numOracles > 3 && numeraireAssetIndex != 3 ? 10**oracles[3].decimals() : 0;
+        oracleUnit4 = numOracles > 4 && numeraireAssetIndex != 4 ? 10**oracles[4].decimals() : 0;
+        oracleUnit5 = numOracles > 5 && numeraireAssetIndex != 5 ? 10**oracles[5].decimals() : 0;
+        oracleUnit6 = numOracles > 6 && numeraireAssetIndex != 6 ? 10**oracles[6].decimals() : 0;
+        oracleUnit7 = numOracles > 7 && numeraireAssetIndex != 7 ? 10**oracles[7].decimals() : 0;
+        oracleUnit8 = numOracles > 8 && numeraireAssetIndex != 8 ? 10**oracles[8].decimals() : 0;
+        oracleUnit9 = numOracles > 9 && numeraireAssetIndex != 9 ? 10**oracles[9].decimals() : 0;
+        oracleUnit10 = numOracles > 10 && numeraireAssetIndex != 10 ? 10**oracles[10].decimals() : 0;
+        oracleUnit11 = numOracles > 11 && numeraireAssetIndex != 11 ? 10**oracles[11].decimals() : 0;
+        oracleUnit12 = numOracles > 12 && numeraireAssetIndex != 12 ? 10**oracles[12].decimals() : 0;
+        oracleUnit13 = numOracles > 13 && numeraireAssetIndex != 13 ? 10**oracles[13].decimals() : 0;
+        oracleUnit14 = numOracles > 14 && numeraireAssetIndex != 14 ? 10**oracles[14].decimals() : 0;
+        oracleUnit15 = numOracles > 15 && numeraireAssetIndex != 15 ? 10**oracles[15].decimals() : 0;
+        oracleUnit16 = numOracles > 16 && numeraireAssetIndex != 16 ? 10**oracles[16].decimals() : 0;
+        oracleUnit17 = numOracles > 17 && numeraireAssetIndex != 17 ? 10**oracles[17].decimals() : 0;
+        oracleUnit18 = numOracles > 18 && numeraireAssetIndex != 18 ? 10**oracles[18].decimals() : 0;
+        oracleUnit19 = numOracles > 19 && numeraireAssetIndex != 19 ? 10**oracles[19].decimals() : 0;
     }
 
     /// @notice Returns an array of oracles.
+    // prettier-ignore
+    // solhint-disable-next-line code-complexity
     function getOracles()
         internal
         view
@@ -120,60 +127,56 @@ contract OracleStorage {
         AggregatorV2V3Interface[]
             memory oracles = new AggregatorV2V3Interface[](numOracles);
 
-        // prettier-ignore
-        {
-            oracles[0] = oracle0;
-            oracles[1] = oracle1;
-            if (numOracles > 2) { oracles[2] = oracle2; } else { return oracles; }
-            if (numOracles > 3) { oracles[3] = oracle3; } else { return oracles; }
-            if (numOracles > 4) { oracles[4] = oracle4; } else { return oracles; }
-            if (numOracles > 5) { oracles[5] = oracle5; } else { return oracles; }
-            if (numOracles > 6) { oracles[6] = oracle6; } else { return oracles; }
-            if (numOracles > 7) { oracles[7] = oracle7; } else { return oracles; }
-            if (numOracles > 8) { oracles[8] = oracle8; } else { return oracles; }
-            if (numOracles > 9) { oracles[9] = oracle9; } else { return oracles; }
-            if (numOracles > 10) { oracles[10] = oracle10; } else { return oracles; }
-            if (numOracles > 11) { oracles[11] = oracle11; } else { return oracles; }
-            if (numOracles > 12) { oracles[12] = oracle12; } else { return oracles; }
-            if (numOracles > 13) { oracles[13] = oracle13; } else { return oracles; }
-            if (numOracles > 14) { oracles[14] = oracle14; } else { return oracles; }
-            if (numOracles > 15) { oracles[15] = oracle15; } else { return oracles; }
-            if (numOracles > 16) { oracles[16] = oracle16; } else { return oracles; }
-            if (numOracles > 17) { oracles[17] = oracle17; } else { return oracles; }
-            if (numOracles > 18) { oracles[18] = oracle18; } else { return oracles; }
-            if (numOracles > 19) { oracles[19] = oracle19; } else { return oracles; }
-        }
+        oracles[0] = oracle0;
+        oracles[1] = oracle1;
+        if (numOracles > 2) { oracles[2] = oracle2; } else { return oracles; }
+        if (numOracles > 3) { oracles[3] = oracle3; } else { return oracles; }
+        if (numOracles > 4) { oracles[4] = oracle4; } else { return oracles; }
+        if (numOracles > 5) { oracles[5] = oracle5; } else { return oracles; }
+        if (numOracles > 6) { oracles[6] = oracle6; } else { return oracles; }
+        if (numOracles > 7) { oracles[7] = oracle7; } else { return oracles; }
+        if (numOracles > 8) { oracles[8] = oracle8; } else { return oracles; }
+        if (numOracles > 9) { oracles[9] = oracle9; } else { return oracles; }
+        if (numOracles > 10) { oracles[10] = oracle10; } else { return oracles; }
+        if (numOracles > 11) { oracles[11] = oracle11; } else { return oracles; }
+        if (numOracles > 12) { oracles[12] = oracle12; } else { return oracles; }
+        if (numOracles > 13) { oracles[13] = oracle13; } else { return oracles; }
+        if (numOracles > 14) { oracles[14] = oracle14; } else { return oracles; }
+        if (numOracles > 15) { oracles[15] = oracle15; } else { return oracles; }
+        if (numOracles > 16) { oracles[16] = oracle16; } else { return oracles; }
+        if (numOracles > 17) { oracles[17] = oracle17; } else { return oracles; }
+        if (numOracles > 18) { oracles[18] = oracle18; } else { return oracles; }
+        if (numOracles > 19) { oracles[19] = oracle19; } else { return oracles; }
 
         return oracles;
     }
 
     /// @notice Returns an array of units in oracle decimals.
+    // prettier-ignore
+    // solhint-disable-next-line code-complexity
     function getOracleUnits() internal view returns (uint256[] memory) {
         uint256[] memory oracleUnits = new uint256[](numOracles);
 
-        // prettier-ignore
-        {
-            oracleUnits[0] = oracleUnit0;
-            oracleUnits[1] = oracleUnit1;
-            if (numOracles > 2) { oracleUnits[2] = oracleUnit2; } else { return oracleUnits; }
-            if (numOracles > 3) { oracleUnits[3] = oracleUnit3; } else { return oracleUnits; }
-            if (numOracles > 4) { oracleUnits[4] = oracleUnit4; } else { return oracleUnits; }
-            if (numOracles > 5) { oracleUnits[5] = oracleUnit5; } else { return oracleUnits; }
-            if (numOracles > 6) { oracleUnits[6] = oracleUnit6; } else { return oracleUnits; }
-            if (numOracles > 7) { oracleUnits[7] = oracleUnit7; } else { return oracleUnits; }
-            if (numOracles > 8) { oracleUnits[8] = oracleUnit8; } else { return oracleUnits; }
-            if (numOracles > 9) { oracleUnits[9] = oracleUnit9; } else { return oracleUnits; }
-            if (numOracles > 10) { oracleUnits[10] = oracleUnit10; } else { return oracleUnits; }
-            if (numOracles > 11) { oracleUnits[11] = oracleUnit11; } else { return oracleUnits; }
-            if (numOracles > 12) { oracleUnits[12] = oracleUnit12; } else { return oracleUnits; }
-            if (numOracles > 13) { oracleUnits[13] = oracleUnit13; } else { return oracleUnits; }
-            if (numOracles > 14) { oracleUnits[14] = oracleUnit14; } else { return oracleUnits; }
-            if (numOracles > 15) { oracleUnits[15] = oracleUnit15; } else { return oracleUnits; }
-            if (numOracles > 16) { oracleUnits[16] = oracleUnit16; } else { return oracleUnits; }
-            if (numOracles > 17) { oracleUnits[17] = oracleUnit17; } else { return oracleUnits; }
-            if (numOracles > 18) { oracleUnits[18] = oracleUnit18; } else { return oracleUnits; }
-            if (numOracles > 19) { oracleUnits[19] = oracleUnit19; } else { return oracleUnits; }
-        }
+        oracleUnits[0] = oracleUnit0;
+        oracleUnits[1] = oracleUnit1;
+        if (numOracles > 2) { oracleUnits[2] = oracleUnit2; } else { return oracleUnits; }
+        if (numOracles > 3) { oracleUnits[3] = oracleUnit3; } else { return oracleUnits; }
+        if (numOracles > 4) { oracleUnits[4] = oracleUnit4; } else { return oracleUnits; }
+        if (numOracles > 5) { oracleUnits[5] = oracleUnit5; } else { return oracleUnits; }
+        if (numOracles > 6) { oracleUnits[6] = oracleUnit6; } else { return oracleUnits; }
+        if (numOracles > 7) { oracleUnits[7] = oracleUnit7; } else { return oracleUnits; }
+        if (numOracles > 8) { oracleUnits[8] = oracleUnit8; } else { return oracleUnits; }
+        if (numOracles > 9) { oracleUnits[9] = oracleUnit9; } else { return oracleUnits; }
+        if (numOracles > 10) { oracleUnits[10] = oracleUnit10; } else { return oracleUnits; }
+        if (numOracles > 11) { oracleUnits[11] = oracleUnit11; } else { return oracleUnits; }
+        if (numOracles > 12) { oracleUnits[12] = oracleUnit12; } else { return oracleUnits; }
+        if (numOracles > 13) { oracleUnits[13] = oracleUnit13; } else { return oracleUnits; }
+        if (numOracles > 14) { oracleUnits[14] = oracleUnit14; } else { return oracleUnits; }
+        if (numOracles > 15) { oracleUnits[15] = oracleUnit15; } else { return oracleUnits; }
+        if (numOracles > 16) { oracleUnits[16] = oracleUnit16; } else { return oracleUnits; }
+        if (numOracles > 17) { oracleUnits[17] = oracleUnit17; } else { return oracleUnits; }
+        if (numOracles > 18) { oracleUnits[18] = oracleUnit18; } else { return oracleUnits; }
+        if (numOracles > 19) { oracleUnits[19] = oracleUnit19; } else { return oracleUnits; }
 
         return oracleUnits;
     }
