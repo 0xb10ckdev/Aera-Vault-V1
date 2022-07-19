@@ -27,8 +27,9 @@ contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
     /// EVENTS ///
 
     /// @notice Emitted when enableTradingWithOraclePrice is called.
+    /// @param prices Used oracle prices.
     /// @param weights Updated weights of tokens.
-    event UpdateWeightsWithOraclePrice(uint256[] weights);
+    event UpdateWeightsWithOraclePrice(uint256[] prices, uint256[] weights);
 
     /// ERRORS ///
 
@@ -99,6 +100,7 @@ contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
         uint256[] memory holdings = getHoldings();
         uint256 numHoldings = holdings.length;
         uint256[] memory weights = new uint256[](numHoldings);
+        uint256[] memory prices = new uint256[](numHoldings);
         uint256 weightSum = ONE;
         int256 latestAnswer;
         uint256 holdingsRatio;
@@ -120,17 +122,16 @@ contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
                 revert Aera__OraclePriceIsInvalid(i, latestAnswer);
             }
 
+            prices[i] = uint256(latestAnswer);
             // slither-disable-next-line divide-before-multiply
             holdingsRatio = (holdings[i] * ONE) / numeraireAssetHolding;
-            weights[i] =
-                (holdingsRatio * (oracleUnits[i])) /
-                uint256(latestAnswer);
+            weights[i] = (holdingsRatio * (oracleUnits[i])) / prices[i];
             weightSum += weights[i];
         }
 
         updateWeights(weights, weightSum);
         setSwapEnabled(true);
 
-        emit UpdateWeightsWithOraclePrice(pool.getNormalizedWeights());
+        emit UpdateWeightsWithOraclePrice(prices, pool.getNormalizedWeights());
     }
 }
