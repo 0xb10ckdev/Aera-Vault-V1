@@ -81,6 +81,7 @@ contract AeraVaultV2 is MammonVaultV1, OracleStorage, IProtocolAPIV2 {
     }
 
     /// @inheritdoc IProtocolAPIV2
+    // slither-disable-next-line calls-loop
     function enableTradingWithOraclePrice()
         external
         override
