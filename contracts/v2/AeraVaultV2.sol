@@ -53,7 +53,7 @@ contract AeraVaultV2 is MammonVaultV1, OracleStorage, IProtocolAPIV2 {
         NewVaultParams memory vaultParams,
         AggregatorV2V3Interface[] memory oracles,
         uint256 numeraireAssetIndex_
-    ) MammonVaultV1(vaultParams) OracleStorage(oracles) {
+    ) MammonVaultV1(vaultParams) OracleStorage(oracles, numeraireAssetIndex_) {
         uint256 numTokens = vaultParams.tokens.length;
         if (numTokens != oracles.length) {
             revert Aera__OracleLengthIsNotSame(numTokens, oracles.length);
