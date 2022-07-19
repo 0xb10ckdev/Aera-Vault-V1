@@ -12,7 +12,7 @@ task("deploy:vaultV2", "Deploys a Aera vault v2 with the given parameters")
   .addParam("symbol", "Pool Token's symbol")
   .addParam("tokens", "Tokens' addresses")
   .addParam("weights", "Tokens' weights")
-  .addParam("oracles", "Oracles for token prices vs ETH")
+  .addParam("oracles", "Oracles for token prices vs base token")
   .addParam("numeraireAssetIndex", "Index of base token for oracles")
   .addParam("swapFee", "Swap Fee Percentage")
   .addParam("manager", "Manager's address")
@@ -57,7 +57,17 @@ task("deploy:vaultV2", "Deploys a Aera vault v2 with the given parameters")
     const merkleOrchard = config.merkleOrchard || ethers.constants.AddressZero;
 
     if (tokens.length < 2) {
-      console.error("Number of Tokens should be at least two");
+      console.error("Number of tokens should be at least two");
+      return;
+    }
+
+    if (tokens.length != weights.length) {
+      console.error("Number of tokens and weights should be same");
+      return;
+    }
+
+    if (tokens.length != oracles.length) {
+      console.error("Number of tokens and oracles should be same");
       return;
     }
 
