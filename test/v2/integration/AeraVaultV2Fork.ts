@@ -67,6 +67,7 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
       ({ tokens, sortedTokens, unsortedTokens } = await setupTokens());
       oracles = await setupOracles();
       oracleAddress = oracles.map((oracle: OracleMock) => oracle.address);
+      oracleAddress[0] = ZERO_ADDRESS;
       validWeights = valueArray(ONE.div(tokens.length), tokens.length);
 
       await deployments.deploy("Validator", {
@@ -134,8 +135,22 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
 
     it("when oracle is zero address", async () => {
       await expect(
-        deployVault(validParams, [...oracleAddress.slice(1), ZERO_ADDRESS], 0),
+        deployVault(
+          validParams,
+          [...oracleAddress.slice(0, -1), ZERO_ADDRESS],
+          0,
+        ),
       ).to.be.revertedWith("Aera__OracleIsZeroAddress");
+    });
+
+    it("when numeraire oracle is not zero address", async () => {
+      await expect(
+        deployVault(
+          validParams,
+          [oracles[0].address, ...oracleAddress.slice(1)],
+          0,
+        ),
+      ).to.be.revertedWith("Aera__NumeraireOracleIsNotZeroAddress");
     });
 
     it("when management fee is greater than maximum", async () => {
@@ -294,6 +309,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     ({ tokens, sortedTokens, unsortedTokens } = await setupTokens());
     oracles = await setupOracles();
     oracleAddresses = oracles.map((oracle: OracleMock) => oracle.address);
+    oracleAddresses[0] = ZERO_ADDRESS;
 
     const validatorMock =
       await ethers.getContractFactory<WithdrawalValidatorMock__factory>(
