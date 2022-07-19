@@ -12,9 +12,6 @@ import "./interfaces/IProtocolAPIV2.sol";
 contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
     /// STORAGE ///
 
-    // slither-disable-next-line shadowing-state
-    uint256 private constant ONE = 10**18;
-
     /// @dev Oracle addresses.
     AggregatorV2V3Interface[] public oracles;
 

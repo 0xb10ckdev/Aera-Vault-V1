@@ -8,8 +8,6 @@ import "../AeraVaultV2.sol";
  *      THIS CONTRACT IS FOR TESTING PURPOSES ONLY. DO NOT USE IN PRODUCTION.
  */
 contract AeraVaultV2Mock is AeraVaultV2 {
-    uint256 private constant ONE = 10**18;
-
     // solhint-disable no-empty-blocks
     constructor(
         NewVaultParams memory vaultParams,
