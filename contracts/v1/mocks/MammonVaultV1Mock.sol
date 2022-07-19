@@ -8,8 +8,6 @@ import "../MammonVaultV1.sol";
  *      THIS CONTRACT IS FOR TESTING PURPOSES ONLY. DO NOT USE IN PRODUCTION.
  */
 contract MammonVaultV1Mock is MammonVaultV1 {
-    uint256 private constant ONE = 10**18;
-
     // solhint-disable no-empty-blocks
     constructor(NewVaultParams memory vaultParams)
         MammonVaultV1(vaultParams)

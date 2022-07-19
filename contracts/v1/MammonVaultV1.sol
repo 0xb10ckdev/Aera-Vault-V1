@@ -24,7 +24,7 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
 
     /// STORAGE ///
 
-    uint256 private constant ONE = 10**18;
+    uint256 internal constant ONE = 10**18;
 
     /// @notice Minimum period for weight change duration.
     uint256 private constant MINIMUM_WEIGHT_CHANGE_DURATION = 1 days;
