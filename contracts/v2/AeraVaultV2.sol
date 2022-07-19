@@ -29,7 +29,7 @@ contract AeraVaultV2 is MammonVaultV1, OracleStorage, IProtocolAPIV2 {
         uint256 tokenLength,
         uint256 oracleLength
     );
-    error Aera__NumeraireAssetIndexExceedTokenLength(
+    error Aera__NumeraireAssetIndexExceedsTokenLength(
         uint256 tokenLength,
         uint256 index
     );
@@ -58,7 +58,7 @@ contract AeraVaultV2 is MammonVaultV1, OracleStorage, IProtocolAPIV2 {
             revert Aera__OracleLengthIsNotSame(numTokens, oracles.length);
         }
         if (numeraireAssetIndex_ >= numTokens) {
-            revert Aera__NumeraireAssetIndexExceedTokenLength(
+            revert Aera__NumeraireAssetIndexExceedsTokenLength(
                 numTokens,
                 numeraireAssetIndex_
             );
