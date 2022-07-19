@@ -34,6 +34,7 @@ contract AeraVaultV2 is MammonVaultV1, OracleStorage, IProtocolAPIV2 {
         uint256 index
     );
     error Aera__OracleIsZeroAddress(uint256 index);
+    error Aera__NumeraireOracleIsNotZeroAddress(uint256 index);
     error Aera__OraclePriceIsInvalid(uint256 index, int256 actual);
 
     /// FUNCTIONS ///
@@ -71,6 +72,8 @@ contract AeraVaultV2 is MammonVaultV1, OracleStorage, IProtocolAPIV2 {
                 if (address(oracles[i]) == address(0)) {
                     revert Aera__OracleIsZeroAddress(i);
                 }
+            } else if (address(oracles[i]) != address(0)) {
+                revert Aera__NumeraireOracleIsNotZeroAddress(i);
             }
         }
 

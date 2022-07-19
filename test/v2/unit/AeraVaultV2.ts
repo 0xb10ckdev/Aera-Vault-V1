@@ -79,6 +79,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     ({ tokens, sortedTokens, unsortedTokens } = await setupTokens());
     oracles = await setupOracles();
     oracleAddresses = oracles.map((oracle: OracleMock) => oracle.address);
+    oracleAddresses[0] = ZERO_ADDRESS;
 
     const validatorMock =
       await ethers.getContractFactory<WithdrawalValidatorMock__factory>(
