@@ -2,6 +2,7 @@
 pragma solidity 0.8.11;
 
 import "../v1/MammonVaultV1.sol";
+import "./OracleStorage.sol";
 import "./dependencies/chainlink/interfaces/AggregatorV2V3Interface.sol";
 import "./interfaces/IProtocolAPIV2.sol";
 
@@ -9,14 +10,8 @@ import "./interfaces/IProtocolAPIV2.sol";
 /// @notice Managed n-asset vault that supports withdrawals
 ///         in line with a pre-defined validator contract.
 /// @dev Vault owner is the asset owner.
-contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
+contract AeraVaultV2 is MammonVaultV1, OracleStorage, IProtocolAPIV2 {
     /// STORAGE ///
-
-    /// @dev Oracle addresses.
-    AggregatorV2V3Interface[] public oracles;
-
-    /// @dev Units in oracle decimals.
-    uint256[] public oracleUnits;
 
     /// @dev Index of asset to be used as base token for oracles.
     uint256 public immutable numeraireAssetIndex;
@@ -50,17 +45,17 @@ contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
     ///       If swapFeePercentage is greater than minimum and less than maximum.
     ///       If total sum of weights is one.
     /// @param vaultParams Struct vault parameter.
-    /// @param oracles_ Chainlink oracle addresses.
+    /// @param oracles Chainlink oracle addresses.
     ///                 All oracles should be in reference to the same asset.
     /// @param numeraireAssetIndex_ Index of base token for oracles.
     constructor(
         NewVaultParams memory vaultParams,
-        AggregatorV2V3Interface[] memory oracles_,
+        AggregatorV2V3Interface[] memory oracles,
         uint256 numeraireAssetIndex_
-    ) MammonVaultV1(vaultParams) {
+    ) MammonVaultV1(vaultParams) OracleStorage(oracles) {
         uint256 numTokens = vaultParams.tokens.length;
-        if (numTokens != oracles_.length) {
-            revert Aera__OracleLengthIsNotSame(numTokens, oracles_.length);
+        if (numTokens != oracles.length) {
+            revert Aera__OracleLengthIsNotSame(numTokens, oracles.length);
         }
         if (numeraireAssetIndex_ >= numTokens) {
             revert Aera__NumeraireAssetIndexExceedTokenLength(
@@ -69,24 +64,20 @@ contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
             );
         }
 
-        oracleUnits = new uint256[](numTokens);
         // Check if oracle address is zero address.
         // Oracle for base token could be specified as zero address.
         for (uint256 i = 0; i < numTokens; i++) {
             if (i != numeraireAssetIndex_) {
-                if (address(oracles_[i]) == address(0)) {
+                if (address(oracles[i]) == address(0)) {
                     revert Aera__OracleIsZeroAddress(i);
                 }
-                oracleUnits[i] = 10**oracles_[i].decimals();
             }
         }
 
-        oracles = oracles_;
         numeraireAssetIndex = numeraireAssetIndex_;
     }
 
     /// @inheritdoc IProtocolAPIV2
-    // slither-disable-next-line calls-loop
     function enableTradingWithOraclePrice()
         external
         override
@@ -94,6 +85,8 @@ contract AeraVaultV2 is MammonVaultV1, IProtocolAPIV2 {
         onlyManager
         whenInitialized
     {
+        AggregatorV2V3Interface[] memory oracles = getOracles();
+        uint256[] memory oracleUnits = getOracleUnits();
         uint256[] memory holdings = getHoldings();
         uint256 numHoldings = holdings.length;
         uint256[] memory weights = new uint256[](numHoldings);
