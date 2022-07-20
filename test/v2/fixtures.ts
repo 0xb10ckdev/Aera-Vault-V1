@@ -4,7 +4,9 @@ import { ZERO_ADDRESS } from "./constants";
 
 export * from "../v1/fixtures";
 
-export const setupOracles = async (): Promise<OracleMock[]> => {
+export const setupOracles = async (
+  length: number = 4,
+): Promise<OracleMock[]> => {
   const { admin } = await ethers.getNamedSigners();
 
   const oracleDeploys = [];
@@ -12,7 +14,7 @@ export const setupOracles = async (): Promise<OracleMock[]> => {
     "OracleMock",
   );
 
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < length; i++) {
     const oracle = await oracleFactory.connect(admin).deploy(8);
     oracleDeploys.push(oracle);
   }
