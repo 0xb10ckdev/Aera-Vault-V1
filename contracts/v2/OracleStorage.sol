@@ -2,11 +2,12 @@
 pragma solidity 0.8.11;
 
 import "./dependencies/chainlink/interfaces/AggregatorV2V3Interface.sol";
+import "./interfaces/IOracleStorage.sol";
 
 /// @title Oracle Storage management contract.
 /// @notice Manage oracle information.
 /// @dev Store oracle information for gas reduction and cleaner code.
-contract OracleStorage {
+contract OracleStorage is IOracleStorage {
     /// STORAGE ///
 
     /// @dev Oracle addresses.
@@ -56,6 +57,9 @@ contract OracleStorage {
     /// @dev Index of asset to be used as base token for oracles.
     uint256 internal immutable numOracles;
 
+    /// @dev Index of asset to be used as base token for oracles.
+    uint256 public immutable numeraireAssetIndex;
+
     /// ERRORS ///
 
     error Aera__OracleLengthIsNotSame(
@@ -75,11 +79,11 @@ contract OracleStorage {
     /// @notice Initialize the oracle information.
     /// @param oracles Chainlink oracle addresses.
     ///                All oracles should be in reference to the same asset.
-    /// @param numeraireAssetIndex Index of base token for oracles.
+    /// @param numeraireAssetIndex_ Index of base token for oracles.
     // prettier-ignore
     constructor(
         AggregatorV2V3Interface[] memory oracles,
-        uint256 numeraireAssetIndex,
+        uint256 numeraireAssetIndex_,
         uint256 numTokens
     ) {
         numOracles = oracles.length;
@@ -87,17 +91,17 @@ contract OracleStorage {
         if (numTokens != numOracles) {
             revert Aera__OracleLengthIsNotSame(numTokens, numOracles);
         }
-        if (numeraireAssetIndex >= numTokens) {
+        if (numeraireAssetIndex_ >= numTokens) {
             revert Aera__NumeraireAssetIndexExceedsTokenLength(
                 numTokens,
-                numeraireAssetIndex
+                numeraireAssetIndex_
             );
         }
 
         // Check if oracle address is zero address.
         // Oracle for base token could be specified as zero address.
         for (uint256 i = 0; i < numTokens; i++) {
-            if (i != numeraireAssetIndex) {
+            if (i != numeraireAssetIndex_) {
                 if (address(oracles[i]) == address(0)) {
                     revert Aera__OracleIsZeroAddress(i);
                 }
@@ -131,33 +135,35 @@ contract OracleStorage {
         oracle18 = numOracles > 18 ? oracles[18] : invalidAggregator;
         oracle19 = numOracles > 19 ? oracles[19] : invalidAggregator;
 
-        oracleUnit0 = numeraireAssetIndex > 0 ? 10**oracles[0].decimals() : 0;
-        oracleUnit1 = numeraireAssetIndex != 1 ? 10**oracles[1].decimals() : 0;
-        oracleUnit2 = numOracles > 2 && numeraireAssetIndex != 2 ? 10**oracles[2].decimals() : 0;
-        oracleUnit3 = numOracles > 3 && numeraireAssetIndex != 3 ? 10**oracles[3].decimals() : 0;
-        oracleUnit4 = numOracles > 4 && numeraireAssetIndex != 4 ? 10**oracles[4].decimals() : 0;
-        oracleUnit5 = numOracles > 5 && numeraireAssetIndex != 5 ? 10**oracles[5].decimals() : 0;
-        oracleUnit6 = numOracles > 6 && numeraireAssetIndex != 6 ? 10**oracles[6].decimals() : 0;
-        oracleUnit7 = numOracles > 7 && numeraireAssetIndex != 7 ? 10**oracles[7].decimals() : 0;
-        oracleUnit8 = numOracles > 8 && numeraireAssetIndex != 8 ? 10**oracles[8].decimals() : 0;
-        oracleUnit9 = numOracles > 9 && numeraireAssetIndex != 9 ? 10**oracles[9].decimals() : 0;
-        oracleUnit10 = numOracles > 10 && numeraireAssetIndex != 10 ? 10**oracles[10].decimals() : 0;
-        oracleUnit11 = numOracles > 11 && numeraireAssetIndex != 11 ? 10**oracles[11].decimals() : 0;
-        oracleUnit12 = numOracles > 12 && numeraireAssetIndex != 12 ? 10**oracles[12].decimals() : 0;
-        oracleUnit13 = numOracles > 13 && numeraireAssetIndex != 13 ? 10**oracles[13].decimals() : 0;
-        oracleUnit14 = numOracles > 14 && numeraireAssetIndex != 14 ? 10**oracles[14].decimals() : 0;
-        oracleUnit15 = numOracles > 15 && numeraireAssetIndex != 15 ? 10**oracles[15].decimals() : 0;
-        oracleUnit16 = numOracles > 16 && numeraireAssetIndex != 16 ? 10**oracles[16].decimals() : 0;
-        oracleUnit17 = numOracles > 17 && numeraireAssetIndex != 17 ? 10**oracles[17].decimals() : 0;
-        oracleUnit18 = numOracles > 18 && numeraireAssetIndex != 18 ? 10**oracles[18].decimals() : 0;
-        oracleUnit19 = numOracles > 19 && numeraireAssetIndex != 19 ? 10**oracles[19].decimals() : 0;
+        oracleUnit0 = numeraireAssetIndex_ > 0 ? 10**oracles[0].decimals() : 0;
+        oracleUnit1 = numeraireAssetIndex_ != 1 ? 10**oracles[1].decimals() : 0;
+        oracleUnit2 = numOracles > 2 && numeraireAssetIndex_ != 2 ? 10**oracles[2].decimals() : 0;
+        oracleUnit3 = numOracles > 3 && numeraireAssetIndex_ != 3 ? 10**oracles[3].decimals() : 0;
+        oracleUnit4 = numOracles > 4 && numeraireAssetIndex_ != 4 ? 10**oracles[4].decimals() : 0;
+        oracleUnit5 = numOracles > 5 && numeraireAssetIndex_ != 5 ? 10**oracles[5].decimals() : 0;
+        oracleUnit6 = numOracles > 6 && numeraireAssetIndex_ != 6 ? 10**oracles[6].decimals() : 0;
+        oracleUnit7 = numOracles > 7 && numeraireAssetIndex_ != 7 ? 10**oracles[7].decimals() : 0;
+        oracleUnit8 = numOracles > 8 && numeraireAssetIndex_ != 8 ? 10**oracles[8].decimals() : 0;
+        oracleUnit9 = numOracles > 9 && numeraireAssetIndex_ != 9 ? 10**oracles[9].decimals() : 0;
+        oracleUnit10 = numOracles > 10 && numeraireAssetIndex_ != 10 ? 10**oracles[10].decimals() : 0;
+        oracleUnit11 = numOracles > 11 && numeraireAssetIndex_ != 11 ? 10**oracles[11].decimals() : 0;
+        oracleUnit12 = numOracles > 12 && numeraireAssetIndex_ != 12 ? 10**oracles[12].decimals() : 0;
+        oracleUnit13 = numOracles > 13 && numeraireAssetIndex_ != 13 ? 10**oracles[13].decimals() : 0;
+        oracleUnit14 = numOracles > 14 && numeraireAssetIndex_ != 14 ? 10**oracles[14].decimals() : 0;
+        oracleUnit15 = numOracles > 15 && numeraireAssetIndex_ != 15 ? 10**oracles[15].decimals() : 0;
+        oracleUnit16 = numOracles > 16 && numeraireAssetIndex_ != 16 ? 10**oracles[16].decimals() : 0;
+        oracleUnit17 = numOracles > 17 && numeraireAssetIndex_ != 17 ? 10**oracles[17].decimals() : 0;
+        oracleUnit18 = numOracles > 18 && numeraireAssetIndex_ != 18 ? 10**oracles[18].decimals() : 0;
+        oracleUnit19 = numOracles > 19 && numeraireAssetIndex_ != 19 ? 10**oracles[19].decimals() : 0;
+
+        numeraireAssetIndex = numeraireAssetIndex_;
     }
 
-    /// @notice Returns an array of oracles.
+    /// @inheritdoc IOracleStorage
     // prettier-ignore
     // solhint-disable-next-line code-complexity
     function getOracles()
-        internal
+        public
         view
         returns (AggregatorV2V3Interface[] memory)
     {
@@ -188,10 +194,10 @@ contract OracleStorage {
         return oracles;
     }
 
-    /// @notice Returns an array of units in oracle decimals.
+    /// @inheritdoc IOracleStorage
     // prettier-ignore
     // solhint-disable-next-line code-complexity
-    function getOracleUnits() internal view returns (uint256[] memory) {
+    function getOracleUnits() public view returns (uint256[] memory) {
         uint256[] memory oracleUnits = new uint256[](numOracles);
 
         oracleUnits[0] = oracleUnit0;

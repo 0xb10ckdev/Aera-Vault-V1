@@ -11,11 +11,6 @@ import "./interfaces/IProtocolAPIV2.sol";
 ///         in line with a pre-defined validator contract.
 /// @dev Vault owner is the asset owner.
 contract AeraVaultV2 is MammonVaultV1, OracleStorage, IProtocolAPIV2 {
-    /// STORAGE ///
-
-    /// @dev Index of asset to be used as base token for oracles.
-    uint256 public immutable numeraireAssetIndex;
-
     /// EVENTS ///
 
     /// @notice Emitted when enableTradingWithOraclePrice is called.
@@ -35,6 +30,7 @@ contract AeraVaultV2 is MammonVaultV1, OracleStorage, IProtocolAPIV2 {
     /// @param oracles Chainlink oracle addresses.
     ///                 All oracles should be in reference to the same asset.
     /// @param numeraireAssetIndex_ Index of base token for oracles.
+    // solhint-disable no-empty-blocks
     constructor(
         NewVaultParams memory vaultParams,
         AggregatorV2V3Interface[] memory oracles,
@@ -42,9 +38,7 @@ contract AeraVaultV2 is MammonVaultV1, OracleStorage, IProtocolAPIV2 {
     )
         MammonVaultV1(vaultParams)
         OracleStorage(oracles, numeraireAssetIndex_, vaultParams.tokens.length)
-    {
-        numeraireAssetIndex = numeraireAssetIndex_;
-    }
+    {}
 
     /// @inheritdoc IProtocolAPIV2
     // slither-disable-next-line calls-loop
