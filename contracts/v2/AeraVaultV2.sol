@@ -23,20 +23,6 @@ contract AeraVaultV2 is MammonVaultV1, OracleStorage, IProtocolAPIV2 {
     /// @param weights Updated weights of tokens.
     event UpdateWeightsWithOraclePrice(uint256[] prices, uint256[] weights);
 
-    /// ERRORS ///
-
-    error Aera__OracleLengthIsNotSame(
-        uint256 tokenLength,
-        uint256 oracleLength
-    );
-    error Aera__NumeraireAssetIndexExceedsTokenLength(
-        uint256 tokenLength,
-        uint256 index
-    );
-    error Aera__OracleIsZeroAddress(uint256 index);
-    error Aera__NumeraireOracleIsNotZeroAddress(uint256 index);
-    error Aera__OraclePriceIsInvalid(uint256 index, int256 actual);
-
     /// FUNCTIONS ///
 
     /// @notice Initialize the contract by deploying new Balancer pool using the provided factory.
@@ -53,30 +39,10 @@ contract AeraVaultV2 is MammonVaultV1, OracleStorage, IProtocolAPIV2 {
         NewVaultParams memory vaultParams,
         AggregatorV2V3Interface[] memory oracles,
         uint256 numeraireAssetIndex_
-    ) MammonVaultV1(vaultParams) OracleStorage(oracles, numeraireAssetIndex_) {
-        uint256 numTokens = vaultParams.tokens.length;
-        if (numTokens != oracles.length) {
-            revert Aera__OracleLengthIsNotSame(numTokens, oracles.length);
-        }
-        if (numeraireAssetIndex_ >= numTokens) {
-            revert Aera__NumeraireAssetIndexExceedsTokenLength(
-                numTokens,
-                numeraireAssetIndex_
-            );
-        }
-
-        // Check if oracle address is zero address.
-        // Oracle for base token could be specified as zero address.
-        for (uint256 i = 0; i < numTokens; i++) {
-            if (i != numeraireAssetIndex_) {
-                if (address(oracles[i]) == address(0)) {
-                    revert Aera__OracleIsZeroAddress(i);
-                }
-            } else if (address(oracles[i]) != address(0)) {
-                revert Aera__NumeraireOracleIsNotZeroAddress(i);
-            }
-        }
-
+    )
+        MammonVaultV1(vaultParams)
+        OracleStorage(oracles, numeraireAssetIndex_, vaultParams.tokens.length)
+    {
         numeraireAssetIndex = numeraireAssetIndex_;
     }
 

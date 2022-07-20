@@ -56,6 +56,20 @@ contract OracleStorage {
     /// @dev Index of asset to be used as base token for oracles.
     uint256 internal immutable numOracles;
 
+    /// ERRORS ///
+
+    error Aera__OracleLengthIsNotSame(
+        uint256 tokenLength,
+        uint256 oracleLength
+    );
+    error Aera__NumeraireAssetIndexExceedsTokenLength(
+        uint256 tokenLength,
+        uint256 index
+    );
+    error Aera__OracleIsZeroAddress(uint256 index);
+    error Aera__NumeraireOracleIsNotZeroAddress(uint256 index);
+    error Aera__OraclePriceIsInvalid(uint256 index, int256 actual);
+
     /// FUNCTIONS ///
 
     /// @notice Initialize the oracle information.
@@ -65,9 +79,32 @@ contract OracleStorage {
     // prettier-ignore
     constructor(
         AggregatorV2V3Interface[] memory oracles,
-        uint256 numeraireAssetIndex
+        uint256 numeraireAssetIndex,
+        uint256 numTokens
     ) {
         numOracles = oracles.length;
+
+        if (numTokens != numOracles) {
+            revert Aera__OracleLengthIsNotSame(numTokens, numOracles);
+        }
+        if (numeraireAssetIndex >= numTokens) {
+            revert Aera__NumeraireAssetIndexExceedsTokenLength(
+                numTokens,
+                numeraireAssetIndex
+            );
+        }
+
+        // Check if oracle address is zero address.
+        // Oracle for base token could be specified as zero address.
+        for (uint256 i = 0; i < numTokens; i++) {
+            if (i != numeraireAssetIndex) {
+                if (address(oracles[i]) == address(0)) {
+                    revert Aera__OracleIsZeroAddress(i);
+                }
+            } else if (address(oracles[i]) != address(0)) {
+                revert Aera__NumeraireOracleIsNotZeroAddress(i);
+            }
+        }
 
         AggregatorV2V3Interface invalidAggregator = AggregatorV2V3Interface(
             address(0)
