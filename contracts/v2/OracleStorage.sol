@@ -80,6 +80,7 @@ contract OracleStorage is IOracleStorage {
     /// @param oracles Chainlink oracle addresses.
     ///                All oracles should be in reference to the same asset.
     /// @param numeraireAssetIndex_ Index of base token for oracles.
+    /// @param numTokens Number of tokens.
     // prettier-ignore
     constructor(
         AggregatorV2V3Interface[] memory oracles,
