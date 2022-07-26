@@ -1,37 +1,34 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
-import hre, { deployments, ethers } from "hardhat";
-import { DEFAULT_NOTICE_PERIOD, getConfig } from "../../../scripts/config";
+import { ethers } from "hardhat";
+import { DEFAULT_NOTICE_PERIOD } from "../../../scripts/config";
 import {
+  BalancerVaultMock__factory,
   IERC20,
   BaseManagedPoolFactory__factory,
   ManagedPoolFactory,
   ManagedPoolFactory__factory,
-  MammonVaultV1Mock,
+  AeraVaultV2Mock,
+  AeraVaultV2Mock__factory,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
+  OracleMock,
 } from "../../../typechain";
 import {
-  BALANCER_ERRORS,
-  DEVIATION,
+  MAX_MANAGEMENT_FEE,
   MAXIMUM_SWAP_FEE_PERCENT_CHANGE,
   SWAP_FEE_COOLDOWN_PERIOD,
-  MAX_MANAGEMENT_FEE,
-  MAX_NOTICE_PERIOD,
-  MAX_SWAP_FEE,
-  MAX_WEIGHT_CHANGE_RATIO,
   MINIMUM_WEIGHT_CHANGE_DURATION,
   MIN_SWAP_FEE,
   MIN_WEIGHT,
   NOTICE_PERIOD,
   ONE,
   ZERO_ADDRESS,
+  PRICE_DEVIATION,
 } from "../constants";
-import { deployToken, setupTokens } from "../fixtures";
+import { deployToken, setupTokens, setupOracles } from "../fixtures";
 import {
-  deployFactory,
-  deployVault,
   getCurrentTime,
   getTimestamp,
   increaseTime,
@@ -39,232 +36,50 @@ import {
   tokenValueArray,
   tokenWithValues,
   valueArray,
-  VaultParams,
+  toUnit,
 } from "../utils";
 
-describe("Mammon Vault V1 Mainnet Deployment", function () {
-  let admin: SignerWithAddress;
-  let manager: SignerWithAddress;
-  let validator: WithdrawalValidatorMock;
-  let factory: ManagedPoolFactory;
-  let tokens: IERC20[];
-  let sortedTokens: string[];
-  let unsortedTokens: string[];
-  let snapshot: unknown;
-  let validWeights: string[];
-  let validParams: VaultParams;
-
-  describe("should be reverted to deploy vault", async () => {
-    before(async function () {
-      snapshot = await ethers.provider.send("evm_snapshot", []);
-      ({ admin, manager } = await ethers.getNamedSigners());
-
-      ({ tokens, sortedTokens, unsortedTokens } = await setupTokens());
-      validWeights = valueArray(ONE.div(tokens.length), tokens.length);
-
-      await deployments.deploy("Validator", {
-        contract: "WithdrawalValidatorMock",
-        args: [tokens.length],
-        from: admin.address,
-        log: true,
-      });
-      validator = WithdrawalValidatorMock__factory.connect(
-        (await deployments.get("Validator")).address,
-        admin,
-      );
-
-      await deployments.deploy("InvalidValidator", {
-        contract: "InvalidValidatorMock",
-        from: admin.address,
-        log: true,
-      });
-
-      factory = await deployFactory(admin);
-    });
-
-    beforeEach(async function () {
-      const config = getConfig(hre.network.config.chainId || 1);
-
-      validParams = {
-        signer: admin,
-        factory: factory.address,
-        name: "Test",
-        symbol: "TEST",
-        tokens: sortedTokens,
-        weights: validWeights,
-        swapFeePercentage: MIN_SWAP_FEE,
-        manager: manager.address,
-        validator: validator.address,
-        noticePeriod: MAX_NOTICE_PERIOD,
-        managementFee: MAX_MANAGEMENT_FEE,
-        merkleOrchard: config.merkleOrchard,
-        description: "Test Vault",
-      };
-    });
-
-    after(async () => {
-      await ethers.provider.send("evm_revert", [snapshot]);
-    });
-
-    it("when token and weight length is not same", async () => {
-      validParams.tokens = [...sortedTokens, tokens[0].address];
-      await expect(deployVault(validParams)).to.be.revertedWith(
-        "Mammon__ValueLengthIsNotSame",
-      );
-    });
-
-    it("when management fee is greater than maximum", async () => {
-      validParams.managementFee = MAX_MANAGEMENT_FEE.add(1);
-      await expect(deployVault(validParams)).to.be.revertedWith(
-        "Mammon__ManagementFeeIsAboveMax",
-      );
-    });
-
-    it("when notice period is greater than maximum", async () => {
-      validParams.noticePeriod = MAX_NOTICE_PERIOD + 1;
-      await expect(deployVault(validParams)).to.be.revertedWith(
-        "Mammon__NoticePeriodIsAboveMax",
-      );
-    });
-
-    it("when validator is not valid", async () => {
-      validParams.validator = manager.address;
-      await expect(deployVault(validParams)).to.be.revertedWith(
-        "Mammon__ValidatorIsNotValid",
-      );
-
-      validParams.validator = (
-        await deployments.get("InvalidValidator")
-      ).address;
-      await expect(deployVault(validParams)).to.be.revertedWith(
-        "Mammon__ValidatorIsNotValid",
-      );
-    });
-
-    it("when validator is not matched", async () => {
-      const validatorMock =
-        await ethers.getContractFactory<WithdrawalValidatorMock__factory>(
-          "WithdrawalValidatorMock",
-        );
-      const mismatchedValidator = await validatorMock
-        .connect(admin)
-        .deploy(tokens.length - 1);
-      validParams.validator = mismatchedValidator.address;
-      await expect(deployVault(validParams)).to.be.revertedWith(
-        "Mammon__ValidatorIsNotMatched",
-      );
-    });
-
-    it("when token is not sorted in ascending order", async () => {
-      validParams.tokens = unsortedTokens;
-      await expect(deployVault(validParams)).to.be.revertedWith(
-        BALANCER_ERRORS.UNSORTED_ARRAY,
-      );
-    });
-
-    it("when token is duplicated", async () => {
-      validParams.tokens = [sortedTokens[0], ...sortedTokens.slice(0, -1)];
-      await expect(deployVault(validParams)).to.be.revertedWith(
-        BALANCER_ERRORS.UNSORTED_ARRAY,
-      );
-    });
-
-    it("when swap fee is greater than maximum", async () => {
-      validParams.swapFeePercentage = MAX_SWAP_FEE.add(1);
-      await expect(deployVault(validParams)).to.be.revertedWith(
-        BALANCER_ERRORS.MAX_SWAP_FEE_PERCENTAGE,
-      );
-    });
-
-    it("when swap fee is less than minimum", async () => {
-      validParams.swapFeePercentage = MIN_SWAP_FEE.sub(1);
-      await expect(deployVault(validParams)).to.be.revertedWith(
-        BALANCER_ERRORS.MIN_SWAP_FEE_PERCENTAGE,
-      );
-    });
-
-    it("when total sum of weights is not one", async () => {
-      validParams.weights = valueArray(MIN_WEIGHT, tokens.length);
-      await expect(deployVault(validParams)).to.be.revertedWith(
-        BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT,
-      );
-    });
-
-    it("when manager is zero address", async () => {
-      validParams.manager = ZERO_ADDRESS;
-      await expect(deployVault(validParams)).to.be.revertedWith(
-        "Mammon__ManagerIsZeroAddress",
-      );
-    });
-
-    it("when manager is deployer", async () => {
-      validParams.manager = admin.address;
-      await expect(deployVault(validParams)).to.be.revertedWith(
-        "Mammon__ManagerIsOwner",
-      );
-    });
-
-    it("when description is empty", async () => {
-      validParams.description = "";
-      await expect(deployVault(validParams)).to.be.revertedWith(
-        "Mammon__DescriptionIsEmpty",
-      );
-    });
-  });
-});
-
-describe("Mammon Vault V1 Mainnet Functionality", function () {
+describe("Aera Vault V2 Mainnet Functionality", function () {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
   let user: SignerWithAddress;
-  let vault: MammonVaultV1Mock;
+  let vault: AeraVaultV2Mock;
   let validator: WithdrawalValidatorMock;
   let factory: ManagedPoolFactory;
   let tokens: IERC20[];
   let sortedTokens: string[];
   let unsortedTokens: string[];
+  let oracles: OracleMock[];
+  let oracleAddresses: string[];
   let snapshot: unknown;
 
-  const getUserBalances = async (address: string) => {
+  const getBalances = async () => {
     const balances = await Promise.all(
-      tokens.map(token => token.balanceOf(address)),
+      tokens.map(token => token.balanceOf(admin.address)),
     );
     return balances;
   };
 
-  const getManagersFeeTotal = async () => {
-    const managersFeeTotal = await Promise.all(
-      Array.from(Array(tokens.length).keys()).map(index =>
-        vault.managersFeeTotal(index),
-      ),
-    );
-    return managersFeeTotal;
-  };
-
-  const getState = async (
-    managerAddress: string | null = null,
-    adminAddress: string | null = null,
-  ) => {
-    const [holdings, adminBalances, managerBalances] = await Promise.all([
+  const getState = async () => {
+    const [holdings, balances] = await Promise.all([
       vault.getHoldings(),
-      getUserBalances(adminAddress || admin.address),
-      getUserBalances(managerAddress || manager.address),
+      getBalances(),
     ]);
 
     return {
       holdings,
-      adminBalances,
-      managerBalances,
+      balances,
     };
   };
 
   beforeEach(async function () {
     snapshot = await ethers.provider.send("evm_snapshot", []);
 
-    const config = getConfig(hre.network.config.chainId || 1);
-
     ({ admin, manager, user } = await ethers.getNamedSigners());
     ({ tokens, sortedTokens, unsortedTokens } = await setupTokens());
+    oracles = await setupOracles();
+    oracleAddresses = oracles.map((oracle: OracleMock) => oracle.address);
+    oracleAddresses[0] = ZERO_ADDRESS;
 
     const validatorMock =
       await ethers.getContractFactory<WithdrawalValidatorMock__factory>(
@@ -273,13 +88,19 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
     validator = await validatorMock.connect(admin).deploy(tokens.length);
 
+    const bVaultContract =
+      await ethers.getContractFactory<BalancerVaultMock__factory>(
+        "BalancerVaultMock",
+      );
+    const bVault = await bVaultContract.connect(admin).deploy(ZERO_ADDRESS);
+
     const baseManagedPoolFactoryContract =
       await ethers.getContractFactory<BaseManagedPoolFactory__factory>(
         "BaseManagedPoolFactory",
       );
     const baseManagedPoolFactory = await baseManagedPoolFactoryContract
       .connect(admin)
-      .deploy(config.bVault);
+      .deploy(bVault.address);
 
     const managedPoolFactoryContract =
       await ethers.getContractFactory<ManagedPoolFactory__factory>(
@@ -291,21 +112,28 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
     const validWeights = valueArray(ONE.div(tokens.length), tokens.length);
 
-    vault = await hre.run("deploy:vault", {
-      factory: factory.address,
-      name: "Test",
-      symbol: "TEST",
-      tokens: sortedTokens.join(","),
-      weights: validWeights.join(","),
-      swapFee: MIN_SWAP_FEE.toString(),
-      manager: manager.address,
-      validator: validator.address,
-      noticePeriod: DEFAULT_NOTICE_PERIOD.toString(),
-      managementFee: MAX_MANAGEMENT_FEE.toString(),
-      description: "Test vault description",
-      silent: true,
-      test: true,
-    });
+    const vaultFactory =
+      await ethers.getContractFactory<AeraVaultV2Mock__factory>(
+        "AeraVaultV2Mock",
+      );
+    vault = await vaultFactory.connect(admin).deploy(
+      {
+        factory: factory.address,
+        name: "Test",
+        symbol: "TEST",
+        tokens: sortedTokens,
+        weights: validWeights,
+        swapFeePercentage: MIN_SWAP_FEE,
+        manager: manager.address,
+        validator: validator.address,
+        noticePeriod: DEFAULT_NOTICE_PERIOD,
+        managementFee: MAX_MANAGEMENT_FEE,
+        merkleOrchard: ZERO_ADDRESS,
+        description: "Test vault description",
+      },
+      oracleAddresses,
+      0,
+    );
   });
 
   afterEach(async () => {
@@ -372,9 +200,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       it("when call claimManagerFees", async () => {
-        await expect(
-          vault.connect(manager).claimManagerFees(),
-        ).to.be.revertedWith("Mammon__VaultNotInitialized");
+        await expect(vault.claimManagerFees()).to.be.revertedWith(
+          "Mammon__VaultNotInitialized",
+        );
       });
 
       it("when call initiateFinalization", async () => {
@@ -430,44 +258,14 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           ]),
         ).to.be.revertedWith("ERC20: insufficient allowance");
       });
-
-      it("when amount is zero", async () => {
-        const validAmounts = tokenValueArray(sortedTokens, ONE, tokens.length);
-
-        await expect(
-          vault.initialDeposit([
-            {
-              token: sortedTokens[0],
-              value: 0,
-            },
-            ...validAmounts.slice(1),
-          ]),
-        ).to.be.revertedWith(BALANCER_ERRORS.ZERO_INVARIANT);
-
-        await expect(
-          vault.initialDeposit([
-            ...validAmounts.slice(0, -1),
-            {
-              token: sortedTokens[tokens.length - 1],
-              value: 0,
-            },
-          ]),
-        ).to.be.revertedWith(BALANCER_ERRORS.ZERO_INVARIANT);
-      });
     });
 
     it("should be possible to initialize the vault", async () => {
-      const balances = await getUserBalances(admin.address);
-
       await vault.initialDeposit(
         tokenValueArray(sortedTokens, ONE, tokens.length),
       );
 
-      const { holdings, adminBalances: newAdminBalances } = await getState();
-      for (let i = 0; i < tokens.length; i++) {
-        expect(newAdminBalances[i]).to.equal(balances[i].sub(ONE));
-        expect(holdings[i]).to.equal(ONE);
-      }
+      expect(await vault.initialized()).to.equal(true);
     });
   });
 
@@ -520,131 +318,61 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             ),
           ).to.be.revertedWith("ERC20: insufficient allowance");
         });
-
-        it("when balance is changed in the same block", async () => {
-          const amounts = tokens.map(_ =>
-            toWei(Math.floor(Math.random() * 100)),
-          );
-
-          for (let i = 0; i < tokens.length; i++) {
-            await tokens[i].approve(vault.address, amounts[i].mul(2));
-          }
-
-          await ethers.provider.send("evm_setAutomine", [false]);
-          await ethers.provider.send("evm_setIntervalMining", [0]);
-
-          const trx1 = await vault.deposit(
-            tokenWithValues(sortedTokens, amounts),
-          );
-          const trx2 = await vault.depositIfBalanceUnchanged(
-            tokenWithValues(sortedTokens, amounts),
-          );
-
-          await ethers.provider.send("evm_mine", []);
-
-          try {
-            await trx1.wait();
-            await trx2.wait();
-          } catch {
-            // empty
-          }
-
-          const receipt1 = await ethers.provider.getTransactionReceipt(
-            trx1.hash,
-          );
-          const receipt2 = await ethers.provider.getTransactionReceipt(
-            trx2.hash,
-          );
-
-          expect(receipt1.status).to.equal(1);
-          expect(receipt2.status).to.equal(0);
-
-          await ethers.provider.send("evm_setAutomine", [true]);
-          await ethers.provider.send("evm_setIntervalMining", [0]);
-        });
       });
 
       describe("should be possible to deposit tokens", async () => {
         it("when depositing one token", async () => {
-          let { holdings, adminBalances } = await getState();
-          let managersFeeTotal = await getManagersFeeTotal();
-
           for (let i = 0; i < tokens.length; i++) {
             const amounts = new Array(tokens.length).fill(0);
             amounts[i] = toWei(5);
 
-            const spotPrices = await vault.getSpotPrices(tokens[i].address);
+            const trx = await vault.deposit(
+              tokenWithValues(sortedTokens, amounts),
+            );
+            const weights = await vault.getNormalizedWeights();
 
-            await vault.deposit(tokenWithValues(sortedTokens, amounts));
-            const newManagersFeeTotal = await getManagersFeeTotal();
-
-            const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
-            const { holdings: newHoldings, adminBalances: newAdminBalances } =
-              await getState();
-
-            for (let j = 0; j < tokens.length; j++) {
-              expect(newSpotPrices[j]).to.closeTo(spotPrices[j], DEVIATION);
-              expect(newHoldings[j]).to.equal(
-                holdings[j]
-                  .add(amounts[j])
-                  .sub(newManagersFeeTotal[j])
-                  .add(managersFeeTotal[j]),
-              );
-              expect(newAdminBalances[j]).to.equal(
-                adminBalances[j].sub(amounts[j]),
-              );
-            }
-
-            holdings = newHoldings;
-            adminBalances = newAdminBalances;
-            managersFeeTotal = newManagersFeeTotal;
+            await expect(trx)
+              .to.emit(vault, "Deposit")
+              .withArgs(amounts, amounts, weights);
           }
         });
 
         it("when depositing tokens", async () => {
-          const { holdings, adminBalances } = await getState();
-
           const amounts = tokens.map(_ =>
             toWei(Math.floor(Math.random() * 100)),
           );
 
-          const spotPrices = [];
           for (let i = 0; i < tokens.length; i++) {
             await tokens[i].approve(vault.address, amounts[i]);
-            spotPrices.push(await vault.getSpotPrices(tokens[i].address));
           }
 
-          await vault.deposit(tokenWithValues(sortedTokens, amounts));
-          const managersFeeTotal = await getManagersFeeTotal();
+          const trx = await vault.deposit(
+            tokenWithValues(sortedTokens, amounts),
+          );
+          const weights = await vault.getNormalizedWeights();
 
-          const { holdings: newHoldings, adminBalances: newAdminBalances } =
-            await getState();
+          await expect(trx)
+            .to.emit(vault, "Deposit")
+            .withArgs(amounts, amounts, weights);
+        });
+
+        it("when depositing tokens with depositIfBalanceUnchanged", async () => {
+          const amounts = tokens.map(_ =>
+            toWei(Math.floor(Math.random() * 100)),
+          );
 
           for (let i = 0; i < tokens.length; i++) {
-            const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
-
-            expect(
-              await vault.getSpotPrice(
-                tokens[i].address,
-                tokens[(i + 1) % tokens.length].address,
-              ),
-            ).to.equal(newSpotPrices[(i + 1) % tokens.length]);
-
-            for (let j = 0; j < tokens.length; j++) {
-              expect(newSpotPrices[j]).to.be.closeTo(
-                spotPrices[i][j],
-                DEVIATION,
-              );
-            }
-
-            expect(await vault.holding(i)).to.equal(newHoldings[i]);
-            expect(newHoldings[i]).to.equal(
-              holdings[i].add(amounts[i]).sub(managersFeeTotal[i]),
-            );
-            expect(newAdminBalances[i]).to.equal(
-              adminBalances[i].sub(amounts[i]),
-            );
+            await tokens[i].approve(vault.address, amounts[i]);
           }
+
+          const trx = await vault.depositIfBalanceUnchanged(
+            tokenWithValues(sortedTokens, amounts),
+          );
+          const weights = await vault.getNormalizedWeights();
+
+          await expect(trx)
+            .to.emit(vault, "Deposit")
+            .withArgs(amounts, amounts, weights);
         });
       });
     });
@@ -708,51 +436,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               ]),
             ).to.be.revertedWith("Mammon__AmountExceedAvailable");
           });
-
-          it("when balance is changed in the same block", async () => {
-            for (let i = 0; i < tokens.length; i++) {
-              await tokens[i].approve(vault.address, toWei(100000));
-            }
-            await vault.deposit(
-              tokenValueArray(sortedTokens, toWei(10000), tokens.length),
-            );
-
-            const amounts = tokens.map(_ =>
-              toWei(Math.floor(Math.random() * 100)),
-            );
-
-            await ethers.provider.send("evm_setAutomine", [false]);
-            await ethers.provider.send("evm_setIntervalMining", [0]);
-
-            const trx1 = await vault.withdraw(
-              tokenWithValues(sortedTokens, amounts),
-            );
-            const trx2 = await vault.withdrawIfBalanceUnchanged(
-              tokenWithValues(sortedTokens, amounts),
-            );
-
-            await ethers.provider.send("evm_mine", []);
-
-            try {
-              await trx1.wait();
-              await trx2.wait();
-            } catch {
-              // empty
-            }
-
-            const receipt1 = await ethers.provider.getTransactionReceipt(
-              trx1.hash,
-            );
-            const receipt2 = await ethers.provider.getTransactionReceipt(
-              trx2.hash,
-            );
-
-            expect(receipt1.status).to.equal(1);
-            expect(receipt2.status).to.equal(0);
-
-            await ethers.provider.send("evm_setAutomine", [true]);
-            await ethers.provider.send("evm_setIntervalMining", [0]);
-          });
         });
 
         describe("should be possible to withdraw ", async () => {
@@ -760,42 +443,24 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             await vault.deposit(
               tokenValueArray(sortedTokens, toWei(5), tokens.length),
             );
-            let { holdings, adminBalances } = await getState();
-            let managersFeeTotal = await getManagersFeeTotal();
 
             for (let i = 0; i < tokens.length; i++) {
               const amounts = new Array(tokens.length).fill(0);
               amounts[i] = toWei(5);
 
-              const spotPrices = await vault.getSpotPrices(tokens[i].address);
-
-              await vault.withdraw(tokenWithValues(sortedTokens, amounts));
-              const newManagersFeeTotal = await getManagersFeeTotal();
-
-              const newSpotPrices = await vault.getSpotPrices(
-                tokens[i].address,
+              const trx = await vault.withdraw(
+                tokenWithValues(sortedTokens, amounts),
               );
-              const {
-                holdings: newHoldings,
-                adminBalances: newAdminBalances,
-              } = await getState();
 
-              for (let j = 0; j < tokens.length; j++) {
-                expect(newSpotPrices[j]).to.closeTo(spotPrices[j], DEVIATION);
-                expect(newHoldings[j]).to.equal(
-                  holdings[j]
-                    .sub(amounts[j])
-                    .sub(newManagersFeeTotal[j])
-                    .add(managersFeeTotal[j]),
+              const weights = await vault.getNormalizedWeights();
+              await expect(trx)
+                .to.emit(vault, "Withdraw")
+                .withArgs(
+                  amounts,
+                  amounts,
+                  valueArray(toWei(100000), tokens.length),
+                  weights,
                 );
-                expect(newAdminBalances[j]).to.equal(
-                  adminBalances[j].add(amounts[j]),
-                );
-              }
-
-              holdings = newHoldings;
-              adminBalances = newAdminBalances;
-              managersFeeTotal = newManagersFeeTotal;
             }
           });
 
@@ -807,141 +472,51 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               tokenValueArray(sortedTokens, toWei(10000), tokens.length),
             );
 
-            const { holdings, adminBalances } = await getState();
-            const managersFeeTotal = await getManagersFeeTotal();
+            const amounts = tokens.map(_ =>
+              toWei(Math.floor(Math.random() * 100)),
+            );
+
+            const trx = await vault.withdraw(
+              tokenWithValues(sortedTokens, amounts),
+            );
+
+            const weights = await vault.getNormalizedWeights();
+            await expect(trx)
+              .to.emit(vault, "Withdraw")
+              .withArgs(
+                amounts,
+                amounts,
+                valueArray(toWei(100000), tokens.length),
+                weights,
+              );
+          });
+
+          it("when withdrawing tokens with withdrawIfBalanceUnchanged", async () => {
+            for (let i = 0; i < tokens.length; i++) {
+              await tokens[i].approve(vault.address, toWei(100000));
+            }
+            await vault.deposit(
+              tokenValueArray(sortedTokens, toWei(10000), tokens.length),
+            );
 
             const amounts = tokens.map(_ =>
               toWei(Math.floor(Math.random() * 100)),
             );
 
-            const spotPrices = [];
-            for (let i = 0; i < tokens.length; i++) {
-              spotPrices.push(await vault.getSpotPrices(tokens[i].address));
-            }
-
-            await vault.withdraw(tokenWithValues(sortedTokens, amounts));
-            const newManagersFeeTotal = await getManagersFeeTotal();
-
-            const { holdings: newHoldings, adminBalances: newAdminBalances } =
-              await getState();
-
-            for (let i = 0; i < tokens.length; i++) {
-              const newSpotPrices = await vault.getSpotPrices(
-                tokens[i].address,
+            const trx = await vault.withdrawIfBalanceUnchanged(
+              tokenWithValues(sortedTokens, amounts),
+            );
+            const weights = await vault.getNormalizedWeights();
+            await expect(trx)
+              .to.emit(vault, "Withdraw")
+              .withArgs(
+                amounts,
+                amounts,
+                valueArray(toWei(100000), tokens.length),
+                weights,
               );
-
-              expect(
-                await vault.getSpotPrice(
-                  tokens[i].address,
-                  tokens[(i + 1) % tokens.length].address,
-                ),
-              ).to.equal(newSpotPrices[(i + 1) % tokens.length]);
-
-              for (let j = 0; j < tokens.length; j++) {
-                expect(newSpotPrices[j]).to.be.closeTo(
-                  spotPrices[i][j],
-                  DEVIATION,
-                );
-              }
-
-              expect(await vault.holding(i)).to.equal(newHoldings[i]);
-              expect(newHoldings[i]).to.equal(
-                holdings[i]
-                  .sub(amounts[i])
-                  .sub(newManagersFeeTotal[i])
-                  .add(managersFeeTotal[i]),
-              );
-              expect(newAdminBalances[i]).to.equal(
-                adminBalances[i].add(amounts[i]),
-              );
-            }
           });
         });
-      });
-    });
-
-    describe("when depositing and withdrawing", () => {
-      beforeEach(async () => {
-        await validator.setAllowances(
-          valueArray(toWei(100000), tokens.length),
-        );
-      });
-
-      it("should be possible to deposit and withdraw one token", async () => {
-        let { holdings, adminBalances } = await getState();
-        let managersFeeTotal = await getManagersFeeTotal();
-
-        for (let i = 0; i < tokens.length; i++) {
-          const amounts = new Array(tokens.length).fill(0);
-          amounts[i] = toWei(5);
-
-          const spotPrices = await vault.getSpotPrices(tokens[i].address);
-
-          await vault.deposit(tokenWithValues(sortedTokens, amounts));
-          await vault.withdraw(tokenWithValues(sortedTokens, amounts));
-          const newManagersFeeTotal = await getManagersFeeTotal();
-
-          const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
-          const { holdings: newHoldings, adminBalances: newAdminBalances } =
-            await getState();
-
-          for (let j = 0; j < tokens.length; j++) {
-            expect(newSpotPrices[j]).to.closeTo(spotPrices[j], DEVIATION);
-            expect(newHoldings[j]).to.equal(
-              holdings[j].sub(newManagersFeeTotal[j]).add(managersFeeTotal[j]),
-            );
-            expect(newAdminBalances[j]).to.equal(adminBalances[j]);
-          }
-
-          holdings = newHoldings;
-          adminBalances = newAdminBalances;
-          managersFeeTotal = newManagersFeeTotal;
-        }
-      });
-
-      it("should be possible to deposit and withdraw tokens", async () => {
-        const { holdings, adminBalances } = await getState();
-
-        const amounts = tokens.map(_ =>
-          toWei(Math.floor(Math.random() * 100)),
-        );
-
-        const spotPrices = [];
-        for (let i = 0; i < tokens.length; i++) {
-          await tokens[i].approve(vault.address, amounts[i]);
-          spotPrices.push(await vault.getSpotPrices(tokens[i].address));
-        }
-
-        await vault.deposit(tokenWithValues(sortedTokens, amounts));
-        await vault.withdraw(tokenWithValues(sortedTokens, amounts));
-        const managersFeeTotal = await getManagersFeeTotal();
-
-        const { holdings: newHoldings, adminBalances: newAdminBalances } =
-          await getState();
-
-        for (let i = 0; i < tokens.length; i++) {
-          const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
-
-          expect(
-            await vault.getSpotPrice(
-              tokens[i].address,
-              tokens[(i + 1) % tokens.length].address,
-            ),
-          ).to.equal(newSpotPrices[(i + 1) % tokens.length]);
-
-          for (let j = 0; j < tokens.length; j++) {
-            expect(newSpotPrices[j]).to.be.closeTo(
-              spotPrices[i][j],
-              DEVIATION,
-            );
-          }
-
-          expect(await vault.holding(i)).to.equal(newHoldings[i]);
-          expect(newHoldings[i]).to.equal(
-            holdings[i].sub(managersFeeTotal[i]),
-          );
-          expect(newAdminBalances[i]).to.equal(adminBalances[i]);
-        }
       });
     });
 
@@ -1062,83 +637,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               ),
           ).to.be.revertedWith("Mammon__WeightChangeDurationIsBelowMin");
         });
-
-        it("when total sum of weights is not one", async () => {
-          const timestamp = await getCurrentTime();
-          await expect(
-            vault
-              .connect(manager)
-              .updateWeightsGradually(
-                tokenValueArray(
-                  sortedTokens,
-                  ONE.div(tokens.length).sub(1),
-                  tokens.length,
-                ),
-                timestamp,
-                timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
-              ),
-          ).to.be.revertedWith(BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT);
-        });
-
-        it("when change ratio is greater than maximum", async () => {
-          const timestamp = await getCurrentTime();
-          const startWeights = await vault.getNormalizedWeights();
-          const targetWeight0 = startWeights[0]
-            .mul(ONE)
-            .div(MAX_WEIGHT_CHANGE_RATIO + 2)
-            .div(MINIMUM_WEIGHT_CHANGE_DURATION + 1);
-          const targetWeights = [
-            targetWeight0,
-            ...valueArray(
-              ONE.sub(targetWeight0).div(tokens.length - 1),
-              tokens.length - 1,
-            ),
-          ];
-
-          let weightSum = toWei(0);
-          for (let i = 0; i < tokens.length; i++) {
-            weightSum = weightSum.add(targetWeights[i]);
-          }
-
-          targetWeights[tokens.length - 1] = ONE.sub(weightSum).add(
-            targetWeights[tokens.length - 1],
-          );
-
-          await expect(
-            vault
-              .connect(manager)
-              .updateWeightsGradually(
-                tokenWithValues(sortedTokens, targetWeights),
-                timestamp,
-                timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
-              ),
-          ).to.be.revertedWith("Mammon__WeightChangeRatioIsAboveMax");
-        });
-
-        it("when weight is less than minimum", async () => {
-          const timestamp = await getCurrentTime();
-          await expect(
-            vault.connect(manager).updateWeightsGradually(
-              [
-                {
-                  token: sortedTokens[0],
-                  value: toWei(0.009),
-                },
-                ...tokenValueArray(
-                  sortedTokens.slice(1),
-                  ONE.sub(toWei(0.009)).div(tokens.length - 1),
-                  tokens.length - 1,
-                ),
-              ],
-              timestamp,
-              timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
-            ),
-          ).to.be.revertedWith(BALANCER_ERRORS.MIN_WEIGHT);
-        });
       });
 
       it("should be possible to call updateWeightsGradually", async () => {
-        const startWeights = await vault.getNormalizedWeights();
         const timestamp = await getCurrentTime();
         const endWeights = [];
         const avgWeights = ONE.div(tokens.length);
@@ -1153,122 +654,17 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           }
         }
 
-        await vault
-          .connect(manager)
-          .updateWeightsGradually(
-            tokenWithValues(sortedTokens, endWeights),
-            startTime,
-            endTime,
-          );
-
-        await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION);
-
-        const currentWeights = await vault.getNormalizedWeights();
-
-        const currentTime = await getCurrentTime();
-        const ptcProgress = ONE.mul(currentTime - startTime).div(
-          endTime - startTime,
-        );
-
-        for (let i = 0; i < tokens.length; i++) {
-          const weightDelta = endWeights[i]
-            .sub(startWeights[i])
-            .mul(ptcProgress)
-            .div(ONE);
-          expect(startWeights[i].add(weightDelta)).to.be.closeTo(
-            currentWeights[i],
-            DEVIATION,
-          );
-        }
-      });
-
-      describe("should cancel current weight update", async () => {
-        it("when deposit tokens", async () => {
-          const timestamp = await getCurrentTime();
-          const endWeights = [];
-          const avgWeights = ONE.div(tokens.length);
-          const startTime = timestamp + 10;
-          const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
-          for (let i = 0; i < tokens.length; i += 2) {
-            if (i < tokens.length - 1) {
-              endWeights.push(avgWeights.add(toWei((i + 1) / 100)));
-              endWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
-            } else {
-              endWeights.push(avgWeights);
-            }
-          }
-
-          await vault
+        await expect(
+          vault
             .connect(manager)
             .updateWeightsGradually(
               tokenWithValues(sortedTokens, endWeights),
               startTime,
               endTime,
-            );
-
-          await vault.deposit(
-            tokenValueArray(sortedTokens, toWei(50), tokens.length),
-          );
-
-          const newWeights = await vault.getNormalizedWeights();
-
-          for (let i = 0; i < 1000; i++) {
-            await ethers.provider.send("evm_mine", []);
-          }
-
-          const currentWeights = await vault.getNormalizedWeights();
-
-          for (let i = 0; i < tokens.length; i++) {
-            expect(newWeights[i]).to.equal(currentWeights[i]);
-          }
-        });
-
-        it("when withdraw tokens", async () => {
-          await validator.setAllowances(
-            valueArray(toWei(100000), tokens.length),
-          );
-          await vault.deposit(
-            tokenValueArray(sortedTokens, toWei(50), tokens.length),
-          );
-
-          const timestamp = await getCurrentTime();
-          const endWeights = [];
-          const avgWeights = ONE.div(tokens.length);
-          const startTime = timestamp + 10;
-          const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
-          for (let i = 0; i < tokens.length; i += 2) {
-            if (i < tokens.length - 1) {
-              endWeights.push(avgWeights.add(toWei((i + 1) / 100)));
-              endWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
-            } else {
-              endWeights.push(avgWeights);
-            }
-          }
-
-          await vault
-            .connect(manager)
-            .updateWeightsGradually(
-              tokenWithValues(sortedTokens, endWeights),
-              startTime,
-              endTime,
-            );
-
-          await vault.withdraw(
-            tokenValueArray(sortedTokens, toWei(50), tokens.length),
-          );
-
-          const newWeights = await vault.getNormalizedWeights();
-
-          for (let i = 0; i < 1000; i++) {
-            await ethers.provider.send("evm_mine", []);
-          }
-
-          const currentWeights = await vault.getNormalizedWeights();
-
-          for (let i = 0; i < tokens.length; i++) {
-            expect(newWeights[i]).to.equal(currentWeights[i]);
-          }
-        });
+            ),
+        )
+          .to.emit(vault, "UpdateWeightsGradually")
+          .withArgs(startTime, endTime, endWeights);
       });
     });
 
@@ -1280,41 +676,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       it("should be possible to call cancelWeightUpdates", async () => {
-        const timestamp = await getCurrentTime();
-        const endWeights = [];
-        const avgWeights = ONE.div(tokens.length);
-        const startTime = timestamp + 10;
-        const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
-        for (let i = 0; i < tokens.length; i += 2) {
-          if (i < tokens.length - 1) {
-            endWeights.push(avgWeights.add(toWei((i + 1) / 100)));
-            endWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
-          } else {
-            endWeights.push(avgWeights);
-          }
-        }
+        const weights = await vault.getNormalizedWeights();
 
-        await vault
-          .connect(manager)
-          .updateWeightsGradually(
-            tokenWithValues(sortedTokens, endWeights),
-            startTime,
-            endTime,
-          );
-
-        await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION / 2);
-
-        await vault.connect(manager).cancelWeightUpdates();
-
-        const newWeights = await vault.getNormalizedWeights();
-
-        await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION / 2);
-
-        const currentWeights = await vault.getNormalizedWeights();
-
-        for (let i = 0; i < tokens.length; i++) {
-          expect(newWeights[i]).to.equal(currentWeights[i]);
-        }
+        await expect(vault.connect(manager).cancelWeightUpdates())
+          .to.emit(vault, "CancelWeightUpdates")
+          .withArgs(weights);
       });
     });
 
@@ -1397,9 +763,9 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
 
         it("when call claimManagerFees", async () => {
-          await expect(
-            vault.connect(manager).claimManagerFees(),
-          ).to.be.revertedWith("Mammon__VaultIsFinalizing");
+          await expect(vault.claimManagerFees()).to.be.revertedWith(
+            "Mammon__VaultIsFinalizing",
+          );
         });
 
         it("when call initiateFinalization", async () => {
@@ -1410,23 +776,26 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       it("should be possible to finalize", async () => {
-        const adminBalances = await getUserBalances(admin.address);
-
-        await vault.initiateFinalization();
+        const trx = await vault.initiateFinalization();
         expect(await vault.isSwapEnabled()).to.equal(false);
 
-        const { holdings: newHoldings } = await getState();
+        const noticeTimeoutAt = await vault.noticeTimeoutAt();
+        await expect(trx)
+          .to.emit(vault, "FinalizationInitiated")
+          .withArgs(noticeTimeoutAt);
 
         await increaseTime(NOTICE_PERIOD + 1);
 
-        await vault.finalize();
+        const { holdings, balances } = await getState();
 
-        const newAdminBalances = await getUserBalances(admin.address);
+        await expect(vault.finalize())
+          .to.emit(vault, "Finalized")
+          .withArgs(admin.address, holdings);
+
+        const newBalances = await getBalances();
 
         for (let i = 0; i < tokens.length; i++) {
-          expect(newAdminBalances[i]).to.equal(
-            adminBalances[i].add(newHoldings[i]),
-          );
+          expect(newBalances[i]).to.equal(balances[i].add(holdings[i]));
         }
       });
     });
@@ -1489,20 +858,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         ).to.be.revertedWith("ERC20: transfer amount exceeds balance");
       });
     });
-
-    it("should be possible to withdraw token", async () => {
-      const balance = await TOKEN.balanceOf(admin.address);
-      await TOKEN.transfer(vault.address, toWei(1000));
-
-      expect(
-        await vault.estimateGas.sweep(TOKEN.address, toWei(1000)),
-      ).to.below(70000);
-      await vault.sweep(TOKEN.address, toWei(1000));
-
-      expect(await TOKEN.balanceOf(vault.address)).to.equal(toWei(0));
-
-      expect(await TOKEN.balanceOf(admin.address)).to.equal(balance);
-    });
   });
 
   describe("Claim Manager Fees", () => {
@@ -1536,7 +891,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
         let lastFeeCheckpoint = (await vault.lastFeeCheckpoint()).toNumber();
         let holdings = await vault.getHoldings();
-        const managerBalances = await getUserBalances(manager.address);
         const depositTrx = await vault.deposit(
           tokenValueArray(sortedTokens, toWei(10000), tokens.length),
         );
@@ -1551,10 +905,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         lastFeeCheckpoint = currentTime;
 
         holdings = await vault.getHoldings();
-
         const trx = await vault.connect(manager).claimManagerFees();
-
-        const newManagerBalances = await getUserBalances(manager.address);
 
         currentTime = await getTimestamp(trx.blockNumber);
         holdings.forEach((holding: BigNumber, index: number) => {
@@ -1564,10 +915,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               .mul(MAX_MANAGEMENT_FEE)
               .div(ONE),
           );
-          expect(newManagerBalances[index]).to.equal(
-            managerBalances[index].add(managerFee[index]),
-          );
         });
+
+        await expect(trx)
+          .to.emit(vault, "DistributeManagerFees")
+          .withArgs(manager.address, managerFee);
       });
 
       it("when called from old manager", async () => {
@@ -1577,7 +929,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
         let lastFeeCheckpoint = (await vault.lastFeeCheckpoint()).toNumber();
         let holdings = await vault.getHoldings();
-        const managerBalances = await getUserBalances(manager.address);
         const depositTrx = await vault.deposit(
           tokenValueArray(sortedTokens, toWei(10000), tokens.length),
         );
@@ -1591,7 +942,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         );
         lastFeeCheckpoint = currentTime;
 
-        holdings = (await getState()).holdings;
+        holdings = await vault.getHoldings();
         const setManagerTrx = await vault.setManager(user.address);
 
         currentTime = await getTimestamp(setManagerTrx.blockNumber);
@@ -1604,17 +955,11 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           );
         });
 
-        await vault.connect(manager).claimManagerFees();
+        const trx = await vault.connect(manager).claimManagerFees();
 
-        const newManagerBalances = await getUserBalances(manager.address);
-
-        newManagerBalances.forEach(
-          (managerBalance: BigNumber, index: number) => {
-            expect(managerBalance).to.equal(
-              managerBalances[index].add(managerFee[index]),
-            );
-          },
-        );
+        await expect(trx)
+          .to.emit(vault, "DistributeManagerFees")
+          .withArgs(manager.address, managerFee);
       });
     });
   });
@@ -1642,8 +987,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       it("should be possible to change manager", async () => {
-        expect(await vault.manager()).to.equal(manager.address);
-        await vault.setManager(user.address);
+        await expect(vault.setManager(user.address))
+          .to.emit(vault, "ManagerChanged")
+          .withArgs(manager.address, user.address);
+
         expect(await vault.manager()).to.equal(user.address);
       });
     });
@@ -1659,23 +1006,18 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       });
 
       describe("with enableTradingRiskingArbitrage function", () => {
-        it("should be reverted to enable trading when called from non-owner", async () => {
+        it("should be reverted to enable trading", async () => {
           await expect(
             vault.connect(manager).enableTradingRiskingArbitrage(),
           ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
         it("should be possible to enable trading", async () => {
-          const weights = await vault.getNormalizedWeights();
-
-          await vault.enableTradingRiskingArbitrage();
-
-          const currentWeights = await vault.getNormalizedWeights();
+          await expect(vault.enableTradingRiskingArbitrage())
+            .to.emit(vault, "SetSwapEnabled")
+            .withArgs(true);
 
           expect(await vault.isSwapEnabled()).to.equal(true);
-          for (let i = 0; i < tokens.length; i++) {
-            expect(weights[i]).to.equal(currentWeights[i]);
-          }
         });
       });
 
@@ -1709,20 +1051,6 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             ).to.be.revertedWith("Mammon__DifferentTokensInPosition");
           });
 
-          it("when total sum of weights is not one", async () => {
-            await vault.disableTrading();
-
-            await expect(
-              vault.enableTradingWithWeights(
-                tokenValueArray(
-                  sortedTokens,
-                  ONE.div(tokens.length).sub(1),
-                  tokens.length,
-                ),
-              ),
-            ).to.be.revertedWith(BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT);
-          });
-
           it("when swap is already enabled", async () => {
             await expect(
               vault.enableTradingWithWeights(
@@ -1739,27 +1067,62 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         it("should be possible to enable trading", async () => {
           await vault.disableTrading();
 
-          const newWeights = [];
-          const avgWeights = ONE.div(tokens.length);
-          for (let i = 0; i < tokens.length; i += 2) {
-            if (i < tokens.length - 1) {
-              newWeights.push(avgWeights.add(toWei((i + 1) / 100)));
-              newWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
-            } else {
-              newWeights.push(avgWeights);
-            }
-          }
-
-          await vault.enableTradingWithWeights(
-            tokenWithValues(sortedTokens, newWeights),
+          const trx = await vault.enableTradingWithWeights(
+            tokenValueArray(
+              sortedTokens,
+              ONE.div(tokens.length),
+              tokens.length,
+            ),
           );
+          const currentTime = await getTimestamp(trx.blockNumber);
 
-          const currentWeights = await vault.getNormalizedWeights();
+          await expect(trx)
+            .to.emit(vault, "EnabledTradingWithWeights")
+            .withArgs(
+              currentTime,
+              valueArray(ONE.div(tokens.length), tokens.length),
+            );
 
           expect(await vault.isSwapEnabled()).to.equal(true);
-          for (let i = 0; i < tokens.length; i++) {
-            expect(newWeights[i]).to.be.closeTo(currentWeights[i], DEVIATION);
+        });
+      });
+
+      describe("with enableTradingWithOraclePrice function", () => {
+        describe("should be reverted to enable trading", async () => {
+          it("when called from non-manager", async () => {
+            await expect(
+              vault.enableTradingWithOraclePrice(),
+            ).to.be.revertedWith("Mammon__CallerIsNotManager");
+          });
+
+          it("when oracle price is not greater than zero", async () => {
+            await oracles[1].setLatestAnswer(0);
+            await expect(
+              vault.connect(manager).enableTradingWithOraclePrice(),
+            ).to.be.revertedWith("Aera__OraclePriceIsInvalid");
+          });
+        });
+
+        it("should be possible to enable trading", async () => {
+          const oraclePrices: BigNumber[] = [toUnit(1, 8)];
+          for (let i = 1; i < tokens.length; i++) {
+            oraclePrices.push(
+              toUnit(Math.floor((0.1 + Math.random()) * 50), 8),
+            );
+            await oracles[i].setLatestAnswer(oraclePrices[i]);
           }
+
+          await expect(vault.connect(manager).enableTradingWithOraclePrice())
+            .to.emit(vault, "SetSwapEnabled")
+            .withArgs(true)
+            .to.emit(vault, "UpdateWeightsWithOraclePrice");
+
+          for (let i = 0; i < tokens.length; i++) {
+            expect(
+              await vault.getSpotPrice(tokens[i].address, tokens[0].address),
+            ).to.be.closeTo(oraclePrices[i].mul(1e10), PRICE_DEVIATION);
+          }
+          expect(await vault.isSwapEnabled()).to.equal(true);
         });
       });
     });
@@ -1783,55 +1146,58 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       it("should be possible to disable trading", async () => {
         expect(await vault.isSwapEnabled()).to.equal(true);
 
-        expect(await vault.estimateGas.disableTrading()).to.below(52000);
-        await vault.connect(manager).disableTrading();
+        await expect(vault.connect(manager).disableTrading())
+          .to.emit(vault, "SetSwapEnabled")
+          .withArgs(false);
 
         expect(await vault.isSwapEnabled()).to.equal(false);
       });
     });
 
     describe("Set Swap Fee", () => {
-      describe("should be reverted to set swap fee", async () => {
+      describe("should be reverted", () => {
         it("when called from non-manager", async () => {
           await expect(vault.setSwapFee(toWei(3))).to.be.revertedWith(
             "Mammon__CallerIsNotManager()",
           );
         });
 
-        it("when swap fee is greater than balancer maximum", async () => {
-          let newFee = await vault.getSwapFee();
-          while (newFee.lte(MAX_SWAP_FEE)) {
-            await vault.connect(manager).setSwapFee(newFee);
-            await increaseTime(SWAP_FEE_COOLDOWN_PERIOD);
-            newFee = newFee.add(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
-          }
+        it("when called before cooldown", async () => {
+          const newFee = MIN_SWAP_FEE.add(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
+          await vault.connect(manager).setSwapFee(newFee);
           await expect(
-            vault.connect(manager).setSwapFee(MAX_SWAP_FEE.add(1)),
-          ).to.be.revertedWith(BALANCER_ERRORS.MAX_SWAP_FEE_PERCENTAGE);
+            vault.connect(manager).setSwapFee(newFee.add(1)),
+          ).to.be.revertedWith("Mammon__CannotSetSwapFeeBeforeCooldown");
         });
 
-        it("when swap fee is less than balancer minimum", async () => {
-          let newFee = await vault.getSwapFee();
-          while (newFee.gte(MIN_SWAP_FEE)) {
-            await vault.connect(manager).setSwapFee(newFee);
-            await increaseTime(SWAP_FEE_COOLDOWN_PERIOD);
-            newFee = newFee.sub(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
-          }
+        it("when positive change exceeds max", async () => {
+          const invalidFee = MIN_SWAP_FEE.add(
+            MAXIMUM_SWAP_FEE_PERCENT_CHANGE,
+          ).add(1);
           await expect(
-            vault.connect(manager).setSwapFee(MIN_SWAP_FEE.sub(1)),
-          ).to.be.revertedWith(BALANCER_ERRORS.MIN_SWAP_FEE_PERCENTAGE);
+            vault.connect(manager).setSwapFee(invalidFee),
+          ).to.be.revertedWith("Mammon__SwapFeePercentageChangeIsAboveMax");
+        });
+
+        it("when negative change exceeds max", async () => {
+          const newFee = MIN_SWAP_FEE.add(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
+          await vault.connect(manager).setSwapFee(newFee);
+          await increaseTime(SWAP_FEE_COOLDOWN_PERIOD);
+          const invalidFee = newFee
+            .sub(MAXIMUM_SWAP_FEE_PERCENT_CHANGE)
+            .sub(1);
+          await expect(
+            vault.connect(manager).setSwapFee(invalidFee),
+          ).to.be.revertedWith("Mammon__SwapFeePercentageChangeIsAboveMax");
         });
       });
 
       it("should be possible to set swap fee", async () => {
-        const fee = await vault.getSwapFee();
-        const newFee = fee.add(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
-        expect(
-          await vault.connect(manager).estimateGas.setSwapFee(newFee),
-        ).to.below(90000);
-        await vault.connect(manager).setSwapFee(newFee);
-
-        expect(await vault.getSwapFee()).to.equal(newFee);
+        const newFee = MIN_SWAP_FEE.add(1);
+        await expect(vault.connect(manager).setSwapFee(newFee))
+          .to.emit(vault.connect(manager), "SetSwapFee")
+          .withArgs(newFee);
+        expect(await vault.connect(manager).getSwapFee()).to.equal(newFee);
       });
     });
 
@@ -1883,9 +1249,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         });
 
         it("should be possible to call", async () => {
-          expect(await vault.pendingOwner()).to.equal(ZERO_ADDRESS);
-          await vault.transferOwnership(user.address);
-          expect(await vault.pendingOwner()).to.equal(user.address);
+          await expect(vault.transferOwnership(user.address)).to.emit(
+            vault,
+            "OwnershipTransferOffered",
+          );
         });
       });
 
@@ -1906,9 +1273,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
         it("should be possible to cancel", async () => {
           await vault.transferOwnership(user.address);
-          expect(await vault.pendingOwner()).to.equal(user.address);
-          await vault.cancelOwnershipTransfer();
-          expect(await vault.pendingOwner()).to.equal(ZERO_ADDRESS);
+          await expect(vault.cancelOwnershipTransfer()).to.emit(
+            vault,
+            "OwnershipTransferCanceled",
+          );
           await expect(
             vault.connect(user).acceptOwnership(),
           ).to.be.revertedWith("Mammon__NotPendingOwner");
@@ -1927,10 +1295,10 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
         it("should be possible to accept", async () => {
           await vault.transferOwnership(user.address);
-          expect(await vault.owner()).to.equal(admin.address);
-          expect(await vault.pendingOwner()).to.equal(user.address);
-          await vault.connect(user).acceptOwnership();
-          expect(await vault.owner()).to.equal(user.address);
+          await expect(vault.connect(user).acceptOwnership()).to.emit(
+            vault,
+            "OwnershipTransferred",
+          );
           await vault.connect(user).transferOwnership(admin.address);
         });
       });

@@ -1,6 +1,7 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { ethers } from "hardhat";
 import { expect } from "chai";
+import { BigNumber } from "ethers";
 import { MammonMedian } from "../../../typechain";
 import { ONE } from "../../v1/constants";
 import { toWei } from "../../v1/utils";
@@ -9,9 +10,9 @@ describe("ChainLink Median Functionality", function () {
   let admin: SignerWithAddress;
   let mammonMedian: MammonMedian;
   let snapshot: unknown;
-  let testList: any[];
-  const testWeights: any = {};
-  const gasEstimation: any = {};
+  let testList: number[];
+  const testWeights: { [index: number]: BigNumber[] } = {};
+  const gasEstimation: { [index: number]: { [method: string]: number } } = {};
 
   const getMedian = (list: number[]) => {
     const len = list.length;
@@ -26,17 +27,17 @@ describe("ChainLink Median Functionality", function () {
     return listMedian;
   };
 
-  const getWeightedMedian = (list: number[], weights: any[]) => {
+  const getWeightedMedian = (list: number[], weights: BigNumber[]) => {
     const len = list.length;
     for (let j = 0; j < len; j++) {
       for (let k = len - 1; k > j; k--) {
         if (list[k] < list[k - 1]) {
-          let temp: any = list[k];
+          const tempNum: number = list[k];
           list[k] = list[k - 1];
-          list[k - 1] = temp;
-          temp = weights[k];
+          list[k - 1] = tempNum;
+          const tempWeight: BigNumber = weights[k];
           weights[k] = weights[k - 1];
-          weights[k - 1] = temp;
+          weights[k - 1] = tempWeight;
         }
       }
     }
