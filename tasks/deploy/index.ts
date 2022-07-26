@@ -1,6 +1,7 @@
 import "./validator";
 import "./factory";
 import "./vault";
+import "./vault-v2";
 import "./manager-whitelist-factory";
 import "./manager-whitelist";
 import "./apples";

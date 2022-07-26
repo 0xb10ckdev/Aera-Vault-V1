@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
-import "../MammonVaultV1.sol";
+import "../AeraVaultV2.sol";
 
 /**
- * @dev Mock MammonVaultV1 with getting spot prices.
+ * @dev Mock AeraVaultV2 with getting spot prices.
  *      THIS CONTRACT IS FOR TESTING PURPOSES ONLY. DO NOT USE IN PRODUCTION.
  */
-contract MammonVaultV1Mock is MammonVaultV1 {
+contract AeraVaultV2Mock is AeraVaultV2 {
     // solhint-disable no-empty-blocks
-    constructor(NewVaultParams memory vaultParams)
-        MammonVaultV1(vaultParams)
-    {}
+    constructor(
+        NewVaultParams memory vaultParams,
+        AggregatorV2V3Interface[] memory oracles,
+        uint256 numeraireAssetIndex
+    ) AeraVaultV2(vaultParams, oracles, numeraireAssetIndex) {}
 
     function getSpotPrice(address tokenIn, address tokenOut)
         external
