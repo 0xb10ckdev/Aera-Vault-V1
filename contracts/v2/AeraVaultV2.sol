@@ -80,6 +80,50 @@ contract AeraVaultV2 is
         OracleStorage(oracles, numeraireAssetIndex_, vaultParams.tokens.length)
     {}
 
+    function deposit(TokenValue[] calldata tokenWithAmount)
+        external
+        override
+        nonReentrant
+        onlyOwner
+        whenInitialized
+        whenNotFinalizing
+    {
+        depositTokens(tokenWithAmount);
+    }
+
+    /// @inheritdoc IProtocolAPIV2
+    function depositRiskingArbitrage(TokenValue[] calldata tokenWithAmount)
+        external
+        override
+        nonReentrant
+        onlyOwner
+        whenInitialized
+        whenNotFinalizing
+    {
+        depositTokens(tokenWithAmount);
+    }
+
+    /// @inheritdoc IProtocolAPIV2
+    // slither-disable-next-line incorrect-equality
+    function depositRiskingArbitrageIfBalanceUnchanged(
+        TokenValue[] calldata tokenWithAmount
+    )
+        external
+        override
+        nonReentrant
+        onlyOwner
+        whenInitialized
+        whenNotFinalizing
+    {
+        (, , uint256 lastChangeBlock) = getTokensData();
+
+        if (lastChangeBlock == block.number) {
+            revert Mammon__BalanceChangedInCurrentBlock();
+        }
+
+        depositTokens(tokenWithAmount);
+    }
+
     /// @inheritdoc IProtocolAPIV2
     // slither-disable-next-line calls-loop
     function enableTradingWithOraclePrice()
