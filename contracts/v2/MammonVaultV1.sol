@@ -19,6 +19,7 @@ import "../v1/interfaces/IWithdrawalValidator.sol";
 /// @notice Managed n-asset vault that supports withdrawals
 ///         in line with a pre-defined validator contract.
 /// @dev Vault owner is the asset owner.
+// slither-disable-next-line name-reused
 contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
