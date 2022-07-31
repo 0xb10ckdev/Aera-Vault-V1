@@ -3,16 +3,18 @@ pragma solidity 0.8.11;
 
 import "../../v1/interfaces/IUserAPI.sol";
 import "../../v1/interfaces/IManagerAPI.sol";
-import "../../v1/interfaces/IProtocolAPI.sol";
 import "../../v1/interfaces/IMultiAssetVault.sol";
+import "../../v1/interfaces/IProtocolAPI.sol";
+import "./IProtocolAPIV2.sol";
 
-/// @title Interface for v1 vault.
+/// @title Interface for v2 vault.
 // solhint-disable-next-line no-empty-blocks
-interface IAeraVaultV1 is
+interface IAeraVaultV2 is
     IUserAPI,
     IManagerAPI,
+    IMultiAssetVault,
     IProtocolAPI,
-    IMultiAssetVault
+    IProtocolAPIV2
 {
     // Use struct parameter to avoid stack too deep error.
     // factory: Balancer Managed Pool Factory address.
