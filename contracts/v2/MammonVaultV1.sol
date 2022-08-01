@@ -12,15 +12,15 @@ import "../v1/interfaces/IBManagedPoolController.sol";
 import "../v1/interfaces/IBMerkleOrchard.sol";
 import "../v1/interfaces/IBVault.sol";
 import "../v1/interfaces/IBManagedPool.sol";
+import "../v1/interfaces/IMammonVaultV1.sol";
 import "../v1/interfaces/IWithdrawalValidator.sol";
-import "./interfaces/IAeraVaultV1.sol";
 
 /// @title Risk-managed treasury vault.
 /// @notice Managed n-asset vault that supports withdrawals
 ///         in line with a pre-defined validator contract.
 /// @dev Vault owner is the asset owner.
 // slither-disable-next-line name-reused
-contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
+contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     /// STORAGE ///
@@ -232,67 +232,67 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
 
     /// ERRORS ///
 
-    error Aera__ValueLengthIsNotSame(uint256 numTokens, uint256 numValues);
-    error Aera__DifferentTokensInPosition(
+    error Mammon__ValueLengthIsNotSame(uint256 numTokens, uint256 numValues);
+    error Mammon__DifferentTokensInPosition(
         address actual,
         address sortedToken,
         uint256 index
     );
-    error Aera__ValidatorIsNotMatched(
+    error Mammon__ValidatorIsNotMatched(
         uint256 numTokens,
         uint256 numAllowances
     );
-    error Aera__ValidatorIsNotValid(address validator);
-    error Aera__ManagementFeeIsAboveMax(uint256 actual, uint256 max);
-    error Aera__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
-    error Aera__NoticeTimeoutNotElapsed(uint256 noticeTimeoutAt);
-    error Aera__ManagerIsZeroAddress();
-    error Aera__ManagerIsOwner(address newManager);
-    error Aera__CallerIsNotManager();
-    error Aera__SwapFeePercentageChangeIsAboveMax(
+    error Mammon__ValidatorIsNotValid(address validator);
+    error Mammon__ManagementFeeIsAboveMax(uint256 actual, uint256 max);
+    error Mammon__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
+    error Mammon__NoticeTimeoutNotElapsed(uint256 noticeTimeoutAt);
+    error Mammon__ManagerIsZeroAddress();
+    error Mammon__ManagerIsOwner(address newManager);
+    error Mammon__CallerIsNotManager();
+    error Mammon__SwapFeePercentageChangeIsAboveMax(
         uint256 actual,
         uint256 max
     );
-    error Aera__DescriptionIsEmpty();
-    error Aera__CallerIsNotOwnerOrManager();
-    error Aera__WeightChangeEndBeforeStart();
-    error Aera__WeightChangeStartTimeIsAboveMax(uint256 actual, uint256 max);
-    error Aera__WeightChangeEndTimeIsAboveMax(uint256 actual, uint256 max);
-    error Aera__WeightChangeDurationIsBelowMin(uint256 actual, uint256 min);
-    error Aera__WeightChangeRatioIsAboveMax(
+    error Mammon__DescriptionIsEmpty();
+    error Mammon__CallerIsNotOwnerOrManager();
+    error Mammon__WeightChangeEndBeforeStart();
+    error Mammon__WeightChangeStartTimeIsAboveMax(uint256 actual, uint256 max);
+    error Mammon__WeightChangeEndTimeIsAboveMax(uint256 actual, uint256 max);
+    error Mammon__WeightChangeDurationIsBelowMin(uint256 actual, uint256 min);
+    error Mammon__WeightChangeRatioIsAboveMax(
         address token,
         uint256 actual,
         uint256 max
     );
-    error Aera__WeightIsAboveMax(uint256 actual, uint256 max);
-    error Aera__WeightIsBelowMin(uint256 actual, uint256 min);
-    error Aera__AmountIsBelowMin(uint256 actual, uint256 min);
-    error Aera__AmountExceedAvailable(
+    error Mammon__WeightIsAboveMax(uint256 actual, uint256 max);
+    error Mammon__WeightIsBelowMin(uint256 actual, uint256 min);
+    error Mammon__AmountIsBelowMin(uint256 actual, uint256 min);
+    error Mammon__AmountExceedAvailable(
         address token,
         uint256 amount,
         uint256 available
     );
-    error Aera__NoAvailableFeeForCaller(address caller);
-    error Aera__BalanceChangedInCurrentBlock();
-    error Aera__CannotSweepPoolToken();
-    error Aera__PoolSwapIsAlreadyEnabled();
-    error Aera__CannotSetSwapFeeBeforeCooldown();
-    error Aera__FinalizationNotInitiated();
-    error Aera__VaultNotInitialized();
-    error Aera__VaultIsAlreadyInitialized();
-    error Aera__VaultIsFinalizing();
-    error Aera__VaultIsAlreadyFinalized();
-    error Aera__VaultIsNotRenounceable();
-    error Aera__OwnerIsZeroAddress();
-    error Aera__NotPendingOwner();
-    error Aera__NoPendingOwnershipTransfer();
+    error Mammon__NoAvailableFeeForCaller(address caller);
+    error Mammon__BalanceChangedInCurrentBlock();
+    error Mammon__CannotSweepPoolToken();
+    error Mammon__PoolSwapIsAlreadyEnabled();
+    error Mammon__CannotSetSwapFeeBeforeCooldown();
+    error Mammon__FinalizationNotInitiated();
+    error Mammon__VaultNotInitialized();
+    error Mammon__VaultIsAlreadyInitialized();
+    error Mammon__VaultIsFinalizing();
+    error Mammon__VaultIsAlreadyFinalized();
+    error Mammon__VaultIsNotRenounceable();
+    error Mammon__OwnerIsZeroAddress();
+    error Mammon__NotPendingOwner();
+    error Mammon__NoPendingOwnershipTransfer();
 
     /// MODIFIERS ///
 
     /// @dev Throws if called by any account other than the manager.
     modifier onlyManager() {
         if (msg.sender != manager) {
-            revert Aera__CallerIsNotManager();
+            revert Mammon__CallerIsNotManager();
         }
         _;
     }
@@ -300,7 +300,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
     /// @dev Throws if called by any account other than the owner or manager.
     modifier onlyOwnerOrManager() {
         if (msg.sender != owner() && msg.sender != manager) {
-            revert Aera__CallerIsNotOwnerOrManager();
+            revert Mammon__CallerIsNotOwnerOrManager();
         }
         _;
     }
@@ -308,7 +308,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
     /// @dev Throws if called before vault is initialized.
     modifier whenInitialized() {
         if (!initialized) {
-            revert Aera__VaultNotInitialized();
+            revert Mammon__VaultNotInitialized();
         }
         _;
     }
@@ -316,7 +316,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
     /// @dev Throws if called before finalization is initiated.
     modifier whenNotFinalizing() {
         if (noticeTimeoutAt != 0) {
-            revert Aera__VaultIsFinalizing();
+            revert Mammon__VaultIsFinalizing();
         }
         _;
     }
@@ -334,7 +334,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         uint256 numTokens = vaultParams.tokens.length;
 
         if (numTokens != vaultParams.weights.length) {
-            revert Aera__ValueLengthIsNotSame(
+            revert Mammon__ValueLengthIsNotSame(
                 numTokens,
                 vaultParams.weights.length
             );
@@ -345,7 +345,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
                 type(IWithdrawalValidator).interfaceId
             )
         ) {
-            revert Aera__ValidatorIsNotValid(vaultParams.validator);
+            revert Mammon__ValidatorIsNotValid(vaultParams.validator);
         }
         // Use new block to avoid stack too deep issue
         {
@@ -353,24 +353,24 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
                 .allowance()
                 .length;
             if (numTokens != numAllowances) {
-                revert Aera__ValidatorIsNotMatched(numTokens, numAllowances);
+                revert Mammon__ValidatorIsNotMatched(numTokens, numAllowances);
             }
         }
         if (vaultParams.managementFee > MAX_MANAGEMENT_FEE) {
-            revert Aera__ManagementFeeIsAboveMax(
+            revert Mammon__ManagementFeeIsAboveMax(
                 vaultParams.managementFee,
                 MAX_MANAGEMENT_FEE
             );
         }
         if (vaultParams.noticePeriod > MAX_NOTICE_PERIOD) {
-            revert Aera__NoticePeriodIsAboveMax(
+            revert Mammon__NoticePeriodIsAboveMax(
                 vaultParams.noticePeriod,
                 MAX_NOTICE_PERIOD
             );
         }
 
         if (bytes(vaultParams.description).length == 0) {
-            revert Aera__DescriptionIsEmpty();
+            revert Mammon__DescriptionIsEmpty();
         }
         checkManagerAddress(vaultParams.manager);
 
@@ -392,7 +392,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         //   to use joinPool
         // - minWeightChangeDuration should be zero so that weights can be updated immediately
         //   in deposit, withdraw, cancelWeightUpdates and enableTradingWithWeights.
-        // - manager should be AeraVault(this).
+        // - manager should be MammonVault(this).
         pool = IBManagedPool(
             IBManagedPoolFactory(vaultParams.factory).create(
                 IBManagedPoolFactory.NewPoolParams({
@@ -468,7 +468,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         onlyOwner
     {
         if (initialized) {
-            revert Aera__VaultIsAlreadyInitialized();
+            revert Mammon__VaultIsAlreadyInitialized();
         }
 
         initialized = true;
@@ -525,7 +525,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         (, , uint256 lastChangeBlock) = getTokensData();
 
         if (lastChangeBlock == block.number) {
-            revert Aera__BalanceChangedInCurrentBlock();
+            revert Mammon__BalanceChangedInCurrentBlock();
         }
 
         depositTokens(tokenWithAmount);
@@ -556,7 +556,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         (, , uint256 lastChangeBlock) = getTokensData();
 
         if (lastChangeBlock == block.number) {
-            revert Aera__BalanceChangedInCurrentBlock();
+            revert Mammon__BalanceChangedInCurrentBlock();
         }
 
         withdrawTokens(tokenWithAmount);
@@ -588,13 +588,13 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
     {
         if (finalized) {
-            revert Aera__VaultIsAlreadyFinalized();
+            revert Mammon__VaultIsAlreadyFinalized();
         }
         if (noticeTimeoutAt == 0) {
-            revert Aera__FinalizationNotInitiated();
+            revert Mammon__FinalizationNotInitiated();
         }
         if (noticeTimeoutAt > block.timestamp) {
-            revert Aera__NoticeTimeoutNotElapsed(noticeTimeoutAt);
+            revert Mammon__NoticeTimeoutNotElapsed(noticeTimeoutAt);
         }
 
         finalized = true;
@@ -637,7 +637,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         onlyOwner
     {
         if (token == address(pool)) {
-            revert Aera__CannotSweepPoolToken();
+            revert Mammon__CannotSweepPoolToken();
         }
         IERC20(token).safeTransfer(owner(), amount);
     }
@@ -660,7 +660,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
     {
         if (pool.getSwapEnabled()) {
-            revert Aera__PoolSwapIsAlreadyEnabled();
+            revert Mammon__PoolSwapIsAlreadyEnabled();
         }
 
         IERC20[] memory tokens = getTokens();
@@ -723,13 +723,13 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         // These are to protect against the following vulnerability
         // https://forum.balancer.fi/t/vulnerability-disclosure/3179
         if (startTime > type(uint32).max) {
-            revert Aera__WeightChangeStartTimeIsAboveMax(
+            revert Mammon__WeightChangeStartTimeIsAboveMax(
                 startTime,
                 type(uint32).max
             );
         }
         if (endTime > type(uint32).max) {
-            revert Aera__WeightChangeEndTimeIsAboveMax(
+            revert Mammon__WeightChangeEndTimeIsAboveMax(
                 endTime,
                 type(uint32).max
             );
@@ -737,10 +737,10 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
 
         startTime = Math.max(block.timestamp, startTime);
         if (startTime > endTime) {
-            revert Aera__WeightChangeEndBeforeStart();
+            revert Mammon__WeightChangeEndBeforeStart();
         }
         if (startTime + MINIMUM_WEIGHT_CHANGE_DURATION > endTime) {
-            revert Aera__WeightChangeDurationIsBelowMin(
+            revert Mammon__WeightChangeDurationIsBelowMin(
                 endTime - startTime,
                 MINIMUM_WEIGHT_CHANGE_DURATION
             );
@@ -764,7 +764,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
             );
 
             if (changeRatio > maximumRatio) {
-                revert Aera__WeightChangeRatioIsAboveMax(
+                revert Mammon__WeightChangeRatioIsAboveMax(
                     address(tokens[i]),
                     changeRatio,
                     maximumRatio
@@ -816,7 +816,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         if (
             block.timestamp < lastSwapFeeCheckpoint + SWAP_FEE_COOLDOWN_PERIOD
         ) {
-            revert Aera__CannotSetSwapFeeBeforeCooldown();
+            revert Mammon__CannotSetSwapFeeBeforeCooldown();
         }
         lastSwapFeeCheckpoint = block.timestamp;
 
@@ -826,7 +826,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
             ? newSwapFee - oldSwapFee
             : oldSwapFee - newSwapFee;
         if (absoluteDelta > MAXIMUM_SWAP_FEE_PERCENT_CHANGE) {
-            revert Aera__SwapFeePercentageChangeIsAboveMax(
+            revert Mammon__SwapFeePercentageChangeIsAboveMax(
                 absoluteDelta,
                 MAXIMUM_SWAP_FEE_PERCENT_CHANGE
             );
@@ -850,7 +850,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         }
 
         if (managersFee[msg.sender].length == 0) {
-            revert Aera__NoAvailableFeeForCaller(msg.sender);
+            revert Mammon__NoAvailableFeeForCaller(msg.sender);
         }
 
         IERC20[] memory tokens;
@@ -954,7 +954,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Disable ownership renounceable
     function renounceOwnership() public override onlyOwner {
-        revert Aera__VaultIsNotRenounceable();
+        revert Mammon__VaultIsNotRenounceable();
     }
 
     /// @inheritdoc IProtocolAPI
@@ -964,7 +964,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         onlyOwner
     {
         if (newOwner == address(0)) {
-            revert Aera__OwnerIsZeroAddress();
+            revert Mammon__OwnerIsZeroAddress();
         }
         pendingOwner = newOwner;
         emit OwnershipTransferOffered(owner(), newOwner);
@@ -973,7 +973,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
     /// @inheritdoc IProtocolAPI
     function cancelOwnershipTransfer() external override onlyOwner {
         if (pendingOwner == address(0)) {
-            revert Aera__NoPendingOwnershipTransfer();
+            revert Mammon__NoPendingOwnershipTransfer();
         }
         emit OwnershipTransferCanceled(owner(), pendingOwner);
         pendingOwner = address(0);
@@ -982,7 +982,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
     /// @inheritdoc IUserAPI
     function acceptOwnership() external override {
         if (msg.sender != pendingOwner) {
-            revert Aera__NotPendingOwner();
+            revert Mammon__NotPendingOwner();
         }
         _transferOwnership(pendingOwner);
         pendingOwner = address(0);
@@ -1017,7 +1017,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         }
 
         /// Set managed balance of pool as amounts
-        /// i.e. Deposit amounts of tokens to pool from Aera Vault
+        /// i.e. Deposit amounts of tokens to pool from Mammon Vault
         updatePoolBalance(newBalances, IBVault.PoolBalanceOpKind.UPDATE);
         /// Decrease managed balance and increase cash balance of pool
         /// i.e. Move amounts from managed balance to cash balance
@@ -1066,7 +1066,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
 
         for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] > holdings[i] || amounts[i] > allowances[i]) {
-                revert Aera__AmountExceedAvailable(
+                revert Mammon__AmountExceedAvailable(
                     address(tokens[i]),
                     amounts[i],
                     Math.min(holdings[i], allowances[i])
@@ -1107,7 +1107,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         );
     }
 
-    /// @notice Withdraw tokens from Balancer Pool to Aera Vault
+    /// @notice Withdraw tokens from Balancer Pool to Mammon Vault
     /// @dev Will only be called by withdrawTokens(), returnFunds()
     ///      and lockManagerFees()
     function withdrawFromPool(uint256[] memory amounts) internal {
@@ -1115,7 +1115,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
 
         /// Decrease cash balance and increase managed balance of pool
         /// i.e. Move amounts from cash balance to managed balance
-        /// and withdraw token amounts from pool to Aera Vault
+        /// and withdraw token amounts from pool to Mammon Vault
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.WITHDRAW);
         /// Adjust managed balance of pool as the zero array
         updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
@@ -1192,7 +1192,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         uint256 numTokens = tokens.length;
 
         if (numTokens != tokenWithValues.length) {
-            revert Aera__ValueLengthIsNotSame(
+            revert Mammon__ValueLengthIsNotSame(
                 numTokens,
                 tokenWithValues.length
             );
@@ -1201,7 +1201,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         uint256[] memory values = new uint256[](numTokens);
         for (uint256 i = 0; i < numTokens; i++) {
             if (address(tokenWithValues[i].token) != address(tokens[i])) {
-                revert Aera__DifferentTokensInPosition(
+                revert Mammon__DifferentTokensInPosition(
                     address(tokenWithValues[i].token),
                     address(tokens[i]),
                     i
@@ -1329,10 +1329,10 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
     /// @param newManager Address to check.
     function checkManagerAddress(address newManager) internal {
         if (newManager == address(0)) {
-            revert Aera__ManagerIsZeroAddress();
+            revert Mammon__ManagerIsZeroAddress();
         }
         if (newManager == owner()) {
-            revert Aera__ManagerIsOwner(newManager);
+            revert Mammon__ManagerIsOwner(newManager);
         }
     }
 }
