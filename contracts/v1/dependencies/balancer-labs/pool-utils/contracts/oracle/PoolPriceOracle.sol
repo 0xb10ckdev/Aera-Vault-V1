@@ -15,9 +15,10 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import "../../../interfaces/contracts/solidity-utils/helpers/BalancerErrors.sol";
-import "../../../interfaces/contracts/pool-utils/IPriceOracle.sol";
-import "../../../interfaces/contracts/pool-utils/IPoolPriceOracle.sol";
+import "../../../solidity-utils/contracts/helpers/BalancerErrors.sol";
+
+import "../interfaces/IPriceOracle.sol";
+import "../interfaces/IPoolPriceOracle.sol";
 
 import "./Buffer.sol";
 import "./Samples.sol";
