@@ -14,9 +14,10 @@
 
 pragma solidity ^0.7.0;
 
-import "../../interfaces/contracts/vault/IAuthorizer.sol";
-
 import "../../solidity-utils/contracts/helpers/Authentication.sol";
+import "../../vault/contracts/interfaces/IAuthorizer.sol";
+
+import "./BasePool.sol";
 
 /**
  * @dev Base authorization layer implementation for Pools.

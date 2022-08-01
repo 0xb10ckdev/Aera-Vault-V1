@@ -14,9 +14,8 @@
 
 pragma solidity ^0.7.0;
 
-import "../../interfaces/contracts/vault/IVault.sol";
-
 import "../../solidity-utils/contracts/openzeppelin/ERC20Permit.sol";
+import "../../vault/contracts/interfaces/IVault.sol";
 
 /**
  * @title Highly opinionated token implementation
