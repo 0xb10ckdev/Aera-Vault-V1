@@ -172,7 +172,6 @@ $ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKE
 - SALT: Salt value for ManagerWhitelist deployment
 - FACTORY: Balancer's Managed Pool Factory address
 - TOKEN_COUNT: Token Count
-- FACTORY: Balancer's Managed Pool Factory address
 - NAME: Pool token name
 - SYMBOL: Pool token symbol
 - TOKENS: Tokens' addresses
