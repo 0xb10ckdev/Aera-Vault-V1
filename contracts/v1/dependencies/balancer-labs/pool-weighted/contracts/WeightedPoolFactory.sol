@@ -15,7 +15,7 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import "../../interfaces/contracts/vault/IVault.sol";
+import "../../vault/contracts/interfaces/IVault.sol";
 
 import "../../pool-utils/contracts/factories/BasePoolSplitCodeFactory.sol";
 import "../../pool-utils/contracts/factories/FactoryWidePauseWindow.sol";

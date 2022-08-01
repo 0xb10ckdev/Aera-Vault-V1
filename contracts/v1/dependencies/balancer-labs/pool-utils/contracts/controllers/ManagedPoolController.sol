@@ -15,8 +15,7 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import "../../../interfaces/contracts/pool-utils/IControlledManagedPool.sol";
-
+import "../interfaces/IControlledManagedPool.sol";
 import "./BasePoolController.sol";
 
 /**
@@ -32,34 +31,32 @@ import "./BasePoolController.sol";
 contract ManagedPoolController is BasePoolController, IControlledManagedPool {
     using WordCodec for bytes32;
 
-    // There are six managed pool rights: all corresponding to permissioned functions of ManagedPool.
+    // There are five managed pool rights: all corresponding to permissioned functions of ManagedPool.
     struct ManagedPoolRights {
         bool canChangeWeights;
         bool canDisableSwaps;
         bool canSetMustAllowlistLPs;
         bool canSetCircuitBreakers;
         bool canChangeTokens;
-        bool canChangeMgmtFees;
     }
 
     // The minimum weight change duration could be replaced with more sophisticated rate-limiting.
     uint256 internal immutable _minWeightChangeDuration;
 
     // Immutable controller state - the first 16 bits are reserved as a bitmap for permission flags
-    // (3 used in the base class; 6 used here), and the remaining 240 bits can be used by derived classes
+    // (3 used in the base class; 5 used here), and the remaining 240 bits can be used by derived classes
     // to store any other immutable data.
     //
     //               Managed Pool Controller Permissions             |   Base Controller Permissions  ]
-    // [  240 | 7 bits |   1 bit  |  1 bit |  1 bit   | 1 bit | 1 bit |  1 bit  |  1 bit   |  1 bit   |   1 bit  ]
-    // [unused|reserved| mgmt fee | tokens | breakers |  LPs  | swaps | weights | metadata | swap fee | transfer ]
-    // |MSB                                                                                                   LSB|
+    // [  240 | 8 bits |  1 bit |  1 bit   | 1 bit | 1 bit |  1 bit  |  1 bit   |  1 bit   |   1 bit  ]
+    // [unused|reserved| tokens | breakers |  LPs  | swaps | weights | metadata | swap fee | transfer ]
+    // |MSB                                                                                        LSB|
 
     uint256 private constant _CHANGE_WEIGHTS_OFFSET = 3;
     uint256 private constant _DISABLE_SWAPS_OFFSET = 4;
     uint256 private constant _MUST_ALLOWLIST_LPS_OFFSET = 5;
     uint256 private constant _CIRCUIT_BREAKERS_OFFSET = 6;
     uint256 private constant _CHANGE_TOKENS_OFFSET = 7;
-    uint256 private constant _CHANGE_MGMT_FEES_OFFSET = 8;
 
     /**
      * @dev Pass in the `BasePoolRights` and `ManagedPoolRights` structures, to form the complete set of
@@ -80,16 +77,13 @@ contract ManagedPoolController is BasePoolController, IControlledManagedPool {
         pure
         returns (bytes32)
     {
-        bytes32 permissions = super
-            .encodePermissions(baseRights)
-            .insertBool(managedRights.canChangeWeights, _CHANGE_WEIGHTS_OFFSET)
-            .insertBool(managedRights.canDisableSwaps, _DISABLE_SWAPS_OFFSET)
-            .insertBool(managedRights.canSetMustAllowlistLPs, _MUST_ALLOWLIST_LPS_OFFSET);
+        bytes32 permissions = super.encodePermissions(baseRights);
 
-        // Needed to avoid "stack too deep"
         return
             permissions
-                .insertBool(managedRights.canChangeMgmtFees, _CHANGE_MGMT_FEES_OFFSET)
+                .insertBool(managedRights.canChangeWeights, _CHANGE_WEIGHTS_OFFSET)
+                .insertBool(managedRights.canDisableSwaps, _DISABLE_SWAPS_OFFSET)
+                .insertBool(managedRights.canSetMustAllowlistLPs, _MUST_ALLOWLIST_LPS_OFFSET)
                 .insertBool(managedRights.canChangeTokens, _CHANGE_TOKENS_OFFSET)
                 .insertBool(managedRights.canSetCircuitBreakers, _CIRCUIT_BREAKERS_OFFSET);
     }
@@ -127,13 +121,6 @@ contract ManagedPoolController is BasePoolController, IControlledManagedPool {
      */
     function canChangeTokens() public view returns (bool) {
         return _controllerState.decodeBool(_CHANGE_TOKENS_OFFSET);
-    }
-
-    /**
-     * @dev Getter for the canChangeManagementFees permission.
-     */
-    function canChangeManagementFees() public view returns (bool) {
-        return _controllerState.decodeBool(_CHANGE_MGMT_FEES_OFFSET);
     }
 
     /**
@@ -203,39 +190,9 @@ contract ManagedPoolController is BasePoolController, IControlledManagedPool {
     }
 
     /**
-     * @dev Transfer any BPT management fees from this contract to the recipient.
+     * @dev Pass a call to ManagedPool's withdrawCollectedManagementFees through to the underlying pool.
      */
     function withdrawCollectedManagementFees(address recipient) external virtual override onlyManager withBoundPool {
-        IERC20(pool).transfer(recipient, IERC20(pool).balanceOf(address(this)));
-    }
-
-    /**
-     * @dev Pass a call to ManagedPool's setManagementSwapFeePercentage through to the underlying pool.
-     */
-    function setManagementSwapFeePercentage(uint256 managementSwapFeePercentage)
-        external
-        virtual
-        override
-        onlyManager
-        withBoundPool
-    {
-        _require(canChangeManagementFees(), Errors.UNAUTHORIZED_OPERATION);
-
-        IControlledManagedPool(pool).setManagementSwapFeePercentage(managementSwapFeePercentage);
-    }
-
-    /**
-     * @dev Pass a call to ManagedPool's setManagementAumFeePercentage through to the underlying pool.
-     */
-    function setManagementAumFeePercentage(uint256 managementAumFeePercentage)
-        external
-        virtual
-        override
-        onlyManager
-        withBoundPool
-    {
-        _require(canChangeManagementFees(), Errors.UNAUTHORIZED_OPERATION);
-
-        IControlledManagedPool(pool).setManagementAumFeePercentage(managementAumFeePercentage);
+        IControlledManagedPool(pool).withdrawCollectedManagementFees(recipient);
     }
 }

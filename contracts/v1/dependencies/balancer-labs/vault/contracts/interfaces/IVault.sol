@@ -14,11 +14,10 @@
 
 pragma experimental ABIEncoderV2;
 
-import "../solidity-utils/openzeppelin/IERC20.sol";
-import "../solidity-utils/helpers/IAuthentication.sol";
-import "../solidity-utils/helpers/ISignaturesValidator.sol";
-import "../solidity-utils/helpers/ITemporarilyPausable.sol";
-import "../solidity-utils/misc/IWETH.sol";
+import "../../../solidity-utils/contracts/openzeppelin/IERC20.sol";
+import "../../../solidity-utils/contracts/helpers/ISignaturesValidator.sol";
+import "../../../solidity-utils/contracts/helpers/ITemporarilyPausable.sol";
+import "../../../solidity-utils/contracts/misc/IWETH.sol";
 
 import "./IAsset.sol";
 import "./IAuthorizer.sol";
@@ -31,7 +30,7 @@ pragma solidity ^0.7.0;
  * @dev Full external interface for the Vault core contract - no external or public methods exist in the contract that
  * don't override one of these declarations.
  */
-interface IVault is ISignaturesValidator, ITemporarilyPausable, IAuthentication {
+interface IVault is ISignaturesValidator, ITemporarilyPausable {
     // Generalities about the Vault:
     //
     // - Whenever documentation refers to 'tokens', it strictly refers to ERC20-compliant token contracts. Tokens are
