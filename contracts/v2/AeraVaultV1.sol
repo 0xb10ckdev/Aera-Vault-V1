@@ -249,7 +249,10 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
     error Aera__ManagerIsZeroAddress();
     error Aera__ManagerIsOwner(address newManager);
     error Aera__CallerIsNotManager();
-    error Aera__SwapFeePercentageChangeIsAboveMax(uint256 actual, uint256 max);
+    error Aera__SwapFeePercentageChangeIsAboveMax(
+        uint256 actual,
+        uint256 max
+    );
     error Aera__DescriptionIsEmpty();
     error Aera__CallerIsNotOwnerOrManager();
     error Aera__WeightChangeEndBeforeStart();
