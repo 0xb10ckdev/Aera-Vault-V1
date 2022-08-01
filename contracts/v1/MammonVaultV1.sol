@@ -384,29 +384,28 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
         //     BasePoolController.BasePoolRights calldata basePoolRights,
         //     ManagedPoolController.ManagedPoolRights calldata managedPoolRights,
         //     uint256 minWeightChangeDuration,
-        //     address manager
         // )
         //
         // - poolParams.mustAllowlistLPs should be true to prevent other accounts
         //   to use joinPool
         // - minWeightChangeDuration should be zero so that weights can be updated immediately
         //   in deposit, withdraw, cancelWeightUpdates and enableTradingWithWeights.
-        // - manager should be MammonVault(this).
         pool = IBManagedPool(
             IBManagedPoolFactory(vaultParams.factory).create(
                 IBManagedPoolFactory.NewPoolParams({
+                    vault: IBVault(address(0)),
                     name: vaultParams.name,
                     symbol: vaultParams.symbol,
                     tokens: vaultParams.tokens,
                     normalizedWeights: vaultParams.weights,
                     assetManagers: assetManagers,
                     swapFeePercentage: vaultParams.swapFeePercentage,
+                    pauseWindowDuration: 0,
+                    bufferPeriodDuration: 0,
+                    owner: address(this),
                     swapEnabledOnStart: false,
                     mustAllowlistLPs: true,
-                    protocolSwapFeePercentage: 0,
-                    managementSwapFeePercentage: 0,
-                    managementAumFeePercentage: 0,
-                    aumProtocolFeesCollector: address(0)
+                    managementSwapFeePercentage: 0
                 }),
                 IBManagedPoolFactory.BasePoolRights({
                     canTransferOwnership: false,
@@ -418,11 +417,9 @@ contract MammonVaultV1 is IMammonVaultV1, Ownable, ReentrancyGuard {
                     canDisableSwaps: true,
                     canSetMustAllowlistLPs: false,
                     canSetCircuitBreakers: false,
-                    canChangeTokens: false,
-                    canChangeMgmtFees: false
+                    canChangeTokens: false
                 }),
-                0,
-                address(this)
+                0
             )
         );
 
