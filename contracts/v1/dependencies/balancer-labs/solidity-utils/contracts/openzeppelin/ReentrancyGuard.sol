@@ -6,7 +6,7 @@
 
 pragma solidity ^0.7.0;
 
-import "../../../interfaces/contracts/solidity-utils/helpers/BalancerErrors.sol";
+import "../helpers/BalancerErrors.sol";
 
 /**
  * @dev Contract module that helps prevent reentrant calls to a function.

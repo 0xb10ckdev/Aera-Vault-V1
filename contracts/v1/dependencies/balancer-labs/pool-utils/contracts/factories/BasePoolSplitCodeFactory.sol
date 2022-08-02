@@ -15,9 +15,8 @@
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
 
-import "../../../interfaces/contracts/vault/IVault.sol";
-
 import "../../../solidity-utils/contracts/helpers/BaseSplitCodeFactory.sol";
+import "../../../vault/contracts/interfaces/IVault.sol";
 
 /**
  * @dev Same as `BasePoolFactory`, for Pools whose creation code is so large that the factory cannot hold it.
