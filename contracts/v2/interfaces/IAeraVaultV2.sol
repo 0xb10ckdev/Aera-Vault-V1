@@ -5,6 +5,7 @@ import "../../v1/interfaces/IUserAPI.sol";
 import "../../v1/interfaces/IManagerAPI.sol";
 import "../../v1/interfaces/IMultiAssetVault.sol";
 import "../../v1/interfaces/IProtocolAPI.sol";
+import "../dependencies/chainlink/interfaces/AggregatorV2V3Interface.sol";
 import "./IProtocolAPIV2.sol";
 
 /// @title Interface for v2 vault.
@@ -22,6 +23,9 @@ interface IAeraVaultV2 is
     // symbol: Symbol of Pool Token.
     // tokens: Token addresses.
     // weights: Token weights.
+    // oracles: Chainlink oracle addresses.
+    //          All oracles should be in reference to the same asset.
+    // numeraireAssetIndex: Index of base token for oracles.
     // swapFeePercentage: Pool swap fee.
     // manager: Vault manager address.
     // validator: Withdrawal validator contract address.
@@ -35,6 +39,8 @@ interface IAeraVaultV2 is
         string symbol;
         IERC20[] tokens;
         uint256[] weights;
+        AggregatorV2V3Interface[] oracles;
+        uint256 numeraireAssetIndex;
         uint256 swapFeePercentage;
         address manager;
         address validator;
