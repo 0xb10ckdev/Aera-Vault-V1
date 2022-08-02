@@ -334,14 +334,13 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     ///       If swapFeePercentage is greater than minimum and less than maximum.
     ///       If total sum of weights is one.
     /// @param vaultParams Struct vault parameter.
-    /// @param oracles Chainlink oracle addresses.
-    ///                 All oracles should be in reference to the same asset.
-    /// @param numeraireAssetIndex_ Index of base token for oracles.
-    constructor(
-        NewVaultParams memory vaultParams,
-        AggregatorV2V3Interface[] memory oracles,
-        uint256 numeraireAssetIndex_
-    ) OracleStorage(oracles, numeraireAssetIndex_, vaultParams.tokens.length) {
+    constructor(NewVaultParams memory vaultParams)
+        OracleStorage(
+            vaultParams.oracles,
+            vaultParams.numeraireAssetIndex,
+            vaultParams.tokens.length
+        )
+    {
         uint256 numTokens = vaultParams.tokens.length;
 
         if (numTokens != vaultParams.weights.length) {
@@ -396,29 +395,28 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         //     BasePoolController.BasePoolRights calldata basePoolRights,
         //     ManagedPoolController.ManagedPoolRights calldata managedPoolRights,
         //     uint256 minWeightChangeDuration,
-        //     address manager
         // )
         //
         // - poolParams.mustAllowlistLPs should be true to prevent other accounts
         //   to use joinPool
         // - minWeightChangeDuration should be zero so that weights can be updated immediately
         //   in deposit, withdraw, cancelWeightUpdates and enableTradingWithWeights.
-        // - manager should be AeraVault(this).
         pool = IBManagedPool(
             IBManagedPoolFactory(vaultParams.factory).create(
                 IBManagedPoolFactory.NewPoolParams({
+                    vault: IBVault(address(0)),
                     name: vaultParams.name,
                     symbol: vaultParams.symbol,
                     tokens: vaultParams.tokens,
                     normalizedWeights: vaultParams.weights,
                     assetManagers: assetManagers,
                     swapFeePercentage: vaultParams.swapFeePercentage,
+                    pauseWindowDuration: 0,
+                    bufferPeriodDuration: 0,
+                    owner: address(this),
                     swapEnabledOnStart: false,
                     mustAllowlistLPs: true,
-                    protocolSwapFeePercentage: 0,
-                    managementSwapFeePercentage: 0,
-                    managementAumFeePercentage: 0,
-                    aumProtocolFeesCollector: address(0)
+                    managementSwapFeePercentage: 0
                 }),
                 IBManagedPoolFactory.BasePoolRights({
                     canTransferOwnership: false,
@@ -430,11 +428,9 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
                     canDisableSwaps: true,
                     canSetMustAllowlistLPs: false,
                     canSetCircuitBreakers: false,
-                    canChangeTokens: false,
-                    canChangeMgmtFees: false
+                    canChangeTokens: false
                 }),
-                0,
-                address(this)
+                0
             )
         );
 
