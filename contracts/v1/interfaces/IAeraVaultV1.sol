@@ -8,7 +8,7 @@ import "./IMultiAssetVault.sol";
 
 /// @title Interface for v1 vault.
 // solhint-disable-next-line no-empty-blocks
-interface IMammonVaultV1 is
+interface IAeraVaultV1 is
     IUserAPI,
     IManagerAPI,
     IProtocolAPI,

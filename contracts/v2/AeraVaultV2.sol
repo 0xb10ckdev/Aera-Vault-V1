@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
-import "../v1/MammonVaultV1.sol";
+import "../v1/AeraVaultV1.sol";
 import "./OracleStorage.sol";
 import "./dependencies/chainlink/interfaces/AggregatorV2V3Interface.sol";
 import "./interfaces/IProtocolAPIV2.sol";
@@ -10,7 +10,7 @@ import "./interfaces/IProtocolAPIV2.sol";
 /// @notice Managed n-asset vault that supports withdrawals
 ///         in line with a pre-defined validator contract.
 /// @dev Vault owner is the asset owner.
-contract AeraVaultV2 is MammonVaultV1, OracleStorage, IProtocolAPIV2 {
+contract AeraVaultV2 is AeraVaultV1, OracleStorage, IProtocolAPIV2 {
     /// EVENTS ///
 
     /// @notice Emitted when enableTradingWithOraclePrice is called.
@@ -36,7 +36,7 @@ contract AeraVaultV2 is MammonVaultV1, OracleStorage, IProtocolAPIV2 {
         AggregatorV2V3Interface[] memory oracles,
         uint256 numeraireAssetIndex_
     )
-        MammonVaultV1(vaultParams)
+        AeraVaultV1(vaultParams)
         OracleStorage(oracles, numeraireAssetIndex_, vaultParams.tokens.length)
     {}
 

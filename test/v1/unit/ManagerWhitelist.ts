@@ -23,13 +23,13 @@ describe("ManagerWhitelist Deployment", function () {
     it("when initialization list has a zero address", async () => {
       await expect(
         deployManagerWhitelist(admin, [ZERO_ADDRESS]),
-      ).to.be.revertedWith("Mammon__ManagerIsZeroAddress");
+      ).to.be.revertedWith("Aera__ManagerIsZeroAddress");
     });
 
     it("when managers are duplicated in initialization list", async () => {
       await expect(
         deployManagerWhitelist(admin, [manager.address, manager.address]),
-      ).to.be.revertedWith("Mammon__AddressIsAlreadyManager");
+      ).to.be.revertedWith("Aera__AddressIsAlreadyManager");
     });
   });
 });
@@ -79,14 +79,14 @@ describe("ManagerWhitelist Functionality", function () {
       it("when a manager is zero address", async () => {
         await expect(
           managerWhitelist.addManager(ZERO_ADDRESS),
-        ).to.be.revertedWith("Mammon__ManagerIsZeroAddress");
+        ).to.be.revertedWith("Aera__ManagerIsZeroAddress");
       });
 
       it("when a manager is already present", async () => {
         await managerWhitelist.addManager(manager.address);
         await expect(
           managerWhitelist.addManager(manager.address),
-        ).to.be.revertedWith("Mammon__AddressIsAlreadyManager");
+        ).to.be.revertedWith("Aera__AddressIsAlreadyManager");
       });
     });
 
@@ -121,7 +121,7 @@ describe("ManagerWhitelist Functionality", function () {
       it("when a manager isn't present", async () => {
         await expect(
           managerWhitelist.removeManager(manager.address),
-        ).to.be.revertedWith("Mammon__AddressIsNotManager");
+        ).to.be.revertedWith("Aera__AddressIsNotManager");
       });
     });
 
