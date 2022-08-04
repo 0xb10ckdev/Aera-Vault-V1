@@ -6,7 +6,7 @@ import { getConfig } from "../../scripts/config";
 const wethAddress = "0x000000000000000000000000000000000000000F";
 const assetHelpers = new AssetHelpers(wethAddress);
 
-task("deploy:vault", "Deploys a Aera vault with the given parameters")
+task("deploy:vault", "Deploys an Aera vault with the given parameters")
   .addParam("factory", "Balancer Managed Pool Factory address")
   .addParam("name", "Pool Token's name")
   .addParam("symbol", "Pool Token's symbol")
