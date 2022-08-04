@@ -1117,21 +1117,27 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
         it("when weight is less than minimum", async () => {
           const timestamp = await getCurrentTime();
+          const token0TargetWeight = toWei(0.009);
+          const validDuration = ONE.mul(ONE)
+            .div(tokens.length)
+            .div(token0TargetWeight)
+            .div(MAX_WEIGHT_CHANGE_RATIO)
+            .add(1);
           await expect(
             vault.connect(manager).updateWeightsGradually(
               [
                 {
                   token: sortedTokens[0],
-                  value: toWei(0.009),
+                  value: token0TargetWeight,
                 },
                 ...tokenValueArray(
                   sortedTokens.slice(1),
-                  ONE.sub(toWei(0.009)).div(tokens.length - 1),
+                  ONE.sub(token0TargetWeight).div(tokens.length - 1),
                   tokens.length - 1,
                 ),
               ],
               timestamp,
-              timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
+              timestamp + validDuration.toNumber() + 1,
             ),
           ).to.be.revertedWith(BALANCER_ERRORS.MIN_WEIGHT);
         });
