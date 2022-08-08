@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
-
 import "../v1/dependencies/openzeppelin/SafeERC20.sol";
 import "../v1/dependencies/openzeppelin/IERC20.sol";
 import "../v1/dependencies/openzeppelin/Ownable.sol";
