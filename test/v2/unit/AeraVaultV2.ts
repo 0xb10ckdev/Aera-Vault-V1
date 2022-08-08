@@ -116,24 +116,22 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       await ethers.getContractFactory<AeraVaultV2Mock__factory>(
         "AeraVaultV2Mock",
       );
-    vault = await vaultFactory.connect(admin).deploy(
-      {
-        factory: factory.address,
-        name: "Test",
-        symbol: "TEST",
-        tokens: sortedTokens,
-        weights: validWeights,
-        swapFeePercentage: MIN_SWAP_FEE,
-        manager: manager.address,
-        validator: validator.address,
-        noticePeriod: DEFAULT_NOTICE_PERIOD,
-        managementFee: MAX_MANAGEMENT_FEE,
-        merkleOrchard: ZERO_ADDRESS,
-        description: "Test vault description",
-      },
-      oracleAddresses,
-      0,
-    );
+    vault = await vaultFactory.connect(admin).deploy({
+      factory: factory.address,
+      name: "Test",
+      symbol: "TEST",
+      tokens: sortedTokens,
+      weights: validWeights,
+      oracles: oracleAddresses,
+      numeraireAssetIndex: 0,
+      swapFeePercentage: MIN_SWAP_FEE,
+      manager: manager.address,
+      validator: validator.address,
+      noticePeriod: DEFAULT_NOTICE_PERIOD,
+      managementFee: MAX_MANAGEMENT_FEE,
+      merkleOrchard: ZERO_ADDRESS,
+      description: "Test vault description",
+    });
   });
 
   afterEach(async () => {

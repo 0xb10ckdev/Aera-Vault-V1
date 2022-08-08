@@ -103,24 +103,22 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
 
     const vaultFactory = await ethers.getContractFactory(contract);
 
-    const vault = await vaultFactory.connect(admin).deploy(
-      {
-        factory,
-        name,
-        symbol,
-        tokens,
-        weights,
-        swapFeePercentage,
-        manager,
-        validator,
-        noticePeriod,
-        managementFee,
-        merkleOrchard,
-        description,
-      },
+    const vault = await vaultFactory.connect(admin).deploy({
+      factory,
+      name,
+      symbol,
+      tokens,
+      weights,
       oracles,
       numeraireAssetIndex,
-    );
+      swapFeePercentage,
+      manager,
+      validator,
+      noticePeriod,
+      managementFee,
+      merkleOrchard,
+      description,
+    });
 
     if (!taskArgs.silent) {
       console.log("Vault is deployed to:", vault.address);

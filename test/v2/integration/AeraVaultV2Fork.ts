@@ -100,6 +100,8 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
         symbol: "TEST",
         tokens: sortedTokens,
         weights: validWeights,
+        oracles: oracleAddress,
+        numeraireAssetIndex: 0,
         swapFeePercentage: MIN_SWAP_FEE,
         manager: manager.address,
         validator: validator.address,
@@ -115,70 +117,66 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
     });
 
     it("when token and weight length is not same", async () => {
-      validParams.tokens = [...sortedTokens, tokens[0].address];
-      await expect(
-        deployVault(validParams, oracleAddress, 0),
-      ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
+      validParams.weights = [...validWeights, validWeights[0]];
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Aera__ValueLengthIsNotSame",
+      );
     });
 
     it("when token and oracle length is not same", async () => {
-      await expect(
-        deployVault(validParams, [...oracleAddress, oracleAddress[0]], 0),
-      ).to.be.revertedWith("Aera__OracleLengthIsNotSame");
+      validParams.oracles = [...oracleAddress, oracleAddress[0]];
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Aera__OracleLengthIsNotSame",
+      );
     });
 
     it("when numeraire asset index exceeds token length", async () => {
-      await expect(
-        deployVault(validParams, oracleAddress, tokens.length),
-      ).to.be.revertedWith("Aera__NumeraireAssetIndexExceedsTokenLength");
+      validParams.numeraireAssetIndex = tokens.length;
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Aera__NumeraireAssetIndexExceedsTokenLength",
+      );
     });
 
     it("when oracle is zero address", async () => {
-      await expect(
-        deployVault(
-          validParams,
-          [...oracleAddress.slice(0, -1), ZERO_ADDRESS],
-          0,
-        ),
-      ).to.be.revertedWith("Aera__OracleIsZeroAddress");
+      validParams.oracles = [...oracleAddress.slice(0, -1), ZERO_ADDRESS];
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Aera__OracleIsZeroAddress",
+      );
     });
 
     it("when numeraire oracle is not zero address", async () => {
-      await expect(
-        deployVault(
-          validParams,
-          [oracles[0].address, ...oracleAddress.slice(1)],
-          0,
-        ),
-      ).to.be.revertedWith("Aera__NumeraireOracleIsNotZeroAddress");
+      validParams.oracles = [oracles[0].address, ...oracleAddress.slice(1)];
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Aera__NumeraireOracleIsNotZeroAddress",
+      );
     });
 
     it("when management fee is greater than maximum", async () => {
       validParams.managementFee = MAX_MANAGEMENT_FEE.add(1);
-      await expect(
-        deployVault(validParams, oracleAddress, 0),
-      ).to.be.revertedWith("Aera__ManagementFeeIsAboveMax");
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Aera__ManagementFeeIsAboveMax",
+      );
     });
 
     it("when notice period is greater than maximum", async () => {
       validParams.noticePeriod = MAX_NOTICE_PERIOD + 1;
-      await expect(
-        deployVault(validParams, oracleAddress, 0),
-      ).to.be.revertedWith("Aera__NoticePeriodIsAboveMax");
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Aera__NoticePeriodIsAboveMax",
+      );
     });
 
     it("when validator is not valid", async () => {
       validParams.validator = manager.address;
-      await expect(
-        deployVault(validParams, oracleAddress, 0),
-      ).to.be.revertedWith("Aera__ValidatorIsNotValid");
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Aera__ValidatorIsNotValid",
+      );
 
       validParams.validator = (
         await deployments.get("InvalidValidator")
       ).address;
-      await expect(
-        deployVault(validParams, oracleAddress, 0),
-      ).to.be.revertedWith("Aera__ValidatorIsNotValid");
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Aera__ValidatorIsNotValid",
+      );
     });
 
     it("when validator is not matched", async () => {
@@ -190,65 +188,66 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
         .connect(admin)
         .deploy(tokens.length - 1);
       validParams.validator = mismatchedValidator.address;
-      await expect(
-        deployVault(validParams, oracleAddress, 0),
-      ).to.be.revertedWith("Aera__ValidatorIsNotMatched");
+
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Aera__ValidatorIsNotMatched",
+      );
     });
 
     it("when token is not sorted in ascending order", async () => {
       validParams.tokens = unsortedTokens;
-      await expect(
-        deployVault(validParams, oracleAddress, 0),
-      ).to.be.revertedWith(BALANCER_ERRORS.UNSORTED_ARRAY);
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        BALANCER_ERRORS.UNSORTED_ARRAY,
+      );
     });
 
     it("when token is duplicated", async () => {
       validParams.tokens = [sortedTokens[0], ...sortedTokens.slice(0, -1)];
-      await expect(
-        deployVault(validParams, oracleAddress, 0),
-      ).to.be.revertedWith(BALANCER_ERRORS.UNSORTED_ARRAY);
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        BALANCER_ERRORS.UNSORTED_ARRAY,
+      );
     });
 
     it("when swap fee is greater than maximum", async () => {
       validParams.swapFeePercentage = MAX_SWAP_FEE.add(1);
-      await expect(
-        deployVault(validParams, oracleAddress, 0),
-      ).to.be.revertedWith(BALANCER_ERRORS.MAX_SWAP_FEE_PERCENTAGE);
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        BALANCER_ERRORS.MAX_SWAP_FEE_PERCENTAGE,
+      );
     });
 
     it("when swap fee is less than minimum", async () => {
       validParams.swapFeePercentage = MIN_SWAP_FEE.sub(1);
-      await expect(
-        deployVault(validParams, oracleAddress, 0),
-      ).to.be.revertedWith(BALANCER_ERRORS.MIN_SWAP_FEE_PERCENTAGE);
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        BALANCER_ERRORS.MIN_SWAP_FEE_PERCENTAGE,
+      );
     });
 
     it("when total sum of weights is not one", async () => {
       validParams.weights = valueArray(MIN_WEIGHT, tokens.length);
-      await expect(
-        deployVault(validParams, oracleAddress, 0),
-      ).to.be.revertedWith(BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT);
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT,
+      );
     });
 
     it("when manager is zero address", async () => {
       validParams.manager = ZERO_ADDRESS;
-      await expect(
-        deployVault(validParams, oracleAddress, 0),
-      ).to.be.revertedWith("Aera__ManagerIsZeroAddress");
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Aera__ManagerIsZeroAddress",
+      );
     });
 
     it("when manager is deployer", async () => {
       validParams.manager = admin.address;
-      await expect(
-        deployVault(validParams, oracleAddress, 0),
-      ).to.be.revertedWith("Aera__ManagerIsOwner");
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Aera__ManagerIsOwner",
+      );
     });
 
     it("when description is empty", async () => {
       validParams.description = "";
-      await expect(
-        deployVault(validParams, oracleAddress, 0),
-      ).to.be.revertedWith("Aera__DescriptionIsEmpty");
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Aera__DescriptionIsEmpty",
+      );
     });
   });
 });
