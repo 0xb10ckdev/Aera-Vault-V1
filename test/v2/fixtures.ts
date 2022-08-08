@@ -1,6 +1,5 @@
 import { ethers } from "hardhat";
 import { OracleMock, OracleMock__factory } from "../../typechain";
-import { ZERO_ADDRESS } from "./constants";
 
 export * from "../v1/fixtures";
 
