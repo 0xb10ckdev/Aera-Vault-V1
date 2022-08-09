@@ -9,8 +9,8 @@ import {
   BaseManagedPoolFactory__factory,
   ManagedPoolFactory,
   ManagedPoolFactory__factory,
-  MammonVaultV1Mock,
-  MammonVaultV1Mock__factory,
+  AeraVaultV1Mock,
+  AeraVaultV1Mock__factory,
   ManagerWhitelist,
   ManagerWhitelist__factory,
 } from "../../typechain";
@@ -34,9 +34,9 @@ export type VaultParams = {
 
 export const deployVault = async (
   params: VaultParams,
-): Promise<MammonVaultV1Mock> => {
-  const vault = await ethers.getContractFactory<MammonVaultV1Mock__factory>(
-    "MammonVaultV1Mock",
+): Promise<AeraVaultV1Mock> => {
+  const vault = await ethers.getContractFactory<AeraVaultV1Mock__factory>(
+    "AeraVaultV1Mock",
   );
 
   if (!params.validator) {

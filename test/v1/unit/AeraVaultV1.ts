@@ -9,8 +9,8 @@ import {
   BaseManagedPoolFactory__factory,
   ManagedPoolFactory,
   ManagedPoolFactory__factory,
-  MammonVaultV1Mock,
-  MammonVaultV1Mock__factory,
+  AeraVaultV1Mock,
+  AeraVaultV1Mock__factory,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
 } from "../../../typechain";
@@ -36,11 +36,11 @@ import {
   valueArray,
 } from "../utils";
 
-describe("Mammon Vault V1 Mainnet Functionality", function () {
+describe("Aera Vault V1 Mainnet Functionality", function () {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
   let user: SignerWithAddress;
-  let vault: MammonVaultV1Mock;
+  let vault: AeraVaultV1Mock;
   let validator: WithdrawalValidatorMock;
   let factory: ManagedPoolFactory;
   let tokens: IERC20[];
@@ -105,8 +105,8 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     const validWeights = valueArray(ONE.div(tokens.length), tokens.length);
 
     const vaultFactory =
-      await ethers.getContractFactory<MammonVaultV1Mock__factory>(
-        "MammonVaultV1Mock",
+      await ethers.getContractFactory<AeraVaultV1Mock__factory>(
+        "AeraVaultV1Mock",
       );
     vault = await vaultFactory.connect(admin).deploy({
       factory: factory.address,
@@ -139,7 +139,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       it("when call deposit", async () => {
         await expect(
           vault.deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
-        ).to.be.revertedWith("Mammon__VaultNotInitialized");
+        ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
 
       it("when call depositIfBalanceUnchanged", async () => {
@@ -147,13 +147,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           vault.depositIfBalanceUnchanged(
             tokenValueArray(sortedTokens, ONE, tokens.length),
           ),
-        ).to.be.revertedWith("Mammon__VaultNotInitialized");
+        ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
 
       it("when call withdraw", async () => {
         await expect(
           vault.withdraw(tokenValueArray(sortedTokens, ONE, tokens.length)),
-        ).to.be.revertedWith("Mammon__VaultNotInitialized");
+        ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
 
       it("when call withdrawIfBalanceUnchanged", async () => {
@@ -161,7 +161,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           vault.withdrawIfBalanceUnchanged(
             tokenValueArray(sortedTokens, ONE, tokens.length),
           ),
-        ).to.be.revertedWith("Mammon__VaultNotInitialized");
+        ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
 
       it("when call updateWeightsGradually", async () => {
@@ -178,30 +178,30 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               blocknumber + 1,
               blocknumber + 1000,
             ),
-        ).to.be.revertedWith("Mammon__VaultNotInitialized");
+        ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
 
       it("when call cancelWeightUpdates", async () => {
         await expect(
           vault.connect(manager).cancelWeightUpdates(),
-        ).to.be.revertedWith("Mammon__VaultNotInitialized");
+        ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
 
       it("when call claimManagerFees", async () => {
         await expect(vault.claimManagerFees()).to.be.revertedWith(
-          "Mammon__VaultNotInitialized",
+          "Aera__VaultNotInitialized",
         );
       });
 
       it("when call initiateFinalization", async () => {
         await expect(vault.initiateFinalization()).to.be.revertedWith(
-          "Mammon__VaultNotInitialized",
+          "Aera__VaultNotInitialized",
         );
       });
 
       it("when call finalize", async () => {
         await expect(vault.finalize()).to.be.revertedWith(
-          "Mammon__VaultNotInitialized",
+          "Aera__VaultNotInitialized",
         );
       });
     });
@@ -212,7 +212,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           vault.initialDeposit(
             tokenValueArray(sortedTokens, ONE, tokens.length + 1),
           ),
-        ).to.be.revertedWith("Mammon__ValueLengthIsNotSame");
+        ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
       });
 
       it("when token is not sorted", async () => {
@@ -220,7 +220,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           vault.initialDeposit(
             tokenValueArray(unsortedTokens, ONE, tokens.length),
           ),
-        ).to.be.revertedWith("Mammon__DifferentTokensInPosition");
+        ).to.be.revertedWith("Aera__DifferentTokensInPosition");
       });
 
       it("when amount exceeds allowance", async () => {
@@ -272,7 +272,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         vault.initialDeposit(
           tokenValueArray(sortedTokens, ONE, tokens.length),
         ),
-      ).to.be.revertedWith("Mammon__VaultIsAlreadyInitialized");
+      ).to.be.revertedWith("Aera__VaultIsAlreadyInitialized");
     });
 
     describe("when depositing to Vault", () => {
@@ -290,13 +290,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             vault.deposit(
               tokenValueArray(sortedTokens, ONE, tokens.length + 1),
             ),
-          ).to.be.revertedWith("Mammon__ValueLengthIsNotSame");
+          ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
         });
 
         it("when token is not sorted", async () => {
           await expect(
             vault.deposit(tokenValueArray(unsortedTokens, ONE, tokens.length)),
-          ).to.be.revertedWith("Mammon__DifferentTokensInPosition");
+          ).to.be.revertedWith("Aera__DifferentTokensInPosition");
         });
 
         it("when amount exceeds allowance", async () => {
@@ -372,7 +372,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             vault.withdraw(
               tokenValueArray(sortedTokens, toWei(5), tokens.length),
             ),
-          ).to.be.revertedWith("Mammon__AmountExceedAvailable");
+          ).to.be.revertedWith("Aera__AmountExceedAvailable");
         });
       });
 
@@ -397,7 +397,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               vault.withdraw(
                 tokenValueArray(sortedTokens, ONE, tokens.length + 1),
               ),
-            ).to.be.revertedWith("Mammon__ValueLengthIsNotSame");
+            ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
           });
 
           it("when token is not sorted", async () => {
@@ -405,7 +405,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               vault.withdraw(
                 tokenValueArray(unsortedTokens, ONE, tokens.length),
               ),
-            ).to.be.revertedWith("Mammon__DifferentTokensInPosition");
+            ).to.be.revertedWith("Aera__DifferentTokensInPosition");
           });
 
           it("when amount exceeds holdings", async () => {
@@ -422,7 +422,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                   tokens.length - 1,
                 ),
               ]),
-            ).to.be.revertedWith("Mammon__AmountExceedAvailable");
+            ).to.be.revertedWith("Aera__AmountExceedAvailable");
           });
         });
 
@@ -521,7 +521,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
               0,
               1,
             ),
-          ).to.be.revertedWith("Mammon__CallerIsNotManager");
+          ).to.be.revertedWith("Aera__CallerIsNotManager");
         });
 
         it("when token is not sorted", async () => {
@@ -538,7 +538,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 timestamp + 10,
                 timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 10,
               ),
-          ).to.be.revertedWith("Mammon__DifferentTokensInPosition");
+          ).to.be.revertedWith("Aera__DifferentTokensInPosition");
         });
 
         it("when start time is greater than maximum", async () => {
@@ -555,7 +555,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 2 ** 32,
                 timestamp,
               ),
-          ).to.be.revertedWith("Mammon__WeightChangeStartTimeIsAboveMax");
+          ).to.be.revertedWith("Aera__WeightChangeStartTimeIsAboveMax");
         });
 
         it("when end time is greater than maximum", async () => {
@@ -572,7 +572,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 timestamp,
                 2 ** 32,
               ),
-          ).to.be.revertedWith("Mammon__WeightChangeEndTimeIsAboveMax");
+          ).to.be.revertedWith("Aera__WeightChangeEndTimeIsAboveMax");
         });
 
         it("when end time is earlier than start time", async () => {
@@ -589,7 +589,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 timestamp - 2,
                 timestamp - 1,
               ),
-          ).to.be.revertedWith("Mammon__WeightChangeEndBeforeStart");
+          ).to.be.revertedWith("Aera__WeightChangeEndBeforeStart");
         });
 
         it("when duration is less than minimum", async () => {
@@ -606,7 +606,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 timestamp,
                 timestamp + 1,
               ),
-          ).to.be.revertedWith("Mammon__WeightChangeDurationIsBelowMin");
+          ).to.be.revertedWith("Aera__WeightChangeDurationIsBelowMin");
         });
 
         it("when actual duration is less than minimum", async () => {
@@ -623,7 +623,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 timestamp - 2,
                 timestamp + MINIMUM_WEIGHT_CHANGE_DURATION - 1,
               ),
-          ).to.be.revertedWith("Mammon__WeightChangeDurationIsBelowMin");
+          ).to.be.revertedWith("Aera__WeightChangeDurationIsBelowMin");
         });
       });
 
@@ -659,7 +659,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
     describe("when calling cancelWeightUpdates()", () => {
       it("should be reverted when called from non-manager", async () => {
         await expect(vault.cancelWeightUpdates()).to.be.revertedWith(
-          "Mammon__CallerIsNotManager",
+          "Aera__CallerIsNotManager",
         );
       });
 
@@ -690,7 +690,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
         it("when finalization is not initiated", async () => {
           await expect(vault.finalize()).to.be.revertedWith(
-            "Mammon__FinalizationNotInitiated",
+            "Aera__FinalizationNotInitiated",
           );
         });
 
@@ -699,7 +699,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           const noticeTimeoutAt = await vault.noticeTimeoutAt();
 
           await expect(vault.finalize()).to.be.revertedWith(
-            `Mammon__NoticeTimeoutNotElapsed(${noticeTimeoutAt})`,
+            `Aera__NoticeTimeoutNotElapsed(${noticeTimeoutAt})`,
           );
         });
 
@@ -709,7 +709,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
           await vault.finalize();
           await expect(vault.finalize()).to.be.revertedWith(
-            "Mammon__VaultIsAlreadyFinalized",
+            "Aera__VaultIsAlreadyFinalized",
           );
         });
       });
@@ -722,13 +722,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
         it("when call deposit", async () => {
           await expect(
             vault.deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
-          ).to.be.revertedWith("Mammon__VaultIsFinalizing");
+          ).to.be.revertedWith("Aera__VaultIsFinalizing");
         });
 
         it("when call withdraw", async () => {
           await expect(
             vault.withdraw(tokenValueArray(sortedTokens, ONE, tokens.length)),
-          ).to.be.revertedWith("Mammon__VaultIsFinalizing");
+          ).to.be.revertedWith("Aera__VaultIsFinalizing");
         });
 
         it("when call updateWeightsGradually", async () => {
@@ -741,24 +741,24 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                 blocknumber + 1,
                 blocknumber + 1000,
               ),
-          ).to.be.revertedWith("Mammon__VaultIsFinalizing");
+          ).to.be.revertedWith("Aera__VaultIsFinalizing");
         });
 
         it("when call cancelWeightUpdates", async () => {
           await expect(
             vault.connect(manager).cancelWeightUpdates(),
-          ).to.be.revertedWith("Mammon__VaultIsFinalizing");
+          ).to.be.revertedWith("Aera__VaultIsFinalizing");
         });
 
         it("when call claimManagerFees", async () => {
           await expect(vault.claimManagerFees()).to.be.revertedWith(
-            "Mammon__VaultIsFinalizing",
+            "Aera__VaultIsFinalizing",
           );
         });
 
         it("when call initiateFinalization", async () => {
           await expect(vault.initiateFinalization()).to.be.revertedWith(
-            "Mammon__VaultIsFinalizing",
+            "Aera__VaultIsFinalizing",
           );
         });
       });
@@ -836,7 +836,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       it("when token is pool token", async () => {
         const poolToken = await vault.pool();
         await expect(vault.sweep(poolToken, toWei(1))).to.be.revertedWith(
-          "Mammon__CannotSweepPoolToken",
+          "Aera__CannotSweepPoolToken",
         );
       });
 
@@ -867,7 +867,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       );
 
       await expect(vault.claimManagerFees()).to.be.revertedWith(
-        "Mammon__NoAvailableFeeForCaller",
+        "Aera__NoAvailableFeeForCaller",
       );
     });
 
@@ -963,13 +963,13 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
         it("when parameter(new manager) is zero address", async () => {
           await expect(vault.setManager(ZERO_ADDRESS)).to.be.revertedWith(
-            "Mammon__ManagerIsZeroAddress",
+            "Aera__ManagerIsZeroAddress",
           );
         });
 
         it("when parameter(new manager) is owner", async () => {
           await expect(vault.setManager(admin.address)).to.be.revertedWith(
-            "Mammon__ManagerIsOwner",
+            "Aera__ManagerIsOwner",
           );
         });
       });
@@ -1036,7 +1036,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                   tokens.length,
                 ),
               ),
-            ).to.be.revertedWith("Mammon__DifferentTokensInPosition");
+            ).to.be.revertedWith("Aera__DifferentTokensInPosition");
           });
 
           it("when swap is already enabled", async () => {
@@ -1048,7 +1048,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
                   tokens.length,
                 ),
               ),
-            ).to.be.revertedWith("Mammon__PoolSwapIsAlreadyEnabled");
+            ).to.be.revertedWith("Aera__PoolSwapIsAlreadyEnabled");
           });
         });
 
@@ -1088,7 +1088,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
       it("should be reverted to disable trading", async () => {
         await expect(vault.connect(user).disableTrading()).to.be.revertedWith(
-          "Mammon__CallerIsNotOwnerOrManager",
+          "Aera__CallerIsNotOwnerOrManager",
         );
       });
 
@@ -1107,7 +1107,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
       describe("should be reverted", () => {
         it("when called from non-manager", async () => {
           await expect(vault.setSwapFee(toWei(3))).to.be.revertedWith(
-            "Mammon__CallerIsNotManager()",
+            "Aera__CallerIsNotManager()",
           );
         });
 
@@ -1116,7 +1116,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           await vault.connect(manager).setSwapFee(newFee);
           await expect(
             vault.connect(manager).setSwapFee(newFee.add(1)),
-          ).to.be.revertedWith("Mammon__CannotSetSwapFeeBeforeCooldown");
+          ).to.be.revertedWith("Aera__CannotSetSwapFeeBeforeCooldown");
         });
 
         it("when positive change exceeds max", async () => {
@@ -1125,7 +1125,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           ).add(1);
           await expect(
             vault.connect(manager).setSwapFee(invalidFee),
-          ).to.be.revertedWith("Mammon__SwapFeePercentageChangeIsAboveMax");
+          ).to.be.revertedWith("Aera__SwapFeePercentageChangeIsAboveMax");
         });
 
         it("when negative change exceeds max", async () => {
@@ -1137,7 +1137,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
             .sub(1);
           await expect(
             vault.connect(manager).setSwapFee(invalidFee),
-          ).to.be.revertedWith("Mammon__SwapFeePercentageChangeIsAboveMax");
+          ).to.be.revertedWith("Aera__SwapFeePercentageChangeIsAboveMax");
         });
       });
 
@@ -1161,7 +1161,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
           it("when called from owner", async () => {
             await expect(vault.renounceOwnership()).to.be.revertedWith(
-              "Mammon__VaultIsNotRenounceable",
+              "Aera__VaultIsNotRenounceable",
             );
           });
         });
@@ -1193,7 +1193,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           it("when new owner is zero address", async () => {
             await expect(
               vault.transferOwnership(ZERO_ADDRESS),
-            ).to.be.revertedWith("Mammon__OwnerIsZeroAddress");
+            ).to.be.revertedWith("Aera__OwnerIsZeroAddress");
           });
         });
 
@@ -1215,7 +1215,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
 
           it("when there is no pending ownership transfer", async () => {
             await expect(vault.cancelOwnershipTransfer()).to.be.revertedWith(
-              "Mammon__NoPendingOwnershipTransfer",
+              "Aera__NoPendingOwnershipTransfer",
             );
           });
         });
@@ -1228,7 +1228,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           );
           await expect(
             vault.connect(user).acceptOwnership(),
-          ).to.be.revertedWith("Mammon__NotPendingOwner");
+          ).to.be.revertedWith("Aera__NotPendingOwner");
         });
       });
 
@@ -1237,7 +1237,7 @@ describe("Mammon Vault V1 Mainnet Functionality", function () {
           it("when called from not pending owner", async () => {
             await vault.transferOwnership(user.address);
             await expect(vault.acceptOwnership()).to.be.revertedWith(
-              "Mammon__NotPendingOwner",
+              "Aera__NotPendingOwner",
             );
           });
         });
