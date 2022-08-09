@@ -29,7 +29,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     uint256 internal constant ONE = 10**18;
 
     /// @notice Minimum period for weight change duration.
-    uint256 private constant MINIMUM_WEIGHT_CHANGE_DURATION = 1 days;
+    uint256 private constant MINIMUM_WEIGHT_CHANGE_DURATION = 4 hours;
 
     /// @notice Maximum absolute change in swap fee.
     uint256 private constant MAXIMUM_SWAP_FEE_PERCENT_CHANGE = 0.005e18;
