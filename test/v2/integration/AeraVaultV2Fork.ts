@@ -188,6 +188,7 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
         .connect(admin)
         .deploy(tokens.length - 1);
       validParams.validator = mismatchedValidator.address;
+
       await expect(deployVault(validParams)).to.be.revertedWith(
         "Aera__ValidatorIsNotMatched",
       );
