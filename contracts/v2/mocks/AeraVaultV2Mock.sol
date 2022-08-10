@@ -9,11 +9,7 @@ import "../AeraVaultV2.sol";
  */
 contract AeraVaultV2Mock is AeraVaultV2 {
     // solhint-disable no-empty-blocks
-    constructor(
-        NewVaultParams memory vaultParams,
-        AggregatorV2V3Interface[] memory oracles,
-        uint256 numeraireAssetIndex
-    ) AeraVaultV2(vaultParams, oracles, numeraireAssetIndex) {}
+    constructor(NewVaultParams memory vaultParams) AeraVaultV2(vaultParams) {}
 
     function getSpotPrice(address tokenIn, address tokenOut)
         external

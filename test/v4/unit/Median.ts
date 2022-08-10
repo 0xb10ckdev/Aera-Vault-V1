@@ -2,13 +2,13 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
-import { MammonMedian } from "../../../typechain";
+import { AeraMedian } from "../../../typechain";
 import { ONE } from "../../v1/constants";
 import { toWei } from "../../v1/utils";
 
 describe("ChainLink Median Functionality", function () {
   let admin: SignerWithAddress;
-  let mammonMedian: MammonMedian;
+  let aeraMedian: AeraMedian;
   let snapshot: unknown;
   let testList: number[];
   const testWeights: { [index: number]: BigNumber[] } = {};
@@ -77,11 +77,9 @@ describe("ChainLink Median Functionality", function () {
     const signers = await ethers.getSigners();
     admin = signers[0];
 
-    const contractFactory = await ethers.getContractFactory("MammonMedian");
+    const contractFactory = await ethers.getContractFactory("AeraMedian");
 
-    mammonMedian = (await contractFactory
-      .connect(admin)
-      .deploy()) as MammonMedian;
+    aeraMedian = (await contractFactory.connect(admin).deploy()) as AeraMedian;
   });
 
   afterEach(async () => {
@@ -124,11 +122,11 @@ describe("ChainLink Median Functionality", function () {
         );
 
         gasEstimation[i]["Chainlink"] = (
-          await mammonMedian.estimateGas.calculateWithChainlinkMedian(list)
+          await aeraMedian.estimateGas.calculateWithChainlinkMedian(list)
         ).toNumber();
 
         expect(
-          await mammonMedian.calculateWithChainlinkMedian(list),
+          await aeraMedian.calculateWithChainlinkMedian(list),
         ).to.be.equal(getMedian(list));
       });
     }
@@ -141,17 +139,14 @@ describe("ChainLink Median Functionality", function () {
         const weights = testWeights[i];
 
         gasEstimation[i]["Chainlink Weighted Median"] = (
-          await mammonMedian.estimateGas.calculateWithChainlinkWeightedMedian(
+          await aeraMedian.estimateGas.calculateWithChainlinkWeightedMedian(
             list,
             weights,
           )
         ).toNumber();
 
         expect(
-          await mammonMedian.calculateWithChainlinkWeightedMedian(
-            list,
-            weights,
-          ),
+          await aeraMedian.calculateWithChainlinkWeightedMedian(list, weights),
         ).to.be.equal(getWeightedMedian(list, weights));
       });
     }
@@ -163,10 +158,10 @@ describe("ChainLink Median Functionality", function () {
         const list = testList.slice(0, i);
 
         gasEstimation[i]["Uint Median"] = (
-          await mammonMedian.estimateGas.calculateWithUintMedian(list)
+          await aeraMedian.estimateGas.calculateWithUintMedian(list)
         ).toNumber();
 
-        expect(await mammonMedian.calculateWithUintMedian(list)).to.be.equal(
+        expect(await aeraMedian.calculateWithUintMedian(list)).to.be.equal(
           getMedian(list),
         );
       });
@@ -180,14 +175,14 @@ describe("ChainLink Median Functionality", function () {
         const weights = testWeights[i];
 
         gasEstimation[i]["Uint Weighted Median"] = (
-          await mammonMedian.estimateGas.calculateWithUintWeightedMedian(
+          await aeraMedian.estimateGas.calculateWithUintWeightedMedian(
             list,
             weights,
           )
         ).toNumber();
 
         expect(
-          await mammonMedian.calculateWithUintWeightedMedian(list, weights),
+          await aeraMedian.calculateWithUintWeightedMedian(list, weights),
         ).to.be.equal(getWeightedMedian(list, weights));
       });
     }
@@ -199,20 +194,20 @@ describe("ChainLink Median Functionality", function () {
         const list = testList.slice(0, i);
 
         const gasCost = (
-          await mammonMedian.estimateGas.updateList(list)
+          await aeraMedian.estimateGas.updateList(list)
         ).toNumber();
 
-        await mammonMedian.updateList(list);
+        await aeraMedian.updateList(list);
 
         gasEstimation[i]["Sorted Linked Median"] =
           gasCost +
           (
-            await mammonMedian.estimateGas.calculateWithSortedLinkedMedian()
+            await aeraMedian.estimateGas.calculateWithSortedLinkedMedian()
           ).toNumber();
 
-        expect(
-          await mammonMedian.calculateWithSortedLinkedMedian(),
-        ).to.be.equal(getSortedLinkedMedian(list));
+        expect(await aeraMedian.calculateWithSortedLinkedMedian()).to.be.equal(
+          getSortedLinkedMedian(list),
+        );
       });
     }
   });

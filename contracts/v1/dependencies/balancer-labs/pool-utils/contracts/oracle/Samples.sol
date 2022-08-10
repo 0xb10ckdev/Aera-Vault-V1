@@ -14,9 +14,9 @@
 
 pragma solidity ^0.7.0;
 
-import "../../../interfaces/contracts/pool-utils/IPriceOracle.sol";
-
 import "../../../solidity-utils/contracts/helpers/WordCodec.sol";
+
+import "../interfaces/IPriceOracle.sol";
 
 /**
  * @dev This library provides functions to help manipulating samples for Pool Price Oracles. It handles updates,

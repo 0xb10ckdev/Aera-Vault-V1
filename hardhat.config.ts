@@ -173,7 +173,7 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            // ref: https://github.com/balancer-labs/balancer-v2-monorepo/blob/ec4400150df04ad127dbd42caacb9f7a9faeefdb/pvt/common/hardhat-base-config.ts#L48
+            // ref: https://github.com/balancer-labs/balancer-v2-monorepo/blob/3caf66978d3e5f3bb2af050bd8131983c83d9844/pvt/common/hardhat-base-config.ts#L48
             runs: 9999,
           },
         },
@@ -227,32 +227,7 @@ const config: HardhatUserConfig = {
     : undefined,
   dodoc: {
     runOnCompile: false,
-    exclude: [
-      "AccessControl",
-      "AccessControlEnumerable",
-      "Address",
-      "Context",
-      "EnumerableSet",
-      "ERC20",
-      "ERC20Burnable",
-      "ERC20Mock",
-      "ERC20Pausable",
-      "ERC20PresetMinterPauser",
-      "ERC165",
-      "ERC165Checker",
-      "IAccessControl",
-      "IAccessControlEnumerable",
-      "IBManagedPoolFactory",
-      "IERC20",
-      "IERC20Metadata",
-      "IERC165",
-      "Math",
-      "Ownable",
-      "Pausable",
-      "ReentrancyGuard",
-      "SafeERC20",
-      "Strings",
-    ],
+    include: ["PermissiveWithdrawalValidator", "AeraVaultV1"],
   },
   mocha: {
     timeout: 30000,

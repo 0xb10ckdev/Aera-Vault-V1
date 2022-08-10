@@ -25,9 +25,9 @@ contract ManagerWhitelist is Ownable, IManagerWhitelist {
 
     /// ERRORS ///
 
-    error Mammon__ManagerIsZeroAddress();
-    error Mammon__AddressIsAlreadyManager();
-    error Mammon__AddressIsNotManager();
+    error Aera__ManagerIsZeroAddress();
+    error Aera__AddressIsAlreadyManager();
+    error Aera__AddressIsNotManager();
 
     /// FUNCTIONS ///
 
@@ -50,7 +50,7 @@ contract ManagerWhitelist is Ownable, IManagerWhitelist {
     function removeManager(address manager) external override onlyOwner {
         bool result = managers.remove(manager);
         if (!result) {
-            revert Mammon__AddressIsNotManager();
+            revert Aera__AddressIsNotManager();
         }
 
         emit ManagerRemoved(manager);
@@ -70,12 +70,12 @@ contract ManagerWhitelist is Ownable, IManagerWhitelist {
 
     function _addManager(address manager) internal {
         if (manager == address(0)) {
-            revert Mammon__ManagerIsZeroAddress();
+            revert Aera__ManagerIsZeroAddress();
         }
 
         bool result = managers.add(manager);
         if (!result) {
-            revert Mammon__AddressIsAlreadyManager();
+            revert Aera__AddressIsAlreadyManager();
         }
 
         emit ManagerAdded(manager);

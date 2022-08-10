@@ -6,7 +6,7 @@ import { getConfig } from "../../scripts/config";
 const wethAddress = "0x000000000000000000000000000000000000000F";
 const assetHelpers = new AssetHelpers(wethAddress);
 
-task("deploy:vaultV2", "Deploys a Aera vault v2 with the given parameters")
+task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
   .addParam("factory", "Balancer Managed Pool Factory address")
   .addParam("name", "Pool Token's name")
   .addParam("symbol", "Pool Token's symbol")
@@ -103,24 +103,22 @@ task("deploy:vaultV2", "Deploys a Aera vault v2 with the given parameters")
 
     const vaultFactory = await ethers.getContractFactory(contract);
 
-    const vault = await vaultFactory.connect(admin).deploy(
-      {
-        factory,
-        name,
-        symbol,
-        tokens,
-        weights,
-        swapFeePercentage,
-        manager,
-        validator,
-        noticePeriod,
-        managementFee,
-        merkleOrchard,
-        description,
-      },
+    const vault = await vaultFactory.connect(admin).deploy({
+      factory,
+      name,
+      symbol,
+      tokens,
+      weights,
       oracles,
       numeraireAssetIndex,
-    );
+      swapFeePercentage,
+      manager,
+      validator,
+      noticePeriod,
+      managementFee,
+      merkleOrchard,
+      description,
+    });
 
     if (!taskArgs.silent) {
       console.log("Vault is deployed to:", vault.address);
