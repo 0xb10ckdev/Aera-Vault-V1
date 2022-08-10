@@ -62,7 +62,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     /// @notice Maximum oracle spot price divergence.
     uint256 private constant MAX_ORACLE_SPOT_DIVERGENCE = 0;
 
-    /// @notice Maximum update deplay of oracles.
+    /// @notice Maximum update delay of oracles.
     uint256 private constant MAX_ORACLE_DELAY = 1 minutes;
 
     /// @notice If it's enabled to use oracle prices.
@@ -297,10 +297,11 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     );
     error Aera__OraclePriceIsInvalid(uint256 index, int256 actual);
     error Aera__OracleSpotPriceDivergenceExceedsMaximum(
+        uint256 index,
         uint256 actual,
         uint256 max
     );
-    error Aera__OracleIsDeplayedBeyondMaximum(
+    error Aera__OracleIsDelayedBeyondMaximum(
         uint256 index,
         uint256 actual,
         uint256 max
@@ -796,7 +797,6 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     function setOraclesEnabled(bool enabled)
         external
         override
-        nonReentrant
         onlyOwnerOrManager
     {
         oraclesEnabled = enabled;
@@ -829,6 +829,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
             ratio = (oraclePrices[i] * ONE) / spotPrices[i];
             if (ratio > MAX_ORACLE_SPOT_DIVERGENCE) {
                 revert Aera__OracleSpotPriceDivergenceExceedsMaximum(
+                    i,
                     ratio,
                     MAX_ORACLE_SPOT_DIVERGENCE
                 );
@@ -836,6 +837,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
             ratio = (spotPrices[i] * ONE) / oraclePrices[i];
             if (ratio > MAX_ORACLE_SPOT_DIVERGENCE) {
                 revert Aera__OracleSpotPriceDivergenceExceedsMaximum(
+                    i,
                     ratio,
                     MAX_ORACLE_SPOT_DIVERGENCE
                 );
@@ -867,7 +869,6 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
                 continue;
             }
 
-            // slither-disable-next-line divide-before-multiply
             value += ((amounts[i] * prices[i]) / ONE);
         }
 
@@ -967,7 +968,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
 
             delay = block.timestamp - updatedAt;
             if (delay > MAX_ORACLE_DELAY) {
-                revert Aera__OracleIsDeplayedBeyondMaximum(
+                revert Aera__OracleIsDelayedBeyondMaximum(
                     i,
                     delay,
                     MAX_ORACLE_DELAY
@@ -1287,7 +1288,8 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     /// INTERNAL FUNCTIONS ///
 
     /// @notice Deposit amount of tokens.
-    /// @dev Will only be called by deposit() and depositRiskingArbitrageIfBalanceUnchanged()
+    /// @dev Will only be called by depositRiskingArbitrage()
+    ///      and depositRiskingArbitrageIfBalanceUnchanged().
     ///      It calls updateWeights() function which cancels
     ///      current active weights change schedule.
     /// @param tokenWithAmount Deposit tokens with amount.
