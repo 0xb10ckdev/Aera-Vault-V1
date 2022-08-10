@@ -167,6 +167,13 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
       );
     });
 
+    it("when mininum reliable vault value is zero", async () => {
+      validParams.minReliableVaultValue = toWei(0);
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Aera__MinReliableVaultValueIsZero",
+      );
+    });
+
     it("when validator is not valid", async () => {
       validParams.validator = manager.address;
       await expect(deployVault(validParams)).to.be.revertedWith(
