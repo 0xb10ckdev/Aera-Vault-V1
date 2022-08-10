@@ -3,6 +3,7 @@ import { deployments, ethers } from "hardhat";
 import { DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
 import { AeraVaultV2Mock, AeraVaultV2Mock__factory } from "../../typechain";
 import { MAX_MANAGEMENT_FEE, ZERO_ADDRESS } from "../v1/constants";
+import { MIN_RELIABLE_VAULT_VALUE } from "./constants";
 
 export type VaultParams = {
   signer: Signer;
@@ -16,6 +17,7 @@ export type VaultParams = {
   swapFeePercentage: BigNumber;
   manager: string;
   validator?: string;
+  minReliableVaultValue?: BigNumber;
   noticePeriod?: number;
   managementFee?: BigNumber;
   merkleOrchard?: string;
@@ -46,6 +48,8 @@ export const deployVault = async (
     manager: params.manager,
     validator: params.validator,
     noticePeriod: params.noticePeriod || DEFAULT_NOTICE_PERIOD,
+    minReliableVaultValue:
+      params.minReliableVaultValue || MIN_RELIABLE_VAULT_VALUE,
     managementFee: params.managementFee || MAX_MANAGEMENT_FEE,
     merkleOrchard: params.merkleOrchard || ZERO_ADDRESS,
     description: params.description || "",

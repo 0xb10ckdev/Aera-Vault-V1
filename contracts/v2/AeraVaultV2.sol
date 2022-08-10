@@ -56,9 +56,6 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     ///      0.0000001% * (365 * 24 * 60 * 60) = 3.1536%
     uint256 private constant MAX_MANAGEMENT_FEE = 10**9;
 
-    /// @notice Minimum reliable vault TVL. It will be measured in base token terms.
-    uint256 private constant MIN_RELIABLE_VAULT_VALUE = 0;
-
     /// @notice Minimum significant deposit value. It will be measured in base token terms.
     uint256 private constant MIN_SIGNIFICANT_DEPOSIT_VALUE = 0;
 
@@ -66,7 +63,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     uint256 private constant MAX_ORACLE_SPOT_DIVERGENCE = 0;
 
     /// @notice Maximum update deplay of oracles.
-    uint256 private constant MAX_ORACLE_DELAY = 0;
+    uint256 private constant MAX_ORACLE_DELAY = 1 minutes;
 
     /// @notice If it's enabled to use oracle prices.
     bool public oraclesEnabled = true;
@@ -88,6 +85,9 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
 
     /// @notice Notice period for vault termination (in seconds).
     uint256 public immutable noticePeriod;
+
+    /// @notice Minimum reliable vault TVL. It will be measured in base token terms.
+    uint256 private immutable minReliableVaultValue;
 
     /// @notice Verifies withdraw limits.
     IWithdrawalValidator public immutable validator;
@@ -271,6 +271,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     error Aera__ManagementFeeIsAboveMax(uint256 actual, uint256 max);
     error Aera__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
     error Aera__NoticeTimeoutNotElapsed(uint256 noticeTimeoutAt);
+    error Aera__MinReliableVaultValueIsZero();
     error Aera__ManagerIsZeroAddress();
     error Aera__ManagerIsOwner(address newManager);
     error Aera__CallerIsNotManager();
@@ -407,6 +408,9 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
                 MAX_NOTICE_PERIOD
             );
         }
+        if (vaultParams.minReliableVaultValue == 0) {
+            revert Aera__MinReliableVaultValueIsZero();
+        }
 
         if (bytes(vaultParams.description).length == 0) {
             revert Aera__DescriptionIsEmpty();
@@ -471,8 +475,9 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         manager = vaultParams.manager;
         validator = IWithdrawalValidator(vaultParams.validator);
         noticePeriod = vaultParams.noticePeriod;
-        description = vaultParams.description;
+        minReliableVaultValue = vaultParams.minReliableVaultValue;
         managementFee = vaultParams.managementFee;
+        description = vaultParams.description;
         managersFee[manager] = new uint256[](numTokens);
         managersFeeTotal = new uint256[](numTokens);
 
@@ -813,7 +818,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         uint256[] memory oraclePrices = getOraclePrices();
         uint256[] memory spotPrices = getSpotPrices();
 
-        if (getValue(holdings, spotPrices) < MIN_RELIABLE_VAULT_VALUE) {
+        if (getValue(holdings, spotPrices) < minReliableVaultValue) {
             checkOracleStatus();
             return oraclePrices;
         }
@@ -854,7 +859,6 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         internal
         returns (uint256)
     {
-        uint256[] memory amounts = getHoldings();
         uint256 value;
 
         for (uint256 i = 0; i < amounts.length; i++) {

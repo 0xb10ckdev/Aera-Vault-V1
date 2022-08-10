@@ -32,6 +32,8 @@ interface IAeraVaultV2 is
     // manager: Vault manager address.
     // validator: Withdrawal validator contract address.
     // noticePeriod: Notice period (in seconds).
+    // minReliableVaultValue: Minimum reliable vault TVL.
+    //                        It will be measured in base token terms.
     // managementFee: Management fee earned proportion per second.
     // merkleOrchard: Balancer Merkle Orchard address.
     // description: Simple vault text description.
@@ -47,6 +49,7 @@ interface IAeraVaultV2 is
         address manager;
         address validator;
         uint32 noticePeriod;
+        uint256 minReliableVaultValue;
         uint256 managementFee;
         address merkleOrchard;
         string description;
