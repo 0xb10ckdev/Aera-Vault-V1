@@ -2,9 +2,9 @@
 
 pragma solidity ^0.7.0;
 
-import "../../../interfaces/contracts/solidity-utils/helpers/BalancerErrors.sol";
-import "../../../interfaces/contracts/solidity-utils/openzeppelin/IERC20.sol";
+import "../helpers/BalancerErrors.sol";
 
+import "./IERC20.sol";
 import "./SafeMath.sol";
 
 /**
@@ -266,7 +266,7 @@ contract ERC20 is IERC20 {
 
         _beforeTokenTransfer(account, address(0), amount);
 
-        _balances[account] = _balances[account].sub(amount, Errors.ERC20_BURN_EXCEEDS_BALANCE);
+        _balances[account] = _balances[account].sub(amount, Errors.ERC20_BURN_EXCEEDS_ALLOWANCE);
         _totalSupply = _totalSupply.sub(amount);
         emit Transfer(account, address(0), amount);
     }
@@ -322,7 +322,5 @@ contract ERC20 is IERC20 {
         address from,
         address to,
         uint256 amount
-    ) internal virtual {
-        // solhint-disable-previous-line no-empty-blocks
-    }
+    ) internal virtual {}
 }

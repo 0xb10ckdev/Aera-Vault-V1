@@ -7,7 +7,7 @@ import "./dependencies/median/celo-org/SortedLinkedListWithMedian.sol";
 import "./dependencies/median/UintMedian.sol";
 import "./dependencies/median/UintWeightedMedian.sol";
 
-contract MammonMedian {
+contract AeraMedian {
     using SortedLinkedListWithMedian for SortedLinkedListWithMedian.List;
 
     SortedLinkedListWithMedian.List private sortedLinkedList;

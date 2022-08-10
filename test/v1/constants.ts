@@ -4,7 +4,7 @@ import { ethers } from "hardhat";
 export const ONE = toWei("1");
 export const MIN_WEIGHT = toWei("0.01");
 export const MIN_SWAP_FEE = toWei("0.000001");
-export const MAX_SWAP_FEE = toWei("1");
+export const MAX_SWAP_FEE = toWei("0.1");
 export const MAXIMUM_SWAP_FEE_PERCENT_CHANGE = toWei("0.005");
 export const SWAP_FEE_COOLDOWN_PERIOD = 60; // 1 minute
 export const ZERO_ADDRESS = ethers.constants.AddressZero;
@@ -12,7 +12,7 @@ export const NOTICE_PERIOD = 10000;
 export const MAX_NOTICE_PERIOD = 5184000; // 60 days in seconds
 export const MAX_MANAGEMENT_FEE = toWei("0.000000001"); // 60 days in seconds
 export const MAX_WEIGHT_CHANGE_RATIO = 1e15; // Maximum weight change ratio
-export const MINIMUM_WEIGHT_CHANGE_DURATION = 86400; // 1 day in seconds
+export const MINIMUM_WEIGHT_CHANGE_DURATION = 14400; // 4 hours in seconds
 export const DEVIATION = 1e10; // Deviation of weights in wei
 
 export const BALANCER_ERRORS = {
