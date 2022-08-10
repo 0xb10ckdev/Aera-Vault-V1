@@ -374,49 +374,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     {
         uint256 numTokens = vaultParams.tokens.length;
 
-        if (numTokens != vaultParams.weights.length) {
-            revert Aera__ValueLengthIsNotSame(
-                numTokens,
-                vaultParams.weights.length
-            );
-        }
-        if (
-            !ERC165Checker.supportsInterface(
-                vaultParams.validator,
-                type(IWithdrawalValidator).interfaceId
-            )
-        ) {
-            revert Aera__ValidatorIsNotValid(vaultParams.validator);
-        }
-        // Use new block to avoid stack too deep issue
-        {
-            uint256 numAllowances = IWithdrawalValidator(vaultParams.validator)
-                .allowance()
-                .length;
-            if (numTokens != numAllowances) {
-                revert Aera__ValidatorIsNotMatched(numTokens, numAllowances);
-            }
-        }
-        if (vaultParams.managementFee > MAX_MANAGEMENT_FEE) {
-            revert Aera__ManagementFeeIsAboveMax(
-                vaultParams.managementFee,
-                MAX_MANAGEMENT_FEE
-            );
-        }
-        if (vaultParams.noticePeriod > MAX_NOTICE_PERIOD) {
-            revert Aera__NoticePeriodIsAboveMax(
-                vaultParams.noticePeriod,
-                MAX_NOTICE_PERIOD
-            );
-        }
-        if (vaultParams.minReliableVaultValue == 0) {
-            revert Aera__MinReliableVaultValueIsZero();
-        }
-
-        if (bytes(vaultParams.description).length == 0) {
-            revert Aera__DescriptionIsEmpty();
-        }
-        checkManagerAddress(vaultParams.manager);
+        checkVaultParams(vaultParams, numTokens);
 
         address[] memory assetManagers = new address[](numTokens);
         for (uint256 i = 0; i < numTokens; i++) {
@@ -1622,8 +1580,62 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         emit SetSwapEnabled(swapEnabled);
     }
 
+    /// @notice Check if the vaultParam is valid.
+    /// @dev Will only be called by constructor.
+    /// @param vaultParams Struct vault parameter to check.
+    /// @param numTokens Number of tokens.
+    function checkVaultParams(
+        NewVaultParams memory vaultParams,
+        uint256 numTokens
+    ) internal {
+        uint256 numTokens = vaultParams.tokens.length;
+
+        if (numTokens != vaultParams.weights.length) {
+            revert Aera__ValueLengthIsNotSame(
+                numTokens,
+                vaultParams.weights.length
+            );
+        }
+        if (
+            !ERC165Checker.supportsInterface(
+                vaultParams.validator,
+                type(IWithdrawalValidator).interfaceId
+            )
+        ) {
+            revert Aera__ValidatorIsNotValid(vaultParams.validator);
+        }
+
+        uint256 numAllowances = IWithdrawalValidator(vaultParams.validator)
+            .allowance()
+            .length;
+        if (numTokens != numAllowances) {
+            revert Aera__ValidatorIsNotMatched(numTokens, numAllowances);
+        }
+
+        if (vaultParams.managementFee > MAX_MANAGEMENT_FEE) {
+            revert Aera__ManagementFeeIsAboveMax(
+                vaultParams.managementFee,
+                MAX_MANAGEMENT_FEE
+            );
+        }
+        if (vaultParams.noticePeriod > MAX_NOTICE_PERIOD) {
+            revert Aera__NoticePeriodIsAboveMax(
+                vaultParams.noticePeriod,
+                MAX_NOTICE_PERIOD
+            );
+        }
+        if (vaultParams.minReliableVaultValue == 0) {
+            revert Aera__MinReliableVaultValueIsZero();
+        }
+
+        if (bytes(vaultParams.description).length == 0) {
+            revert Aera__DescriptionIsEmpty();
+        }
+        checkManagerAddress(vaultParams.manager);
+    }
+
     /// @notice Check if the address can be a manager.
-    /// @dev Will only be called by constructor and setManager()
+    /// @dev Will only be called by checkVaultParams() and setManager().
     /// @param newManager Address to check.
     function checkManagerAddress(address newManager) internal {
         if (newManager == address(0)) {
