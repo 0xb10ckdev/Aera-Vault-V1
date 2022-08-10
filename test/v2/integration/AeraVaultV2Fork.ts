@@ -29,6 +29,7 @@ import {
   ONE,
   ZERO_ADDRESS,
   PRICE_DEVIATION,
+  MIN_RELIABLE_VAULT_VALUE,
 } from "../constants";
 import { deployToken, setupTokens, setupOracles } from "../fixtures";
 import {
@@ -106,6 +107,7 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
         manager: manager.address,
         validator: validator.address,
         noticePeriod: MAX_NOTICE_PERIOD,
+        minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
         managementFee: MAX_MANAGEMENT_FEE,
         merkleOrchard: config.merkleOrchard,
         description: "Test Vault",
@@ -347,6 +349,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       manager: manager.address,
       validator: validator.address,
       noticePeriod: DEFAULT_NOTICE_PERIOD.toString(),
+      minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE.toString(),
       managementFee: MAX_MANAGEMENT_FEE.toString(),
       description: "Test vault description",
       silent: true,

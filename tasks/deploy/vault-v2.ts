@@ -19,6 +19,10 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
   .addParam("validator", "Validator's address")
   .addParam("noticePeriod", "Notice period in seconds")
   .addParam(
+    "minReliableVaultValue",
+    "Minimum reliable vault TVL in base token",
+  )
+  .addParam(
     "managementFee",
     "Management fee earned proportion per second(1e9 is maximum)",
   )
@@ -52,6 +56,7 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
     const manager = taskArgs.manager;
     const validator = taskArgs.validator;
     const noticePeriod = taskArgs.noticePeriod;
+    const minReliableVaultValue = taskArgs.minReliableVaultValue;
     const managementFee = taskArgs.managementFee;
     const description = taskArgs.description;
     const merkleOrchard = config.merkleOrchard || ethers.constants.AddressZero;
@@ -94,6 +99,7 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       console.log(`Manager: ${manager}`);
       console.log(`Validator: ${validator}`);
       console.log(`Notice Period: ${noticePeriod}`);
+      console.log(`Minimum Reliable Vault Value: ${minReliableVaultValue}`);
       console.log(`Management Fee: ${managementFee}`);
       console.log(`Merkle Orchard: ${merkleOrchard}`);
       console.log(`Description: ${description}`);
@@ -115,6 +121,7 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       manager,
       validator,
       noticePeriod,
+      minReliableVaultValue,
       managementFee,
       merkleOrchard,
       description,
