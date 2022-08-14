@@ -23,6 +23,12 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
     "Minimum reliable vault TVL in base token",
   )
   .addParam(
+    "minSignificantDepositValue",
+    "Minimum significant deposit value in base token terms",
+  )
+  .addParam("maxOracleSpotDivergence", "Maximum oracle spot price divergence")
+  .addParam("maxOracleDelay", "Maximum update delay of oracles")
+  .addParam(
     "managementFee",
     "Management fee earned proportion per second(1e9 is maximum)",
   )
@@ -57,6 +63,9 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
     const validator = taskArgs.validator;
     const noticePeriod = taskArgs.noticePeriod;
     const minReliableVaultValue = taskArgs.minReliableVaultValue;
+    const minSignificantDepositValue = taskArgs.minSignificantDepositValue;
+    const maxOracleSpotDivergence = taskArgs.maxOracleSpotDivergence;
+    const maxOracleDelay = taskArgs.maxOracleDelay;
     const managementFee = taskArgs.managementFee;
     const description = taskArgs.description;
     const merkleOrchard = config.merkleOrchard || ethers.constants.AddressZero;
@@ -100,6 +109,13 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       console.log(`Validator: ${validator}`);
       console.log(`Notice Period: ${noticePeriod}`);
       console.log(`Minimum Reliable Vault Value: ${minReliableVaultValue}`);
+      console.log(
+        `Minimum Significant Deposit Value: ${minSignificantDepositValue}`,
+      );
+      console.log(
+        `Maximum Oracle Spot Divergence: ${maxOracleSpotDivergence}`,
+      );
+      console.log(`Maximum Oracle Delay: ${maxOracleDelay}`);
       console.log(`Management Fee: ${managementFee}`);
       console.log(`Merkle Orchard: ${merkleOrchard}`);
       console.log(`Description: ${description}`);
@@ -122,6 +138,9 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       validator,
       noticePeriod,
       minReliableVaultValue,
+      minSignificantDepositValue,
+      maxOracleSpotDivergence,
+      maxOracleDelay,
       managementFee,
       merkleOrchard,
       description,

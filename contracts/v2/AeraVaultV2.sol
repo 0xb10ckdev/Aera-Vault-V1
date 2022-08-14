@@ -56,18 +56,6 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     ///      0.0000001% * (365 * 24 * 60 * 60) = 3.1536%
     uint256 private constant MAX_MANAGEMENT_FEE = 10**9;
 
-    /// @notice Minimum significant deposit value. It will be measured in base token terms.
-    uint256 private constant MIN_SIGNIFICANT_DEPOSIT_VALUE = 0;
-
-    /// @notice Maximum oracle spot price divergence.
-    uint256 private constant MAX_ORACLE_SPOT_DIVERGENCE = 0;
-
-    /// @notice Maximum update delay of oracles.
-    uint256 private constant MAX_ORACLE_DELAY = 1 minutes;
-
-    /// @notice If it's enabled to use oracle prices.
-    bool public oraclesEnabled = true;
-
     /// @notice Balancer Vault.
     IBVault public immutable bVault;
 
@@ -89,6 +77,15 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     /// @notice Minimum reliable vault TVL. It will be measured in base token terms.
     uint256 private immutable minReliableVaultValue;
 
+    /// @notice Minimum significant deposit value. It will be measured in base token terms.
+    uint256 private immutable minSignificantDepositValue;
+
+    /// @notice Maximum oracle spot price divergence.
+    uint256 private immutable maxOracleSpotDivergence;
+
+    /// @notice Maximum update delay of oracles.
+    uint256 private immutable maxOracleDelay;
+
     /// @notice Verifies withdraw limits.
     IWithdrawalValidator public immutable validator;
 
@@ -98,15 +95,18 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
 
     /// STORAGE SLOT START ///
 
-    /// @notice Describes vault purpose and modelling assumptions for differentiating between vaults
-    /// @dev string cannot be immutable bytecode but only set in constructor
+    /// @notice Describes vault purpose and modelling assumptions for differentiating between vaults.
+    /// @dev string cannot be immutable bytecode but only set in constructor.
     string public description;
 
-    /// @notice Indicates that the Vault has been initialized
+    /// @notice Indicates that the Vault has been initialized.
     bool public initialized;
 
-    /// @notice Indicates that the Vault has been finalized
+    /// @notice Indicates that the Vault has been finalized.
     bool public finalized;
+
+    /// @notice If it's enabled to use oracle prices.
+    bool public oraclesEnabled = true;
 
     /// @notice Controls vault parameters.
     address public manager;
@@ -114,16 +114,16 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     /// @notice Pending account to accept ownership of vault.
     address public pendingOwner;
 
-    /// @notice Timestamp when notice elapses or 0 if not yet set
+    /// @notice Timestamp when notice elapses or 0 if not yet set.
     uint256 public noticeTimeoutAt;
 
     /// @notice Last timestamp where manager fee index was locked.
     uint256 public lastFeeCheckpoint = type(uint256).max;
 
-    /// @notice Fee earned amount for each manager
+    /// @notice Fee earned amount for each manager.
     mapping(address => uint256[]) public managersFee;
 
-    /// @notice Total manager fee earned amount
+    /// @notice Total manager fee earned amount.
     uint256[] public managersFeeTotal;
 
     /// @notice Last timestamp where swap fee was updated.
@@ -296,12 +296,12 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         uint256 available
     );
     error Aera__OraclePriceIsInvalid(uint256 index, int256 actual);
-    error Aera__OracleSpotPriceDivergenceExceedsMaximum(
+    error Aera__OracleSpotPriceDivergenceExceedsMax(
         uint256 index,
         uint256 actual,
         uint256 max
     );
-    error Aera__OracleIsDelayedBeyondMaximum(
+    error Aera__OracleIsDelayedBeyondMax(
         uint256 index,
         uint256 actual,
         uint256 max
@@ -435,6 +435,9 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         validator = IWithdrawalValidator(vaultParams.validator);
         noticePeriod = vaultParams.noticePeriod;
         minReliableVaultValue = vaultParams.minReliableVaultValue;
+        minSignificantDepositValue = vaultParams.minSignificantDepositValue;
+        maxOracleSpotDivergence = vaultParams.maxOracleSpotDivergence;
+        maxOracleDelay = vaultParams.maxOracleDelay;
         managementFee = vaultParams.managementFee;
         description = vaultParams.description;
         managersFee[manager] = new uint256[](numTokens);
@@ -722,11 +725,15 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         onlyManager
         whenInitialized
     {
-        checkOracleStatus();
+        (
+            uint256[] memory prices,
+            uint256[] memory updatedAts
+        ) = getOraclePrices();
+
+        checkOracleStatus(updatedAts);
 
         uint256[] memory oracleUnits = getOracleUnits();
         uint256[] memory holdings = getHoldings();
-        uint256[] memory prices = getOraclePrices();
         uint256 numHoldings = holdings.length;
         uint256[] memory weights = new uint256[](numHoldings);
         uint256 weightSum = ONE;
@@ -773,11 +780,14 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         returns (uint256[] memory)
     {
         uint256[] memory holdings = getHoldings();
-        uint256[] memory oraclePrices = getOraclePrices();
+        (
+            uint256[] memory oraclePrices,
+            uint256[] memory updatedAts
+        ) = getOraclePrices();
         uint256[] memory spotPrices = getSpotPrices();
 
         if (getValue(holdings, spotPrices) < minReliableVaultValue) {
-            checkOracleStatus();
+            checkOracleStatus(updatedAts);
             return oraclePrices;
         }
 
@@ -785,28 +795,28 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
 
         for (uint256 i = 0; i < holdings.length; i++) {
             ratio = (oraclePrices[i] * ONE) / spotPrices[i];
-            if (ratio > MAX_ORACLE_SPOT_DIVERGENCE) {
-                revert Aera__OracleSpotPriceDivergenceExceedsMaximum(
+            if (ratio > maxOracleSpotDivergence) {
+                revert Aera__OracleSpotPriceDivergenceExceedsMax(
                     i,
                     ratio,
-                    MAX_ORACLE_SPOT_DIVERGENCE
+                    maxOracleSpotDivergence
                 );
             }
             ratio = (spotPrices[i] * ONE) / oraclePrices[i];
-            if (ratio > MAX_ORACLE_SPOT_DIVERGENCE) {
-                revert Aera__OracleSpotPriceDivergenceExceedsMaximum(
+            if (ratio > maxOracleSpotDivergence) {
+                revert Aera__OracleSpotPriceDivergenceExceedsMax(
                     i,
                     ratio,
-                    MAX_ORACLE_SPOT_DIVERGENCE
+                    maxOracleSpotDivergence
                 );
             }
         }
 
-        if (getValue(amounts, spotPrices) < MIN_SIGNIFICANT_DEPOSIT_VALUE) {
+        if (getValue(amounts, spotPrices) < minSignificantDepositValue) {
             return spotPrices;
         }
 
-        checkOracleStatus();
+        checkOracleStatus(updatedAts);
         return oraclePrices;
     }
 
@@ -876,45 +886,51 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         uint256 denom = (tokenBalanceOut * ONE) / tokenWeightOut;
         uint256 ratio = (numer * ONE) / denom;
         uint256 scale = (ONE * ONE) / (ONE - swapFee);
+        // slither-disable-next-line divide-before-multiply
         return (ratio * scale) / ONE;
     }
 
     /// @notice Get oracle prices.
     /// @dev Will only be called by getDeterminedPrices and enableTradingWithOraclePrice.
-    /// @return Oracle prices.
-    function getOraclePrices() internal returns (uint256[] memory) {
+    /// @return Array of oracle price and updatedAt.
+    function getOraclePrices()
+        internal
+        returns (uint256[] memory, uint256[] memory)
+    {
         AggregatorV2V3Interface[] memory oracles = getOracles();
         uint256[] memory prices = new uint256[](numOracles);
-        int256 latestAnswer;
+        uint256[] memory updatedAts = new uint256[](numOracles);
+        int256 answer;
+        uint256 updatedAt;
 
         for (uint256 i = 0; i < numOracles; i++) {
             if (i == numeraireAssetIndex) {
                 continue;
             }
 
-            latestAnswer = oracles[i].latestAnswer();
+            (, answer, , updatedAt, ) = oracles[i].latestRoundData();
 
             // Check if the price from the Oracle is valid as Aave does
-            if (latestAnswer <= 0) {
-                revert Aera__OraclePriceIsInvalid(i, latestAnswer);
+            if (answer <= 0) {
+                revert Aera__OraclePriceIsInvalid(i, answer);
             }
 
-            prices[i] = uint256(latestAnswer);
+            prices[i] = uint256(answer);
+            updatedAts[i] = updatedAt;
         }
 
-        return prices;
+        return (prices, updatedAts);
     }
 
     /// @notice Check oracle status.
     /// @dev Will only be called by getDeterminedPrices.
     ///      It checks if oracles are updated recently or oracles are enabled to use.
-    function checkOracleStatus() internal {
+    /// @param updatedAts Last updated timestamp of oracles to check.
+    function checkOracleStatus(uint256[] memory updatedAts) internal {
         if (!oraclesEnabled) {
             revert Aera__OraclesAreDisabled();
         }
 
-        AggregatorV2V3Interface[] memory oracles = getOracles();
-        uint256 updatedAt;
         uint256 delay;
 
         for (uint256 i = 0; i < numOracles; i++) {
@@ -922,14 +938,12 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
                 continue;
             }
 
-            (, , , updatedAt, ) = oracles[i].latestRoundData();
-
-            delay = block.timestamp - updatedAt;
-            if (delay > MAX_ORACLE_DELAY) {
-                revert Aera__OracleIsDelayedBeyondMaximum(
+            delay = block.timestamp - updatedAts[i];
+            if (delay > maxOracleDelay) {
+                revert Aera__OracleIsDelayedBeyondMax(
                     i,
                     delay,
-                    MAX_ORACLE_DELAY
+                    maxOracleDelay
                 );
             }
         }

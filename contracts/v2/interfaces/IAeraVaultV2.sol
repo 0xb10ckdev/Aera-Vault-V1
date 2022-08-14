@@ -37,6 +37,10 @@ interface IAeraVaultV2 is
     // managementFee: Management fee earned proportion per second.
     // merkleOrchard: Balancer Merkle Orchard address.
     // description: Simple vault text description.
+    // minSignificantDepositValue: Minimum significant deposit value.
+    //                             It will be measured in base token terms.
+    // maxOracleSpotDivergence: Maximum oracle spot price divergence.
+    // maxOracleDelay: Maximum update delay of oracles.
     struct NewVaultParams {
         address factory;
         string name;
@@ -50,6 +54,9 @@ interface IAeraVaultV2 is
         address validator;
         uint32 noticePeriod;
         uint256 minReliableVaultValue;
+        uint256 minSignificantDepositValue;
+        uint256 maxOracleSpotDivergence;
+        uint256 maxOracleDelay;
         uint256 managementFee;
         address merkleOrchard;
         string description;
