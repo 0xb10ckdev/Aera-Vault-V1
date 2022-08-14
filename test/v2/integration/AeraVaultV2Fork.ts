@@ -30,6 +30,9 @@ import {
   ZERO_ADDRESS,
   PRICE_DEVIATION,
   MIN_RELIABLE_VAULT_VALUE,
+  MIN_SIGNIFICANT_DEPOSIT_VALUE,
+  MAX_ORACLE_SPOT_DIVERGENCE,
+  MAX_ORACLE_DELAY,
 } from "../constants";
 import { deployToken, setupTokens, setupOracles } from "../fixtures";
 import {
@@ -108,6 +111,9 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
         validator: validator.address,
         noticePeriod: MAX_NOTICE_PERIOD,
         minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
+        minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE,
+        maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE,
+        maxOracleDelay: MAX_ORACLE_DELAY,
         managementFee: MAX_MANAGEMENT_FEE,
         merkleOrchard: config.merkleOrchard,
         description: "Test Vault",
@@ -357,6 +363,9 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       validator: validator.address,
       noticePeriod: DEFAULT_NOTICE_PERIOD.toString(),
       minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE.toString(),
+      minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE.toString(),
+      maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE.toString(),
+      maxOracleDelay: MAX_ORACLE_DELAY.toString(),
       managementFee: MAX_MANAGEMENT_FEE.toString(),
       description: "Test vault description",
       silent: true,
