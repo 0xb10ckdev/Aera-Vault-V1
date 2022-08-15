@@ -512,7 +512,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
-        depositTokens(tokenWithAmount);
+        depositTokensAndUpdateWeights(tokenWithAmount, true);
     }
 
     /// @inheritdoc IProtocolAPI
@@ -531,7 +531,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
             revert Aera__BalanceChangedInCurrentBlock();
         }
 
-        depositTokens(tokenWithAmount);
+        depositTokensAndUpdateWeights(tokenWithAmount, true);
     }
 
     /// @inheritdoc IProtocolAPIV2
@@ -543,7 +543,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
-        depositTokens(tokenWithAmount);
+        depositTokensAndUpdateWeights(tokenWithAmount, false);
     }
 
     /// @inheritdoc IProtocolAPIV2
@@ -564,7 +564,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
             revert Aera__BalanceChangedInCurrentBlock();
         }
 
-        depositTokens(tokenWithAmount);
+        depositTokensAndUpdateWeights(tokenWithAmount, false);
     }
 
     /// @inheritdoc IProtocolAPI
@@ -767,186 +767,6 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         oraclesEnabled = enabled;
 
         emit SetOraclesEnabled(enabled);
-    }
-
-    /// INTERNAL FUNCTIONS ///
-
-    /// @notice Determine best prices for deposits.
-    /// @dev Will only be called by deposit.
-    /// @param amounts Deposit token amounts.
-    /// @return Determined token prices
-    function getDeterminedPrices(uint256[] memory amounts)
-        internal
-        returns (uint256[] memory)
-    {
-        uint256[] memory holdings = getHoldings();
-        (
-            uint256[] memory oraclePrices,
-            uint256[] memory updatedAts
-        ) = getOraclePrices();
-        uint256[] memory spotPrices = getSpotPrices();
-
-        if (getValue(holdings, spotPrices) < minReliableVaultValue) {
-            checkOracleStatus(updatedAts);
-            return oraclePrices;
-        }
-
-        uint256 ratio;
-
-        for (uint256 i = 0; i < holdings.length; i++) {
-            ratio = (oraclePrices[i] * ONE) / spotPrices[i];
-            if (ratio > maxOracleSpotDivergence) {
-                revert Aera__OracleSpotPriceDivergenceExceedsMax(
-                    i,
-                    ratio,
-                    maxOracleSpotDivergence
-                );
-            }
-            ratio = (spotPrices[i] * ONE) / oraclePrices[i];
-            if (ratio > maxOracleSpotDivergence) {
-                revert Aera__OracleSpotPriceDivergenceExceedsMax(
-                    i,
-                    ratio,
-                    maxOracleSpotDivergence
-                );
-            }
-        }
-
-        if (getValue(amounts, spotPrices) < minSignificantDepositValue) {
-            return spotPrices;
-        }
-
-        checkOracleStatus(updatedAts);
-        return oraclePrices;
-    }
-
-    /// @notice Calculate value of token amounts in base token term.
-    /// @dev Will only be called by getDeterminedPrices.
-    /// @param amounts Token amounts.
-    /// @param prices Token prices in base token.
-    /// @return Total value in base token term.
-    function getValue(uint256[] memory amounts, uint256[] memory prices)
-        internal
-        returns (uint256)
-    {
-        uint256 value;
-
-        for (uint256 i = 0; i < amounts.length; i++) {
-            if (i == numeraireAssetIndex) {
-                value += amounts[i];
-                continue;
-            }
-
-            value += ((amounts[i] * prices[i]) / ONE);
-        }
-
-        return value;
-    }
-
-    /// @notice Calculate spot prices of tokens vs base token.
-    /// @dev Will only be called by getDeterminedPrices.
-    /// @return Spot prices of tokens vs base token.
-    function getSpotPrices() internal view returns (uint256[] memory) {
-        uint256[] memory holdings = getHoldings();
-        uint256[] memory weights = pool.getNormalizedWeights();
-        uint256 numHoldings = holdings.length;
-        uint256[] memory prices = new uint256[](numHoldings);
-        uint256 swapFee = pool.getSwapFeePercentage();
-        uint256 numeraireAssetHolding = holdings[numeraireAssetIndex];
-        uint256 numeraireAssetWeight = weights[numeraireAssetIndex];
-
-        for (uint256 i = 0; i < numHoldings; i++) {
-            if (i == numeraireAssetIndex) {
-                prices[i] = ONE;
-                continue;
-            }
-            prices[i] = calcSpotPrice(
-                holdings[i],
-                weights[i],
-                numeraireAssetHolding,
-                numeraireAssetWeight,
-                swapFee
-            );
-        }
-
-        return prices;
-    }
-
-    /// @notice Calculate spot price from balances and weights.
-    /// @dev Will only be called by getSpotPrices().
-    /// @return Spot price from balances and weights.
-    function calcSpotPrice(
-        uint256 tokenBalanceIn,
-        uint256 tokenWeightIn,
-        uint256 tokenBalanceOut,
-        uint256 tokenWeightOut,
-        uint256 swapFee
-    ) internal pure returns (uint256) {
-        uint256 numer = (tokenBalanceIn * ONE) / tokenWeightIn;
-        uint256 denom = (tokenBalanceOut * ONE) / tokenWeightOut;
-        uint256 ratio = (numer * ONE) / denom;
-        uint256 scale = (ONE * ONE) / (ONE - swapFee);
-        // slither-disable-next-line divide-before-multiply
-        return (ratio * scale) / ONE;
-    }
-
-    /// @notice Get oracle prices.
-    /// @dev Will only be called by getDeterminedPrices and enableTradingWithOraclePrice.
-    /// @return Array of oracle price and updatedAt.
-    function getOraclePrices()
-        internal
-        returns (uint256[] memory, uint256[] memory)
-    {
-        AggregatorV2V3Interface[] memory oracles = getOracles();
-        uint256[] memory prices = new uint256[](numOracles);
-        uint256[] memory updatedAts = new uint256[](numOracles);
-        int256 answer;
-        uint256 updatedAt;
-
-        for (uint256 i = 0; i < numOracles; i++) {
-            if (i == numeraireAssetIndex) {
-                continue;
-            }
-
-            (, answer, , updatedAt, ) = oracles[i].latestRoundData();
-
-            // Check if the price from the Oracle is valid as Aave does
-            if (answer <= 0) {
-                revert Aera__OraclePriceIsInvalid(i, answer);
-            }
-
-            prices[i] = uint256(answer);
-            updatedAts[i] = updatedAt;
-        }
-
-        return (prices, updatedAts);
-    }
-
-    /// @notice Check oracle status.
-    /// @dev Will only be called by getDeterminedPrices.
-    ///      It checks if oracles are updated recently or oracles are enabled to use.
-    /// @param updatedAts Last updated timestamp of oracles to check.
-    function checkOracleStatus(uint256[] memory updatedAts) internal {
-        if (!oraclesEnabled) {
-            revert Aera__OraclesAreDisabled();
-        }
-
-        uint256 delay;
-
-        for (uint256 i = 0; i < numOracles; i++) {
-            if (i == numeraireAssetIndex) {
-                continue;
-            }
-
-            delay = block.timestamp - updatedAts[i];
-            if (delay > maxOracleDelay) {
-                revert Aera__OracleIsDelayedBeyondMax(
-                    i,
-                    delay,
-                    maxOracleDelay
-                );
-            }
-        }
     }
 
     /// @inheritdoc IProtocolAPI
@@ -1259,26 +1079,89 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
 
     /// INTERNAL FUNCTIONS ///
 
-    /// @notice Deposit amount of tokens.
-    /// @dev Will only be called by depositRiskingArbitrage()
-    ///      and depositRiskingArbitrageIfBalanceUnchanged().
+    /// @notice Deposit amount of tokens and update weights.
+    /// @dev Will only be called by deposit(), depositIfBalanceUnchanged(),
+    ///      depositRiskingArbitrage() and depositRiskingArbitrageIfBalanceUnchanged().
     ///      It calls updateWeights() function which cancels
     ///      current active weights change schedule.
     /// @param tokenWithAmount Deposit tokens with amount.
-    function depositTokens(TokenValue[] calldata tokenWithAmount) internal {
-        lockManagerFees();
-
+    /// @param useDeterminedPrice If deposits with determined prices.
+    function depositTokensAndUpdateWeights(
+        TokenValue[] calldata tokenWithAmount,
+        bool useDeterminedPrice
+    ) internal {
         IERC20[] memory tokens;
         uint256[] memory holdings;
         (tokens, holdings, ) = getTokensData();
         uint256 numTokens = tokens.length;
 
-        uint256[] memory weights = pool.getNormalizedWeights();
-        uint256[] memory newBalances = new uint256[](numTokens);
         uint256[] memory amounts = getValuesFromTokenWithValues(
             tokenWithAmount,
             tokens
         );
+
+        uint256[] memory determinedPrices;
+        bool useOraclePrices;
+        if (useDeterminedPrice) {
+            (determinedPrices, useOraclePrices) = getDeterminedPrices(amounts);
+        }
+
+        depositTokens(tokens, amounts, numTokens);
+
+        uint256[] memory weights = pool.getNormalizedWeights();
+        uint256[] memory newHoldings = getHoldings();
+        uint256[] memory newBalances = new uint256[](numTokens);
+        uint256 weightSum;
+
+        if (useOraclePrices) {
+            uint256 numeraireAssetRatio = (weights[numeraireAssetIndex] *
+                ONE *
+                ONE) / newHoldings[numeraireAssetIndex];
+            for (uint256 i = 0; i < numTokens; i++) {
+                if (i != numeraireAssetIndex) {
+                    weights[i] =
+                        (newHoldings[i] * numeraireAssetRatio) /
+                        determinedPrices[i] /
+                        ONE;
+                }
+                if (amounts[i] != 0) {
+                    newBalances[i] = newHoldings[i] - holdings[i];
+                }
+
+                weightSum += weights[i];
+            }
+        } else {
+            for (uint256 i = 0; i < numTokens; i++) {
+                if (amounts[i] != 0) {
+                    weights[i] = (weights[i] * newHoldings[i]) / holdings[i];
+                    newBalances[i] = newHoldings[i] - holdings[i];
+                }
+
+                weightSum += weights[i];
+            }
+        }
+
+        /// It cancels current active weights change schedule
+        /// and update weights with newWeights
+        updateWeights(weights, weightSum);
+
+        // slither-disable-next-line reentrancy-events
+        emit Deposit(amounts, newBalances, pool.getNormalizedWeights());
+    }
+
+    /// @notice Deposit amount of tokens.
+    /// @dev Will only be called by depositTokensAndUpdateWeights().
+    /// @param tokens Array of pool tokens.
+    /// @param amounts Deposit token amounts.
+    /// @param numTokens Number of tokens.
+    function depositTokens(
+        IERC20[] memory tokens,
+        uint256[] memory amounts,
+        uint256 numTokens
+    ) internal {
+        lockManagerFees();
+
+        uint256[] memory newBalances = new uint256[](numTokens);
 
         for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] != 0) {
@@ -1292,25 +1175,6 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         /// Decrease managed balance and increase cash balance of pool
         /// i.e. Move amounts from managed balance to cash balance
         updatePoolBalance(newBalances, IBVault.PoolBalanceOpKind.DEPOSIT);
-
-        uint256[] memory newHoldings = getHoldings();
-        uint256 weightSum;
-
-        for (uint256 i = 0; i < numTokens; i++) {
-            if (amounts[i] != 0) {
-                weights[i] = (weights[i] * newHoldings[i]) / holdings[i];
-                newBalances[i] = newHoldings[i] - holdings[i];
-            }
-
-            weightSum += weights[i];
-        }
-
-        /// It cancels current active weights change schedule
-        /// and update weights with newWeights
-        updateWeights(weights, weightSum);
-
-        // slither-disable-next-line reentrancy-events
-        emit Deposit(amounts, newBalances, pool.getNormalizedWeights());
     }
 
     /// @notice Withdraw tokens up to requested amounts.
@@ -1393,7 +1257,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
 
     /// @notice Calculate manager fees and lock the tokens in Vault.
     /// @dev Will only be called by claimManagerFees(), setManager(),
-    ///      initiateFinalization(), deposit() and withdraw().
+    ///      initiateFinalization(), depositTokens() and withdrawTokens().
     // slither-disable-next-line timestamp
     function lockManagerFees() internal {
         if (managementFee == 0) {
@@ -1449,8 +1313,9 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     }
 
     /// @notice Return an array of values from given tokenWithValues.
-    /// @dev Will only be called by enableTradingWithWeights(), updateWeightsGradually().
-    ///      initialDeposit(), depositTokens() and withdrawTokens().
+    /// @dev Will only be called by initialDeposit(), enableTradingWithWeights(),
+    ///      depositTokensAndUpdateWeights(), withdrawTokens()
+    ///      and updateWeightsGradually()
     ///      The values could be amounts or weights.
     /// @param tokenWithValues Tokens with values.
     /// @param tokens Array of pool tokens.
@@ -1513,7 +1378,9 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     }
 
     /// @notice Update weights of tokens in the pool.
-    /// @dev Will only be called by deposit(), withdraw() and cancelWeightUpdates().
+    /// @dev Will only be called by depositTokensAndUpdateWeights(),
+    ///      withdrawTokens(), enableTradingWithOraclePrice()
+    ///      and cancelWeightUpdates().
     function updateWeights(uint256[] memory weights, uint256 weightSum)
         internal
     {
@@ -1536,7 +1403,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     }
 
     /// @notice Deposit token to the pool.
-    /// @dev Will only be called by deposit().
+    /// @dev Will only be called by initialDeposit() and depositTokens().
     /// @param token Address of the token to deposit.
     /// @param amount Amount to deposit.
     /// @return Actual deposited amount excluding fee on transfer.
@@ -1584,8 +1451,196 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         }
     }
 
+    /// @notice Determine best prices for deposits.
+    /// @dev Will only be called by depositTokensAndUpdateWeights().
+    /// @param amounts Deposit token amounts.
+    /// @return Determined token prices.
+    /// @return If oracle prices are determined.
+    function getDeterminedPrices(uint256[] memory amounts)
+        internal
+        returns (uint256[] memory, bool)
+    {
+        uint256[] memory holdings = getHoldings();
+        (
+            uint256[] memory oraclePrices,
+            uint256[] memory updatedAts
+        ) = getOraclePrices();
+        uint256[] memory spotPrices = getSpotPrices(holdings);
+
+        if (getValue(holdings, spotPrices) < minReliableVaultValue) {
+            checkOracleStatus(updatedAts);
+            return (oraclePrices, true);
+        }
+
+        uint256 ratio;
+
+        for (uint256 i = 0; i < holdings.length; i++) {
+            ratio = (oraclePrices[i] * ONE) / spotPrices[i];
+            if (ratio > maxOracleSpotDivergence) {
+                revert Aera__OracleSpotPriceDivergenceExceedsMax(
+                    i,
+                    ratio,
+                    maxOracleSpotDivergence
+                );
+            }
+            ratio = (spotPrices[i] * ONE) / oraclePrices[i];
+            if (ratio > maxOracleSpotDivergence) {
+                revert Aera__OracleSpotPriceDivergenceExceedsMax(
+                    i,
+                    ratio,
+                    maxOracleSpotDivergence
+                );
+            }
+        }
+
+        if (getValue(amounts, spotPrices) < minSignificantDepositValue) {
+            return (spotPrices, false);
+        }
+
+        checkOracleStatus(updatedAts);
+        return (oraclePrices, true);
+    }
+
+    /// @notice Calculate value of token amounts in base token term.
+    /// @dev Will only be called by getDeterminedPrices().
+    /// @param amounts Token amounts.
+    /// @param prices Token prices in base token.
+    /// @return Total value in base token term.
+    function getValue(uint256[] memory amounts, uint256[] memory prices)
+        internal
+        view
+        returns (uint256)
+    {
+        uint256 value;
+
+        for (uint256 i = 0; i < amounts.length; i++) {
+            if (i == numeraireAssetIndex) {
+                value += amounts[i];
+                continue;
+            }
+
+            value += ((amounts[i] * prices[i]) / ONE);
+        }
+
+        return value;
+    }
+
+    /// @notice Calculate spot prices of tokens vs base token.
+    /// @dev Will only be called by getDeterminedPrices().
+    /// @param holdings Balances of tokens of Balancer pool.
+    /// @return Spot prices of tokens vs base token.
+    function getSpotPrices(uint256[] memory holdings)
+        internal
+        view
+        returns (uint256[] memory)
+    {
+        uint256[] memory weights = pool.getNormalizedWeights();
+        uint256 numHoldings = holdings.length;
+        uint256[] memory prices = new uint256[](numHoldings);
+        uint256 swapFee = pool.getSwapFeePercentage();
+        uint256 numeraireAssetHolding = holdings[numeraireAssetIndex];
+        uint256 numeraireAssetWeight = weights[numeraireAssetIndex];
+
+        for (uint256 i = 0; i < numHoldings; i++) {
+            if (i == numeraireAssetIndex) {
+                prices[i] = ONE;
+                continue;
+            }
+            prices[i] = calcSpotPrice(
+                holdings[i],
+                weights[i],
+                numeraireAssetHolding,
+                numeraireAssetWeight,
+                swapFee
+            );
+        }
+
+        return prices;
+    }
+
+    /// @notice Calculate spot price from balances and weights.
+    /// @dev Will only be called by getSpotPrices().
+    /// @return Spot price from balances and weights.
+    function calcSpotPrice(
+        uint256 tokenBalanceIn,
+        uint256 tokenWeightIn,
+        uint256 tokenBalanceOut,
+        uint256 tokenWeightOut,
+        uint256 swapFee
+    ) internal pure returns (uint256) {
+        uint256 numer = (tokenBalanceIn * ONE) / tokenWeightIn;
+        uint256 denom = (tokenBalanceOut * ONE) / tokenWeightOut;
+        uint256 ratio = (numer * ONE) / denom;
+        uint256 scale = (ONE * ONE) / (ONE - swapFee);
+        // slither-disable-next-line divide-before-multiply
+        return (ratio * scale) / ONE;
+    }
+
+    /// @notice Get oracle prices.
+    /// @dev Will only be called by getDeterminedPrices()
+    ///      and enableTradingWithOraclePrice().
+    /// @return Array of oracle price and updatedAt.
+    function getOraclePrices()
+        internal
+        view
+        returns (uint256[] memory, uint256[] memory)
+    {
+        AggregatorV2V3Interface[] memory oracles = getOracles();
+        uint256[] memory prices = new uint256[](numOracles);
+        uint256[] memory updatedAts = new uint256[](numOracles);
+        int256 answer;
+        uint256 updatedAt;
+
+        for (uint256 i = 0; i < numOracles; i++) {
+            if (i == numeraireAssetIndex) {
+                continue;
+            }
+
+            (, answer, , updatedAt, ) = oracles[i].latestRoundData();
+
+            // Check if the price from the Oracle is valid as Aave does
+            if (answer <= 0) {
+                revert Aera__OraclePriceIsInvalid(i, answer);
+            }
+
+            prices[i] = uint256(answer);
+            updatedAts[i] = updatedAt;
+        }
+
+        return (prices, updatedAts);
+    }
+
+    /// @notice Check oracle status.
+    /// @dev Will only be called by enableTradingWithOraclePrice()
+    ///      and getDeterminedPrices().
+    ///      It checks if oracles are updated recently or oracles are enabled to use.
+    /// @param updatedAts Last updated timestamp of oracles to check.
+    function checkOracleStatus(uint256[] memory updatedAts) internal {
+        if (!oraclesEnabled) {
+            revert Aera__OraclesAreDisabled();
+        }
+
+        uint256 delay;
+
+        for (uint256 i = 0; i < numOracles; i++) {
+            if (i == numeraireAssetIndex) {
+                continue;
+            }
+
+            delay = block.timestamp - updatedAts[i];
+            if (delay > maxOracleDelay) {
+                revert Aera__OracleIsDelayedBeyondMax(
+                    i,
+                    delay,
+                    maxOracleDelay
+                );
+            }
+        }
+    }
+
     /// @notice Enable or disable swap.
-    /// @dev Will only be called by enableTradingRiskingArbitrage(), enableTradingWithWeights()
+    /// @dev Will only be called by initialDeposit(), initiateFinalization(),
+    ///      enableTradingRiskingArbitrage(), enableTradingWithOraclePrice()
     ///      and disableTrading().
     /// @param swapEnabled Swap status.
     function setSwapEnabled(bool swapEnabled) internal {
