@@ -387,13 +387,15 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     describe("should be reverted to call functions", async () => {
       it("when call deposit", async () => {
         await expect(
-          vault.deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
+          vault.depositRiskingArbitrage(
+            tokenValueArray(sortedTokens, ONE, tokens.length),
+          ),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
 
-      it("when call depositIfBalanceUnchanged", async () => {
+      it("when call depositRiskingArbitrageIfBalanceUnchanged", async () => {
         await expect(
-          vault.depositIfBalanceUnchanged(
+          vault.depositRiskingArbitrageIfBalanceUnchanged(
             tokenValueArray(sortedTokens, ONE, tokens.length),
           ),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
@@ -555,161 +557,177 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     });
 
     describe("when depositing to Vault", () => {
-      describe("should be reverted to deposit tokens", async () => {
-        it("when called from non-owner", async () => {
-          await expect(
-            vault
-              .connect(user)
-              .deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
-          ).to.be.revertedWith("Ownable: caller is not the owner");
+      describe("with depositRiskingArbitrage function", async () => {
+        describe("should be reverted to deposit tokens", async () => {
+          it("when called from non-owner", async () => {
+            await expect(
+              vault
+                .connect(user)
+                .depositRiskingArbitrage(
+                  tokenValueArray(sortedTokens, ONE, tokens.length),
+                ),
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+          });
+
+          it("when token and amount length is not same", async () => {
+            await expect(
+              vault.depositRiskingArbitrage(
+                tokenValueArray(sortedTokens, ONE, tokens.length + 1),
+              ),
+            ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
+          });
+
+          it("when token is not sorted", async () => {
+            await expect(
+              vault.depositRiskingArbitrage(
+                tokenValueArray(unsortedTokens, ONE, tokens.length),
+              ),
+            ).to.be.revertedWith("Aera__DifferentTokensInPosition");
+          });
+
+          it("when amount exceeds allowance", async () => {
+            await expect(
+              vault.depositRiskingArbitrage(
+                tokenValueArray(sortedTokens, toWei(100), tokens.length),
+              ),
+            ).to.be.revertedWith("ERC20: insufficient allowance");
+          });
+
+          it("when balance is changed in the same block", async () => {
+            const amounts = tokens.map(_ =>
+              toWei(Math.floor(Math.random() * 100)),
+            );
+
+            for (let i = 0; i < tokens.length; i++) {
+              await tokens[i].approve(vault.address, amounts[i].mul(2));
+            }
+
+            await ethers.provider.send("evm_setAutomine", [false]);
+            await ethers.provider.send("evm_setIntervalMining", [0]);
+
+            const trx1 = await vault.depositRiskingArbitrage(
+              tokenWithValues(sortedTokens, amounts),
+            );
+            const trx2 = await vault.depositRiskingArbitrageIfBalanceUnchanged(
+              tokenWithValues(sortedTokens, amounts),
+            );
+
+            await ethers.provider.send("evm_mine", []);
+
+            try {
+              await trx1.wait();
+              await trx2.wait();
+            } catch {
+              // empty
+            }
+
+            const receipt1 = await ethers.provider.getTransactionReceipt(
+              trx1.hash,
+            );
+            const receipt2 = await ethers.provider.getTransactionReceipt(
+              trx2.hash,
+            );
+
+            expect(receipt1.status).to.equal(1);
+            expect(receipt2.status).to.equal(0);
+
+            await ethers.provider.send("evm_setAutomine", [true]);
+            await ethers.provider.send("evm_setIntervalMining", [0]);
+          });
         });
 
-        it("when token and amount length is not same", async () => {
-          await expect(
-            vault.deposit(
-              tokenValueArray(sortedTokens, ONE, tokens.length + 1),
-            ),
-          ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
-        });
+        describe("should be possible to deposit tokens", async () => {
+          it("when depositing one token", async () => {
+            let { holdings, adminBalances } = await getState();
+            let managersFeeTotal = await getManagersFeeTotal();
 
-        it("when token is not sorted", async () => {
-          await expect(
-            vault.deposit(tokenValueArray(unsortedTokens, ONE, tokens.length)),
-          ).to.be.revertedWith("Aera__DifferentTokensInPosition");
-        });
+            for (let i = 0; i < tokens.length; i++) {
+              const amounts = new Array(tokens.length).fill(0);
+              amounts[i] = toWei(5);
 
-        it("when amount exceeds allowance", async () => {
-          await expect(
-            vault.deposit(
-              tokenValueArray(sortedTokens, toWei(100), tokens.length),
-            ),
-          ).to.be.revertedWith("ERC20: insufficient allowance");
-        });
+              const spotPrices = await vault.getSpotPrices(tokens[i].address);
 
-        it("when balance is changed in the same block", async () => {
-          const amounts = tokens.map(_ =>
-            toWei(Math.floor(Math.random() * 100)),
-          );
+              await vault.depositRiskingArbitrage(
+                tokenWithValues(sortedTokens, amounts),
+              );
+              const newManagersFeeTotal = await getManagersFeeTotal();
 
-          for (let i = 0; i < tokens.length; i++) {
-            await tokens[i].approve(vault.address, amounts[i].mul(2));
-          }
+              const newSpotPrices = await vault.getSpotPrices(
+                tokens[i].address,
+              );
+              const {
+                holdings: newHoldings,
+                adminBalances: newAdminBalances,
+              } = await getState();
 
-          await ethers.provider.send("evm_setAutomine", [false]);
-          await ethers.provider.send("evm_setIntervalMining", [0]);
+              for (let j = 0; j < tokens.length; j++) {
+                expect(newSpotPrices[j]).to.closeTo(spotPrices[j], DEVIATION);
+                expect(newHoldings[j]).to.equal(
+                  holdings[j]
+                    .add(amounts[j])
+                    .sub(newManagersFeeTotal[j])
+                    .add(managersFeeTotal[j]),
+                );
+                expect(newAdminBalances[j]).to.equal(
+                  adminBalances[j].sub(amounts[j]),
+                );
+              }
 
-          const trx1 = await vault.deposit(
-            tokenWithValues(sortedTokens, amounts),
-          );
-          const trx2 = await vault.depositIfBalanceUnchanged(
-            tokenWithValues(sortedTokens, amounts),
-          );
+              holdings = newHoldings;
+              adminBalances = newAdminBalances;
+              managersFeeTotal = newManagersFeeTotal;
+            }
+          });
 
-          await ethers.provider.send("evm_mine", []);
+          it("when depositing tokens", async () => {
+            const { holdings, adminBalances } = await getState();
 
-          try {
-            await trx1.wait();
-            await trx2.wait();
-          } catch {
-            // empty
-          }
+            const amounts = tokens.map(_ =>
+              toWei(Math.floor(Math.random() * 100)),
+            );
 
-          const receipt1 = await ethers.provider.getTransactionReceipt(
-            trx1.hash,
-          );
-          const receipt2 = await ethers.provider.getTransactionReceipt(
-            trx2.hash,
-          );
+            const spotPrices = [];
+            for (let i = 0; i < tokens.length; i++) {
+              await tokens[i].approve(vault.address, amounts[i]);
+              spotPrices.push(await vault.getSpotPrices(tokens[i].address));
+            }
 
-          expect(receipt1.status).to.equal(1);
-          expect(receipt2.status).to.equal(0);
+            await vault.depositRiskingArbitrage(
+              tokenWithValues(sortedTokens, amounts),
+            );
+            const managersFeeTotal = await getManagersFeeTotal();
 
-          await ethers.provider.send("evm_setAutomine", [true]);
-          await ethers.provider.send("evm_setIntervalMining", [0]);
-        });
-      });
-
-      describe("should be possible to deposit tokens", async () => {
-        it("when depositing one token", async () => {
-          let { holdings, adminBalances } = await getState();
-          let managersFeeTotal = await getManagersFeeTotal();
-
-          for (let i = 0; i < tokens.length; i++) {
-            const amounts = new Array(tokens.length).fill(0);
-            amounts[i] = toWei(5);
-
-            const spotPrices = await vault.getSpotPrices(tokens[i].address);
-
-            await vault.deposit(tokenWithValues(sortedTokens, amounts));
-            const newManagersFeeTotal = await getManagersFeeTotal();
-
-            const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
             const { holdings: newHoldings, adminBalances: newAdminBalances } =
               await getState();
 
-            for (let j = 0; j < tokens.length; j++) {
-              expect(newSpotPrices[j]).to.closeTo(spotPrices[j], DEVIATION);
-              expect(newHoldings[j]).to.equal(
-                holdings[j]
-                  .add(amounts[j])
-                  .sub(newManagersFeeTotal[j])
-                  .add(managersFeeTotal[j]),
-              );
-              expect(newAdminBalances[j]).to.equal(
-                adminBalances[j].sub(amounts[j]),
-              );
-            }
-
-            holdings = newHoldings;
-            adminBalances = newAdminBalances;
-            managersFeeTotal = newManagersFeeTotal;
-          }
-        });
-
-        it("when depositing tokens", async () => {
-          const { holdings, adminBalances } = await getState();
-
-          const amounts = tokens.map(_ =>
-            toWei(Math.floor(Math.random() * 100)),
-          );
-
-          const spotPrices = [];
-          for (let i = 0; i < tokens.length; i++) {
-            await tokens[i].approve(vault.address, amounts[i]);
-            spotPrices.push(await vault.getSpotPrices(tokens[i].address));
-          }
-
-          await vault.deposit(tokenWithValues(sortedTokens, amounts));
-          const managersFeeTotal = await getManagersFeeTotal();
-
-          const { holdings: newHoldings, adminBalances: newAdminBalances } =
-            await getState();
-
-          for (let i = 0; i < tokens.length; i++) {
-            const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
-
-            expect(
-              await vault.getSpotPrice(
+            for (let i = 0; i < tokens.length; i++) {
+              const newSpotPrices = await vault.getSpotPrices(
                 tokens[i].address,
-                tokens[(i + 1) % tokens.length].address,
-              ),
-            ).to.equal(newSpotPrices[(i + 1) % tokens.length]);
+              );
 
-            for (let j = 0; j < tokens.length; j++) {
-              expect(newSpotPrices[j]).to.be.closeTo(
-                spotPrices[i][j],
-                DEVIATION,
+              expect(
+                await vault.getSpotPrice(
+                  tokens[i].address,
+                  tokens[(i + 1) % tokens.length].address,
+                ),
+              ).to.equal(newSpotPrices[(i + 1) % tokens.length]);
+
+              for (let j = 0; j < tokens.length; j++) {
+                expect(newSpotPrices[j]).to.be.closeTo(
+                  spotPrices[i][j],
+                  DEVIATION,
+                );
+              }
+
+              expect(await vault.holding(i)).to.equal(newHoldings[i]);
+              expect(newHoldings[i]).to.equal(
+                holdings[i].add(amounts[i]).sub(managersFeeTotal[i]),
+              );
+              expect(newAdminBalances[i]).to.equal(
+                adminBalances[i].sub(amounts[i]),
               );
             }
-
-            expect(await vault.holding(i)).to.equal(newHoldings[i]);
-            expect(newHoldings[i]).to.equal(
-              holdings[i].add(amounts[i]).sub(managersFeeTotal[i]),
-            );
-            expect(newAdminBalances[i]).to.equal(
-              adminBalances[i].sub(amounts[i]),
-            );
-          }
+          });
         });
       });
     });
@@ -778,7 +796,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             for (let i = 0; i < tokens.length; i++) {
               await tokens[i].approve(vault.address, toWei(100000));
             }
-            await vault.deposit(
+            await vault.depositRiskingArbitrage(
               tokenValueArray(sortedTokens, toWei(10000), tokens.length),
             );
 
@@ -822,7 +840,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
         describe("should be possible to withdraw ", async () => {
           it("when withdrawing one token", async () => {
-            await vault.deposit(
+            await vault.depositRiskingArbitrage(
               tokenValueArray(sortedTokens, toWei(5), tokens.length),
             );
             let { holdings, adminBalances } = await getState();
@@ -868,7 +886,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             for (let i = 0; i < tokens.length; i++) {
               await tokens[i].approve(vault.address, toWei(100000));
             }
-            await vault.deposit(
+            await vault.depositRiskingArbitrage(
               tokenValueArray(sortedTokens, toWei(10000), tokens.length),
             );
 
@@ -942,7 +960,9 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
           const spotPrices = await vault.getSpotPrices(tokens[i].address);
 
-          await vault.deposit(tokenWithValues(sortedTokens, amounts));
+          await vault.depositRiskingArbitrage(
+            tokenWithValues(sortedTokens, amounts),
+          );
           await vault.withdraw(tokenWithValues(sortedTokens, amounts));
           const newManagersFeeTotal = await getManagersFeeTotal();
 
@@ -977,7 +997,9 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           spotPrices.push(await vault.getSpotPrices(tokens[i].address));
         }
 
-        await vault.deposit(tokenWithValues(sortedTokens, amounts));
+        await vault.depositRiskingArbitrage(
+          tokenWithValues(sortedTokens, amounts),
+        );
         await vault.withdraw(tokenWithValues(sortedTokens, amounts));
         const managersFeeTotal = await getManagersFeeTotal();
 
@@ -1277,7 +1299,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
               endTime,
             );
 
-          await vault.deposit(
+          await vault.depositRiskingArbitrage(
             tokenValueArray(sortedTokens, toWei(50), tokens.length),
           );
 
@@ -1298,7 +1320,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           await validator.setAllowances(
             valueArray(toWei(100000), tokens.length),
           );
-          await vault.deposit(
+          await vault.depositRiskingArbitrage(
             tokenValueArray(sortedTokens, toWei(50), tokens.length),
           );
 
@@ -1438,7 +1460,9 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
         it("when call deposit", async () => {
           await expect(
-            vault.deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
+            vault.depositRiskingArbitrage(
+              tokenValueArray(sortedTokens, ONE, tokens.length),
+            ),
           ).to.be.revertedWith("Aera__VaultIsFinalizing");
         });
 
@@ -1590,7 +1614,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       for (let i = 0; i < tokens.length; i++) {
         await tokens[i].approve(vault.address, toWei(100000));
       }
-      await vault.deposit(
+      await vault.depositRiskingArbitrage(
         tokenValueArray(sortedTokens, toWei(10000), tokens.length),
       );
 
@@ -1608,7 +1632,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         let lastFeeCheckpoint = (await vault.lastFeeCheckpoint()).toNumber();
         let holdings = await vault.getHoldings();
         const managerBalances = await getUserBalances(manager.address);
-        const depositTrx = await vault.deposit(
+        const depositTrx = await vault.depositRiskingArbitrage(
           tokenValueArray(sortedTokens, toWei(10000), tokens.length),
         );
 
@@ -1649,7 +1673,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         let lastFeeCheckpoint = (await vault.lastFeeCheckpoint()).toNumber();
         let holdings = await vault.getHoldings();
         const managerBalances = await getUserBalances(manager.address);
-        const depositTrx = await vault.deposit(
+        const depositTrx = await vault.depositRiskingArbitrage(
           tokenValueArray(sortedTokens, toWei(10000), tokens.length),
         );
 

@@ -1090,6 +1090,8 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         TokenValue[] calldata tokenWithAmount,
         bool useDeterminedPrice
     ) internal {
+        lockManagerFees();
+
         IERC20[] memory tokens;
         uint256[] memory holdings;
         (tokens, holdings, ) = getTokensData();
@@ -1159,8 +1161,6 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         uint256[] memory amounts,
         uint256 numTokens
     ) internal {
-        lockManagerFees();
-
         uint256[] memory newBalances = new uint256[](numTokens);
 
         for (uint256 i = 0; i < numTokens; i++) {
@@ -1257,7 +1257,8 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
 
     /// @notice Calculate manager fees and lock the tokens in Vault.
     /// @dev Will only be called by claimManagerFees(), setManager(),
-    ///      initiateFinalization(), depositTokens() and withdrawTokens().
+    ///      initiateFinalization(), depositTokensAndUpdateWeights()
+    ///      and withdrawTokens().
     // slither-disable-next-line timestamp
     function lockManagerFees() internal {
         if (managementFee == 0) {
