@@ -156,13 +156,15 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     describe("should be reverted to call functions", async () => {
       it("when call deposit", async () => {
         await expect(
-          vault.deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
+          vault.depositRiskingArbitrage(
+            tokenValueArray(sortedTokens, ONE, tokens.length),
+          ),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
 
-      it("when call depositIfBalanceUnchanged", async () => {
+      it("when call depositRiskingArbitrageIfBalanceUnchanged", async () => {
         await expect(
-          vault.depositIfBalanceUnchanged(
+          vault.depositRiskingArbitrageIfBalanceUnchanged(
             tokenValueArray(sortedTokens, ONE, tokens.length),
           ),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
@@ -294,45 +296,70 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     });
 
     describe("when depositing to Vault", () => {
-      describe("should be reverted to deposit tokens", async () => {
-        it("when called from non-owner", async () => {
-          await expect(
-            vault
-              .connect(user)
-              .deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
-          ).to.be.revertedWith("Ownable: caller is not the owner");
+      describe("with depositRiskingArbitrage function", async () => {
+        describe("should be reverted to deposit tokens", async () => {
+          it("when called from non-owner", async () => {
+            await expect(
+              vault
+                .connect(user)
+                .depositRiskingArbitrage(
+                  tokenValueArray(sortedTokens, ONE, tokens.length),
+                ),
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+          });
+
+          it("when token and amount length is not same", async () => {
+            await expect(
+              vault.depositRiskingArbitrage(
+                tokenValueArray(sortedTokens, ONE, tokens.length + 1),
+              ),
+            ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
+          });
+
+          it("when token is not sorted", async () => {
+            await expect(
+              vault.depositRiskingArbitrage(
+                tokenValueArray(unsortedTokens, ONE, tokens.length),
+              ),
+            ).to.be.revertedWith("Aera__DifferentTokensInPosition");
+          });
+
+          it("when amount exceeds allowance", async () => {
+            await expect(
+              vault.depositRiskingArbitrage(
+                tokenValueArray(sortedTokens, toWei(100), tokens.length),
+              ),
+            ).to.be.revertedWith("ERC20: insufficient allowance");
+          });
         });
 
-        it("when token and amount length is not same", async () => {
-          await expect(
-            vault.deposit(
-              tokenValueArray(sortedTokens, ONE, tokens.length + 1),
-            ),
-          ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
-        });
+        describe("should be possible to deposit tokens", async () => {
+          it("when depositing one token", async () => {
+            for (let i = 0; i < tokens.length; i++) {
+              const amounts = new Array(tokens.length).fill(0);
+              amounts[i] = toWei(5);
 
-        it("when token is not sorted", async () => {
-          await expect(
-            vault.deposit(tokenValueArray(unsortedTokens, ONE, tokens.length)),
-          ).to.be.revertedWith("Aera__DifferentTokensInPosition");
-        });
+              const trx = await vault.depositRiskingArbitrage(
+                tokenWithValues(sortedTokens, amounts),
+              );
+              const weights = await vault.getNormalizedWeights();
 
-        it("when amount exceeds allowance", async () => {
-          await expect(
-            vault.deposit(
-              tokenValueArray(sortedTokens, toWei(100), tokens.length),
-            ),
-          ).to.be.revertedWith("ERC20: insufficient allowance");
-        });
-      });
+              await expect(trx)
+                .to.emit(vault, "Deposit")
+                .withArgs(amounts, amounts, weights);
+            }
+          });
 
-      describe("should be possible to deposit tokens", async () => {
-        it("when depositing one token", async () => {
-          for (let i = 0; i < tokens.length; i++) {
-            const amounts = new Array(tokens.length).fill(0);
-            amounts[i] = toWei(5);
+          it("when depositing tokens", async () => {
+            const amounts = tokens.map(_ =>
+              toWei(Math.floor(Math.random() * 100)),
+            );
 
-            const trx = await vault.deposit(
+            for (let i = 0; i < tokens.length; i++) {
+              await tokens[i].approve(vault.address, amounts[i]);
+            }
+
+            const trx = await vault.depositRiskingArbitrage(
               tokenWithValues(sortedTokens, amounts),
             );
             const weights = await vault.getNormalizedWeights();
@@ -340,45 +367,26 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             await expect(trx)
               .to.emit(vault, "Deposit")
               .withArgs(amounts, amounts, weights);
-          }
-        });
+          });
 
-        it("when depositing tokens", async () => {
-          const amounts = tokens.map(_ =>
-            toWei(Math.floor(Math.random() * 100)),
-          );
+          it("when depositing tokens with depositRiskingArbitrageIfBalanceUnchanged", async () => {
+            const amounts = tokens.map(_ =>
+              toWei(Math.floor(Math.random() * 100)),
+            );
 
-          for (let i = 0; i < tokens.length; i++) {
-            await tokens[i].approve(vault.address, amounts[i]);
-          }
+            for (let i = 0; i < tokens.length; i++) {
+              await tokens[i].approve(vault.address, amounts[i]);
+            }
 
-          const trx = await vault.deposit(
-            tokenWithValues(sortedTokens, amounts),
-          );
-          const weights = await vault.getNormalizedWeights();
+            const trx = await vault.depositRiskingArbitrageIfBalanceUnchanged(
+              tokenWithValues(sortedTokens, amounts),
+            );
+            const weights = await vault.getNormalizedWeights();
 
-          await expect(trx)
-            .to.emit(vault, "Deposit")
-            .withArgs(amounts, amounts, weights);
-        });
-
-        it("when depositing tokens with depositIfBalanceUnchanged", async () => {
-          const amounts = tokens.map(_ =>
-            toWei(Math.floor(Math.random() * 100)),
-          );
-
-          for (let i = 0; i < tokens.length; i++) {
-            await tokens[i].approve(vault.address, amounts[i]);
-          }
-
-          const trx = await vault.depositIfBalanceUnchanged(
-            tokenWithValues(sortedTokens, amounts),
-          );
-          const weights = await vault.getNormalizedWeights();
-
-          await expect(trx)
-            .to.emit(vault, "Deposit")
-            .withArgs(amounts, amounts, weights);
+            await expect(trx)
+              .to.emit(vault, "Deposit")
+              .withArgs(amounts, amounts, weights);
+          });
         });
       });
     });
@@ -446,7 +454,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
         describe("should be possible to withdraw ", async () => {
           it("when withdrawing one token", async () => {
-            await vault.deposit(
+            await vault.depositRiskingArbitrage(
               tokenValueArray(sortedTokens, toWei(5), tokens.length),
             );
 
@@ -474,7 +482,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             for (let i = 0; i < tokens.length; i++) {
               await tokens[i].approve(vault.address, toWei(100000));
             }
-            await vault.deposit(
+            await vault.depositRiskingArbitrage(
               tokenValueArray(sortedTokens, toWei(10000), tokens.length),
             );
 
@@ -501,7 +509,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             for (let i = 0; i < tokens.length; i++) {
               await tokens[i].approve(vault.address, toWei(100000));
             }
-            await vault.deposit(
+            await vault.depositRiskingArbitrage(
               tokenValueArray(sortedTokens, toWei(10000), tokens.length),
             );
 
@@ -739,7 +747,9 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
         it("when call deposit", async () => {
           await expect(
-            vault.deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
+            vault.depositRiskingArbitrage(
+              tokenValueArray(sortedTokens, ONE, tokens.length),
+            ),
           ).to.be.revertedWith("Aera__VaultIsFinalizing");
         });
 
@@ -880,7 +890,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       for (let i = 0; i < tokens.length; i++) {
         await tokens[i].approve(vault.address, toWei(100000));
       }
-      await vault.deposit(
+      await vault.depositRiskingArbitrage(
         tokenValueArray(sortedTokens, toWei(10000), tokens.length),
       );
 
@@ -897,7 +907,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
         let lastFeeCheckpoint = (await vault.lastFeeCheckpoint()).toNumber();
         let holdings = await vault.getHoldings();
-        const depositTrx = await vault.deposit(
+        const depositTrx = await vault.depositRiskingArbitrage(
           tokenValueArray(sortedTokens, toWei(10000), tokens.length),
         );
 
@@ -935,7 +945,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
         let lastFeeCheckpoint = (await vault.lastFeeCheckpoint()).toNumber();
         let holdings = await vault.getHoldings();
-        const depositTrx = await vault.deposit(
+        const depositTrx = await vault.depositRiskingArbitrage(
           tokenValueArray(sortedTokens, toWei(10000), tokens.length),
         );
 
