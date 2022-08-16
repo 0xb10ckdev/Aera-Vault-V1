@@ -272,6 +272,9 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     error Aera__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
     error Aera__NoticeTimeoutNotElapsed(uint256 noticeTimeoutAt);
     error Aera__MinReliableVaultValueIsZero();
+    error Aera__MinSignificantDepositValueIsZero();
+    error Aera__MaxOracleSpotDivergenceIsZero();
+    error Aera__MaxOracleDelayIsZero();
     error Aera__ManagerIsZeroAddress();
     error Aera__ManagerIsOwner(address newManager);
     error Aera__CallerIsNotManager();
@@ -1086,6 +1089,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     ///      current active weights change schedule.
     /// @param tokenWithAmount Deposit tokens with amount.
     /// @param useDeterminedPrice If deposits with determined prices.
+    /// slither-disable-next-line uninitialized-local
     function depositTokensAndUpdateWeights(
         TokenValue[] calldata tokenWithAmount,
         bool useDeterminedPrice
@@ -1562,6 +1566,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     /// @notice Calculate spot price from balances and weights.
     /// @dev Will only be called by getSpotPrices().
     /// @return Spot price from balances and weights.
+    // slither-disable-next-line divide-before-multiply
     function calcSpotPrice(
         uint256 tokenBalanceIn,
         uint256 tokenWeightIn,
@@ -1573,7 +1578,6 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         uint256 denom = (tokenBalanceOut * ONE) / tokenWeightOut;
         uint256 ratio = (numer * ONE) / denom;
         uint256 scale = (ONE * ONE) / (ONE - swapFee);
-        // slither-disable-next-line divide-before-multiply
         return (ratio * scale) / ONE;
     }
 
@@ -1658,14 +1662,45 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         NewVaultParams memory vaultParams,
         uint256 numTokens
     ) internal {
-        uint256 numTokens = vaultParams.tokens.length;
-
         if (numTokens != vaultParams.weights.length) {
             revert Aera__ValueLengthIsNotSame(
                 numTokens,
                 vaultParams.weights.length
             );
         }
+
+        checkValidator(vaultParams, numTokens);
+
+        if (vaultParams.managementFee > MAX_MANAGEMENT_FEE) {
+            revert Aera__ManagementFeeIsAboveMax(
+                vaultParams.managementFee,
+                MAX_MANAGEMENT_FEE
+            );
+        }
+        if (vaultParams.noticePeriod > MAX_NOTICE_PERIOD) {
+            revert Aera__NoticePeriodIsAboveMax(
+                vaultParams.noticePeriod,
+                MAX_NOTICE_PERIOD
+            );
+        }
+
+        checkPriceRelatedValues(vaultParams);
+
+        if (bytes(vaultParams.description).length == 0) {
+            revert Aera__DescriptionIsEmpty();
+        }
+
+        checkManagerAddress(vaultParams.manager);
+    }
+
+    /// @notice Check if the validator is valid.
+    /// @dev Will only be called by checkVaultParams().
+    /// @param vaultParams Struct vault parameter to check.
+    /// @param numTokens Number of tokens.
+    function checkValidator(
+        NewVaultParams memory vaultParams,
+        uint256 numTokens
+    ) internal {
         if (
             !ERC165Checker.supportsInterface(
                 vaultParams.validator,
@@ -1681,27 +1716,26 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         if (numTokens != numAllowances) {
             revert Aera__ValidatorIsNotMatched(numTokens, numAllowances);
         }
+    }
 
-        if (vaultParams.managementFee > MAX_MANAGEMENT_FEE) {
-            revert Aera__ManagementFeeIsAboveMax(
-                vaultParams.managementFee,
-                MAX_MANAGEMENT_FEE
-            );
-        }
-        if (vaultParams.noticePeriod > MAX_NOTICE_PERIOD) {
-            revert Aera__NoticePeriodIsAboveMax(
-                vaultParams.noticePeriod,
-                MAX_NOTICE_PERIOD
-            );
-        }
+    /// @notice Check if price-related values are valid.
+    /// @dev Will only be called by checkVaultParams().
+    /// @param vaultParams Struct vault parameter to check.
+    function checkPriceRelatedValues(NewVaultParams memory vaultParams)
+        internal
+    {
         if (vaultParams.minReliableVaultValue == 0) {
             revert Aera__MinReliableVaultValueIsZero();
         }
-
-        if (bytes(vaultParams.description).length == 0) {
-            revert Aera__DescriptionIsEmpty();
+        if (vaultParams.minSignificantDepositValue == 0) {
+            revert Aera__MinSignificantDepositValueIsZero();
         }
-        checkManagerAddress(vaultParams.manager);
+        if (vaultParams.maxOracleSpotDivergence == 0) {
+            revert Aera__MaxOracleSpotDivergenceIsZero();
+        }
+        if (vaultParams.maxOracleDelay == 0) {
+            revert Aera__MaxOracleDelayIsZero();
+        }
     }
 
     /// @notice Check if the address can be a manager.
