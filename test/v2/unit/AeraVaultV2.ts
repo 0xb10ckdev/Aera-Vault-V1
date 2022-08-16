@@ -156,6 +156,20 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     describe("should be reverted to call functions", async () => {
       it("when call deposit", async () => {
         await expect(
+          vault.deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
+        ).to.be.revertedWith("Aera__VaultNotInitialized");
+      });
+
+      it("when call depositIfBalanceUnchanged", async () => {
+        await expect(
+          vault.depositIfBalanceUnchanged(
+            tokenValueArray(sortedTokens, ONE, tokens.length),
+          ),
+        ).to.be.revertedWith("Aera__VaultNotInitialized");
+      });
+
+      it("when call depositRiskingArbitrage", async () => {
+        await expect(
           vault.depositRiskingArbitrage(
             tokenValueArray(sortedTokens, ONE, tokens.length),
           ),
@@ -296,6 +310,205 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     });
 
     describe("when depositing to Vault", () => {
+      describe("with deposit function", async () => {
+        describe("should be reverted to deposit tokens", async () => {
+          it("when called from non-owner", async () => {
+            await expect(
+              vault
+                .connect(user)
+                .deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
+            ).to.be.revertedWith("Ownable: caller is not the owner");
+          });
+
+          it("when token and amount length is not same", async () => {
+            await expect(
+              vault.deposit(
+                tokenValueArray(sortedTokens, ONE, tokens.length + 1),
+              ),
+            ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
+          });
+
+          it("when token is not sorted", async () => {
+            await expect(
+              vault.deposit(
+                tokenValueArray(unsortedTokens, ONE, tokens.length),
+              ),
+            ).to.be.revertedWith("Aera__DifferentTokensInPosition");
+          });
+
+          it("when amount exceeds allowance", async () => {
+            const spotPrices = await vault.getSpotPrices(tokens[0].address);
+            for (let i = 1; i < tokens.length; i++) {
+              await oracles[i].setLatestAnswer(spotPrices[i]);
+            }
+            await expect(
+              vault.deposit(
+                tokenValueArray(sortedTokens, toWei(100), tokens.length),
+              ),
+            ).to.be.revertedWith("ERC20: insufficient allowance");
+          });
+
+          it("when oracle is disabled", async () => {
+            const spotPrices = await vault.getSpotPrices(tokens[0].address);
+            for (let i = 1; i < tokens.length; i++) {
+              await oracles[i].setLatestAnswer(spotPrices[i]);
+            }
+
+            const amounts = tokens.map(_ =>
+              toWei(Math.floor(10 + Math.random() * 10)),
+            );
+
+            for (let i = 0; i < tokens.length; i++) {
+              await tokens[i].approve(vault.address, amounts[i]);
+            }
+
+            await vault.setOraclesEnabled(false);
+            await expect(
+              vault.deposit(tokenWithValues(sortedTokens, amounts)),
+            ).to.be.revertedWith("Aera__OraclesAreDisabled");
+          });
+
+          it("when oracle is delayed beyond maximum", async () => {
+            const timestamp = await getCurrentTime();
+            const spotPrices = await vault.getSpotPrices(tokens[0].address);
+            for (let i = 1; i < tokens.length; i++) {
+              await oracles[i].setLatestAnswer(spotPrices[i]);
+              await oracles[i].setUpdatedAt(timestamp - MAX_ORACLE_DELAY);
+            }
+
+            const amounts = tokens.map(_ =>
+              toWei(Math.floor(10 + Math.random() * 10)),
+            );
+
+            for (let i = 0; i < tokens.length; i++) {
+              await tokens[i].approve(vault.address, amounts[i]);
+            }
+
+            await expect(
+              vault.deposit(tokenWithValues(sortedTokens, amounts)),
+            ).to.be.revertedWith("Aera__OracleIsDelayedBeyondMax");
+          });
+
+          it("when oracle and spot price divergence exceeds maximum", async () => {
+            const spotPrices = await vault.getSpotPrices(tokens[0].address);
+            for (let i = 1; i < tokens.length; i++) {
+              await oracles[i].setLatestAnswer(
+                spotPrices[i].mul(ONE).div(MAX_ORACLE_SPOT_DIVERGENCE.add(1)),
+              );
+            }
+
+            const amounts = tokens.map(_ =>
+              toWei(Math.floor(10 + Math.random() * 10)),
+            );
+
+            for (let i = 0; i < tokens.length; i++) {
+              await tokens[i].approve(vault.address, amounts[i]);
+            }
+
+            await expect(
+              vault.deposit(tokenWithValues(sortedTokens, amounts)),
+            ).to.be.revertedWith("Aera__OracleSpotPriceDivergenceExceedsMax");
+          });
+
+          it("when oracle price is not greater than zero", async () => {
+            await oracles[1].setLatestAnswer(0);
+
+            const amounts = tokens.map(_ =>
+              toWei(Math.floor(10 + Math.random() * 10)),
+            );
+
+            for (let i = 0; i < tokens.length; i++) {
+              await tokens[i].approve(vault.address, amounts[i]);
+            }
+
+            await expect(
+              vault.deposit(tokenWithValues(sortedTokens, amounts)),
+            ).to.be.revertedWith("Aera__OraclePriceIsInvalid");
+          });
+        });
+
+        describe("should be possible to deposit tokens", async () => {
+          it("when vault value is less than minimum", async () => {
+            await validator.setAllowances(
+              valueArray(toWei(100000), tokens.length),
+            );
+            await vault.withdraw(
+              tokenValueArray(sortedTokens, toWei(0.99), tokens.length),
+            );
+
+            const spotPrices = await vault.getSpotPrices(tokens[0].address);
+            for (let i = 1; i < tokens.length; i++) {
+              await oracles[i].setLatestAnswer(spotPrices[i].add(1));
+            }
+
+            const amounts = tokens.map(_ =>
+              toWei(Math.floor(10 + Math.random() * 10)),
+            );
+
+            for (let i = 0; i < tokens.length; i++) {
+              await tokens[i].approve(vault.address, amounts[i]);
+            }
+
+            const trx = await vault.deposit(
+              tokenWithValues(sortedTokens, amounts),
+            );
+            const weights = await vault.getNormalizedWeights();
+
+            await expect(trx)
+              .to.emit(vault, "Deposit")
+              .withArgs(amounts, amounts, weights);
+          });
+
+          it("when deposit value is less than minimum", async () => {
+            const spotPrices = await vault.getSpotPrices(tokens[0].address);
+            for (let i = 1; i < tokens.length; i++) {
+              await oracles[i].setLatestAnswer(spotPrices[i]);
+            }
+
+            const amounts = tokens.map(_ =>
+              toWei(Math.floor(1 + Math.random())),
+            );
+
+            for (let i = 0; i < tokens.length; i++) {
+              await tokens[i].approve(vault.address, amounts[i]);
+            }
+
+            const trx = await vault.deposit(
+              tokenWithValues(sortedTokens, amounts),
+            );
+            const weights = await vault.getNormalizedWeights();
+
+            await expect(trx)
+              .to.emit(vault, "Deposit")
+              .withArgs(amounts, amounts, weights);
+          });
+
+          it("when vault value and deposit value are greater than minimum", async () => {
+            const spotPrices = await vault.getSpotPrices(tokens[0].address);
+            for (let i = 1; i < tokens.length; i++) {
+              await oracles[i].setLatestAnswer(spotPrices[i].add(1));
+            }
+
+            const amounts = tokens.map(_ =>
+              toWei(Math.floor(10 + Math.random() * 10)),
+            );
+
+            for (let i = 0; i < tokens.length; i++) {
+              await tokens[i].approve(vault.address, amounts[i]);
+            }
+
+            const trx = await vault.deposit(
+              tokenWithValues(sortedTokens, amounts),
+            );
+            const weights = await vault.getNormalizedWeights();
+
+            await expect(trx)
+              .to.emit(vault, "Deposit")
+              .withArgs(amounts, amounts, weights);
+          });
+        });
+      });
+
       describe("with depositRiskingArbitrage function", async () => {
         describe("should be reverted to deposit tokens", async () => {
           it("when called from non-owner", async () => {
@@ -352,7 +565,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
           it("when depositing tokens", async () => {
             const amounts = tokens.map(_ =>
-              toWei(Math.floor(Math.random() * 100)),
+              toWei(Math.floor(10 + Math.random() * 10)),
             );
 
             for (let i = 0; i < tokens.length; i++) {
@@ -371,7 +584,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
           it("when depositing tokens with depositRiskingArbitrageIfBalanceUnchanged", async () => {
             const amounts = tokens.map(_ =>
-              toWei(Math.floor(Math.random() * 100)),
+              toWei(Math.floor(10 + Math.random() * 10)),
             );
 
             for (let i = 0; i < tokens.length; i++) {
@@ -487,7 +700,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             );
 
             const amounts = tokens.map(_ =>
-              toWei(Math.floor(Math.random() * 100)),
+              toWei(Math.floor(10 + Math.random() * 10)),
             );
 
             const trx = await vault.withdraw(
@@ -514,7 +727,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             );
 
             const amounts = tokens.map(_ =>
-              toWei(Math.floor(Math.random() * 100)),
+              toWei(Math.floor(10 + Math.random() * 10)),
             );
 
             const trx = await vault.withdrawIfBalanceUnchanged(
@@ -747,7 +960,29 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
         it("when call deposit", async () => {
           await expect(
+            vault.deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
+          ).to.be.revertedWith("Aera__VaultIsFinalizing");
+        });
+
+        it("when call depositIfBalanceUnchanged", async () => {
+          await expect(
+            vault.depositIfBalanceUnchanged(
+              tokenValueArray(sortedTokens, ONE, tokens.length),
+            ),
+          ).to.be.revertedWith("Aera__VaultIsFinalizing");
+        });
+
+        it("when call depositRiskingArbitrage", async () => {
+          await expect(
             vault.depositRiskingArbitrage(
+              tokenValueArray(sortedTokens, ONE, tokens.length),
+            ),
+          ).to.be.revertedWith("Aera__VaultIsFinalizing");
+        });
+
+        it("when call depositRiskingArbitrageIfBalanceUnchanged", async () => {
+          await expect(
+            vault.depositRiskingArbitrageIfBalanceUnchanged(
               tokenValueArray(sortedTokens, ONE, tokens.length),
             ),
           ).to.be.revertedWith("Aera__VaultIsFinalizing");
@@ -756,6 +991,14 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         it("when call withdraw", async () => {
           await expect(
             vault.withdraw(tokenValueArray(sortedTokens, ONE, tokens.length)),
+          ).to.be.revertedWith("Aera__VaultIsFinalizing");
+        });
+
+        it("when call withdrawIfBalanceUnchanged", async () => {
+          await expect(
+            vault.withdrawIfBalanceUnchanged(
+              tokenValueArray(sortedTokens, ONE, tokens.length),
+            ),
           ).to.be.revertedWith("Aera__VaultIsFinalizing");
         });
 
@@ -1008,6 +1251,30 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           .withArgs(manager.address, user.address);
 
         expect(await vault.manager()).to.equal(user.address);
+      });
+    });
+
+    describe("Enable/Disable Oracle", () => {
+      describe("should be reverted to enable/disable oracle", async () => {
+        it("when called from non-owner or non-manager", async () => {
+          await expect(
+            vault.connect(user).setOraclesEnabled(true),
+          ).to.be.revertedWith("Aera__CallerIsNotOwnerOrManager");
+        });
+      });
+
+      it("should be possible to enable/disable oracle", async () => {
+        await expect(vault.setOraclesEnabled(true))
+          .to.emit(vault, "SetOraclesEnabled")
+          .withArgs(true);
+
+        expect(await vault.oraclesEnabled()).to.equal(true);
+
+        await expect(vault.setOraclesEnabled(false))
+          .to.emit(vault, "SetOraclesEnabled")
+          .withArgs(false);
+
+        expect(await vault.oraclesEnabled()).to.equal(false);
       });
     });
 
