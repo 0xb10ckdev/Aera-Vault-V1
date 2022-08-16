@@ -12,6 +12,7 @@ contract OracleMock {
 
     constructor(uint256 decimals_) {
         decimals = decimals_;
+        updatedAt = block.timestamp;
     }
 
     function setLatestAnswer(int256 newAnswer) external {
