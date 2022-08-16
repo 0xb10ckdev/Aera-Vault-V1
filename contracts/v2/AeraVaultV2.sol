@@ -16,6 +16,7 @@ import "../v1/interfaces/IWithdrawalValidator.sol";
 import "./dependencies/chainlink/interfaces/AggregatorV2V3Interface.sol";
 import "./interfaces/IAeraVaultV2.sol";
 import "./OracleStorage.sol";
+import "hardhat/console.sol";
 
 /// @title Risk-managed treasury vault.
 /// @notice Managed n-asset vault that supports withdrawals
@@ -1120,15 +1121,13 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         uint256 weightSum;
 
         if (useOraclePrices) {
-            uint256 numeraireAssetRatio = (weights[numeraireAssetIndex] *
-                ONE *
-                ONE) / newHoldings[numeraireAssetIndex];
+            uint256 numeraireAssetHolding = holdings[numeraireAssetIndex];
+            weights[numeraireAssetIndex] = ONE;
             for (uint256 i = 0; i < numTokens; i++) {
                 if (i != numeraireAssetIndex) {
                     weights[i] =
-                        (newHoldings[i] * numeraireAssetRatio) /
-                        determinedPrices[i] /
-                        ONE;
+                        (newHoldings[i] * determinedPrices[i]) /
+                        numeraireAssetHolding;
                 }
                 if (amounts[i] != 0) {
                     newBalances[i] = newHoldings[i] - holdings[i];
@@ -1480,6 +1479,10 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         uint256 ratio;
 
         for (uint256 i = 0; i < holdings.length; i++) {
+            if (i == numeraireAssetIndex) {
+                continue;
+            }
+
             ratio = (oraclePrices[i] * ONE) / spotPrices[i];
             if (ratio > maxOracleSpotDivergence) {
                 revert Aera__OracleSpotPriceDivergenceExceedsMax(
