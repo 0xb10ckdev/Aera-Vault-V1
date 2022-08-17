@@ -1115,7 +1115,9 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
             tokens
         );
 
+        // slither-disable-next-line uninitialized-local
         uint256[] memory determinedPrices;
+        // slither-disable-next-line uninitialized-local
         bool useOraclePrices;
         if (useDeterminedPrice) {
             (determinedPrices, useOraclePrices) = getDeterminedPrices(amounts);
