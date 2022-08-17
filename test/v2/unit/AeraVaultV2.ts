@@ -339,7 +339,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           it("when amount exceeds allowance", async () => {
             const spotPrices = await vault.getSpotPrices(tokens[0].address);
             for (let i = 1; i < tokens.length; i++) {
-              await oracles[i].setLatestAnswer(spotPrices[i]);
+              await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
             }
             await expect(
               vault.deposit(
@@ -351,7 +351,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           it("when oracle is disabled", async () => {
             const spotPrices = await vault.getSpotPrices(tokens[0].address);
             for (let i = 1; i < tokens.length; i++) {
-              await oracles[i].setLatestAnswer(spotPrices[i]);
+              await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
             }
 
             const amounts = tokens.map(_ =>
@@ -372,7 +372,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             const timestamp = await getCurrentTime();
             const spotPrices = await vault.getSpotPrices(tokens[0].address);
             for (let i = 1; i < tokens.length; i++) {
-              await oracles[i].setLatestAnswer(spotPrices[i]);
+              await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
               await oracles[i].setUpdatedAt(timestamp - MAX_ORACLE_DELAY);
             }
 
@@ -393,7 +393,10 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             const spotPrices = await vault.getSpotPrices(tokens[0].address);
             for (let i = 1; i < tokens.length; i++) {
               await oracles[i].setLatestAnswer(
-                spotPrices[i].mul(ONE).div(MAX_ORACLE_SPOT_DIVERGENCE.add(1)),
+                spotPrices[i]
+                  .mul(ONE)
+                  .div(MAX_ORACLE_SPOT_DIVERGENCE.add(1))
+                  .div(1e10),
               );
             }
 
@@ -429,20 +432,18 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
         describe("should be possible to deposit tokens", async () => {
           it("when vault value is less than minimum", async () => {
-            await validator.setAllowances(
-              valueArray(toWei(100000), tokens.length),
-            );
+            await validator.setAllowances(valueArray(ONE, tokens.length));
             await vault.withdraw(
-              tokenValueArray(sortedTokens, toWei(0.99), tokens.length),
+              tokenValueArray(sortedTokens, toWei(0.9), tokens.length),
             );
 
             const spotPrices = await vault.getSpotPrices(tokens[0].address);
             for (let i = 1; i < tokens.length; i++) {
-              await oracles[i].setLatestAnswer(spotPrices[i].add(1));
+              await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
             }
 
             const amounts = tokens.map(_ =>
-              toWei(Math.floor(10 + Math.random() * 10)),
+              toWei(Math.floor(10 + Math.random())),
             );
 
             for (let i = 0; i < tokens.length; i++) {
@@ -462,7 +463,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           it("when deposit value is less than minimum", async () => {
             const spotPrices = await vault.getSpotPrices(tokens[0].address);
             for (let i = 1; i < tokens.length; i++) {
-              await oracles[i].setLatestAnswer(spotPrices[i]);
+              await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
             }
 
             const amounts = tokens.map(_ =>
@@ -486,7 +487,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           it("when vault value and deposit value are greater than minimum", async () => {
             const spotPrices = await vault.getSpotPrices(tokens[0].address);
             for (let i = 1; i < tokens.length; i++) {
-              await oracles[i].setLatestAnswer(spotPrices[i].add(1));
+              await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
             }
 
             const amounts = tokens.map(_ =>
@@ -1403,7 +1404,14 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           for (let i = 0; i < tokens.length; i++) {
             expect(
               await vault.getSpotPrice(tokens[i].address, tokens[0].address),
-            ).to.be.closeTo(oraclePrices[i].mul(1e10), PRICE_DEVIATION);
+            ).to.be.closeTo(
+              oraclePrices[i].mul(1e10),
+              oraclePrices[i]
+                .mul(1e10)
+                .mul(PRICE_DEVIATION)
+                .div(ONE)
+                .toNumber(),
+            );
           }
           expect(await vault.isSwapEnabled()).to.equal(true);
         });

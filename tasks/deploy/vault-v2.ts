@@ -1,6 +1,11 @@
 import { AssetHelpers } from "@balancer-labs/balancer-js";
 import { task, types } from "hardhat/config";
 import { getConfig } from "../../scripts/config";
+import {
+  MAX_ORACLE_DELAY,
+  MAX_ORACLE_SPOT_DIVERGENCE,
+  MIN_SIGNIFICANT_DEPOSIT_VALUE,
+} from "../../test/v2/constants";
 
 // https://github.com/balancer-labs/balancer-v2-monorepo/blob/master/pkg/balancer-js/test/tokens.test.ts
 const wethAddress = "0x000000000000000000000000000000000000000F";
@@ -22,12 +27,15 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
     "minReliableVaultValue",
     "Minimum reliable vault TVL in base token",
   )
-  .addParam(
+  .addOptionalParam(
     "minSignificantDepositValue",
     "Minimum significant deposit value in base token terms",
   )
-  .addParam("maxOracleSpotDivergence", "Maximum oracle spot price divergence")
-  .addParam("maxOracleDelay", "Maximum update delay of oracles")
+  .addOptionalParam(
+    "maxOracleSpotDivergence",
+    "Maximum oracle spot price divergence",
+  )
+  .addOptionalParam("maxOracleDelay", "Maximum update delay of oracles")
   .addParam(
     "managementFee",
     "Management fee earned proportion per second(1e9 is maximum)",
@@ -63,9 +71,11 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
     const validator = taskArgs.validator;
     const noticePeriod = taskArgs.noticePeriod;
     const minReliableVaultValue = taskArgs.minReliableVaultValue;
-    const minSignificantDepositValue = taskArgs.minSignificantDepositValue;
-    const maxOracleSpotDivergence = taskArgs.maxOracleSpotDivergence;
-    const maxOracleDelay = taskArgs.maxOracleDelay;
+    const minSignificantDepositValue =
+      taskArgs.minSignificantDepositValue || MIN_SIGNIFICANT_DEPOSIT_VALUE;
+    const maxOracleSpotDivergence =
+      taskArgs.maxOracleSpotDivergence || MAX_ORACLE_SPOT_DIVERGENCE;
+    const maxOracleDelay = taskArgs.maxOracleDelay || MAX_ORACLE_DELAY;
     const managementFee = taskArgs.managementFee;
     const description = taskArgs.description;
     const merkleOrchard = config.merkleOrchard || ethers.constants.AddressZero;

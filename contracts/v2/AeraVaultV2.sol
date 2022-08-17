@@ -16,7 +16,6 @@ import "../v1/interfaces/IWithdrawalValidator.sol";
 import "./dependencies/chainlink/interfaces/AggregatorV2V3Interface.sol";
 import "./interfaces/IAeraVaultV2.sol";
 import "./OracleStorage.sol";
-import "hardhat/console.sol";
 
 /// @title Risk-managed treasury vault.
 /// @notice Managed n-asset vault that supports withdrawals
@@ -57,6 +56,10 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     ///      0.0000001% * (365 * 24 * 60 * 60) = 3.1536%
     uint256 private constant MAX_MANAGEMENT_FEE = 10**9;
 
+    /// @notice Flags to use or dont' use determined prices.
+    bool private constant USE_DETERMINED_PRICE = true;
+    bool private constant DONT_USE_DETERMINED_PRICE = false;
+
     /// @notice Balancer Vault.
     IBVault public immutable bVault;
 
@@ -76,16 +79,16 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     uint256 public immutable noticePeriod;
 
     /// @notice Minimum reliable vault TVL. It will be measured in base token terms.
-    uint256 private immutable minReliableVaultValue;
+    uint256 public immutable minReliableVaultValue;
 
     /// @notice Minimum significant deposit value. It will be measured in base token terms.
-    uint256 private immutable minSignificantDepositValue;
+    uint256 public immutable minSignificantDepositValue;
 
     /// @notice Maximum oracle spot price divergence.
-    uint256 private immutable maxOracleSpotDivergence;
+    uint256 public immutable maxOracleSpotDivergence;
 
     /// @notice Maximum update delay of oracles.
-    uint256 private immutable maxOracleDelay;
+    uint256 public immutable maxOracleDelay;
 
     /// @notice Verifies withdraw limits.
     IWithdrawalValidator public immutable validator;
@@ -516,7 +519,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
-        depositTokensAndUpdateWeights(tokenWithAmount, true);
+        depositTokensAndUpdateWeights(tokenWithAmount, USE_DETERMINED_PRICE);
     }
 
     /// @inheritdoc IProtocolAPI
@@ -535,7 +538,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
             revert Aera__BalanceChangedInCurrentBlock();
         }
 
-        depositTokensAndUpdateWeights(tokenWithAmount, true);
+        depositTokensAndUpdateWeights(tokenWithAmount, USE_DETERMINED_PRICE);
     }
 
     /// @inheritdoc IProtocolAPIV2
@@ -547,7 +550,10 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
-        depositTokensAndUpdateWeights(tokenWithAmount, false);
+        depositTokensAndUpdateWeights(
+            tokenWithAmount,
+            DONT_USE_DETERMINED_PRICE
+        );
     }
 
     /// @inheritdoc IProtocolAPIV2
@@ -568,7 +574,10 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
             revert Aera__BalanceChangedInCurrentBlock();
         }
 
-        depositTokensAndUpdateWeights(tokenWithAmount, false);
+        depositTokensAndUpdateWeights(
+            tokenWithAmount,
+            DONT_USE_DETERMINED_PRICE
+        );
     }
 
     /// @inheritdoc IProtocolAPI
@@ -736,7 +745,6 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
 
         checkOracleStatus(updatedAts);
 
-        uint256[] memory oracleUnits = getOracleUnits();
         uint256[] memory holdings = getHoldings();
         uint256 numHoldings = holdings.length;
         uint256[] memory weights = new uint256[](numHoldings);
@@ -752,7 +760,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
 
             // slither-disable-next-line divide-before-multiply
             holdingsRatio = (holdings[i] * ONE) / numeraireAssetHolding;
-            weights[i] = (holdingsRatio * (oracleUnits[i])) / prices[i];
+            weights[i] = (holdingsRatio * ONE) / prices[i];
             weightSum += weights[i];
         }
 
@@ -1121,7 +1129,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         uint256 weightSum;
 
         if (useOraclePrices) {
-            uint256 numeraireAssetHolding = holdings[numeraireAssetIndex];
+            uint256 numeraireAssetHolding = newHoldings[numeraireAssetIndex];
             weights[numeraireAssetIndex] = ONE;
             for (uint256 i = 0; i < numTokens; i++) {
                 if (i != numeraireAssetIndex) {
@@ -1594,6 +1602,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         returns (uint256[] memory, uint256[] memory)
     {
         AggregatorV2V3Interface[] memory oracles = getOracles();
+        uint256[] memory oracleUnits = getOracleUnits();
         uint256[] memory prices = new uint256[](numOracles);
         uint256[] memory updatedAts = new uint256[](numOracles);
         int256 answer;
@@ -1612,6 +1621,9 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
             }
 
             prices[i] = uint256(answer);
+            if (oracleUnits[i] != ONE) {
+                prices[i] = (prices[i] * ONE) / oracleUnits[i];
+            }
             updatedAts[i] = updatedAt;
         }
 
