@@ -1,5 +1,8 @@
-import { toWei } from "./utils";
-import { ethers } from "hardhat";
+import { BigNumber, constants, utils } from "ethers";
+
+export const toWei = (value: number | string): BigNumber => {
+  return utils.parseEther(value.toString());
+};
 
 export const ONE = toWei("1");
 export const MIN_WEIGHT = toWei("0.01");
@@ -7,7 +10,7 @@ export const MIN_SWAP_FEE = toWei("0.000001");
 export const MAX_SWAP_FEE = toWei("0.1");
 export const MAXIMUM_SWAP_FEE_PERCENT_CHANGE = toWei("0.005");
 export const SWAP_FEE_COOLDOWN_PERIOD = 60; // 1 minute
-export const ZERO_ADDRESS = ethers.constants.AddressZero;
+export const ZERO_ADDRESS = constants.AddressZero;
 export const NOTICE_PERIOD = 10000;
 export const MAX_NOTICE_PERIOD = 5184000; // 60 days in seconds
 export const MAX_MANAGEMENT_FEE = toWei("0.000000001"); // 60 days in seconds

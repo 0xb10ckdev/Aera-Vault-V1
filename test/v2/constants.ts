@@ -1,4 +1,5 @@
-import { toWei } from "./utils";
+import { toWei } from "../v1/constants";
+
 export * from "../v1/constants";
 
 export const PRICE_DEVIATION = toWei(0.0001); // Deviation percentage of prices.

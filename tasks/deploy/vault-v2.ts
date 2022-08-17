@@ -27,6 +27,14 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
     "minReliableVaultValue",
     "Minimum reliable vault TVL in base token",
   )
+  .addParam(
+    "managementFee",
+    "Management fee earned proportion per second(1e9 is maximum)",
+  )
+  .addParam(
+    "description",
+    "Vault text description. Keep it short and simple, please.",
+  )
   .addOptionalParam(
     "minSignificantDepositValue",
     "Minimum significant deposit value in base token terms",
@@ -36,14 +44,6 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
     "Maximum oracle spot price divergence",
   )
   .addOptionalParam("maxOracleDelay", "Maximum update delay of oracles")
-  .addParam(
-    "managementFee",
-    "Management fee earned proportion per second(1e9 is maximum)",
-  )
-  .addParam(
-    "description",
-    "Vault text description. Keep it short and simple, please.",
-  )
   .addOptionalParam(
     "silent",
     "Disable console log on deployment",
