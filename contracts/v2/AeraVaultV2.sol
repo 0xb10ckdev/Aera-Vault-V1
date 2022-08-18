@@ -56,7 +56,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     ///      0.0000001% * (365 * 24 * 60 * 60) = 3.1536%
     uint256 private constant MAX_MANAGEMENT_FEE = 10**9;
 
-    /// @notice Flags to use or dont' use determined prices.
+    /// @notice Flags to use or don't use determined prices.
     bool private constant USE_DETERMINED_PRICE = true;
     bool private constant DONT_USE_DETERMINED_PRICE = false;
 
@@ -99,7 +99,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
 
     /// STORAGE SLOT START ///
 
-    /// @notice Describes vault purpose and modelling assumptions for differentiating between vaults.
+    /// @notice Describes vault purpose and modeling assumptions for differentiating between vaults.
     /// @dev string cannot be immutable bytecode but only set in constructor.
     string public description;
 
@@ -109,7 +109,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     /// @notice Indicates that the Vault has been finalized.
     bool public finalized;
 
-    /// @notice If it's enabled to use oracle prices.
+    /// @notice True if oracle prices are enabled.
     bool public oraclesEnabled = true;
 
     /// @notice Controls vault parameters.
@@ -740,10 +740,10 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     {
         (
             uint256[] memory prices,
-            uint256[] memory updatedAts
+            uint256[] memory updatedAt
         ) = getOraclePrices();
 
-        checkOracleStatus(updatedAts);
+        checkOracleStatus(updatedAt);
 
         uint256[] memory holdings = getHoldings();
         uint256 numHoldings = holdings.length;
@@ -1477,12 +1477,12 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         uint256[] memory holdings = getHoldings();
         (
             uint256[] memory oraclePrices,
-            uint256[] memory updatedAts
+            uint256[] memory updatedAt
         ) = getOraclePrices();
         uint256[] memory spotPrices = getSpotPrices(holdings);
 
         if (getValue(holdings, spotPrices) < minReliableVaultValue) {
-            checkOracleStatus(updatedAts);
+            checkOracleStatus(updatedAt);
             return (oraclePrices, true);
         }
 
@@ -1515,7 +1515,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
             return (spotPrices, false);
         }
 
-        checkOracleStatus(updatedAts);
+        checkOracleStatus(updatedAt);
         return (oraclePrices, true);
     }
 
@@ -1597,6 +1597,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     /// @notice Get oracle prices.
     /// @dev Will only be called by getDeterminedPrices()
     ///      and enableTradingWithOraclePrice().
+    ///      It converts oracle prices to decimals 18.
     /// @return Array of oracle price and updatedAt.
     function getOraclePrices()
         internal
@@ -1606,16 +1607,15 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         AggregatorV2V3Interface[] memory oracles = getOracles();
         uint256[] memory oracleUnits = getOracleUnits();
         uint256[] memory prices = new uint256[](numOracles);
-        uint256[] memory updatedAts = new uint256[](numOracles);
+        uint256[] memory updatedAt = new uint256[](numOracles);
         int256 answer;
-        uint256 updatedAt;
 
         for (uint256 i = 0; i < numOracles; i++) {
             if (i == numeraireAssetIndex) {
                 continue;
             }
 
-            (, answer, , updatedAt, ) = oracles[i].latestRoundData();
+            (, answer, , updatedAt[i], ) = oracles[i].latestRoundData();
 
             // Check if the price from the Oracle is valid as Aave does
             if (answer <= 0) {
@@ -1626,18 +1626,17 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
             if (oracleUnits[i] != ONE) {
                 prices[i] = (prices[i] * ONE) / oracleUnits[i];
             }
-            updatedAts[i] = updatedAt;
         }
 
-        return (prices, updatedAts);
+        return (prices, updatedAt);
     }
 
     /// @notice Check oracle status.
     /// @dev Will only be called by enableTradingWithOraclePrice()
     ///      and getDeterminedPrices().
     ///      It checks if oracles are updated recently or oracles are enabled to use.
-    /// @param updatedAts Last updated timestamp of oracles to check.
-    function checkOracleStatus(uint256[] memory updatedAts) internal {
+    /// @param updatedAt Last updated timestamp of oracles to check.
+    function checkOracleStatus(uint256[] memory updatedAt) internal {
         if (!oraclesEnabled) {
             revert Aera__OraclesAreDisabled();
         }
@@ -1649,7 +1648,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
                 continue;
             }
 
-            delay = block.timestamp - updatedAts[i];
+            delay = block.timestamp - updatedAt[i];
             if (delay > maxOracleDelay) {
                 revert Aera__OracleIsDelayedBeyondMax(
                     i,
