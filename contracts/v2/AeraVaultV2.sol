@@ -56,10 +56,6 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     ///      0.0000001% * (365 * 24 * 60 * 60) = 3.1536%
     uint256 private constant MAX_MANAGEMENT_FEE = 10**9;
 
-    /// @notice Flags to use or don't use determined prices.
-    bool private constant USE_DETERMINED_PRICE = true;
-    bool private constant DONT_USE_DETERMINED_PRICE = false;
-
     /// @notice Balancer Vault.
     IBVault public immutable bVault;
 
@@ -519,7 +515,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
-        depositTokensAndUpdateWeights(tokenWithAmount, USE_DETERMINED_PRICE);
+        depositTokensAndUpdateWeights(tokenWithAmount, PriceType.DETERMINED);
     }
 
     /// @inheritdoc IProtocolAPI
@@ -538,7 +534,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
             revert Aera__BalanceChangedInCurrentBlock();
         }
 
-        depositTokensAndUpdateWeights(tokenWithAmount, USE_DETERMINED_PRICE);
+        depositTokensAndUpdateWeights(tokenWithAmount, PriceType.DETERMINED);
     }
 
     /// @inheritdoc IProtocolAPIV2
@@ -550,10 +546,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
-        depositTokensAndUpdateWeights(
-            tokenWithAmount,
-            DONT_USE_DETERMINED_PRICE
-        );
+        depositTokensAndUpdateWeights(tokenWithAmount, PriceType.SPOT);
     }
 
     /// @inheritdoc IProtocolAPIV2
@@ -574,10 +567,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
             revert Aera__BalanceChangedInCurrentBlock();
         }
 
-        depositTokensAndUpdateWeights(
-            tokenWithAmount,
-            DONT_USE_DETERMINED_PRICE
-        );
+        depositTokensAndUpdateWeights(tokenWithAmount, PriceType.SPOT);
     }
 
     /// @inheritdoc IProtocolAPI
@@ -1097,11 +1087,11 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     ///      It calls updateWeights() function which cancels
     ///      current active weights change schedule.
     /// @param tokenWithAmount Deposit tokens with amount.
-    /// @param useDeterminedPrice If deposits with determined prices.
+    /// @param priceType Price type to be used.
     /// slither-disable-next-line uninitialized-local
     function depositTokensAndUpdateWeights(
         TokenValue[] calldata tokenWithAmount,
-        bool useDeterminedPrice
+        PriceType priceType
     ) internal {
         lockManagerFees();
 
@@ -1117,10 +1107,8 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
 
         // slither-disable-next-line uninitialized-local
         uint256[] memory determinedPrices;
-        // slither-disable-next-line uninitialized-local
-        bool useOraclePrices;
-        if (useDeterminedPrice) {
-            (determinedPrices, useOraclePrices) = getDeterminedPrices(amounts);
+        if (priceType == PriceType.DETERMINED) {
+            (determinedPrices, priceType) = getDeterminedPrices(amounts);
         }
 
         depositTokens(tokens, amounts, numTokens);
@@ -1130,7 +1118,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         uint256[] memory newBalances = new uint256[](numTokens);
         uint256 weightSum;
 
-        if (useOraclePrices) {
+        if (priceType == PriceType.ORACLE) {
             uint256 numeraireAssetHolding = newHoldings[numeraireAssetIndex];
             weights[numeraireAssetIndex] = ONE;
             for (uint256 i = 0; i < numTokens; i++) {
@@ -1468,11 +1456,11 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
     /// @notice Determine best prices for deposits.
     /// @dev Will only be called by depositTokensAndUpdateWeights().
     /// @param amounts Deposit token amounts.
-    /// @return Determined token prices.
-    /// @return If oracle prices are determined.
+    /// @return prices Determined token prices.
+    /// @return priceType Determined price type.
     function getDeterminedPrices(uint256[] memory amounts)
         internal
-        returns (uint256[] memory, bool)
+        returns (uint256[] memory prices, PriceType priceType)
     {
         uint256[] memory holdings = getHoldings();
         (
@@ -1483,7 +1471,7 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
 
         if (getValue(holdings, spotPrices) < minReliableVaultValue) {
             checkOracleStatus(updatedAt);
-            return (oraclePrices, true);
+            return (oraclePrices, PriceType.ORACLE);
         }
 
         uint256 ratio;
@@ -1512,11 +1500,11 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
         }
 
         if (getValue(amounts, spotPrices) < minSignificantDepositValue) {
-            return (spotPrices, false);
+            return (spotPrices, PriceType.SPOT);
         }
 
         checkOracleStatus(updatedAt);
-        return (oraclePrices, true);
+        return (oraclePrices, PriceType.ORACLE);
     }
 
     /// @notice Calculate value of token amounts in base token term.
