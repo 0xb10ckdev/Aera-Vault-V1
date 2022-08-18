@@ -61,4 +61,14 @@ interface IAeraVaultV2 is
         address merkleOrchard;
         string description;
     }
+
+    // Price types.
+    // DETERMINED: It means prices should be determined.
+    // ORACLE: Use oracle prices.
+    // SPOT: Use spot prices.
+    enum PriceType {
+        DETERMINED,
+        ORACLE,
+        SPOT
+    }
 }
