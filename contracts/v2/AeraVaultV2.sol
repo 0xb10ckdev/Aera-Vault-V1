@@ -1481,15 +1481,11 @@ contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
                 continue;
             }
 
-            ratio = (oraclePrices[i] * ONE) / spotPrices[i];
-            if (ratio > maxOracleSpotDivergence) {
-                revert Aera__OracleSpotPriceDivergenceExceedsMax(
-                    i,
-                    ratio,
-                    maxOracleSpotDivergence
-                );
-            }
-            ratio = (spotPrices[i] * ONE) / oraclePrices[i];
+            // Oracle prices are not zero since we check it while get it
+            // in getOraclePrices()
+            ratio = oraclePrices[i] > spotPrices[i]
+                ? (oraclePrices[i] * ONE) / spotPrices[i]
+                : (spotPrices[i] * ONE) / oraclePrices[i];
             if (ratio > maxOracleSpotDivergence) {
                 revert Aera__OracleSpotPriceDivergenceExceedsMax(
                     i,
