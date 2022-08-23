@@ -72,7 +72,6 @@ contract OracleStorage is IOracleStorage {
     );
     error Aera__OracleIsZeroAddress(uint256 index);
     error Aera__NumeraireOracleIsNotZeroAddress(uint256 index);
-    error Aera__OraclePriceIsInvalid(uint256 index, int256 actual);
 
     /// FUNCTIONS ///
 
