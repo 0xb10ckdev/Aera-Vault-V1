@@ -1,8 +1,14 @@
-import { BigNumber, Signer } from "ethers";
+import { BigNumber, BigNumberish, Signer } from "ethers";
 import { deployments, ethers } from "hardhat";
 import { DEFAULT_NOTICE_PERIOD } from "../../scripts/config";
 import { AeraVaultV2Mock, AeraVaultV2Mock__factory } from "../../typechain";
 import { MAX_MANAGEMENT_FEE, ZERO_ADDRESS } from "../v1/constants";
+import {
+  MAX_ORACLE_DELAY,
+  MAX_ORACLE_SPOT_DIVERGENCE,
+  MIN_RELIABLE_VAULT_VALUE,
+  MIN_SIGNIFICANT_DEPOSIT_VALUE,
+} from "./constants";
 
 export type VaultParams = {
   signer: Signer;
@@ -13,11 +19,15 @@ export type VaultParams = {
   weights: string[];
   oracles: string[];
   numeraireAssetIndex: number;
-  swapFeePercentage: BigNumber;
+  swapFeePercentage: BigNumberish;
   manager: string;
   validator?: string;
+  minReliableVaultValue?: BigNumberish;
+  minSignificantDepositValue?: BigNumberish;
+  maxOracleSpotDivergence?: BigNumberish;
+  maxOracleDelay?: BigNumberish;
   noticePeriod?: number;
-  managementFee?: BigNumber;
+  managementFee?: BigNumberish;
   merkleOrchard?: string;
   description?: string;
 };
@@ -46,6 +56,13 @@ export const deployVault = async (
     manager: params.manager,
     validator: params.validator,
     noticePeriod: params.noticePeriod || DEFAULT_NOTICE_PERIOD,
+    minReliableVaultValue:
+      params.minReliableVaultValue || MIN_RELIABLE_VAULT_VALUE,
+    minSignificantDepositValue:
+      params.minSignificantDepositValue || MIN_SIGNIFICANT_DEPOSIT_VALUE,
+    maxOracleSpotDivergence:
+      params.maxOracleSpotDivergence || MAX_ORACLE_SPOT_DIVERGENCE,
+    maxOracleDelay: params.maxOracleDelay || MAX_ORACLE_DELAY,
     managementFee: params.managementFee || MAX_MANAGEMENT_FEE,
     merkleOrchard: params.merkleOrchard || ZERO_ADDRESS,
     description: params.description || "",

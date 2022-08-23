@@ -1,6 +1,11 @@
 import { AssetHelpers } from "@balancer-labs/balancer-js";
 import { task, types } from "hardhat/config";
 import { getConfig } from "../../scripts/config";
+import {
+  MAX_ORACLE_DELAY,
+  MAX_ORACLE_SPOT_DIVERGENCE,
+  MIN_SIGNIFICANT_DEPOSIT_VALUE,
+} from "../../test/v2/constants";
 
 // https://github.com/balancer-labs/balancer-v2-monorepo/blob/master/pkg/balancer-js/test/tokens.test.ts
 const wethAddress = "0x000000000000000000000000000000000000000F";
@@ -19,6 +24,10 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
   .addParam("validator", "Validator's address")
   .addParam("noticePeriod", "Notice period in seconds")
   .addParam(
+    "minReliableVaultValue",
+    "Minimum reliable vault TVL in base token",
+  )
+  .addParam(
     "managementFee",
     "Management fee earned proportion per second(1e9 is maximum)",
   )
@@ -26,6 +35,15 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
     "description",
     "Vault text description. Keep it short and simple, please.",
   )
+  .addOptionalParam(
+    "minSignificantDepositValue",
+    "Minimum significant deposit value in base token terms",
+  )
+  .addOptionalParam(
+    "maxOracleSpotDivergence",
+    "Maximum oracle spot price divergence",
+  )
+  .addOptionalParam("maxOracleDelay", "Maximum update delay of oracles")
   .addOptionalParam(
     "silent",
     "Disable console log on deployment",
@@ -52,6 +70,12 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
     const manager = taskArgs.manager;
     const validator = taskArgs.validator;
     const noticePeriod = taskArgs.noticePeriod;
+    const minReliableVaultValue = taskArgs.minReliableVaultValue;
+    const minSignificantDepositValue =
+      taskArgs.minSignificantDepositValue || MIN_SIGNIFICANT_DEPOSIT_VALUE;
+    const maxOracleSpotDivergence =
+      taskArgs.maxOracleSpotDivergence || MAX_ORACLE_SPOT_DIVERGENCE;
+    const maxOracleDelay = taskArgs.maxOracleDelay || MAX_ORACLE_DELAY;
     const managementFee = taskArgs.managementFee;
     const description = taskArgs.description;
     const merkleOrchard = config.merkleOrchard || ethers.constants.AddressZero;
@@ -94,6 +118,14 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       console.log(`Manager: ${manager}`);
       console.log(`Validator: ${validator}`);
       console.log(`Notice Period: ${noticePeriod}`);
+      console.log(`Minimum Reliable Vault Value: ${minReliableVaultValue}`);
+      console.log(
+        `Minimum Significant Deposit Value: ${minSignificantDepositValue}`,
+      );
+      console.log(
+        `Maximum Oracle Spot Divergence: ${maxOracleSpotDivergence}`,
+      );
+      console.log(`Maximum Oracle Delay: ${maxOracleDelay}`);
       console.log(`Management Fee: ${managementFee}`);
       console.log(`Merkle Orchard: ${merkleOrchard}`);
       console.log(`Description: ${description}`);
@@ -115,6 +147,10 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       manager,
       validator,
       noticePeriod,
+      minReliableVaultValue,
+      minSignificantDepositValue,
+      maxOracleSpotDivergence,
+      maxOracleDelay,
       managementFee,
       merkleOrchard,
       description,

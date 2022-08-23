@@ -95,23 +95,4 @@ contract AeraVaultV2Mock is AeraVaultV2 {
             }
         }
     }
-
-    /// INTERNAL FUNCTIONS ///
-
-    /// @notice Calculate spot price from balances and weights.
-    /// @dev Will only be called by getSpotPrice().
-    /// @return Spot Price from balances and weights.
-    function calcSpotPrice(
-        uint256 tokenBalanceIn,
-        uint256 tokenWeightIn,
-        uint256 tokenBalanceOut,
-        uint256 tokenWeightOut,
-        uint256 swapFee
-    ) internal pure returns (uint256) {
-        uint256 numer = (tokenBalanceIn * ONE) / tokenWeightIn;
-        uint256 denom = (tokenBalanceOut * ONE) / tokenWeightOut;
-        uint256 ratio = (numer * ONE) / denom;
-        uint256 scale = (ONE * ONE) / (ONE - swapFee);
-        return (ratio * scale) / ONE;
-    }
 }
