@@ -1484,6 +1484,222 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     });
   });
 
+  describe("Multicall", () => {
+    const ABI = [
+      "function deposit(tuple(address token, uint256 value)[])",
+      "function withdraw(tuple(address token, uint256 value)[])",
+      "function updateWeightsGradually(tuple(address token, uint256 value)[], uint256 startTime, uint256 endTime)",
+      "function disableTrading()",
+      "function enableTradingRiskingArbitrage()",
+      "function setSwapFee(uint256 newSwapFee)",
+    ];
+    const iface = new ethers.utils.Interface(ABI);
+
+    describe("should be reverted", async () => {
+      it("when data is invalid", async () => {
+        await expect(vault.multicall(["0x"])).to.be.revertedWith(
+          "Address: low-level delegate call failed",
+        );
+      });
+
+      it("when vault not initialized", async () => {
+        await expect(
+          vault.multicall([iface.encodeFunctionData("disableTrading", [])]),
+        ).to.be.revertedWith("Aera__VaultNotInitialized()");
+      });
+
+      it("when multicall ownable functions from non-owner", async () => {
+        await expect(
+          vault
+            .connect(user)
+            .multicall([iface.encodeFunctionData("disableTrading", [])]),
+        ).to.be.revertedWith("Aera__CallerIsNotOwnerOrManager()");
+      });
+    });
+
+    describe("should be possible to multicall", async () => {
+      beforeEach(async () => {
+        for (let i = 0; i < tokens.length; i++) {
+          await tokens[i].approve(vault.address, ONE);
+        }
+        await vault.initialDeposit(
+          tokenValueArray(sortedTokens, ONE, tokens.length),
+        );
+      });
+
+      it("when disable trading, deposit and enable trading", async () => {
+        const { holdings, adminBalances } = await getState();
+
+        const amounts = tokens.map(_ =>
+          toWei(Math.floor(Math.random() * 100)),
+        );
+
+        const spotPrices = [];
+        for (let i = 0; i < tokens.length; i++) {
+          await tokens[i].approve(vault.address, amounts[i]);
+          spotPrices.push(await vault.getSpotPrices(tokens[i].address));
+        }
+
+        await vault.multicall([
+          iface.encodeFunctionData("disableTrading", []),
+          iface.encodeFunctionData("deposit", [
+            tokenWithValues(sortedTokens, amounts),
+          ]),
+          iface.encodeFunctionData("enableTradingRiskingArbitrage", []),
+        ]);
+
+        expect(await vault.isSwapEnabled()).to.equal(true);
+        const managersFeeTotal = await getManagersFeeTotal();
+
+        const { holdings: newHoldings, adminBalances: newAdminBalances } =
+          await getState();
+
+        for (let i = 0; i < tokens.length; i++) {
+          const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
+
+          expect(
+            await vault.getSpotPrice(
+              tokens[i].address,
+              tokens[(i + 1) % tokens.length].address,
+            ),
+          ).to.equal(newSpotPrices[(i + 1) % tokens.length]);
+
+          for (let j = 0; j < tokens.length; j++) {
+            expect(newSpotPrices[j]).to.be.closeTo(
+              spotPrices[i][j],
+              DEVIATION,
+            );
+          }
+
+          expect(await vault.holding(i)).to.equal(newHoldings[i]);
+          expect(newHoldings[i]).to.equal(
+            holdings[i].add(amounts[i]).sub(managersFeeTotal[i]),
+          );
+          expect(newAdminBalances[i]).to.equal(
+            adminBalances[i].sub(amounts[i]),
+          );
+        }
+      });
+
+      it("when set swap fees and update weights", async () => {
+        const newFee = MIN_SWAP_FEE.add(1);
+        const startWeights = await vault.getNormalizedWeights();
+        const timestamp = await getCurrentTime();
+        const endWeights = [];
+        const avgWeights = ONE.div(tokens.length);
+        const startTime = timestamp + 10;
+        const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
+        for (let i = 0; i < tokens.length; i += 2) {
+          if (i < tokens.length - 1) {
+            endWeights.push(avgWeights.add(toWei((i + 1) / 100)));
+            endWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
+          } else {
+            endWeights.push(avgWeights);
+          }
+        }
+
+        await vault
+          .connect(manager)
+          .multicall([
+            iface.encodeFunctionData("setSwapFee", [newFee]),
+            iface.encodeFunctionData("updateWeightsGradually", [
+              tokenWithValues(sortedTokens, endWeights),
+              startTime,
+              endTime,
+            ]),
+          ]);
+
+        expect(await vault.connect(manager).getSwapFee()).to.equal(newFee);
+        await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION);
+
+        const currentWeights = await vault.getNormalizedWeights();
+
+        const currentTime = await getCurrentTime();
+        const ptcProgress = ONE.mul(currentTime - startTime).div(
+          endTime - startTime,
+        );
+
+        for (let i = 0; i < tokens.length; i++) {
+          const weightDelta = endWeights[i]
+            .sub(startWeights[i])
+            .mul(ptcProgress)
+            .div(ONE);
+          expect(startWeights[i].add(weightDelta)).to.be.closeTo(
+            currentWeights[i],
+            DEVIATION,
+          );
+        }
+      });
+
+      it("when disable trading, withdraw and enable trading", async () => {
+        for (let i = 0; i < tokens.length; i++) {
+          await tokens[i].approve(vault.address, toWei(100000));
+        }
+        await vault.deposit(
+          tokenValueArray(sortedTokens, toWei(10000), tokens.length),
+        );
+        await validator.setAllowances(
+          valueArray(toWei(100000), tokens.length),
+        );
+
+        const { holdings, adminBalances } = await getState();
+        const managersFeeTotal = await getManagersFeeTotal();
+
+        const amounts = tokens.map(_ =>
+          toWei(Math.floor(Math.random() * 100)),
+        );
+
+        const spotPrices = [];
+        for (let i = 0; i < tokens.length; i++) {
+          spotPrices.push(await vault.getSpotPrices(tokens[i].address));
+        }
+
+        await vault.multicall([
+          iface.encodeFunctionData("disableTrading", []),
+          iface.encodeFunctionData("withdraw", [
+            tokenWithValues(sortedTokens, amounts),
+          ]),
+          iface.encodeFunctionData("enableTradingRiskingArbitrage", []),
+        ]);
+
+        expect(await vault.isSwapEnabled()).to.equal(true);
+        const newManagersFeeTotal = await getManagersFeeTotal();
+
+        const { holdings: newHoldings, adminBalances: newAdminBalances } =
+          await getState();
+
+        for (let i = 0; i < tokens.length; i++) {
+          const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
+
+          expect(
+            await vault.getSpotPrice(
+              tokens[i].address,
+              tokens[(i + 1) % tokens.length].address,
+            ),
+          ).to.equal(newSpotPrices[(i + 1) % tokens.length]);
+
+          for (let j = 0; j < tokens.length; j++) {
+            expect(newSpotPrices[j]).to.be.closeTo(
+              spotPrices[i][j],
+              DEVIATION,
+            );
+          }
+
+          expect(await vault.holding(i)).to.equal(newHoldings[i]);
+          expect(newHoldings[i]).to.equal(
+            holdings[i]
+              .sub(amounts[i])
+              .sub(newManagersFeeTotal[i])
+              .add(managersFeeTotal[i]),
+          );
+          expect(newAdminBalances[i]).to.equal(
+            adminBalances[i].add(amounts[i]),
+          );
+        }
+      });
+    });
+  });
+
   describe("Get Spot Prices", () => {
     let TOKEN: IERC20;
     beforeEach(async () => {
