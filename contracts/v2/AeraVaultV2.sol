@@ -7,6 +7,7 @@ import "../v1/dependencies/openzeppelin/Ownable.sol";
 import "../v1/dependencies/openzeppelin/ReentrancyGuard.sol";
 import "../v1/dependencies/openzeppelin/Math.sol";
 import "../v1/dependencies/openzeppelin/ERC165Checker.sol";
+import "../v2/dependencies/openzeppelin/Multicall.sol";
 import "../v1/interfaces/IBManagedPoolFactory.sol";
 import "../v1/interfaces/IBManagedPoolController.sol";
 import "../v1/interfaces/IBMerkleOrchard.sol";
@@ -21,7 +22,13 @@ import "./OracleStorage.sol";
 /// @notice Managed n-asset vault that supports withdrawals
 ///         in line with a pre-defined validator contract.
 /// @dev Vault owner is the asset owner.
-contract AeraVaultV2 is IAeraVaultV2, OracleStorage, Ownable, ReentrancyGuard {
+contract AeraVaultV2 is
+    IAeraVaultV2,
+    OracleStorage,
+    Multicall,
+    Ownable,
+    ReentrancyGuard
+{
     using SafeERC20 for IERC20;
 
     /// STORAGE ///
