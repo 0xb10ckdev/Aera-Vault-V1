@@ -44,9 +44,6 @@ contract AeraVaultV2 is
     /// @dev Address to represent unset manager in events.
     address private constant UNSET_MANAGER_ADDRESS = address(0);
 
-    /// @notice Largest possible notice period for vault termination (2 months).
-    uint256 private constant MAX_NOTICE_PERIOD = 60 days;
-
     /// @notice Cooldown period for updating swap fee (1 minute).
     uint256 private constant SWAP_FEE_COOLDOWN_PERIOD = 1 minutes;
 
@@ -78,8 +75,11 @@ contract AeraVaultV2 is
     /// @notice Pool ID of Balancer pool on Vault.
     bytes32 public immutable poolId;
 
-    /// @notice Notice period for vault termination (in seconds).
-    uint256 public immutable noticePeriod;
+    /// @notice Timestamp when vault is created.
+    uint256 public immutable createdAt;
+
+    /// @notice Minimum period to charge guarantee management fee.
+    uint256 public immutable minFeeDuration;
 
     /// @notice Minimum reliable vault TVL. It will be measured in base token terms.
     uint256 public immutable minReliableVaultValue;
@@ -121,9 +121,6 @@ contract AeraVaultV2 is
     /// @notice Pending account to accept ownership of vault.
     address public pendingOwner;
 
-    /// @notice Timestamp when notice elapses or 0 if not yet set.
-    uint256 public noticeTimeoutAt;
-
     /// @notice Last timestamp where manager fee index was locked.
     uint256 public lastFeeCheckpoint = type(uint256).max;
 
@@ -139,32 +136,8 @@ contract AeraVaultV2 is
     /// EVENTS ///
 
     /// @notice Emitted when the vault is created.
-    /// @param factory Balancer Managed Pool factory address.
-    /// @param name Name of Pool Token.
-    /// @param symbol Symbol of Pool Token.
-    /// @param tokens Token addresses.
-    /// @param weights Token weights.
-    /// @param swapFeePercentage Pool swap fee.
-    /// @param manager Vault manager address.
-    /// @param validator Withdrawal validator contract address.
-    /// @param noticePeriod Notice period (in seconds).
-    /// @param managementFee Management fee earned proportion per second.
-    /// @param merkleOrchard Merkle Orchard address.
-    /// @param description Vault description.
-    event Created(
-        address indexed factory,
-        string name,
-        string symbol,
-        IERC20[] tokens,
-        uint256[] weights,
-        uint256 swapFeePercentage,
-        address indexed manager,
-        address indexed validator,
-        uint256 noticePeriod,
-        uint256 managementFee,
-        address merkleOrchard,
-        string description
-    );
+    /// @param vaultParams Struct vault parameter.
+    event Created(NewVaultParams vaultParams);
 
     /// @notice Emitted when tokens are deposited.
     /// @param requestedAmounts Requested amounts to deposit.
@@ -237,10 +210,6 @@ contract AeraVaultV2 is
     /// @param swapFee New swap fee.
     event SetSwapFee(uint256 swapFee);
 
-    /// @notice Emitted when initiateFinalization is called.
-    /// @param noticeTimeoutAt Timestamp for notice timeout.
-    event FinalizationInitiated(uint256 noticeTimeoutAt);
-
     /// @notice Emitted when vault is finalized.
     /// @param caller Address of finalizer.
     /// @param amounts Returned token amounts.
@@ -276,8 +245,7 @@ contract AeraVaultV2 is
     );
     error Aera__ValidatorIsNotValid(address validator);
     error Aera__ManagementFeeIsAboveMax(uint256 actual, uint256 max);
-    error Aera__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
-    error Aera__NoticeTimeoutNotElapsed(uint256 noticeTimeoutAt);
+    error Aera__MinFeeDurationIsZero();
     error Aera__MinReliableVaultValueIsZero();
     error Aera__MinSignificantDepositValueIsZero();
     error Aera__MaxOracleSpotDivergenceIsZero();
@@ -322,11 +290,9 @@ contract AeraVaultV2 is
     error Aera__CannotSweepPoolToken();
     error Aera__PoolSwapIsAlreadyEnabled();
     error Aera__CannotSetSwapFeeBeforeCooldown();
-    error Aera__FinalizationNotInitiated();
     error Aera__VaultNotInitialized();
     error Aera__VaultIsAlreadyInitialized();
-    error Aera__VaultIsFinalizing();
-    error Aera__VaultIsAlreadyFinalized();
+    error Aera__VaultIsFinalized();
     error Aera__VaultIsNotRenounceable();
     error Aera__OwnerIsZeroAddress();
     error Aera__NotPendingOwner();
@@ -358,10 +324,10 @@ contract AeraVaultV2 is
         _;
     }
 
-    /// @dev Throws if called before finalization is initiated.
-    modifier whenNotFinalizing() {
-        if (noticeTimeoutAt != 0) {
-            revert Aera__VaultIsFinalizing();
+    /// @dev Throws if called after vault is finalized.
+    modifier whenNotFinalized() {
+        if (finalized) {
+            revert Aera__VaultIsFinalized();
         }
         _;
     }
@@ -443,7 +409,8 @@ contract AeraVaultV2 is
         poolId = pool.getPoolId();
         manager = vaultParams.manager;
         validator = IWithdrawalValidator(vaultParams.validator);
-        noticePeriod = vaultParams.noticePeriod;
+        createdAt = block.timestamp;
+        minFeeDuration = vaultParams.minFeeDuration;
         minReliableVaultValue = vaultParams.minReliableVaultValue;
         minSignificantDepositValue = vaultParams.minSignificantDepositValue;
         maxOracleSpotDivergence = vaultParams.maxOracleSpotDivergence;
@@ -454,20 +421,7 @@ contract AeraVaultV2 is
         managersFeeTotal = new uint256[](numTokens);
 
         // slither-disable-next-line reentrancy-events
-        emit Created(
-            vaultParams.factory,
-            vaultParams.name,
-            vaultParams.symbol,
-            vaultParams.tokens,
-            vaultParams.weights,
-            vaultParams.swapFeePercentage,
-            vaultParams.manager,
-            vaultParams.validator,
-            vaultParams.noticePeriod,
-            vaultParams.managementFee,
-            vaultParams.merkleOrchard,
-            vaultParams.description
-        );
+        emit Created(vaultParams);
         // slither-disable-next-line reentrancy-events
         emit ManagerChanged(UNSET_MANAGER_ADDRESS, vaultParams.manager);
     }
@@ -520,7 +474,7 @@ contract AeraVaultV2 is
         nonReentrant
         onlyOwner
         whenInitialized
-        whenNotFinalizing
+        whenNotFinalized
     {
         depositTokensAndUpdateWeights(tokenWithAmount, PriceType.DETERMINED);
     }
@@ -533,7 +487,7 @@ contract AeraVaultV2 is
         nonReentrant
         onlyOwner
         whenInitialized
-        whenNotFinalizing
+        whenNotFinalized
     {
         (, , uint256 lastChangeBlock) = getTokensData();
 
@@ -551,7 +505,7 @@ contract AeraVaultV2 is
         nonReentrant
         onlyOwner
         whenInitialized
-        whenNotFinalizing
+        whenNotFinalized
     {
         depositTokensAndUpdateWeights(tokenWithAmount, PriceType.SPOT);
     }
@@ -566,7 +520,7 @@ contract AeraVaultV2 is
         nonReentrant
         onlyOwner
         whenInitialized
-        whenNotFinalizing
+        whenNotFinalized
     {
         (, , uint256 lastChangeBlock) = getTokensData();
 
@@ -584,7 +538,7 @@ contract AeraVaultV2 is
         nonReentrant
         onlyOwner
         whenInitialized
-        whenNotFinalizing
+        whenNotFinalized
     {
         withdrawTokens(tokenWithAmount);
     }
@@ -597,7 +551,7 @@ contract AeraVaultV2 is
         nonReentrant
         onlyOwner
         whenInitialized
-        whenNotFinalizing
+        whenNotFinalized
     {
         (, , uint256 lastChangeBlock) = getTokensData();
 
@@ -609,22 +563,6 @@ contract AeraVaultV2 is
     }
 
     /// @inheritdoc IProtocolAPI
-    function initiateFinalization()
-        external
-        override
-        nonReentrant
-        onlyOwner
-        whenInitialized
-        whenNotFinalizing
-    {
-        lockManagerFees();
-        // slither-disable-next-line reentrancy-no-eth
-        noticeTimeoutAt = block.timestamp + noticePeriod;
-        setSwapEnabled(false);
-        emit FinalizationInitiated(noticeTimeoutAt);
-    }
-
-    /// @inheritdoc IProtocolAPI
     // slither-disable-next-line timestamp
     function finalize()
         external
@@ -632,18 +570,12 @@ contract AeraVaultV2 is
         nonReentrant
         onlyOwner
         whenInitialized
+        whenNotFinalized
     {
-        if (finalized) {
-            revert Aera__VaultIsAlreadyFinalized();
-        }
-        if (noticeTimeoutAt == 0) {
-            revert Aera__FinalizationNotInitiated();
-        }
-        if (noticeTimeoutAt > block.timestamp) {
-            revert Aera__NoticeTimeoutNotElapsed(noticeTimeoutAt);
-        }
-
         finalized = true;
+
+        lockManagerFees(true);
+        setSwapEnabled(false);
 
         uint256[] memory amounts = returnFunds();
         emit Finalized(owner(), amounts);
@@ -659,8 +591,8 @@ contract AeraVaultV2 is
     {
         checkManagerAddress(newManager);
 
-        if (initialized && noticeTimeoutAt == 0) {
-            lockManagerFees();
+        if (initialized && !finalized) {
+            lockManagerFees(false);
         }
 
         if (managersFee[newManager].length == 0) {
@@ -816,7 +748,7 @@ contract AeraVaultV2 is
         nonReentrant
         onlyManager
         whenInitialized
-        whenNotFinalizing
+        whenNotFinalized
     {
         // These are to protect against the following vulnerability
         // https://forum.balancer.fi/t/vulnerability-disclosure/3179
@@ -887,7 +819,7 @@ contract AeraVaultV2 is
         nonReentrant
         onlyManager
         whenInitialized
-        whenNotFinalizing
+        whenNotFinalized
     {
         uint256[] memory weights = pool.getNormalizedWeights();
         uint256 numWeights = weights.length;
@@ -941,10 +873,10 @@ contract AeraVaultV2 is
         override
         nonReentrant
         whenInitialized
-        whenNotFinalizing
+        whenNotFinalized
     {
         if (msg.sender == manager) {
-            lockManagerFees();
+            lockManagerFees(false);
         }
 
         if (managersFee[msg.sender].length == 0) {
@@ -1100,7 +1032,7 @@ contract AeraVaultV2 is
         TokenValue[] calldata tokenWithAmount,
         PriceType priceType
     ) internal {
-        lockManagerFees();
+        lockManagerFees(false);
 
         IERC20[] memory tokens;
         uint256[] memory holdings;
@@ -1191,7 +1123,7 @@ contract AeraVaultV2 is
     ///      current active weights change schedule.
     /// @param tokenWithAmount Requested tokens with amount.
     function withdrawTokens(TokenValue[] calldata tokenWithAmount) internal {
-        lockManagerFees();
+        lockManagerFees(false);
 
         IERC20[] memory tokens;
         uint256[] memory holdings;
@@ -1265,14 +1197,29 @@ contract AeraVaultV2 is
 
     /// @notice Calculate manager fees and lock the tokens in Vault.
     /// @dev Will only be called by claimManagerFees(), setManager(),
-    ///      initiateFinalization(), depositTokensAndUpdateWeights()
+    ///      finalize(), depositTokensAndUpdateWeights()
     ///      and withdrawTokens().
+    /// @param lockGuaranteeFee True if guarantee fee should be locked.
     // slither-disable-next-line timestamp
-    function lockManagerFees() internal {
+    function lockManagerFees(bool lockGuaranteeFee) internal {
         if (managementFee == 0) {
             return;
         }
-        if (block.timestamp <= lastFeeCheckpoint) {
+
+        uint256 feeIndex;
+        if (block.timestamp > lastFeeCheckpoint) {
+            feeIndex = block.timestamp - lastFeeCheckpoint;
+        }
+
+        if (lockGuaranteeFee) {
+            uint256 minFeeCheckpoint = createdAt + minFeeDuration;
+
+            if (minFeeCheckpoint > block.timestamp) {
+                feeIndex += (minFeeCheckpoint - block.timestamp);
+            }
+        }
+
+        if (feeIndex == 0) {
             return;
         }
 
@@ -1286,11 +1233,7 @@ contract AeraVaultV2 is
 
         for (uint256 i = 0; i < numTokens; i++) {
             balances[i] = tokens[i].balanceOf(address(this));
-            newFees[i] =
-                (holdings[i] *
-                    (block.timestamp - lastFeeCheckpoint) *
-                    managementFee) /
-                ONE;
+            newFees[i] = (holdings[i] * feeIndex * managementFee) / ONE;
         }
 
         lastFeeCheckpoint = block.timestamp;
@@ -1678,16 +1621,13 @@ contract AeraVaultV2 is
 
         checkValidator(vaultParams, numTokens);
 
+        if (vaultParams.minFeeDuration == 0) {
+            revert Aera__MinFeeDurationIsZero();
+        }
         if (vaultParams.managementFee > MAX_MANAGEMENT_FEE) {
             revert Aera__ManagementFeeIsAboveMax(
                 vaultParams.managementFee,
                 MAX_MANAGEMENT_FEE
-            );
-        }
-        if (vaultParams.noticePeriod > MAX_NOTICE_PERIOD) {
-            revert Aera__NoticePeriodIsAboveMax(
-                vaultParams.noticePeriod,
-                MAX_NOTICE_PERIOD
             );
         }
 
