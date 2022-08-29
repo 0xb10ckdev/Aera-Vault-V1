@@ -22,10 +22,13 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
   .addParam("swapFee", "Swap Fee Percentage")
   .addParam("manager", "Manager's address")
   .addParam("validator", "Validator's address")
-  .addParam("noticePeriod", "Notice period in seconds")
   .addParam(
     "minReliableVaultValue",
     "Minimum reliable vault TVL in base token",
+  )
+  .addParam(
+    "minFeeDuration",
+    "Minimum period to charge guarantee management fee",
   )
   .addParam(
     "managementFee",
@@ -69,13 +72,13 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
     const swapFeePercentage = taskArgs.swapFee;
     const manager = taskArgs.manager;
     const validator = taskArgs.validator;
-    const noticePeriod = taskArgs.noticePeriod;
     const minReliableVaultValue = taskArgs.minReliableVaultValue;
     const minSignificantDepositValue =
       taskArgs.minSignificantDepositValue || MIN_SIGNIFICANT_DEPOSIT_VALUE;
     const maxOracleSpotDivergence =
       taskArgs.maxOracleSpotDivergence || MAX_ORACLE_SPOT_DIVERGENCE;
     const maxOracleDelay = taskArgs.maxOracleDelay || MAX_ORACLE_DELAY;
+    const minFeeDuration = taskArgs.minFeeDuration;
     const managementFee = taskArgs.managementFee;
     const description = taskArgs.description;
     const merkleOrchard = config.merkleOrchard || ethers.constants.AddressZero;
@@ -117,7 +120,6 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       console.log(`Swap Fee: ${swapFeePercentage}`);
       console.log(`Manager: ${manager}`);
       console.log(`Validator: ${validator}`);
-      console.log(`Notice Period: ${noticePeriod}`);
       console.log(`Minimum Reliable Vault Value: ${minReliableVaultValue}`);
       console.log(
         `Minimum Significant Deposit Value: ${minSignificantDepositValue}`,
@@ -126,6 +128,7 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
         `Maximum Oracle Spot Divergence: ${maxOracleSpotDivergence}`,
       );
       console.log(`Maximum Oracle Delay: ${maxOracleDelay}`);
+      console.log(`Notice Period: ${minFeeDuration}`);
       console.log(`Management Fee: ${managementFee}`);
       console.log(`Merkle Orchard: ${merkleOrchard}`);
       console.log(`Description: ${description}`);
@@ -146,11 +149,11 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       swapFeePercentage,
       manager,
       validator,
-      noticePeriod,
       minReliableVaultValue,
       minSignificantDepositValue,
       maxOracleSpotDivergence,
       maxOracleDelay,
+      minFeeDuration,
       managementFee,
       merkleOrchard,
       description,
