@@ -10,7 +10,6 @@ import "./IManagerAPI.sol";
 import "./IManagerAPIV2.sol";
 
 /// @title Interface for v2 vault.
-// solhint-disable-next-line no-empty-blocks
 interface IAeraVaultV2 is
     IUserAPI,
     IManagerAPI,
