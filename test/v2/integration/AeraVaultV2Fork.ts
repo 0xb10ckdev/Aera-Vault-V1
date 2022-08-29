@@ -2,7 +2,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
 import hre, { deployments, ethers } from "hardhat";
-import { DEFAULT_NOTICE_PERIOD, getConfig } from "../../../scripts/config";
+import { getConfig } from "../../../scripts/config";
 import {
   IERC20,
   BaseManagedPoolFactory__factory,
@@ -25,10 +25,10 @@ import {
   MINIMUM_WEIGHT_CHANGE_DURATION,
   MIN_SWAP_FEE,
   MIN_WEIGHT,
-  NOTICE_PERIOD,
   ONE,
   ZERO_ADDRESS,
   PRICE_DEVIATION,
+  MIN_FEE_DURATION,
   MIN_RELIABLE_VAULT_VALUE,
   MIN_SIGNIFICANT_DEPOSIT_VALUE,
   MAX_ORACLE_SPOT_DIVERGENCE,
@@ -109,11 +109,11 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
         swapFeePercentage: MIN_SWAP_FEE,
         manager: manager.address,
         validator: validator.address,
-        noticePeriod: MAX_NOTICE_PERIOD,
         minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
         minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE,
         maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE,
         maxOracleDelay: MAX_ORACLE_DELAY,
+        minFeeDuration: MIN_FEE_DURATION,
         managementFee: MAX_MANAGEMENT_FEE,
         merkleOrchard: config.merkleOrchard,
         description: "Test Vault",
@@ -166,10 +166,10 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
       );
     });
 
-    it("when notice period is greater than maximum", async () => {
-      validParams.noticePeriod = MAX_NOTICE_PERIOD + 1;
+    it("when minimum fee duration is zero", async () => {
+      validParams.minFeeDuration = "0";
       await expect(deployVault(validParams)).to.be.revertedWith(
-        "Aera__NoticePeriodIsAboveMax",
+        "Aera__MinFeeDurationIsZero",
       );
     });
 
@@ -382,11 +382,11 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       swapFee: MIN_SWAP_FEE.toString(),
       manager: manager.address,
       validator: validator.address,
-      noticePeriod: DEFAULT_NOTICE_PERIOD.toString(),
       minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE.toString(),
       minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE.toString(),
       maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE.toString(),
       maxOracleDelay: MAX_ORACLE_DELAY.toString(),
+      minFeeDuration: MIN_FEE_DURATION.toString(),
       managementFee: MAX_MANAGEMENT_FEE.toString(),
       description: "Test vault description",
       silent: true,
@@ -477,12 +477,6 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         await expect(
           vault.connect(manager).claimManagerFees(),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
-      });
-
-      it("when call initiateFinalization", async () => {
-        await expect(vault.initiateFinalization()).to.be.revertedWith(
-          "Aera__VaultNotInitialized",
-        );
       });
 
       it("when call finalize", async () => {
@@ -1743,14 +1737,6 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     });
 
     describe("when finalizing", () => {
-      describe("should be reverted to call initiateFinalization", async () => {
-        it("when called from non-owner", async () => {
-          await expect(
-            vault.connect(manager).initiateFinalization(),
-          ).to.be.revertedWith("Ownable: caller is not the owner");
-        });
-      });
-
       describe("should be reverted to call finalize", async () => {
         it("when called from non-owner", async () => {
           await expect(vault.connect(user).finalize()).to.be.revertedWith(
@@ -1758,41 +1744,24 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           );
         });
 
-        it("when finalization is not initiated", async () => {
-          await expect(vault.finalize()).to.be.revertedWith(
-            "Aera__FinalizationNotInitiated",
-          );
-        });
-
-        it("when noticeTimeout is not elapsed", async () => {
-          await vault.initiateFinalization();
-          const noticeTimeoutAt = await vault.noticeTimeoutAt();
-
-          await expect(vault.finalize()).to.be.revertedWith(
-            `Aera__NoticeTimeoutNotElapsed(${noticeTimeoutAt})`,
-          );
-        });
-
         it("when already finalized", async () => {
-          await vault.initiateFinalization();
-          await ethers.provider.send("evm_increaseTime", [NOTICE_PERIOD + 1]);
-
           await vault.finalize();
+
           await expect(vault.finalize()).to.be.revertedWith(
-            "Aera__VaultIsAlreadyFinalized",
+            "Aera__VaultIsFinalized",
           );
         });
       });
 
-      describe("should be reverted to call functions when finalizing", async () => {
+      describe("should be reverted to call functions when finalized", async () => {
         beforeEach(async () => {
-          await vault.initiateFinalization();
+          await vault.finalize();
         });
 
         it("when call deposit", async () => {
           await expect(
             vault.deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
-          ).to.be.revertedWith("Aera__VaultIsFinalizing");
+          ).to.be.revertedWith("Aera__VaultIsFinalized");
         });
 
         it("when call depositIfBalanceUnchanged", async () => {
@@ -1800,7 +1769,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             vault.depositIfBalanceUnchanged(
               tokenValueArray(sortedTokens, ONE, tokens.length),
             ),
-          ).to.be.revertedWith("Aera__VaultIsFinalizing");
+          ).to.be.revertedWith("Aera__VaultIsFinalized");
         });
 
         it("when call depositRiskingArbitrage", async () => {
@@ -1808,7 +1777,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             vault.depositRiskingArbitrage(
               tokenValueArray(sortedTokens, ONE, tokens.length),
             ),
-          ).to.be.revertedWith("Aera__VaultIsFinalizing");
+          ).to.be.revertedWith("Aera__VaultIsFinalized");
         });
 
         it("when call depositRiskingArbitrageIfBalanceUnchanged", async () => {
@@ -1816,13 +1785,13 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             vault.depositRiskingArbitrageIfBalanceUnchanged(
               tokenValueArray(sortedTokens, ONE, tokens.length),
             ),
-          ).to.be.revertedWith("Aera__VaultIsFinalizing");
+          ).to.be.revertedWith("Aera__VaultIsFinalized");
         });
 
         it("when call withdraw", async () => {
           await expect(
             vault.withdraw(tokenValueArray(sortedTokens, ONE, tokens.length)),
-          ).to.be.revertedWith("Aera__VaultIsFinalizing");
+          ).to.be.revertedWith("Aera__VaultIsFinalized");
         });
 
         it("when call withdrawIfBalanceUnchanged", async () => {
@@ -1830,7 +1799,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             vault.withdrawIfBalanceUnchanged(
               tokenValueArray(sortedTokens, ONE, tokens.length),
             ),
-          ).to.be.revertedWith("Aera__VaultIsFinalizing");
+          ).to.be.revertedWith("Aera__VaultIsFinalized");
         });
 
         it("when call updateWeightsGradually", async () => {
@@ -1843,39 +1812,42 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
                 blocknumber + 1,
                 blocknumber + 1000,
               ),
-          ).to.be.revertedWith("Aera__VaultIsFinalizing");
+          ).to.be.revertedWith("Aera__VaultIsFinalized");
         });
 
         it("when call cancelWeightUpdates", async () => {
           await expect(
             vault.connect(manager).cancelWeightUpdates(),
-          ).to.be.revertedWith("Aera__VaultIsFinalizing");
+          ).to.be.revertedWith("Aera__VaultIsFinalized");
         });
 
         it("when call claimManagerFees", async () => {
           await expect(
             vault.connect(manager).claimManagerFees(),
-          ).to.be.revertedWith("Aera__VaultIsFinalizing");
-        });
-
-        it("when call initiateFinalization", async () => {
-          await expect(vault.initiateFinalization()).to.be.revertedWith(
-            "Aera__VaultIsFinalizing",
-          );
+          ).to.be.revertedWith("Aera__VaultIsFinalized");
         });
       });
 
       it("should be possible to finalize", async () => {
-        const adminBalances = await getUserBalances(admin.address);
+        const { holdings, adminBalances } = await getState();
 
-        await vault.initiateFinalization();
+        const createdAt = await vault.createdAt();
+        const lastFeeCheckpoint = await vault.lastFeeCheckpoint();
+
+        const trx = await vault.finalize();
         expect(await vault.isSwapEnabled()).to.equal(false);
 
-        const { holdings: newHoldings } = await getState();
+        const currentTime = await getTimestamp(trx.blockNumber);
+        const feeIndex =
+          Math.max(0, currentTime - lastFeeCheckpoint.toNumber()) +
+          Math.max(0, createdAt.toNumber() + MIN_FEE_DURATION - currentTime);
 
-        await increaseTime(NOTICE_PERIOD + 1);
-
-        await vault.finalize();
+        const newHoldings: BigNumber[] = [];
+        holdings.forEach((holding: BigNumber) => {
+          newHoldings.push(
+            holding.mul(ONE.sub(MAX_MANAGEMENT_FEE.mul(feeIndex))).div(ONE),
+          );
+        });
 
         const newAdminBalances = await getUserBalances(admin.address);
 
