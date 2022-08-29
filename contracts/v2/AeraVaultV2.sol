@@ -563,7 +563,6 @@ contract AeraVaultV2 is
     }
 
     /// @inheritdoc IProtocolAPI
-    // slither-disable-next-line timestamp
     function finalize()
         external
         override
@@ -582,7 +581,6 @@ contract AeraVaultV2 is
     }
 
     /// @inheritdoc IProtocolAPI
-    // slither-disable-next-line timestamp
     function setManager(address newManager)
         external
         override
@@ -737,7 +735,6 @@ contract AeraVaultV2 is
     /// MANAGER API ///
 
     /// @inheritdoc IManagerAPI
-    // slither-disable-next-line timestamp
     function updateWeightsGradually(
         TokenValue[] calldata tokenWithWeight,
         uint256 startTime,
@@ -836,7 +833,6 @@ contract AeraVaultV2 is
     }
 
     /// @inheritdoc IManagerAPI
-    // slither-disable-next-line timestamp
     function setSwapFee(uint256 newSwapFee)
         external
         override
@@ -1027,7 +1023,7 @@ contract AeraVaultV2 is
     ///      current active weights change schedule.
     /// @param tokenWithAmount Deposit tokens with amount.
     /// @param priceType Price type to be used.
-    /// slither-disable-next-line uninitialized-local
+    // slither-disable-next-line uninitialized-local
     function depositTokensAndUpdateWeights(
         TokenValue[] calldata tokenWithAmount,
         PriceType priceType
@@ -1200,12 +1196,12 @@ contract AeraVaultV2 is
     ///      finalize(), depositTokensAndUpdateWeights()
     ///      and withdrawTokens().
     /// @param lockGuaranteeFee True if guarantee fee should be locked.
-    // slither-disable-next-line timestamp
     function lockManagerFees(bool lockGuaranteeFee) internal {
         if (managementFee == 0) {
             return;
         }
 
+        // slither-disable-next-line uninitialized-local
         uint256 feeIndex;
         if (block.timestamp > lastFeeCheckpoint) {
             feeIndex = block.timestamp - lastFeeCheckpoint;
@@ -1219,6 +1215,7 @@ contract AeraVaultV2 is
             }
         }
 
+        // slither-disable-next-line incorrect-equality
         if (feeIndex == 0) {
             return;
         }
@@ -1359,7 +1356,6 @@ contract AeraVaultV2 is
     /// @param token Address of the token to deposit.
     /// @param amount Amount to deposit.
     /// @return Actual deposited amount excluding fee on transfer.
-    // slither-disable-next-line timestamp
     function depositToken(IERC20 token, uint256 amount)
         internal
         returns (uint256)
