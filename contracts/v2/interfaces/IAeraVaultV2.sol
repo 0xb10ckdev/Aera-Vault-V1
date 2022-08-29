@@ -2,11 +2,11 @@
 pragma solidity 0.8.11;
 
 import "../../v1/interfaces/IUserAPI.sol";
-import "../../v1/interfaces/IManagerAPI.sol";
 import "../../v1/interfaces/IMultiAssetVault.sol";
-import "../../v1/interfaces/IProtocolAPI.sol";
 import "../dependencies/chainlink/interfaces/AggregatorV2V3Interface.sol";
+import "./IProtocolAPI.sol";
 import "./IProtocolAPIV2.sol";
+import "./IManagerAPI.sol";
 import "./IManagerAPIV2.sol";
 
 /// @title Interface for v2 vault.
@@ -31,16 +31,16 @@ interface IAeraVaultV2 is
     // swapFeePercentage: Pool swap fee.
     // manager: Vault manager address.
     // validator: Withdrawal validator contract address.
-    // noticePeriod: Notice period (in seconds).
     // minReliableVaultValue: Minimum reliable vault TVL.
     //                        It will be measured in base token terms.
-    // managementFee: Management fee earned proportion per second.
-    // merkleOrchard: Balancer Merkle Orchard address.
-    // description: Simple vault text description.
     // minSignificantDepositValue: Minimum significant deposit value.
     //                             It will be measured in base token terms.
     // maxOracleSpotDivergence: Maximum oracle spot price divergence.
     // maxOracleDelay: Maximum update delay of oracles.
+    // minFeeDuration: Minimum period to charge management fee.
+    // managementFee: Management fee earned proportion per second.
+    // merkleOrchard: Balancer Merkle Orchard address.
+    // description: Simple vault text description.
     struct NewVaultParams {
         address factory;
         string name;
@@ -52,11 +52,11 @@ interface IAeraVaultV2 is
         uint256 swapFeePercentage;
         address manager;
         address validator;
-        uint32 noticePeriod;
         uint256 minReliableVaultValue;
         uint256 minSignificantDepositValue;
         uint256 maxOracleSpotDivergence;
         uint256 maxOracleDelay;
+        uint256 minFeeDuration;
         uint256 managementFee;
         address merkleOrchard;
         string description;
