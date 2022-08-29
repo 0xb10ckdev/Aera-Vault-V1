@@ -6,6 +6,7 @@ import "./IProtocolAPI.sol";
 
 /// @title Interface for vault manager.
 /// @notice Supports parameter submission.
+// slither-disable-next-line name-reused
 interface IManagerAPI {
     /// @notice Initiate weight move to target in given update window.
     /// @dev These are checked by Balancer in internal transactions:
