@@ -1195,8 +1195,8 @@ contract AeraVaultV2 is
     /// @dev Will only be called by claimManagerFees(), setManager(),
     ///      finalize(), depositTokensAndUpdateWeights()
     ///      and withdrawTokens().
-    /// @param lockGuaranteeFee True if guarantee fee should be locked.
-    function lockManagerFees(bool lockGuaranteeFee) internal {
+    /// @param lockGuaranteedFee True if guaranteed fee should be locked.
+    function lockManagerFees(bool lockGuaranteedFee) internal {
         if (managementFee == 0) {
             return;
         }
@@ -1207,7 +1207,7 @@ contract AeraVaultV2 is
             feeIndex = block.timestamp - lastFeeCheckpoint;
         }
 
-        if (lockGuaranteeFee) {
+        if (lockGuaranteedFee) {
             uint256 minFeeCheckpoint = createdAt + minFeeDuration;
 
             if (minFeeCheckpoint > block.timestamp) {
