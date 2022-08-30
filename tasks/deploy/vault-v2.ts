@@ -28,7 +28,7 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
   )
   .addParam(
     "minFeeDuration",
-    "Minimum period to charge guarantee management fee",
+    "Minimum period to charge guaranteed management fee (in seconds)",
   )
   .addParam(
     "managementFee",
@@ -128,7 +128,7 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
         `Maximum Oracle Spot Divergence: ${maxOracleSpotDivergence}`,
       );
       console.log(`Maximum Oracle Delay: ${maxOracleDelay}`);
-      console.log(`Notice Period: ${minFeeDuration}`);
+      console.log(`Minimum Fee Duration: ${minFeeDuration}`);
       console.log(`Management Fee: ${managementFee}`);
       console.log(`Merkle Orchard: ${merkleOrchard}`);
       console.log(`Description: ${description}`);
