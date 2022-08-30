@@ -78,7 +78,7 @@ contract AeraVaultV2 is
     /// @notice Timestamp when vault is created.
     uint256 public immutable createdAt;
 
-    /// @notice Minimum period to charge guarantee management fee.
+    /// @notice Minimum period to charge guaranteed management fee.
     uint256 public immutable minFeeDuration;
 
     /// @notice Minimum reliable vault TVL. It will be measured in base token terms.
