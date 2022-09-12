@@ -133,6 +133,18 @@ contract AeraVaultV2 is
     /// @notice Last timestamp where swap fee was updated.
     uint256 public lastSwapFeeCheckpoint;
 
+    /// @notice Yield bearing assets.
+    YieldBearingAsset[] public yieldBearingAssets;
+
+    /// @notice Weights of yield bearing assets.
+    uint256[] public yieldBearingAssetWeights;
+
+    /// @notice If asset has yield bearing asset.
+    mapping(uint256 => bool) public hasYieldBearingAsset;
+
+    /// @notice Asset index to yield bearing asset.
+    mapping(uint256 => uint256) public yieldBearingAssetIndex;
+
     /// EVENTS ///
 
     /// @notice Emitted when the vault is created.
@@ -420,6 +432,17 @@ contract AeraVaultV2 is
         managersFee[manager] = new uint256[](numTokens);
         managersFeeTotal = new uint256[](numTokens);
 
+        uint256 numYieldBearingAssets = vaultParams.yieldBearingAssets.length;
+        yieldBearingAssetWeights = new uint256[](numYieldBearingAssets);
+
+        uint256 underlyingAssetIndex;
+        for (uint256 i = 0; i < numYieldBearingAssets; i++) {
+            yieldBearingAssets.push(vaultParams.yieldBearingAssets[i]);
+            underlyingAssetIndex = yieldBearingAssets[i].underlyingAssetIndex;
+            hasYieldBearingAsset[underlyingAssetIndex] = true;
+            yieldBearingAssetIndex[underlyingAssetIndex] = i;
+        }
+
         // slither-disable-next-line reentrancy-events
         emit Created(vaultParams);
         // slither-disable-next-line reentrancy-events
@@ -429,11 +452,10 @@ contract AeraVaultV2 is
     /// PROTOCOL API ///
 
     /// @inheritdoc IProtocolAPI
-    function initialDeposit(TokenValue[] calldata tokenWithAmount)
-        external
-        override
-        onlyOwner
-    {
+    function initialDeposit(
+        TokenValue[] calldata tokenWithAmount,
+        TokenValue[] calldata tokenWithWeight
+    ) external override onlyOwner {
         if (initialized) {
             revert Aera__VaultIsAlreadyInitialized();
         }
@@ -446,11 +468,31 @@ contract AeraVaultV2 is
         uint256[] memory balances = new uint256[](numTokens);
         uint256[] memory amounts = getValuesFromTokenWithValues(
             tokenWithAmount,
-            tokens
+            tokens,
+            false
+        );
+        uint256[] memory weights = getValuesFromTokenWithValues(
+            tokenWithWeight,
+            tokens,
+            true
         );
 
+        uint256 depositAmount;
+        uint256 yieldBearingAssetWeight;
+        uint256 index;
         for (uint256 i = 0; i < numTokens; i++) {
-            balances[i] = depositToken(tokens[i], amounts[i]);
+            if (hasYieldBearingAsset[i]) {
+                index = yieldBearingAssetIndex[i];
+                yieldBearingAssetWeights[index] = weights[index + numTokens];
+                depositAmount =
+                    (amounts[i] * yieldBearingAssetWeights[index]) /
+                    (yieldBearingAssetWeights[index] + weights[i]);
+                yieldBearingAssets[index].asset.deposit(
+                    depositAmount,
+                    address(this)
+                );
+            }
+            balances[i] = depositToken(tokens[i], amounts[i] - depositAmount);
         }
 
         bytes memory initUserData = abi.encode(IBVault.JoinKind.INIT, amounts);
@@ -643,7 +685,8 @@ contract AeraVaultV2 is
 
         uint256[] memory weights = getValuesFromTokenWithValues(
             tokenWithWeight,
-            tokens
+            tokens,
+            false
         );
 
         poolController.updateWeightsGradually(
@@ -779,7 +822,8 @@ contract AeraVaultV2 is
         uint256 numTokens = tokens.length;
         uint256[] memory targetWeights = getValuesFromTokenWithValues(
             tokenWithWeight,
-            tokens
+            tokens,
+            false
         );
         uint256 duration = endTime - startTime;
         uint256 maximumRatio = MAX_WEIGHT_CHANGE_RATIO * duration;
@@ -830,6 +874,36 @@ contract AeraVaultV2 is
 
         // slither-disable-next-line reentrancy-events
         emit CancelWeightUpdates(weights);
+    }
+
+    function setTargetWeights(TokenValue[] calldata tokenWithWeight)
+        external
+        nonReentrant
+        onlyManager
+    {
+        IERC20[] memory tokens;
+        uint256[] memory holdings;
+        (tokens, holdings, ) = getTokensData();
+        uint256 numTokens = tokens.length;
+        uint256[] memory weights = getValuesFromTokenWithValues(
+            tokenWithWeight,
+            tokens,
+            true
+        );
+
+        uint256 balance;
+        for (uint256 i = 0; i < numTokens; i++) {
+            balance = holdings[i];
+            if (hasYieldBearingAsset[i]) {
+                balance += yieldBearingAssets[yieldBearingAssetIndex[i]]
+                    .asset
+                    .convertToAssets(
+                        yieldBearingAssets[yieldBearingAssetIndex[i]]
+                            .asset
+                            .balanceOf(address(this))
+                    );
+            }
+        }
     }
 
     /// @inheritdoc IManagerAPI
@@ -1037,7 +1111,8 @@ contract AeraVaultV2 is
 
         uint256[] memory amounts = getValuesFromTokenWithValues(
             tokenWithAmount,
-            tokens
+            tokens,
+            false
         );
 
         // slither-disable-next-line uninitialized-local
@@ -1131,7 +1206,8 @@ contract AeraVaultV2 is
         uint256[] memory balances = new uint256[](numTokens);
         uint256[] memory amounts = getValuesFromTokenWithValues(
             tokenWithAmount,
-            tokens
+            tokens,
+            false
         );
 
         for (uint256 i = 0; i < numTokens; i++) {
@@ -1271,27 +1347,53 @@ contract AeraVaultV2 is
     /// @return Array of values.
     function getValuesFromTokenWithValues(
         TokenValue[] calldata tokenWithValues,
-        IERC20[] memory tokens
+        IERC20[] memory tokens,
+        bool withYieldBearingAssets
     ) internal pure returns (uint256[] memory) {
         uint256 numTokens = tokens.length;
+        uint256 numYieldBearingAssets = yieldBearingAssets.length;
+        uint256 numTokenWithValues = tokenWithValues.length;
 
-        if (numTokens != tokenWithValues.length) {
+        if (!withYieldBearingAssets && numTokens != numTokenWithValues) {
+            revert Aera__ValueLengthIsNotSame(numTokens, numTokenWithValues);
+        }
+        if (
+            withYieldBearingAssets &&
+            numTokens + numYieldBearingAssets != numTokenWithValues
+        ) {
             revert Aera__ValueLengthIsNotSame(
-                numTokens,
-                tokenWithValues.length
+                numTokens + numYieldBearingAssets,
+                numTokenWithValues
             );
         }
 
         uint256[] memory values = new uint256[](numTokens);
         for (uint256 i = 0; i < numTokens; i++) {
-            if (address(tokenWithValues[i].token) != address(tokens[i])) {
+            if (tokenWithValues[i].token != address(tokens[i])) {
                 revert Aera__DifferentTokensInPosition(
-                    address(tokenWithValues[i].token),
+                    tokenWithValues[i].token,
                     address(tokens[i]),
                     i
                 );
             }
             values[i] = tokenWithValues[i].value;
+        }
+
+        if (withYieldBearingAssets) {
+            for (uint256 i = 0; i < numYieldBearingAssets; i++) {
+                uint256 index = i + numTokens;
+                if (
+                    tokenWithValues[index].token !=
+                    address(yieldBearingAssets[i].asset)
+                ) {
+                    revert Aera__DifferentTokensInPosition(
+                        tokenWithValues[index].token,
+                        address(yieldBearingAssets[i].asset),
+                        index
+                    );
+                }
+                values[index] = tokenWithValues[index].value;
+            }
         }
 
         return values;
