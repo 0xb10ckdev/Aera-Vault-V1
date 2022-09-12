@@ -4,6 +4,7 @@ pragma solidity 0.8.11;
 import "../../v1/interfaces/IUserAPI.sol";
 import "../../v1/interfaces/IMultiAssetVault.sol";
 import "../dependencies/chainlink/interfaces/AggregatorV2V3Interface.sol";
+import "../dependencies/openzeppelin/IERC4626.sol";
 import "./IProtocolAPI.sol";
 import "./IProtocolAPIV2.sol";
 import "./IManagerAPI.sol";
@@ -18,6 +19,12 @@ interface IAeraVaultV2 is
     IManagerAPIV2,
     IProtocolAPIV2
 {
+    // Structure for yield-bearing asset.
+    struct YieldBearingAsset {
+        IERC4626 asset;
+        uint256 underlyingAssetIndex;
+    }
+
     // Use struct parameter to avoid stack too deep error.
     // factory: Balancer Managed Pool Factory address.
     // name: Name of Pool Token.
@@ -47,6 +54,7 @@ interface IAeraVaultV2 is
         IERC20[] tokens;
         uint256[] weights;
         AggregatorV2V3Interface[] oracles;
+        YieldBearingAsset[] yieldBearingAssets;
         uint256 numeraireAssetIndex;
         uint256 swapFeePercentage;
         address manager;

@@ -10,7 +10,7 @@ interface IProtocolAPI {
     // token: Token address.
     // value: Amount of weight of token.
     struct TokenValue {
-        IERC20 token;
+        address token;
         uint256 value;
     }
 
