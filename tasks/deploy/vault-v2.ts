@@ -55,7 +55,13 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
   )
   .addOptionalParam(
     "test",
-    "Deploy Aera Vault V1 Mock contract",
+    "Deploy Aera Vault V2 Mock contract",
+    false,
+    types.boolean,
+  )
+  .addOptionalParam(
+    "printTransactionData",
+    "Get transaction data for deployment",
     false,
     types.boolean,
   )
@@ -137,6 +143,31 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
     const contract = taskArgs.test ? "AeraVaultV2Mock" : "AeraVaultV2";
 
     const vaultFactory = await ethers.getContractFactory(contract);
+
+    if (taskArgs.printTransactionData) {
+      const calldata = vaultFactory.getDeployTransaction([
+        factory,
+        name,
+        symbol,
+        tokens,
+        weights,
+        oracles,
+        numeraireAssetIndex,
+        swapFeePercentage,
+        manager,
+        validator,
+        minReliableVaultValue,
+        minSignificantDepositValue,
+        maxOracleSpotDivergence,
+        maxOracleDelay,
+        minFeeDuration,
+        managementFee,
+        merkleOrchard,
+        description,
+      ]).data;
+      console.log("Deployment Transaction Data:", calldata);
+      return;
+    }
 
     const vault = await vaultFactory.connect(admin).deploy({
       factory,
