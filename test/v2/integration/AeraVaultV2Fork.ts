@@ -1862,7 +1862,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
   describe("Multicall", () => {
     const ABI = [
-      "function deposit(tuple(address token, uint256 value)[])",
+      "function depositRiskingArbitrage(tuple(address token, uint256 value)[])",
       "function withdraw(tuple(address token, uint256 value)[])",
       "function updateWeightsGradually(tuple(address token, uint256 value)[], uint256 startTime, uint256 endTime)",
       "function disableTrading()",
@@ -1918,7 +1918,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
         await vault.multicall([
           iface.encodeFunctionData("disableTrading", []),
-          iface.encodeFunctionData("deposit", [
+          iface.encodeFunctionData("depositRiskingArbitrage", [
             tokenWithValues(sortedTokens, amounts),
           ]),
           iface.encodeFunctionData("enableTradingRiskingArbitrage", []),
@@ -2011,7 +2011,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         for (let i = 0; i < tokens.length; i++) {
           await tokens[i].approve(vault.address, toWei(100000));
         }
-        await vault.deposit(
+        await vault.depositRiskingArbitrage(
           tokenValueArray(sortedTokens, toWei(10000), tokens.length),
         );
         await validator.setAllowances(
