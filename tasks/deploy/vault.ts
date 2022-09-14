@@ -36,12 +36,7 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
     false,
     types.boolean,
   )
-  .addOptionalParam(
-    "printTransactionData",
-    "Get transaction data for deployment",
-    false,
-    types.boolean,
-  )
+  .addFlag("printTransactionData", "Get transaction data for deployment")
   .setAction(async (taskArgs, { ethers, network }) => {
     const config = getConfig(network.config.chainId || 1);
 
