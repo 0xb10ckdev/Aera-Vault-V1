@@ -14,17 +14,6 @@ interface IProtocolAPI {
         uint256 value;
     }
 
-    /// @notice Initialize Vault with first deposit.
-    /// @dev Initial deposit must be performed before
-    ///      calling withdraw() or deposit() functions.
-    ///      It enables trading, so weights and balances should be in line
-    ///      with market spot prices, otherwise there is a significant risk
-    ///      of arbitrage.
-    ///      This is checked by Balancer in internal transactions:
-    ///       If token amount is not zero when join pool.
-    /// @param tokenWithAmount Deposit tokens with amount.
-    function initialDeposit(TokenValue[] memory tokenWithAmount) external;
-
     /// @notice Deposit tokens into vault.
     /// @dev It calls updateWeights() function
     ///      which cancels current active weights change schedule.
