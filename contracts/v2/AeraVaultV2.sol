@@ -139,12 +139,6 @@ contract AeraVaultV2 is
     /// @notice Weights of yield bearing assets.
     uint256[] public yieldBearingAssetWeights;
 
-    /// @notice If asset has yield bearing asset.
-    mapping(uint256 => bool) public hasYieldBearingAsset;
-
-    /// @notice Asset index to yield bearing asset.
-    mapping(uint256 => uint256) public yieldBearingAssetIndex;
-
     /// EVENTS ///
 
     /// @notice Emitted when the vault is created.
@@ -268,6 +262,7 @@ contract AeraVaultV2 is
     error Aera__SwapFeePercentageChangeIsAboveMax(uint256 actual, uint256 max);
     error Aera__DescriptionIsEmpty();
     error Aera__CallerIsNotOwnerOrManager();
+    error Aera__SumOfWeightIsNotOne();
     error Aera__WeightChangeEndBeforeStart();
     error Aera__WeightChangeStartTimeIsAboveMax(uint256 actual, uint256 max);
     error Aera__WeightChangeEndTimeIsAboveMax(uint256 actual, uint256 max);
@@ -435,12 +430,8 @@ contract AeraVaultV2 is
         uint256 numYieldBearingAssets = vaultParams.yieldBearingAssets.length;
         yieldBearingAssetWeights = new uint256[](numYieldBearingAssets);
 
-        uint256 underlyingAssetIndex;
         for (uint256 i = 0; i < numYieldBearingAssets; i++) {
             yieldBearingAssets.push(vaultParams.yieldBearingAssets[i]);
-            underlyingAssetIndex = yieldBearingAssets[i].underlyingAssetIndex;
-            hasYieldBearingAsset[underlyingAssetIndex] = true;
-            yieldBearingAssetIndex[underlyingAssetIndex] = i;
         }
 
         // slither-disable-next-line reentrancy-events
@@ -451,7 +442,7 @@ contract AeraVaultV2 is
 
     /// PROTOCOL API ///
 
-    /// @inheritdoc IProtocolAPI
+    /// @inheritdoc IProtocolAPIV2
     function initialDeposit(
         TokenValue[] calldata tokenWithAmount,
         TokenValue[] calldata tokenWithWeight
@@ -466,6 +457,7 @@ contract AeraVaultV2 is
         IERC20[] memory tokens = getTokens();
         uint256 numTokens = tokens.length;
         uint256[] memory balances = new uint256[](numTokens);
+        uint256[] memory underlyingAssetWeights = new uint256[](numTokens);
         uint256[] memory amounts = getValuesFromTokenWithValues(
             tokenWithAmount,
             tokens,
@@ -477,25 +469,69 @@ contract AeraVaultV2 is
             true
         );
 
-        uint256 depositAmount;
-        uint256 yieldBearingAssetWeight;
-        uint256 index;
-        for (uint256 i = 0; i < numTokens; i++) {
-            if (hasYieldBearingAsset[i]) {
-                index = yieldBearingAssetIndex[i];
-                yieldBearingAssetWeights[index] = weights[index + numTokens];
-                depositAmount =
-                    (amounts[i] * yieldBearingAssetWeights[index]) /
-                    (yieldBearingAssetWeights[index] + weights[i]);
-                yieldBearingAssets[index].asset.deposit(
-                    depositAmount,
-                    address(this)
-                );
-            }
-            balances[i] = depositToken(tokens[i], amounts[i] - depositAmount);
+        uint256 weightSum;
+        for (uint256 i = 0; i < weights.length; i++) {
+            weightSum += weights[i];
+        }
+        if (weightSum != ONE) {
+            revert Aera__SumOfWeightIsNotOne();
         }
 
-        bytes memory initUserData = abi.encode(IBVault.JoinKind.INIT, amounts);
+        for (uint256 i = 0; i < numTokens; i++) {
+            balances[i] = depositToken(tokens[i], amounts[i]);
+            underlyingAssetWeights[i] = weights[i];
+        }
+
+        uint256 numYieldBearingAssets = yieldBearingAssets.length;
+        if (numYieldBearingAssets > 0) {
+            (
+                uint256[] memory oraclePrices,
+                uint256[] memory updatedAt
+            ) = getOraclePrices();
+
+            checkOracleStatus(updatedAt);
+            uint256 value = getValue(amounts, oraclePrices);
+
+            IERC20 underlyingAsset;
+            uint256 yieldBearingDepositAmount;
+            uint256 allowance;
+            for (uint256 i = 0; i < numYieldBearingAssets; i++) {
+                yieldBearingAssetWeights[i] = weights[i + numTokens];
+                weightSum -= yieldBearingAssetWeights[i];
+                yieldBearingDepositAmount =
+                    (value * yieldBearingAssetWeights[i]) /
+                    oraclePrices[yieldBearingAssets[i].underlyingAssetIndex];
+
+                underlyingAsset = tokens[
+                    yieldBearingAssets[i].underlyingAssetIndex
+                ];
+                allowance = underlyingAsset.allowance(
+                    address(this),
+                    address(yieldBearingAssets[i].asset)
+                );
+                if (allowance > 0) {
+                    underlyingAsset.safeDecreaseAllowance(
+                        address(yieldBearingAssets[i].asset),
+                        allowance
+                    );
+                }
+                underlyingAsset.safeIncreaseAllowance(
+                    address(yieldBearingAssets[i].asset),
+                    yieldBearingDepositAmount
+                );
+                yieldBearingAssets[i].asset.deposit(
+                    yieldBearingDepositAmount,
+                    address(this)
+                );
+
+                balances[i] -= yieldBearingDepositAmount;
+            }
+        }
+
+        bytes memory initUserData = abi.encode(
+            IBVault.JoinKind.INIT,
+            balances
+        );
 
         IBVault.JoinPoolRequest memory joinPoolRequest = IBVault
             .JoinPoolRequest({
@@ -505,6 +541,8 @@ contract AeraVaultV2 is
                 fromInternalBalance: false
             });
         bVault.joinPool(poolId, address(this), address(this), joinPoolRequest);
+
+        updateWeights(underlyingAssetWeights, weightSum);
 
         setSwapEnabled(true);
     }
@@ -881,9 +919,7 @@ contract AeraVaultV2 is
         nonReentrant
         onlyManager
     {
-        IERC20[] memory tokens;
-        uint256[] memory holdings;
-        (tokens, holdings, ) = getTokensData();
+        IERC20[] memory tokens = getTokens();
         uint256 numTokens = tokens.length;
         uint256[] memory weights = getValuesFromTokenWithValues(
             tokenWithWeight,
@@ -891,18 +927,124 @@ contract AeraVaultV2 is
             true
         );
 
-        uint256 balance;
-        for (uint256 i = 0; i < numTokens; i++) {
-            balance = holdings[i];
-            if (hasYieldBearingAsset[i]) {
-                balance += yieldBearingAssets[yieldBearingAssetIndex[i]]
-                    .asset
-                    .convertToAssets(
-                        yieldBearingAssets[yieldBearingAssetIndex[i]]
-                            .asset
-                            .balanceOf(address(this))
-                    );
+        uint256 weightSum;
+        for (uint256 i = 0; i < weights.length; i++) {
+            weightSum += weights[i];
+        }
+        if (weightSum != ONE) {
+            revert Aera__SumOfWeightIsNotOne();
+        }
+
+        uint256 numYieldBearingAssets = yieldBearingAssets.length;
+        uint256[] memory underlyingAssetBalances = new uint256[](
+            numYieldBearingAssets
+        );
+        uint256[] memory depositAmounts = new uint256[](numTokens);
+        uint256[] memory withdrawAmounts = new uint256[](numTokens);
+        uint256[] memory holdings = getHoldings();
+        for (uint256 i = 0; i < numYieldBearingAssets; i++) {
+            underlyingAssetBalances[i] = yieldBearingAssets[i]
+                .asset
+                .convertToAssets(
+                    yieldBearingAssets[i].asset.balanceOf(address(this))
+                );
+            holdings[
+                yieldBearingAssets[i].underlyingAssetIndex
+            ] += underlyingAssetBalances[i];
+        }
+
+        (
+            uint256[] memory oraclePrices,
+            uint256[] memory updatedAt
+        ) = getOraclePrices();
+
+        checkOracleStatus(updatedAt);
+        uint256 value = getValue(holdings, oraclePrices);
+
+        uint256 underlyingAssetIndex;
+        uint256 targetBalance;
+        uint256 yieldBearingWithdrawAmount;
+        IERC20 underlyingAsset;
+        for (uint256 i = 0; i < numYieldBearingAssets; i++) {
+            underlyingAssetIndex = yieldBearingAssets[i].underlyingAssetIndex;
+            targetBalance = (value * weights[i]) / ONE;
+            underlyingAsset = tokens[
+                yieldBearingAssets[i].underlyingAssetIndex
+            ];
+            if (underlyingAssetBalances[i] > targetBalance) {
+                yieldBearingWithdrawAmount =
+                    underlyingAssetBalances[i] -
+                    targetBalance;
+                depositAmounts[
+                    underlyingAssetIndex
+                ] += yieldBearingWithdrawAmount;
+                yieldBearingAssets[i].asset.withdraw(
+                    yieldBearingWithdrawAmount,
+                    address(this),
+                    address(this)
+                );
+            } else if (underlyingAssetBalances[i] < targetBalance) {
+                withdrawAmounts[underlyingAssetIndex] +=
+                    targetBalance -
+                    underlyingAssetBalances[i];
             }
+        }
+
+        for (uint256 i = 0; i < numTokens; i++) {
+            if (
+                depositAmounts[i] > withdrawAmounts[i] &&
+                withdrawAmounts[i] > 0
+            ) {
+                depositAmounts[i] -= withdrawAmounts[i];
+                withdrawAmounts[i] = 0;
+            } else if (
+                depositAmounts[i] < withdrawAmounts[i] && depositAmounts[i] > 0
+            ) {
+                withdrawAmounts[i] -= depositAmounts[i];
+                depositAmounts[i] = 0;
+            }
+
+            if (withdrawAmounts[i] > holdings[i]) {
+                withdrawAmounts[i] = 0;
+            }
+        }
+        /// Set managed balance of pool as amounts
+        /// i.e. Deposit amounts of tokens to pool from Aera Vault
+        updatePoolBalance(depositAmounts, IBVault.PoolBalanceOpKind.UPDATE);
+        /// Decrease managed balance and increase cash balance of pool
+        /// i.e. Move amounts from managed balance to cash balance
+        updatePoolBalance(depositAmounts, IBVault.PoolBalanceOpKind.DEPOSIT);
+
+        withdrawFromPool(withdrawAmounts);
+
+        uint256 yieldBearingDepositAmount;
+        uint256 allowance;
+        for (uint256 i = 0; i < numYieldBearingAssets; i++) {
+            targetBalance = (value * weights[i]) / ONE;
+            yieldBearingDepositAmount =
+                targetBalance -
+                underlyingAssetBalances[i];
+            underlyingAsset = tokens[
+                yieldBearingAssets[i].underlyingAssetIndex
+            ];
+            allowance = underlyingAsset.allowance(
+                address(this),
+                address(yieldBearingAssets[i].asset)
+            );
+            if (allowance > 0) {
+                underlyingAsset.safeDecreaseAllowance(
+                    address(yieldBearingAssets[i].asset),
+                    allowance
+                );
+            }
+            underlyingAsset.safeIncreaseAllowance(
+                address(yieldBearingAssets[i].asset),
+                yieldBearingDepositAmount
+            );
+            yieldBearingAssets[i].asset.deposit(
+                yieldBearingDepositAmount,
+                address(this)
+            );
         }
     }
 
@@ -1349,7 +1491,7 @@ contract AeraVaultV2 is
         TokenValue[] calldata tokenWithValues,
         IERC20[] memory tokens,
         bool withYieldBearingAssets
-    ) internal pure returns (uint256[] memory) {
+    ) internal view returns (uint256[] memory) {
         uint256 numTokens = tokens.length;
         uint256 numYieldBearingAssets = yieldBearingAssets.length;
         uint256 numTokenWithValues = tokenWithValues.length;

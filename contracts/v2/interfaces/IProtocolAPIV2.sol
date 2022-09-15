@@ -5,6 +5,21 @@ import "./IProtocolAPI.sol";
 
 /// @title Interface for protocol that owns treasury.
 interface IProtocolAPIV2 {
+    /// @notice Initialize Vault with first deposit.
+    /// @dev Initial deposit must be performed before
+    ///      calling withdraw() or deposit() functions.
+    ///      It enables trading, so weights and balances should be in line
+    ///      with market spot prices, otherwise there is a significant risk
+    ///      of arbitrage.
+    ///      This is checked by Balancer in internal transactions:
+    ///       If token amount is not zero when join pool.
+    /// @param tokenWithAmount Deposit tokens with amount.
+    /// @param tokenWithWeight Weight of tokens in the vault.
+    function initialDeposit(
+        IProtocolAPI.TokenValue[] memory tokenWithAmount,
+        IProtocolAPI.TokenValue[] memory tokenWithWeight
+    ) external;
+
     /// @notice Deposit tokens into vault.
     /// @dev It calls updateWeights() function
     ///      which cancels current active weights change schedule.
