@@ -22,7 +22,7 @@ interface IAeraVaultV2 is
     // Structure for yield-bearing asset.
     struct YieldBearingAsset {
         IERC4626 asset;
-        uint256 underlyingAssetIndex;
+        uint256 underlyingIndex;
     }
 
     // Use struct parameter to avoid stack too deep error.

@@ -136,9 +136,6 @@ contract AeraVaultV2 is
     /// @notice Yield bearing assets.
     YieldBearingAsset[] public yieldBearingAssets;
 
-    /// @notice Weights of yield bearing assets.
-    uint256[] public yieldBearingAssetWeights;
-
     /// EVENTS ///
 
     /// @notice Emitted when the vault is created.
@@ -427,10 +424,7 @@ contract AeraVaultV2 is
         managersFee[manager] = new uint256[](numTokens);
         managersFeeTotal = new uint256[](numTokens);
 
-        uint256 numYieldBearingAssets = vaultParams.yieldBearingAssets.length;
-        yieldBearingAssetWeights = new uint256[](numYieldBearingAssets);
-
-        for (uint256 i = 0; i < numYieldBearingAssets; i++) {
+        for (uint256 i = 0; i < vaultParams.yieldBearingAssets.length; i++) {
             yieldBearingAssets.push(vaultParams.yieldBearingAssets[i]);
         }
 
@@ -454,10 +448,9 @@ contract AeraVaultV2 is
         initialized = true;
         lastFeeCheckpoint = block.timestamp;
 
-        IERC20[] memory tokens = getTokens();
-        uint256 numTokens = tokens.length;
-        uint256[] memory balances = new uint256[](numTokens);
-        uint256[] memory underlyingAssetWeights = new uint256[](numTokens);
+        IERC20[] memory tokens;
+        uint256[] memory holdings;
+        (tokens, holdings, ) = getTokensData();
         uint256[] memory amounts = getValuesFromTokenWithValues(
             tokenWithAmount,
             tokens,
@@ -468,65 +461,22 @@ contract AeraVaultV2 is
             tokens,
             true
         );
-
-        uint256 weightSum;
-        for (uint256 i = 0; i < weights.length; i++) {
-            weightSum += weights[i];
-        }
-        if (weightSum != ONE) {
-            revert Aera__SumOfWeightIsNotOne();
-        }
+        uint256 numTokens = tokens.length;
+        uint256[] memory balances = new uint256[](numTokens);
+        uint256[] memory underlyingBalances = new uint256[](numTokens);
 
         for (uint256 i = 0; i < numTokens; i++) {
             balances[i] = depositToken(tokens[i], amounts[i]);
-            underlyingAssetWeights[i] = weights[i];
         }
 
-        uint256 numYieldBearingAssets = yieldBearingAssets.length;
-        if (numYieldBearingAssets > 0) {
-            (
-                uint256[] memory oraclePrices,
-                uint256[] memory updatedAt
-            ) = getOraclePrices();
-
-            checkOracleStatus(updatedAt);
-            uint256 value = getValue(amounts, oraclePrices);
-
-            IERC20 underlyingAsset;
-            uint256 yieldBearingDepositAmount;
-            uint256 allowance;
-            for (uint256 i = 0; i < numYieldBearingAssets; i++) {
-                yieldBearingAssetWeights[i] = weights[i + numTokens];
-                weightSum -= yieldBearingAssetWeights[i];
-                yieldBearingDepositAmount =
-                    (value * yieldBearingAssetWeights[i]) /
-                    oraclePrices[yieldBearingAssets[i].underlyingAssetIndex];
-
-                underlyingAsset = tokens[
-                    yieldBearingAssets[i].underlyingAssetIndex
-                ];
-                allowance = underlyingAsset.allowance(
-                    address(this),
-                    address(yieldBearingAssets[i].asset)
-                );
-                if (allowance > 0) {
-                    underlyingAsset.safeDecreaseAllowance(
-                        address(yieldBearingAssets[i].asset),
-                        allowance
-                    );
-                }
-                underlyingAsset.safeIncreaseAllowance(
-                    address(yieldBearingAssets[i].asset),
-                    yieldBearingDepositAmount
-                );
-                yieldBearingAssets[i].asset.deposit(
-                    yieldBearingDepositAmount,
-                    address(this)
-                );
-
-                balances[i] -= yieldBearingDepositAmount;
-            }
-        }
+        adjustYieldBearingAssets(
+            tokens,
+            holdings,
+            balances,
+            underlyingBalances,
+            weights,
+            numTokens
+        );
 
         bytes memory initUserData = abi.encode(
             IBVault.JoinKind.INIT,
@@ -541,8 +491,6 @@ contract AeraVaultV2 is
                 fromInternalBalance: false
             });
         bVault.joinPool(poolId, address(this), address(this), joinPoolRequest);
-
-        updateWeights(underlyingAssetWeights, weightSum);
 
         setSwapEnabled(true);
     }
@@ -919,133 +867,26 @@ contract AeraVaultV2 is
         nonReentrant
         onlyManager
     {
-        IERC20[] memory tokens = getTokens();
-        uint256 numTokens = tokens.length;
+        IERC20[] memory tokens;
+        uint256[] memory holdings;
+        (tokens, holdings, ) = getTokensData();
         uint256[] memory weights = getValuesFromTokenWithValues(
             tokenWithWeight,
             tokens,
             true
         );
+        uint256 numTokens = tokens.length;
+        uint256[] memory balances = new uint256[](numTokens);
+        uint256[] memory underlyingBalances = getUnderlyingBalances();
 
-        uint256 weightSum;
-        for (uint256 i = 0; i < weights.length; i++) {
-            weightSum += weights[i];
-        }
-        if (weightSum != ONE) {
-            revert Aera__SumOfWeightIsNotOne();
-        }
-
-        uint256 numYieldBearingAssets = yieldBearingAssets.length;
-        uint256[] memory underlyingAssetBalances = new uint256[](
-            numYieldBearingAssets
+        adjustYieldBearingAssets(
+            tokens,
+            holdings,
+            balances,
+            underlyingBalances,
+            weights,
+            numTokens
         );
-        uint256[] memory depositAmounts = new uint256[](numTokens);
-        uint256[] memory withdrawAmounts = new uint256[](numTokens);
-        uint256[] memory holdings = getHoldings();
-        for (uint256 i = 0; i < numYieldBearingAssets; i++) {
-            underlyingAssetBalances[i] = yieldBearingAssets[i]
-                .asset
-                .convertToAssets(
-                    yieldBearingAssets[i].asset.balanceOf(address(this))
-                );
-            holdings[
-                yieldBearingAssets[i].underlyingAssetIndex
-            ] += underlyingAssetBalances[i];
-        }
-
-        (
-            uint256[] memory oraclePrices,
-            uint256[] memory updatedAt
-        ) = getOraclePrices();
-
-        checkOracleStatus(updatedAt);
-        uint256 value = getValue(holdings, oraclePrices);
-
-        uint256 underlyingAssetIndex;
-        uint256 targetBalance;
-        uint256 yieldBearingWithdrawAmount;
-        IERC20 underlyingAsset;
-        for (uint256 i = 0; i < numYieldBearingAssets; i++) {
-            underlyingAssetIndex = yieldBearingAssets[i].underlyingAssetIndex;
-            targetBalance = (value * weights[i]) / ONE;
-            underlyingAsset = tokens[
-                yieldBearingAssets[i].underlyingAssetIndex
-            ];
-            if (underlyingAssetBalances[i] > targetBalance) {
-                yieldBearingWithdrawAmount =
-                    underlyingAssetBalances[i] -
-                    targetBalance;
-                depositAmounts[
-                    underlyingAssetIndex
-                ] += yieldBearingWithdrawAmount;
-                yieldBearingAssets[i].asset.withdraw(
-                    yieldBearingWithdrawAmount,
-                    address(this),
-                    address(this)
-                );
-            } else if (underlyingAssetBalances[i] < targetBalance) {
-                withdrawAmounts[underlyingAssetIndex] +=
-                    targetBalance -
-                    underlyingAssetBalances[i];
-            }
-        }
-
-        for (uint256 i = 0; i < numTokens; i++) {
-            if (
-                depositAmounts[i] > withdrawAmounts[i] &&
-                withdrawAmounts[i] > 0
-            ) {
-                depositAmounts[i] -= withdrawAmounts[i];
-                withdrawAmounts[i] = 0;
-            } else if (
-                depositAmounts[i] < withdrawAmounts[i] && depositAmounts[i] > 0
-            ) {
-                withdrawAmounts[i] -= depositAmounts[i];
-                depositAmounts[i] = 0;
-            }
-
-            if (withdrawAmounts[i] > holdings[i]) {
-                withdrawAmounts[i] = 0;
-            }
-        }
-        /// Set managed balance of pool as amounts
-        /// i.e. Deposit amounts of tokens to pool from Aera Vault
-        updatePoolBalance(depositAmounts, IBVault.PoolBalanceOpKind.UPDATE);
-        /// Decrease managed balance and increase cash balance of pool
-        /// i.e. Move amounts from managed balance to cash balance
-        updatePoolBalance(depositAmounts, IBVault.PoolBalanceOpKind.DEPOSIT);
-
-        withdrawFromPool(withdrawAmounts);
-
-        uint256 yieldBearingDepositAmount;
-        uint256 allowance;
-        for (uint256 i = 0; i < numYieldBearingAssets; i++) {
-            targetBalance = (value * weights[i]) / ONE;
-            yieldBearingDepositAmount =
-                targetBalance -
-                underlyingAssetBalances[i];
-            underlyingAsset = tokens[
-                yieldBearingAssets[i].underlyingAssetIndex
-            ];
-            allowance = underlyingAsset.allowance(
-                address(this),
-                address(yieldBearingAssets[i].asset)
-            );
-            if (allowance > 0) {
-                underlyingAsset.safeDecreaseAllowance(
-                    address(yieldBearingAssets[i].asset),
-                    allowance
-                );
-            }
-            underlyingAsset.safeIncreaseAllowance(
-                address(yieldBearingAssets[i].asset),
-                yieldBearingDepositAmount
-            );
-            yieldBearingAssets[i].asset.deposit(
-                yieldBearingDepositAmount,
-                address(this)
-            );
-        }
     }
 
     /// @inheritdoc IManagerAPI
@@ -1322,12 +1163,16 @@ contract AeraVaultV2 is
             }
         }
 
+        depositToPool(newBalances);
+    }
+
+    function depositToPool(uint256[] memory amounts) internal {
         /// Set managed balance of pool as amounts
         /// i.e. Deposit amounts of tokens to pool from Aera Vault
-        updatePoolBalance(newBalances, IBVault.PoolBalanceOpKind.UPDATE);
+        updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.UPDATE);
         /// Decrease managed balance and increase cash balance of pool
         /// i.e. Move amounts from managed balance to cash balance
-        updatePoolBalance(newBalances, IBVault.PoolBalanceOpKind.DEPOSIT);
+        updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
     }
 
     /// @notice Withdraw tokens up to requested amounts.
@@ -1766,6 +1611,245 @@ contract AeraVaultV2 is
         uint256 ratio = (numer * ONE) / denom;
         uint256 scale = (ONE * ONE) / (ONE - swapFee);
         return (ratio * scale) / ONE;
+    }
+
+    function adjustYieldBearingAssets(
+        IERC20[] memory tokens,
+        uint256[] memory holdings,
+        uint256[] memory balances,
+        uint256[] memory underlyingBalances,
+        uint256[] memory weights,
+        uint256 numTokens
+    ) internal {
+        uint256 numYieldBearingAssets = yieldBearingAssets.length;
+
+        uint256[] memory targetBalances = calcTargetUnderlyingBalances(
+            holdings,
+            balances,
+            underlyingBalances,
+            weights,
+            numTokens,
+            numYieldBearingAssets
+        );
+
+        uint256[] memory necessaryAmounts = new uint256[](numTokens);
+
+        balances = withdrawFromYieldBearingAssets(
+            targetBalances,
+            underlyingBalances,
+            tokens,
+            balances,
+            numYieldBearingAssets
+        );
+
+        uint256 underlyingIndex;
+        for (uint256 i = 0; i < numYieldBearingAssets; i++) {
+            underlyingIndex = yieldBearingAssets[i].underlyingIndex;
+            if (targetBalances[i] > underlyingBalances[i]) {
+                uint256 necessaryAmount = targetBalances[i] -
+                    underlyingBalances[i];
+                if (
+                    necessaryAmounts[underlyingIndex] + necessaryAmount <
+                    holdings[underlyingIndex] + balances[underlyingIndex]
+                ) {
+                    necessaryAmounts[underlyingIndex] +=
+                        targetBalances[i] -
+                        underlyingBalances[i];
+                }
+            }
+        }
+
+        balances = withdrawNecessaryTokensFromPool(
+            tokens,
+            balances,
+            necessaryAmounts,
+            numTokens
+        );
+
+        balances = depositToYieldBearingAssets(
+            targetBalances,
+            underlyingBalances,
+            tokens,
+            balances,
+            numYieldBearingAssets
+        );
+
+        depositToPool(balances);
+    }
+
+    function getUnderlyingBalances() internal returns (uint256[] memory) {
+        uint256[] memory underlyingBalances = new uint256[](
+            yieldBearingAssets.length
+        );
+        for (uint256 i = 0; i < yieldBearingAssets.length; i++) {
+            underlyingBalances[i] = yieldBearingAssets[i]
+                .asset
+                .convertToAssets(
+                    yieldBearingAssets[i].asset.balanceOf(address(this))
+                );
+        }
+
+        return underlyingBalances;
+    }
+
+    function calcTargetUnderlyingBalances(
+        uint256[] memory holdings,
+        uint256[] memory balances,
+        uint256[] memory underlyingBalances,
+        uint256[] memory weights,
+        uint256 numTokens,
+        uint256 numYieldBearingAssets
+    ) internal returns (uint256[] memory) {
+        (
+            uint256[] memory oraclePrices,
+            uint256[] memory updatedAt
+        ) = getOraclePrices();
+
+        checkOracleStatus(updatedAt);
+
+        uint256[] memory amounts = new uint256[](numTokens);
+        for (uint256 i = 0; i < numTokens; i++) {
+            amounts[i] = holdings[i] + balances[i];
+        }
+        for (uint256 i = 0; i < numYieldBearingAssets; i++) {
+            if (underlyingBalances[i] > 0) {
+                amounts[
+                    yieldBearingAssets[i].underlyingIndex
+                ] += underlyingBalances[i];
+            }
+        }
+
+        uint256 value = getValue(amounts, oraclePrices);
+
+        uint256 numYieldBearingAssets = numYieldBearingAssets;
+        uint256[] memory targetBalances = new uint256[](numYieldBearingAssets);
+        for (uint256 i = 0; i < numYieldBearingAssets; i++) {
+            if (weights[i + numTokens] > 0) {
+                targetBalances[i] =
+                    (value * weights[i + numTokens]) /
+                    oraclePrices[yieldBearingAssets[i].underlyingIndex];
+            }
+        }
+
+        return targetBalances;
+    }
+
+    function withdrawNecessaryTokensFromPool(
+        IERC20[] memory tokens,
+        uint256[] memory balances,
+        uint256[] memory necessaryAmounts,
+        uint256 numTokens
+    ) internal returns (uint256[] memory) {
+        uint256[] memory currentBalances = new uint256[](numTokens);
+        for (uint256 i = 0; i < numTokens; i++) {
+            if (necessaryAmounts[i] > balances[i]) {
+                necessaryAmounts[i] -= balances[i];
+            } else {
+                necessaryAmounts[i] = 0;
+            }
+            if (necessaryAmounts[i] > 0) {
+                currentBalances[i] = tokens[i].balanceOf(address(this));
+            }
+        }
+
+        withdrawFromPool(necessaryAmounts);
+
+        for (uint256 i = 0; i < numTokens; i++) {
+            if (necessaryAmounts[i] > 0) {
+                balances[i] +=
+                    tokens[i].balanceOf(address(this)) -
+                    currentBalances[i];
+            }
+        }
+
+        return balances;
+    }
+
+    function depositToYieldBearingAssets(
+        uint256[] memory targetBalances,
+        uint256[] memory underlyingBalances,
+        IERC20[] memory tokens,
+        uint256[] memory balances,
+        uint256 numYieldBearingAssets
+    ) internal returns (uint256[] memory) {
+        uint256 depositAmount;
+        uint256 underlyingIndex;
+        for (uint256 i = 0; i < numYieldBearingAssets; i++) {
+            underlyingIndex = yieldBearingAssets[i].underlyingIndex;
+            if (targetBalances[i] > underlyingBalances[i]) {
+                depositAmount = targetBalances[i] - underlyingBalances[i];
+
+                if (depositAmount <= balances[underlyingIndex]) {
+                    depositUnderlyingAsset(
+                        i,
+                        tokens[underlyingIndex],
+                        depositAmount
+                    );
+                    balances[underlyingIndex] -= depositAmount;
+                }
+            }
+        }
+
+        return balances;
+    }
+
+    function depositUnderlyingAsset(
+        uint256 index,
+        IERC20 underlyingAsset,
+        uint256 amount
+    ) internal {
+        uint256 allowance = underlyingAsset.allowance(
+            address(this),
+            address(yieldBearingAssets[index].asset)
+        );
+        if (allowance > 0) {
+            underlyingAsset.safeDecreaseAllowance(
+                address(yieldBearingAssets[index].asset),
+                allowance
+            );
+        }
+        underlyingAsset.safeIncreaseAllowance(
+            address(yieldBearingAssets[index].asset),
+            amount
+        );
+        yieldBearingAssets[index].asset.deposit(amount, address(this));
+    }
+
+    function withdrawFromYieldBearingAssets(
+        uint256[] memory targetBalances,
+        uint256[] memory underlyingBalances,
+        IERC20[] memory tokens,
+        uint256[] memory balances,
+        uint256 numYieldBearingAssets
+    ) internal returns (uint256[] memory) {
+        uint256 underlyingIndex;
+        for (uint256 i = 0; i < numYieldBearingAssets; i++) {
+            underlyingIndex = yieldBearingAssets[i].underlyingIndex;
+            if (targetBalances[i] < underlyingBalances[i]) {
+                balances[underlyingIndex] += withdrawUnderlyingAsset(
+                    i,
+                    tokens[underlyingIndex],
+                    underlyingBalances[i] - targetBalances[i]
+                );
+            }
+        }
+
+        return balances;
+    }
+
+    function withdrawUnderlyingAsset(
+        uint256 index,
+        IERC20 underlyingAsset,
+        uint256 amount
+    ) internal returns (uint256) {
+        uint256 balance = underlyingAsset.balanceOf(address(this));
+        yieldBearingAssets[index].asset.withdraw(
+            amount,
+            address(this),
+            address(this)
+        );
+
+        return underlyingAsset.balanceOf(address(this)) - balance;
     }
 
     /// @notice Get oracle prices.
