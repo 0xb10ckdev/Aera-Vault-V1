@@ -126,6 +126,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       tokens: sortedTokens,
       weights: validWeights,
       oracles: oracleAddresses,
+      yieldBearingAssets: [],
       numeraireAssetIndex: 0,
       swapFeePercentage: MIN_SWAP_FEE,
       manager: manager.address,
@@ -238,6 +239,11 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         await expect(
           vault.initialDeposit(
             tokenValueArray(sortedTokens, ONE, tokens.length + 1),
+            tokenValueArray(
+              sortedTokens,
+              ONE.div(tokens.length),
+              tokens.length,
+            ),
           ),
         ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
       });
@@ -246,6 +252,11 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         await expect(
           vault.initialDeposit(
             tokenValueArray(unsortedTokens, ONE, tokens.length),
+            tokenValueArray(
+              sortedTokens,
+              ONE.div(tokens.length),
+              tokens.length,
+            ),
           ),
         ).to.be.revertedWith("Aera__DifferentTokensInPosition");
       });
@@ -254,23 +265,37 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         const validAmounts = tokenValueArray(sortedTokens, ONE, tokens.length);
 
         await expect(
-          vault.initialDeposit([
-            {
-              token: sortedTokens[0],
-              value: toWei(3),
-            },
-            ...validAmounts.slice(1),
-          ]),
+          vault.initialDeposit(
+            [
+              {
+                token: sortedTokens[0],
+                value: toWei(3),
+              },
+              ...validAmounts.slice(1),
+            ],
+            tokenValueArray(
+              sortedTokens,
+              ONE.div(tokens.length),
+              tokens.length,
+            ),
+          ),
         ).to.be.revertedWith("ERC20: insufficient allowance");
 
         await expect(
-          vault.initialDeposit([
-            ...validAmounts.slice(0, -1),
-            {
-              token: sortedTokens[tokens.length - 1],
-              value: toWei(3),
-            },
-          ]),
+          vault.initialDeposit(
+            [
+              ...validAmounts.slice(0, -1),
+              {
+                token: sortedTokens[tokens.length - 1],
+                value: toWei(3),
+              },
+            ],
+            tokenValueArray(
+              sortedTokens,
+              ONE.div(tokens.length),
+              tokens.length,
+            ),
+          ),
         ).to.be.revertedWith("ERC20: insufficient allowance");
       });
     });
@@ -278,6 +303,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     it("should be possible to initialize the vault", async () => {
       await vault.initialDeposit(
         tokenValueArray(sortedTokens, ONE, tokens.length),
+        tokenValueArray(sortedTokens, ONE.div(tokens.length), tokens.length),
       );
 
       expect(await vault.initialized()).to.equal(true);
@@ -289,8 +315,14 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       for (let i = 0; i < tokens.length; i++) {
         await tokens[i].approve(vault.address, toWei(100));
       }
+
+      for (let i = 1; i < tokens.length; i++) {
+        await oracles[i].setLatestAnswer(ONE.div(1e10));
+      }
+
       await vault.initialDeposit(
         tokenValueArray(sortedTokens, ONE, tokens.length),
+        tokenValueArray(sortedTokens, ONE.div(tokens.length), tokens.length),
       );
     });
 
@@ -298,6 +330,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       await expect(
         vault.initialDeposit(
           tokenValueArray(sortedTokens, ONE, tokens.length),
+          tokenValueArray(sortedTokens, ONE.div(tokens.length), tokens.length),
         ),
       ).to.be.revertedWith("Aera__VaultIsAlreadyInitialized");
     });
@@ -1069,8 +1102,14 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         for (let i = 0; i < tokens.length; i++) {
           await tokens[i].approve(vault.address, ONE);
         }
+
+        for (let i = 1; i < tokens.length; i++) {
+          await oracles[i].setLatestAnswer(ONE.div(1e10));
+        }
+
         await vault.initialDeposit(
           tokenValueArray(sortedTokens, ONE, tokens.length),
+          tokenValueArray(sortedTokens, ONE.div(tokens.length), tokens.length),
         );
       });
 
@@ -1187,6 +1226,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       }
       await vault.initialDeposit(
         tokenValueArray(sortedTokens, ONE, tokens.length),
+        tokenValueArray(sortedTokens, ONE.div(tokens.length), tokens.length),
       );
     });
 
@@ -1242,8 +1282,14 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       for (let i = 0; i < tokens.length; i++) {
         await tokens[i].approve(vault.address, ONE);
       }
+
+      for (let i = 1; i < tokens.length; i++) {
+        await oracles[i].setLatestAnswer(ONE.div(1e10));
+      }
+
       await vault.initialDeposit(
         tokenValueArray(sortedTokens, ONE, tokens.length),
+        tokenValueArray(sortedTokens, ONE.div(tokens.length), tokens.length),
       );
     });
 
@@ -1403,6 +1449,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         }
         await vault.initialDeposit(
           tokenValueArray(sortedTokens, ONE, tokens.length),
+          tokenValueArray(sortedTokens, ONE.div(tokens.length), tokens.length),
         );
       });
 
@@ -1542,6 +1589,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         }
         await vault.initialDeposit(
           tokenValueArray(sortedTokens, ONE, tokens.length),
+          tokenValueArray(sortedTokens, ONE.div(tokens.length), tokens.length),
         );
       });
 

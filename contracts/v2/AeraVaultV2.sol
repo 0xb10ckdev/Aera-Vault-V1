@@ -485,16 +485,18 @@ contract AeraVaultV2 is
             });
         bVault.joinPool(poolId, address(this), address(this), joinPoolRequest);
 
-        balances = getHoldings();
+        if (yieldBearingAssets.length > 0) {
+            balances = getHoldings();
 
-        adjustYieldBearingAssets(
-            tokens,
-            balances,
-            underlyingBalances,
-            weights,
-            0,
-            numTokens
-        );
+            adjustYieldBearingAssets(
+                tokens,
+                balances,
+                underlyingBalances,
+                weights,
+                0,
+                numTokens
+            );
+        }
 
         setSwapEnabled(true);
     }
@@ -1190,9 +1192,7 @@ contract AeraVaultV2 is
         uint256 numTokens
     ) internal returns (uint256[] memory newBalances) {
         uint256 numYieldBearingAssets = yieldBearingAssets.length;
-        uint256[] memory newBalances = new uint256[](
-            numTokens + numYieldBearingAssets
-        );
+        newBalances = new uint256[](numTokens + numYieldBearingAssets);
 
         for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] > 0) {
@@ -1520,27 +1520,26 @@ contract AeraVaultV2 is
         uint256 startTime,
         uint256 endTime
     ) internal {
-        weights = normalizeWeights(weights, weightSum);
+        uint256[] memory newWeights = normalizeWeights(weights, weightSum);
 
-        poolController.updateWeightsGradually(startTime, endTime, weights);
+        poolController.updateWeightsGradually(startTime, endTime, newWeights);
     }
 
     function normalizeWeights(uint256[] memory weights, uint256 weightSum)
         internal
         pure
-        returns (uint256[] memory)
+        returns (uint256[] memory newWeights)
     {
         uint256 numWeights = weights.length;
+        newWeights = new uint256[](numWeights);
 
         uint256 adjustedSum;
         for (uint256 i = 0; i < numWeights; i++) {
-            weights[i] = (weights[i] * ONE) / weightSum;
-            adjustedSum += weights[i];
+            newWeights[i] = (weights[i] * ONE) / weightSum;
+            adjustedSum += newWeights[i];
         }
 
-        weights[0] = weights[0] + ONE - adjustedSum;
-
-        return weights;
+        newWeights[0] = newWeights[0] + ONE - adjustedSum;
     }
 
     /// @notice Deposit token to the pool.
