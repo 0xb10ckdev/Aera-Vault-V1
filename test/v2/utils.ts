@@ -18,7 +18,7 @@ export type VaultParams = {
   tokens: string[];
   weights: string[];
   oracles: string[];
-  yieldBearingAssets: {asset: string, underlyingIndex: BigNumberish}[];
+  yieldBearingAssets: { asset: string; underlyingIndex: BigNumberish }[];
   numeraireAssetIndex: number;
   swapFeePercentage: BigNumberish;
   manager: string;
