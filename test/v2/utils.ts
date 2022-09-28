@@ -15,7 +15,7 @@ export type VaultParams = {
   factory: string;
   name: string;
   symbol: string;
-  tokens: string[];
+  poolTokens: string[];
   weights: string[];
   oracles: string[];
   yieldBearingAssets: { asset: string; underlyingIndex: BigNumberish }[];
@@ -49,7 +49,7 @@ export const deployVault = async (
     factory: params.factory,
     name: params.name,
     symbol: params.symbol,
-    tokens: params.tokens,
+    poolTokens: params.poolTokens,
     weights: params.weights,
     oracles: params.oracles,
     yieldBearingAssets: params.yieldBearingAssets,

@@ -123,7 +123,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       factory: factory.address,
       name: "Test",
       symbol: "TEST",
-      tokens: sortedTokens,
+      poolTokens: sortedTokens,
       weights: validWeights,
       oracles: oracleAddresses,
       yieldBearingAssets: [],
