@@ -102,7 +102,7 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
         factory: factory.address,
         name: "Test",
         symbol: "TEST",
-        tokens: sortedTokens,
+        poolTokens: sortedTokens,
         weights: validWeights,
         oracles: oracleAddress,
         yieldBearingAssets: [],
@@ -232,14 +232,14 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
     });
 
     it("when token is not sorted in ascending order", async () => {
-      validParams.tokens = unsortedTokens;
+      validParams.poolTokens = unsortedTokens;
       await expect(deployVault(validParams)).to.be.revertedWith(
         BALANCER_ERRORS.UNSORTED_ARRAY,
       );
     });
 
     it("when token is duplicated", async () => {
-      validParams.tokens = [sortedTokens[0], ...sortedTokens.slice(0, -1)];
+      validParams.poolTokens = [sortedTokens[0], ...sortedTokens.slice(0, -1)];
       await expect(deployVault(validParams)).to.be.revertedWith(
         BALANCER_ERRORS.UNSORTED_ARRAY,
       );
@@ -372,27 +372,26 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
     const validWeights = valueArray(ONE.div(tokens.length), tokens.length);
 
-    vault = await hre.run("deploy:vaultV2", {
+    vault = await deployVault({
+      signer: admin,
       factory: factory.address,
       name: "Test",
       symbol: "TEST",
-      tokens: sortedTokens.join(","),
-      weights: validWeights.join(","),
-      oracles: oracleAddresses.join(","),
-      yieldBearingAssets: "",
-      numeraireAssetIndex: "0",
-      swapFee: MIN_SWAP_FEE.toString(),
+      poolTokens: sortedTokens,
+      weights: validWeights,
+      oracles: oracleAddresses,
+      yieldBearingAssets: [],
+      numeraireAssetIndex: 0,
+      swapFeePercentage: MIN_SWAP_FEE,
       manager: manager.address,
       validator: validator.address,
-      minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE.toString(),
-      minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE.toString(),
-      maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE.toString(),
-      maxOracleDelay: MAX_ORACLE_DELAY.toString(),
-      minFeeDuration: MIN_FEE_DURATION.toString(),
-      managementFee: MAX_MANAGEMENT_FEE.toString(),
+      minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
+      minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE,
+      maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE,
+      maxOracleDelay: MAX_ORACLE_DELAY,
+      minFeeDuration: MIN_FEE_DURATION,
+      managementFee: MAX_MANAGEMENT_FEE,
       description: "Test vault description",
-      silent: true,
-      test: true,
     });
   });
 
