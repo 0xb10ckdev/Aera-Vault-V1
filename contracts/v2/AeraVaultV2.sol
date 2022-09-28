@@ -243,6 +243,12 @@ contract AeraVaultV2 is
         address sortedToken,
         uint256 index
     );
+    error Aera__DifferentUnderlyingIndex(
+        address yieldBearingAsset,
+        uint256 underlyingIndex,
+        address underlyingAsset,
+        address actual
+    );
     error Aera__ValidatorIsNotMatched(
         uint256 numTokens,
         uint256 numAllowances
@@ -350,15 +356,16 @@ contract AeraVaultV2 is
         OracleStorage(
             vaultParams.oracles,
             vaultParams.numeraireAssetIndex,
-            vaultParams.tokens.length
+            vaultParams.poolTokens.length
         )
     {
-        uint256 numTokens = vaultParams.tokens.length;
+        uint256 numPoolTokens = vaultParams.poolTokens.length;
+        uint256 numYieldBearingAssets = vaultParams.yieldBearingAssets.length;
 
-        checkVaultParams(vaultParams, numTokens);
+        checkVaultParams(vaultParams, numPoolTokens, numYieldBearingAssets);
 
-        address[] memory assetManagers = new address[](numTokens);
-        for (uint256 i = 0; i < numTokens; i++) {
+        address[] memory assetManagers = new address[](numPoolTokens);
+        for (uint256 i = 0; i < numPoolTokens; i++) {
             assetManagers[i] = address(this);
         }
 
@@ -380,7 +387,7 @@ contract AeraVaultV2 is
                     vault: IBVault(address(0)),
                     name: vaultParams.name,
                     symbol: vaultParams.symbol,
-                    tokens: vaultParams.tokens,
+                    tokens: vaultParams.poolTokens,
                     normalizedWeights: vaultParams.weights,
                     assetManagers: assetManagers,
                     swapFeePercentage: vaultParams.swapFeePercentage,
@@ -422,10 +429,10 @@ contract AeraVaultV2 is
         maxOracleDelay = vaultParams.maxOracleDelay;
         managementFee = vaultParams.managementFee;
         description = vaultParams.description;
-        managersFee[manager] = new uint256[](numTokens);
-        managersFeeTotal = new uint256[](numTokens);
+        managersFee[manager] = new uint256[](numPoolTokens);
+        managersFeeTotal = new uint256[](numPoolTokens);
 
-        for (uint256 i = 0; i < vaultParams.yieldBearingAssets.length; i++) {
+        for (uint256 i = 0; i < numYieldBearingAssets; i++) {
             yieldBearingAssets.push(vaultParams.yieldBearingAssets[i]);
         }
 
@@ -463,11 +470,11 @@ contract AeraVaultV2 is
 
         checkWeights(weights);
 
-        uint256 numTokens = poolTokens.length;
-        uint256[] memory balances = new uint256[](numTokens);
-        uint256[] memory underlyingBalances = new uint256[](numTokens);
+        uint256 numPoolTokens = poolTokens.length;
+        uint256[] memory balances = new uint256[](numPoolTokens);
+        uint256[] memory underlyingBalances = new uint256[](numPoolTokens);
 
-        for (uint256 i = 0; i < numTokens; i++) {
+        for (uint256 i = 0; i < numPoolTokens; i++) {
             balances[i] = depositToken(poolTokens[i], amounts[i]);
         }
 
@@ -492,7 +499,7 @@ contract AeraVaultV2 is
                 underlyingBalances,
                 weights,
                 0,
-                numTokens
+                numPoolTokens
             );
         }
 
@@ -2230,13 +2237,34 @@ contract AeraVaultV2 is
     /// @param numPoolTokens Number of tokens.
     function checkVaultParams(
         NewVaultParams memory vaultParams,
-        uint256 numPoolTokens
+        uint256 numPoolTokens,
+        uint256 numYieldBearingAssets
     ) internal {
         if (numPoolTokens != vaultParams.weights.length) {
             revert Aera__ValueLengthIsNotSame(
                 numPoolTokens,
                 vaultParams.weights.length
             );
+        }
+
+        uint256 underlyingIndex;
+        IERC4626 yieldBearingAsset;
+        for (uint256 i = 0; i < numYieldBearingAssets; i++) {
+            underlyingIndex = vaultParams
+                .yieldBearingAssets[i]
+                .underlyingIndex;
+            yieldBearingAsset = vaultParams.yieldBearingAssets[i].asset;
+            if (
+                address(vaultParams.poolTokens[underlyingIndex]) !=
+                yieldBearingAsset.asset()
+            ) {
+                revert Aera__DifferentUnderlyingIndex(
+                    address(yieldBearingAsset),
+                    underlyingIndex,
+                    yieldBearingAsset.asset(),
+                    address(vaultParams.poolTokens[underlyingIndex])
+                );
+            }
         }
 
         checkValidator(vaultParams, numPoolTokens);

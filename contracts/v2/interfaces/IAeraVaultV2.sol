@@ -29,10 +29,11 @@ interface IAeraVaultV2 is
     // factory: Balancer Managed Pool Factory address.
     // name: Name of Pool Token.
     // symbol: Symbol of Pool Token.
-    // tokens: Token addresses.
+    // poolTokens: Pool token addresses.
     // weights: Token weights.
     // oracles: Chainlink oracle addresses.
     //          All oracles should be in reference to the same asset.
+    // yieldBearingAssets: Yield bearing asset addresses.
     // numeraireAssetIndex: Index of base token for oracles.
     // swapFeePercentage: Pool swap fee.
     // manager: Vault manager address.
@@ -51,7 +52,7 @@ interface IAeraVaultV2 is
         address factory;
         string name;
         string symbol;
-        IERC20[] tokens;
+        IERC20[] poolTokens;
         uint256[] weights;
         AggregatorV2V3Interface[] oracles;
         YieldBearingAsset[] yieldBearingAssets;
