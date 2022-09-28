@@ -1,5 +1,6 @@
 import { AssetHelpers } from "@balancer-labs/balancer-js";
 import { task, types } from "hardhat/config";
+import { readFile } from "fs/promises";
 import { getConfig } from "../../scripts/config";
 import {
   MAX_ORACLE_DELAY,
@@ -12,41 +13,7 @@ const wethAddress = "0x000000000000000000000000000000000000000F";
 const assetHelpers = new AssetHelpers(wethAddress);
 
 task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
-  .addParam("factory", "Balancer Managed Pool Factory address")
-  .addParam("name", "Pool Token's name")
-  .addParam("symbol", "Pool Token's symbol")
-  .addParam("tokens", "Tokens' addresses")
-  .addParam("weights", "Tokens' weights")
-  .addParam("oracles", "Oracles for token prices vs base token")
-  .addParam("numeraireAssetIndex", "Index of base token for oracles")
-  .addParam("swapFee", "Swap Fee Percentage")
-  .addParam("manager", "Manager's address")
-  .addParam("validator", "Validator's address")
-  .addParam(
-    "minReliableVaultValue",
-    "Minimum reliable vault TVL in base token",
-  )
-  .addParam(
-    "minFeeDuration",
-    "Minimum period to charge guaranteed management fee (in seconds)",
-  )
-  .addParam(
-    "managementFee",
-    "Management fee earned proportion per second(1e9 is maximum)",
-  )
-  .addParam(
-    "description",
-    "Vault text description. Keep it short and simple, please.",
-  )
-  .addOptionalParam(
-    "minSignificantDepositValue",
-    "Minimum significant deposit value in base token terms",
-  )
-  .addOptionalParam(
-    "maxOracleSpotDivergence",
-    "Maximum oracle spot price divergence",
-  )
-  .addOptionalParam("maxOracleDelay", "Maximum update delay of oracles")
+  .addParam("path", "Path of configuration for vault parameters")
   .addOptionalParam(
     "silent",
     "Disable console log on deployment",
@@ -62,45 +29,35 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
   .setAction(async (taskArgs, { ethers, network }) => {
     const config = getConfig(network.config.chainId || 1);
 
-    const factory = taskArgs.factory;
-    const name = taskArgs.name;
-    const symbol = taskArgs.symbol;
-    const tokens = taskArgs.tokens.split(",");
-    const weights = taskArgs.weights.split(",");
-    const oracles = taskArgs.oracles.split(",");
-    const numeraireAssetIndex = taskArgs.numeraireAssetIndex;
-    const swapFeePercentage = taskArgs.swapFee;
-    const manager = taskArgs.manager;
-    const validator = taskArgs.validator;
-    const minReliableVaultValue = taskArgs.minReliableVaultValue;
-    const minSignificantDepositValue =
-      taskArgs.minSignificantDepositValue || MIN_SIGNIFICANT_DEPOSIT_VALUE;
-    const maxOracleSpotDivergence =
-      taskArgs.maxOracleSpotDivergence || MAX_ORACLE_SPOT_DIVERGENCE;
-    const maxOracleDelay = taskArgs.maxOracleDelay || MAX_ORACLE_DELAY;
-    const minFeeDuration = taskArgs.minFeeDuration;
-    const managementFee = taskArgs.managementFee;
-    const description = taskArgs.description;
-    const merkleOrchard = config.merkleOrchard || ethers.constants.AddressZero;
+    const vaultConfig = JSON.parse(await readFile(taskArgs.path, "utf8"));
 
-    if (tokens.length < 2) {
+    vaultConfig.minSignificantDepositValue =
+      vaultConfig.minSignificantDepositValue || MIN_SIGNIFICANT_DEPOSIT_VALUE;
+    vaultConfig.maxOracleSpotDivergence =
+      vaultConfig.maxOracleSpotDivergence || MAX_ORACLE_SPOT_DIVERGENCE;
+    vaultConfig.maxOracleDelay =
+      vaultConfig.maxOracleDelay || MAX_ORACLE_DELAY;
+    vaultConfig.merkleOrchard =
+      config.merkleOrchard || ethers.constants.AddressZero;
+
+    if (vaultConfig.poolTokens.length < 2) {
       console.error("Number of tokens should be at least two");
       return;
     }
 
-    if (tokens.length != weights.length) {
+    if (vaultConfig.poolTokens.length != vaultConfig.weights.length) {
       console.error("Number of tokens and weights should be same");
       return;
     }
 
-    if (tokens.length != oracles.length) {
+    if (vaultConfig.poolTokens.length != vaultConfig.oracles.length) {
       console.error("Number of tokens and oracles should be same");
       return;
     }
 
-    const [sortedTokens] = assetHelpers.sortTokens(tokens);
-    for (let i = 0; i < tokens.length; i++) {
-      if (tokens[i] !== sortedTokens[i]) {
+    const [sortedTokens] = assetHelpers.sortTokens(vaultConfig.poolTokens);
+    for (let i = 0; i < vaultConfig.poolTokens.length; i++) {
+      if (vaultConfig.poolTokens[i] !== sortedTokens[i]) {
         console.error("Tokens should be sorted by address in ascending order");
         return;
       }
@@ -110,54 +67,46 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
 
     if (!taskArgs.silent) {
       console.log("Deploying vault with");
-      console.log(`Factory: ${factory}`);
-      console.log(`Name: ${name}`);
-      console.log(`Symbol: ${symbol}`);
-      console.log("Tokens:\n", tokens.join("\n"));
-      console.log("Weights:\n", weights.join("\n"));
-      console.log("Oracles:\n", oracles.join("\n"));
-      console.log("Numeraire Asset Index:\n", numeraireAssetIndex);
-      console.log(`Swap Fee: ${swapFeePercentage}`);
-      console.log(`Manager: ${manager}`);
-      console.log(`Validator: ${validator}`);
-      console.log(`Minimum Reliable Vault Value: ${minReliableVaultValue}`);
+      console.log(`Factory: ${vaultConfig.factory}`);
+      console.log(`Name: ${vaultConfig.name}`);
+      console.log(`Symbol: ${vaultConfig.symbol}`);
+      console.log("Tokens:\n", vaultConfig.poolTokens.join("\n"));
+      console.log("Weights:\n", vaultConfig.weights.join("\n"));
+      console.log("Oracles:\n", vaultConfig.oracles.join("\n"));
       console.log(
-        `Minimum Significant Deposit Value: ${minSignificantDepositValue}`,
+        "YieldBearingAssets:\n",
+        vaultConfig.yieldBearingAssets
+          .map(
+            (yieldBearingAssets: { asset: string; underyingIndex: number }) =>
+              yieldBearingAssets.asset,
+          )
+          .join("\n"),
+      );
+      console.log("Numeraire Asset Index:\n", vaultConfig.numeraireAssetIndex);
+      console.log(`Swap Fee: ${vaultConfig.swapFeePercentage}`);
+      console.log(`Manager: ${vaultConfig.manager}`);
+      console.log(`Validator: ${vaultConfig.validator}`);
+      console.log(
+        `Minimum Reliable Vault Value: ${vaultConfig.minReliableVaultValue}`,
       );
       console.log(
-        `Maximum Oracle Spot Divergence: ${maxOracleSpotDivergence}`,
+        `Minimum Significant Deposit Value: ${vaultConfig.minSignificantDepositValue}`,
       );
-      console.log(`Maximum Oracle Delay: ${maxOracleDelay}`);
-      console.log(`Minimum Fee Duration: ${minFeeDuration}`);
-      console.log(`Management Fee: ${managementFee}`);
-      console.log(`Merkle Orchard: ${merkleOrchard}`);
-      console.log(`Description: ${description}`);
+      console.log(
+        `Maximum Oracle Spot Divergence: ${vaultConfig.maxOracleSpotDivergence}`,
+      );
+      console.log(`Maximum Oracle Delay: ${vaultConfig.maxOracleDelay}`);
+      console.log(`Minimum Fee Duration: ${vaultConfig.minFeeDuration}`);
+      console.log(`Management Fee: ${vaultConfig.managementFee}`);
+      console.log(`Merkle Orchard: ${vaultConfig.merkleOrchard}`);
+      console.log(`Description: ${vaultConfig.description}`);
     }
 
     const contract = taskArgs.test ? "AeraVaultV2Mock" : "AeraVaultV2";
 
     const vaultFactory = await ethers.getContractFactory(contract);
 
-    const vault = await vaultFactory.connect(admin).deploy({
-      factory,
-      name,
-      symbol,
-      tokens,
-      weights,
-      oracles,
-      numeraireAssetIndex,
-      swapFeePercentage,
-      manager,
-      validator,
-      minReliableVaultValue,
-      minSignificantDepositValue,
-      maxOracleSpotDivergence,
-      maxOracleDelay,
-      minFeeDuration,
-      managementFee,
-      merkleOrchard,
-      description,
-    });
+    const vault = await vaultFactory.connect(admin).deploy(vaultConfig);
 
     if (!taskArgs.silent) {
       console.log("Vault is deployed to:", vault.address);
