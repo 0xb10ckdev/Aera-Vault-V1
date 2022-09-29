@@ -2,6 +2,7 @@ import { AssetHelpers } from "@balancer-labs/balancer-js";
 import { task, types } from "hardhat/config";
 import { readFile } from "fs/promises";
 import { getConfig } from "../../scripts/config";
+import { toWei } from "../../test/v1/constants";
 import {
   MAX_ORACLE_DELAY,
   MAX_ORACLE_SPOT_DIVERGENCE,
@@ -13,7 +14,7 @@ const wethAddress = "0x000000000000000000000000000000000000000F";
 const assetHelpers = new AssetHelpers(wethAddress);
 
 task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
-  .addParam("path", "Path of configuration for vault parameters")
+  .addParam("configPath", "Path of configuration for vault parameters")
   .addOptionalParam(
     "silent",
     "Disable console log on deployment",
@@ -29,7 +30,9 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
   .setAction(async (taskArgs, { ethers, network }) => {
     const config = getConfig(network.config.chainId || 1);
 
-    const vaultConfig = JSON.parse(await readFile(taskArgs.path, "utf8"));
+    const vaultConfig = JSON.parse(
+      await readFile(taskArgs.configPath, "utf8"),
+    );
 
     vaultConfig.minSignificantDepositValue =
       vaultConfig.minSignificantDepositValue || MIN_SIGNIFICANT_DEPOSIT_VALUE;
@@ -40,13 +43,18 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
     vaultConfig.merkleOrchard =
       config.merkleOrchard || ethers.constants.AddressZero;
 
+    const avgWeight = toWei(1).div(vaultConfig.poolTokens.length);
+    const weights = Array.from({ length: vaultConfig.poolTokens.length }, _ =>
+      avgWeight.toString(),
+    );
+    weights[0] = toWei(1)
+      .sub(avgWeight.mul(vaultConfig.poolTokens.length))
+      .add(weights[0])
+      .toString();
+    vaultConfig.weights = weights;
+
     if (vaultConfig.poolTokens.length < 2) {
       console.error("Number of tokens should be at least two");
-      return;
-    }
-
-    if (vaultConfig.poolTokens.length != vaultConfig.weights.length) {
-      console.error("Number of tokens and weights should be same");
       return;
     }
 
