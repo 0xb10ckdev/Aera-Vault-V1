@@ -2,6 +2,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
 import hre, { deployments, ethers } from "hardhat";
+import { writeFile, rm } from "fs/promises";
 import { getConfig } from "../../../scripts/config";
 import {
   IERC20,
@@ -372,27 +373,37 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
     const validWeights = valueArray(ONE.div(tokens.length), tokens.length);
 
-    vault = await deployVault({
-      signer: admin,
-      factory: factory.address,
-      name: "Test",
-      symbol: "TEST",
-      poolTokens: sortedTokens,
-      weights: validWeights,
-      oracles: oracleAddresses,
-      yieldBearingAssets: [],
-      numeraireAssetIndex: 0,
-      swapFeePercentage: MIN_SWAP_FEE,
-      manager: manager.address,
-      validator: validator.address,
-      minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
-      minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE,
-      maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE,
-      maxOracleDelay: MAX_ORACLE_DELAY,
-      minFeeDuration: MIN_FEE_DURATION,
-      managementFee: MAX_MANAGEMENT_FEE,
-      description: "Test vault description",
+    await writeFile(
+      ".testConfig.json",
+      JSON.stringify({
+        factory: factory.address,
+        name: "Test",
+        symbol: "TEST",
+        poolTokens: sortedTokens,
+        weights: validWeights,
+        oracles: oracleAddresses,
+        yieldBearingAssets: [],
+        numeraireAssetIndex: 0,
+        swapFeePercentage: MIN_SWAP_FEE,
+        manager: manager.address,
+        validator: validator.address,
+        minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
+        minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE,
+        maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE,
+        maxOracleDelay: MAX_ORACLE_DELAY,
+        minFeeDuration: MIN_FEE_DURATION,
+        managementFee: MAX_MANAGEMENT_FEE,
+        description: "Test vault description",
+      }),
+    );
+
+    vault = await hre.run("deploy:vaultV2", {
+      configPath: ".testConfig.json",
+      silent: true,
+      test: true,
     });
+
+    await rm(".testConfig.json");
   });
 
   afterEach(async () => {
