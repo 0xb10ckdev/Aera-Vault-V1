@@ -36,6 +36,7 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
     false,
     types.boolean,
   )
+  .addFlag("printTransactionData", "Get transaction data for deployment")
   .setAction(async (taskArgs, { ethers, network }) => {
     const config = getConfig(network.config.chainId || 1);
 
@@ -86,6 +87,25 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
     const contract = taskArgs.test ? "AeraVaultV1Mock" : "AeraVaultV1";
 
     const vaultFactory = await ethers.getContractFactory(contract);
+
+    if (taskArgs.printTransactionData) {
+      const calldata = vaultFactory.getDeployTransaction([
+        factory,
+        name,
+        symbol,
+        tokens,
+        weights,
+        swapFeePercentage,
+        manager,
+        validator,
+        noticePeriod,
+        managementFee,
+        merkleOrchard,
+        description,
+      ]).data;
+      console.log("Deployment Transaction Data:", calldata);
+      return;
+    }
 
     const vault = await vaultFactory.connect(admin).deploy({
       factory,
