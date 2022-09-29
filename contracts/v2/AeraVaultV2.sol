@@ -1009,6 +1009,7 @@ contract AeraVaultV2 is
         }
 
         for (uint256 i = 0; i < numYieldBearingAssets; i++) {
+            // slither-disable-next-line calls-loop
             holdings[i + numPoolTokens] = yieldBearingAssets[i]
                 .asset
                 .balanceOf(address(this));
@@ -1092,6 +1093,7 @@ contract AeraVaultV2 is
         for (uint256 i = 0; i < numYieldBearingAssets; i++) {
             index = i + numPoolTokens;
             tokens[index] = yieldBearingAssets[i].asset;
+            // slither-disable-next-line calls-loop
             holdings[index] = yieldBearingAssets[i].asset.balanceOf(
                 address(this)
             );
@@ -2108,6 +2110,8 @@ contract AeraVaultV2 is
             address(yieldBearingAssets[index].asset),
             amount
         );
+
+        // slither-disable-next-line unused-return
         yieldBearingAssets[index].asset.deposit(amount, address(this));
     }
 
@@ -2146,6 +2150,8 @@ contract AeraVaultV2 is
         uint256 amount
     ) internal returns (uint256) {
         uint256 balance = underlyingAsset.balanceOf(address(this));
+
+        // slither-disable-next-line unused-return
         yieldBearingAssets[index].asset.withdraw(
             amount,
             address(this),
