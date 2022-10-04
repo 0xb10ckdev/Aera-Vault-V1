@@ -1,5 +1,10 @@
 import { ethers } from "hardhat";
-import { OracleMock, OracleMock__factory } from "../../typechain";
+import {
+  ERC4626Mock,
+  ERC4626Mock__factory,
+  OracleMock,
+  OracleMock__factory,
+} from "../../typechain";
 
 export * from "../v1/fixtures";
 
@@ -23,4 +28,33 @@ export const setupOracles = async (
   );
 
   return oracles;
+};
+
+export const setupYieldBearingAssets = async (
+  underlyingAssets: string[],
+): Promise<ERC4626Mock[]> => {
+  const { admin } = await ethers.getNamedSigners();
+
+  const tokenDeploys: ERC4626Mock[] = [];
+  const erc4626Mock = await ethers.getContractFactory<ERC4626Mock__factory>(
+    "ERC4626Mock",
+  );
+
+  for (const underlyingAsset of underlyingAssets) {
+    const erc20 = await ethers.getContractAt("ERC20Mock", underlyingAsset);
+    const token = await erc4626Mock
+      .connect(admin)
+      .deploy(
+        underlyingAsset,
+        `YIELD BEARING ${await erc20.name()}`,
+        `YB ${await erc20.symbol()}`,
+      );
+    tokenDeploys.push(token);
+  }
+
+  const tokens = tokenDeploys.map(token =>
+    ERC4626Mock__factory.connect(token.address, admin),
+  );
+
+  return tokens;
 };
