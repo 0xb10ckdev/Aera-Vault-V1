@@ -462,13 +462,13 @@ contract AeraVaultV2 is
             poolTokens,
             false
         );
-        uint256[] memory weights = getValuesFromTokenWithValues(
+        uint256[] memory targetWeights = getValuesFromTokenWithValues(
             tokenWithWeight,
             poolTokens,
             true
         );
 
-        checkWeights(weights);
+        checkWeights(targetWeights);
 
         uint256 numPoolTokens = poolTokens.length;
         uint256[] memory balances = new uint256[](numPoolTokens);
@@ -497,7 +497,7 @@ contract AeraVaultV2 is
                 poolTokens,
                 getPoolHoldings(),
                 underlyingBalances,
-                weights,
+                targetWeights,
                 0,
                 numPoolTokens
             );
@@ -680,7 +680,7 @@ contract AeraVaultV2 is
 
         IERC20[] memory poolTokens = getPoolTokens();
 
-        uint256[] memory weights = getValuesFromTokenWithValues(
+        uint256[] memory targetWeights = getValuesFromTokenWithValues(
             tokenWithWeight,
             poolTokens,
             false
@@ -689,11 +689,11 @@ contract AeraVaultV2 is
         poolController.updateWeightsGradually(
             block.timestamp,
             block.timestamp,
-            weights
+            targetWeights
         );
         poolController.setSwapEnabled(true);
         // slither-disable-next-line reentrancy-events
-        emit EnabledTradingWithWeights(block.timestamp, weights);
+        emit EnabledTradingWithWeights(block.timestamp, targetWeights);
     }
 
     /// @inheritdoc IProtocolAPIV2
@@ -892,13 +892,13 @@ contract AeraVaultV2 is
         IERC20[] memory poolTokens;
         uint256[] memory poolHoldings;
         (poolTokens, poolHoldings, ) = getPoolTokensData();
-        uint256[] memory weights = getValuesFromTokenWithValues(
+        uint256[] memory targetWeights = getValuesFromTokenWithValues(
             tokenWithWeight,
             poolTokens,
             true
         );
 
-        checkWeights(weights);
+        checkWeights(targetWeights);
 
         uint256 numPoolTokens = poolTokens.length;
         uint256[] memory underlyingBalances = getUnderlyingBalances();
@@ -907,7 +907,7 @@ contract AeraVaultV2 is
             poolTokens,
             poolHoldings,
             underlyingBalances,
-            weights,
+            targetWeights,
             period,
             numPoolTokens
         );
@@ -1466,7 +1466,11 @@ contract AeraVaultV2 is
             );
         }
 
-        uint256[] memory values = new uint256[](numPoolTokens);
+        uint256[] memory values = new uint256[](
+            withYieldBearingAssets
+                ? numPoolTokens + numYieldBearingAssets
+                : numPoolTokens
+        );
         for (uint256 i = 0; i < numPoolTokens; i++) {
             if (tokenWithValues[i].token != address(poolTokens[i])) {
                 revert Aera__DifferentTokensInPosition(
@@ -1842,6 +1846,7 @@ contract AeraVaultV2 is
 
         underlyingWeights = depositToYieldBearingAssets(
             depositAmounts,
+            withdrawAmounts,
             balances,
             underlyingWeights,
             currentWeights,
@@ -1902,7 +1907,7 @@ contract AeraVaultV2 is
         }
         for (uint256 i = 0; i < yieldBearingAssets.length; i++) {
             underlyingTotalWeights[
-                yieldBearingAssets[i + numPoolTokens].underlyingIndex
+                yieldBearingAssets[i].underlyingIndex
             ] += weights[i + numPoolTokens];
         }
 
@@ -2040,6 +2045,7 @@ contract AeraVaultV2 is
 
     function depositToYieldBearingAssets(
         uint256[] memory depositAmounts,
+        uint256[] memory withdrawAmounts,
         uint256[] memory balances,
         uint256[] memory underlyingWeights,
         uint256[] memory currentWeights,
@@ -2081,14 +2087,24 @@ contract AeraVaultV2 is
                         depositAmounts[i]
                     );
                     balances[underlyingIndex] -= depositAmounts[i];
-                    underlyingWeights[underlyingIndex] -= targetWeights[i];
+                    underlyingWeights[underlyingIndex] -= targetWeights[
+                        i + numPoolTokens
+                    ];
                 } else {
-                    underlyingWeights[underlyingIndex] -= currentWeights[i];
+                    underlyingWeights[underlyingIndex] -= currentWeights[
+                        i + numPoolTokens
+                    ];
                 }
+            } else if (withdrawAmounts[i] == 0) {
+                underlyingWeights[underlyingIndex] -= currentWeights[
+                    i + numPoolTokens
+                ];
             }
         }
 
         depositToPool(balances);
+
+        return underlyingWeights;
     }
 
     function depositUnderlyingAsset(
@@ -2137,9 +2153,9 @@ contract AeraVaultV2 is
                     tokens[underlyingIndex],
                     withdrawAmounts[i]
                 );
-                underlyingWeights[underlyingIndex] -= targetWeights[i];
-            } else if (withdrawAmounts[i] == 0) {
-                underlyingWeights[underlyingIndex] -= targetWeights[i];
+                underlyingWeights[underlyingIndex] -= targetWeights[
+                    i + numPoolTokens
+                ];
             }
         }
     }
@@ -2179,6 +2195,7 @@ contract AeraVaultV2 is
 
         for (uint256 i = 0; i < numOracles; i++) {
             if (i == numeraireAssetIndex) {
+                prices[i] = ONE;
                 continue;
             }
 
