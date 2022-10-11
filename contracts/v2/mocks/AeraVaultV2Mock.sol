@@ -20,21 +20,21 @@ contract AeraVaultV2Mock is AeraVaultV2 {
             return ONE;
         }
 
-        IERC20[] memory tokens;
-        uint256[] memory holdings;
-        (tokens, holdings, ) = getTokensData();
+        IERC20[] memory poolTokens;
+        uint256[] memory poolHoldings;
+        (poolTokens, poolHoldings, ) = getPoolTokensData();
         uint256[] memory weights = pool.getNormalizedWeights();
 
         uint256 tokenInId = type(uint256).max;
         uint256 tokenOutId = type(uint256).max;
 
-        for (uint256 i = 0; i < tokens.length; i++) {
-            if (tokenIn == address(tokens[i])) {
+        for (uint256 i = 0; i < poolTokens.length; i++) {
+            if (tokenIn == address(poolTokens[i])) {
                 tokenInId = i;
                 if (tokenOutId < type(uint256).max) {
                     break;
                 }
-            } else if (tokenOut == address(tokens[i])) {
+            } else if (tokenOut == address(poolTokens[i])) {
                 tokenOutId = i;
                 if (tokenInId < type(uint256).max) {
                     break;
@@ -50,9 +50,9 @@ contract AeraVaultV2Mock is AeraVaultV2 {
 
         return
             calcSpotPrice(
-                holdings[tokenInId],
+                poolHoldings[tokenInId],
                 weights[tokenInId],
-                holdings[tokenOutId],
+                poolHoldings[tokenOutId],
                 weights[tokenOutId],
                 pool.getSwapFeePercentage()
             );
@@ -63,16 +63,16 @@ contract AeraVaultV2Mock is AeraVaultV2 {
         view
         returns (uint256[] memory spotPrices)
     {
-        IERC20[] memory tokens;
-        uint256[] memory holdings;
-        (tokens, holdings, ) = getTokensData();
+        IERC20[] memory poolTokens;
+        uint256[] memory poolHoldings;
+        (poolTokens, poolHoldings, ) = getPoolTokensData();
         uint256[] memory weights = pool.getNormalizedWeights();
-        spotPrices = new uint256[](tokens.length);
+        spotPrices = new uint256[](poolTokens.length);
 
         uint256 tokenInId = type(uint256).max;
 
-        for (uint256 i = 0; i < tokens.length; i++) {
-            if (tokenIn == address(tokens[i])) {
+        for (uint256 i = 0; i < poolTokens.length; i++) {
+            if (tokenIn == address(poolTokens[i])) {
                 tokenInId = i;
                 break;
             }
@@ -80,15 +80,15 @@ contract AeraVaultV2Mock is AeraVaultV2 {
 
         if (tokenInId < type(uint256).max) {
             uint256 swapFee = pool.getSwapFeePercentage();
-            for (uint256 i = 0; i < tokens.length; i++) {
+            for (uint256 i = 0; i < poolTokens.length; i++) {
                 if (i == tokenInId) {
                     spotPrices[i] = ONE;
                 } else {
                     spotPrices[i] = calcSpotPrice(
-                        holdings[tokenInId],
-                        weights[tokenInId],
-                        holdings[i],
+                        poolHoldings[i],
                         weights[i],
+                        poolHoldings[tokenInId],
+                        weights[tokenInId],
                         swapFee
                     );
                 }
