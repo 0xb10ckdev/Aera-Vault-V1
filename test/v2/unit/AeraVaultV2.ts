@@ -189,22 +189,22 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
   describe("when Vault not initialized", () => {
     beforeEach(async () => {
-      for (let i = 0; i < poolTokens.length; i++) {
-        await poolTokens[i].approve(vault.address, toWei(2));
+      for (let i = 0; i < tokens.length; i++) {
+        await tokens[i].approve(vault.address, toWei(2));
       }
     });
 
     describe("should be reverted to call functions", async () => {
       it("when call deposit", async () => {
         await expect(
-          vault.deposit(tokenValueArray(sortedTokens, ONE, poolTokens.length)),
+          vault.deposit(tokenValueArray(tokenAddresses, ONE, tokens.length)),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
 
       it("when call depositIfBalanceUnchanged", async () => {
         await expect(
           vault.depositIfBalanceUnchanged(
-            tokenValueArray(sortedTokens, ONE, poolTokens.length),
+            tokenValueArray(tokenAddresses, ONE, tokens.length),
           ),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
@@ -212,7 +212,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       it("when call depositRiskingArbitrage", async () => {
         await expect(
           vault.depositRiskingArbitrage(
-            tokenValueArray(sortedTokens, ONE, poolTokens.length),
+            tokenValueArray(tokenAddresses, ONE, tokens.length),
           ),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
@@ -220,23 +220,21 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       it("when call depositRiskingArbitrageIfBalanceUnchanged", async () => {
         await expect(
           vault.depositRiskingArbitrageIfBalanceUnchanged(
-            tokenValueArray(sortedTokens, ONE, poolTokens.length),
+            tokenValueArray(tokenAddresses, ONE, tokens.length),
           ),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
 
       it("when call withdraw", async () => {
         await expect(
-          vault.withdraw(
-            tokenValueArray(sortedTokens, ONE, poolTokens.length),
-          ),
+          vault.withdraw(tokenValueArray(tokenAddresses, ONE, tokens.length)),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
 
       it("when call withdrawIfBalanceUnchanged", async () => {
         await expect(
           vault.withdrawIfBalanceUnchanged(
-            tokenValueArray(sortedTokens, ONE, poolTokens.length),
+            tokenValueArray(tokenAddresses, ONE, tokens.length),
           ),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
@@ -247,10 +245,11 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           vault
             .connect(manager)
             .updateWeightsGradually(
-              tokenValueArray(
-                sortedTokens,
-                ONE.div(poolTokens.length),
-                poolTokens.length,
+              tokenWithValues(
+                tokenAddresses,
+                normalizeWeights(
+                  valueArray(ONE.div(tokens.length), tokens.length),
+                ),
               ),
               blocknumber + 1,
               blocknumber + 1000,
@@ -281,11 +280,12 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       it("when token and amount length is not same", async () => {
         await expect(
           vault.initialDeposit(
-            tokenValueArray(tokenAddresses, ONE, tokens.length + 1),
-            tokenValueArray(
+            tokenValueArray(sortedTokens, ONE, poolTokens.length + 1),
+            tokenWithValues(
               tokenAddresses,
-              ONE.div(poolTokens.length),
-              poolTokens.length,
+              normalizeWeights(
+                valueArray(ONE.div(tokens.length), tokens.length),
+              ),
             ),
           ),
         ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
