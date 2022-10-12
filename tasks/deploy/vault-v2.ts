@@ -54,6 +54,22 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       .toString();
     vaultConfig.weights = weights;
 
+    const yieldBearingAssets = vaultConfig.yieldBearingAssets;
+    vaultConfig.yieldBearingAssets = [];
+    for (let i = 0; i < yieldBearingAssets.length; i++) {
+      const asset = await ethers.getContractAt(
+        "ERC4626",
+        yieldBearingAssets[i],
+      );
+      const underlyingAsset = await asset.asset();
+      vaultConfig.yieldBearingAssets.push({
+        asset: yieldBearingAssets[i],
+        underlyingIndex: vaultConfig.poolTokens.findIndex(
+          (poolToken: string) => poolToken == underlyingAsset,
+        ),
+      });
+    }
+
     if (vaultConfig.poolTokens.length < 2) {
       console.error("Number of tokens should be at least two");
       return;
@@ -82,15 +98,7 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       console.log("Tokens:\n", vaultConfig.poolTokens.join("\n"));
       console.log("Weights:\n", vaultConfig.weights.join("\n"));
       console.log("Oracles:\n", vaultConfig.oracles.join("\n"));
-      console.log(
-        "YieldBearingAssets:\n",
-        vaultConfig.yieldBearingAssets
-          .map(
-            (yieldBearingAssets: { asset: string; underyingIndex: number }) =>
-              yieldBearingAssets.asset,
-          )
-          .join("\n"),
-      );
+      console.log("YieldBearingAssets:\n", yieldBearingAssets.join("\n"));
       console.log("Numeraire Asset Index:\n", vaultConfig.numeraireAssetIndex);
       console.log(`Swap Fee: ${vaultConfig.swapFeePercentage}`);
       console.log(`Manager: ${vaultConfig.manager}`);
