@@ -1233,8 +1233,9 @@ contract AeraVaultV2 is
             for (uint256 i = 0; i < numPoolTokens; i++) {
                 if (i != numeraireAssetIndex) {
                     weights[i] =
-                        (poolNewHoldings[i] * determinedPrices[i]) /
-                        numeraireAssetHolding;
+                        (poolNewHoldings[i] * ONE * ONE) /
+                        numeraireAssetHolding /
+                        determinedPrices[i];
                 }
                 if (amounts[i] > 0) {
                     newBalances[i] = poolNewHoldings[i] - poolHoldings[i];
@@ -1438,7 +1439,11 @@ contract AeraVaultV2 is
         }
     }
 
-    function getFeeIndex(bool lockGuaranteedFee) internal returns (uint256) {
+    function getFeeIndex(bool lockGuaranteedFee)
+        internal
+        view
+        returns (uint256)
+    {
         // slither-disable-next-line uninitialized-local
         uint256 feeIndex;
         if (block.timestamp > lastFeeCheckpoint) {
@@ -1708,6 +1713,7 @@ contract AeraVaultV2 is
     /// @return priceType Determined price type.
     function getDeterminedPrices(uint256[] memory amounts)
         internal
+        view
         returns (uint256[] memory prices, PriceType priceType)
     {
         uint256[] memory poolHoldings = getPoolHoldings();
@@ -1716,15 +1722,20 @@ contract AeraVaultV2 is
             uint256[] memory updatedAt
         ) = getOraclePrices();
         uint256[] memory spotPrices = getSpotPrices(poolHoldings);
+        uint256[]
+            memory underlyingTotalBalances = getUnderlyingTotalBalances();
 
-        if (getValue(poolHoldings, spotPrices) < minReliableVaultValue) {
+        if (
+            getValue(underlyingTotalBalances, spotPrices) <
+            minReliableVaultValue
+        ) {
             checkOracleStatus(updatedAt);
             return (oraclePrices, PriceType.ORACLE);
         }
 
         uint256 ratio;
-
-        for (uint256 i = 0; i < poolHoldings.length; i++) {
+        uint256 numPoolHoldings = poolHoldings.length;
+        for (uint256 i = 0; i < numPoolHoldings; i++) {
             if (i == numeraireAssetIndex) {
                 continue;
             }
@@ -1973,6 +1984,30 @@ contract AeraVaultV2 is
         return underlyingBalances;
     }
 
+    function getUnderlyingTotalBalances()
+        internal
+        view
+        returns (uint256[] memory)
+    {
+        uint256[] memory underlyingBalances = getPoolHoldings();
+        uint256 numYieldBearingAssets = yieldBearingAssets.length;
+
+        YieldBearingAsset memory yieldBearingAsset;
+        uint256 index = getPoolTokens().length;
+        for (uint256 i = 0; i < numYieldBearingAssets; i++) {
+            yieldBearingAsset = yieldBearingAssets[i];
+            underlyingBalances[
+                yieldBearingAsset.underlyingIndex
+            ] += yieldBearingAsset.asset.convertToAssets(
+                yieldBearingAsset.asset.balanceOf(address(this)) -
+                    managersFeeTotal[index]
+            );
+            ++index;
+        }
+
+        return underlyingBalances;
+    }
+
     function calcNormalizedWeights(
         uint256 value,
         uint256[] memory oraclePrices,
@@ -2011,6 +2046,7 @@ contract AeraVaultV2 is
         uint256 numYieldBearingAssets
     )
         internal
+        view
         returns (
             uint256[] memory depositAmounts,
             uint256[] memory withdrawAmounts,
