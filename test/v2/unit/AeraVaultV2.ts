@@ -247,9 +247,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             .updateWeightsGradually(
               tokenWithValues(
                 tokenAddresses,
-                normalizeWeights(
-                  valueArray(ONE.div(tokens.length), tokens.length),
-                ),
+                normalizeWeights(valueArray(ONE, tokens.length)),
               ),
               blocknumber + 1,
               blocknumber + 1000,
@@ -283,9 +281,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             tokenValueArray(sortedTokens, ONE, poolTokens.length + 1),
             tokenWithValues(
               tokenAddresses,
-              normalizeWeights(
-                valueArray(ONE.div(tokens.length), tokens.length),
-              ),
+              normalizeWeights(valueArray(ONE, tokens.length)),
             ),
           ),
         ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
@@ -297,9 +293,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             tokenValueArray(unsortedTokens, ONE, poolTokens.length),
             tokenWithValues(
               tokenAddresses,
-              normalizeWeights(
-                valueArray(ONE.div(tokens.length), tokens.length),
-              ),
+              normalizeWeights(valueArray(ONE, tokens.length)),
             ),
           ),
         ).to.be.revertedWith("Aera__DifferentTokensInPosition");
@@ -323,9 +317,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             ],
             tokenWithValues(
               tokenAddresses,
-              normalizeWeights(
-                valueArray(ONE.div(tokens.length), tokens.length),
-              ),
+              normalizeWeights(valueArray(ONE, tokens.length)),
             ),
           ),
         ).to.be.revertedWith("ERC20: insufficient allowance");
@@ -341,9 +333,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             ],
             tokenWithValues(
               tokenAddresses,
-              normalizeWeights(
-                valueArray(ONE.div(tokens.length), tokens.length),
-              ),
+              normalizeWeights(valueArray(ONE, tokens.length)),
             ),
           ),
         ).to.be.revertedWith("ERC20: insufficient allowance");
@@ -355,7 +345,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         tokenValueArray(sortedTokens, ONE, poolTokens.length),
         tokenWithValues(
           tokenAddresses,
-          normalizeWeights(valueArray(ONE.div(tokens.length), tokens.length)),
+          normalizeWeights(valueArray(ONE, tokens.length)),
         ),
       );
 
@@ -377,7 +367,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         tokenValueArray(sortedTokens, ONE, poolTokens.length),
         tokenWithValues(
           tokenAddresses,
-          normalizeWeights(valueArray(ONE.div(tokens.length), tokens.length)),
+          normalizeWeights(valueArray(ONE, tokens.length)),
         ),
       );
     });
@@ -388,9 +378,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           tokenValueArray(sortedTokens, ONE, poolTokens.length),
           tokenWithValues(
             tokenAddresses,
-            normalizeWeights(
-              valueArray(ONE.div(tokens.length), tokens.length),
-            ),
+            normalizeWeights(valueArray(ONE, tokens.length)),
           ),
         ),
       ).to.be.revertedWith("Aera__VaultIsAlreadyInitialized");
@@ -424,9 +412,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           });
 
           it("when amount exceeds allowance", async () => {
-            const spotPrices = await vault.getSpotPrices(
-              poolTokens[0].address,
-            );
+            const spotPrices = await vault.getSpotPrices(sortedTokens[0]);
             for (let i = 1; i < poolTokens.length; i++) {
               await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
             }
@@ -438,9 +424,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           });
 
           it("when oracle is disabled", async () => {
-            const spotPrices = await vault.getSpotPrices(
-              poolTokens[0].address,
-            );
+            const spotPrices = await vault.getSpotPrices(sortedTokens[0]);
             for (let i = 1; i < poolTokens.length; i++) {
               await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
             }
@@ -461,9 +445,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
           it("when oracle is delayed beyond maximum", async () => {
             const timestamp = await getCurrentTime();
-            const spotPrices = await vault.getSpotPrices(
-              poolTokens[0].address,
-            );
+            const spotPrices = await vault.getSpotPrices(sortedTokens[0]);
             for (let i = 1; i < poolTokens.length; i++) {
               await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
               await oracles[i].setUpdatedAt(timestamp - MAX_ORACLE_DELAY);
@@ -483,9 +465,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           });
 
           it("when oracle and spot price divergence exceeds maximum", async () => {
-            const spotPrices = await vault.getSpotPrices(
-              poolTokens[0].address,
-            );
+            const spotPrices = await vault.getSpotPrices(sortedTokens[0]);
             for (let i = 1; i < poolTokens.length; i++) {
               await oracles[i].setLatestAnswer(
                 spotPrices[i]
@@ -532,9 +512,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
               tokenValueArray(tokenAddresses, toWei(0.3), tokens.length),
             );
 
-            const spotPrices = await vault.getSpotPrices(
-              poolTokens[0].address,
-            );
+            const spotPrices = await vault.getSpotPrices(sortedTokens[0]);
             for (let i = 1; i < poolTokens.length; i++) {
               await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
             }
@@ -558,19 +536,15 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           });
 
           it("when deposit value is less than minimum", async () => {
-            const spotPrices = await vault.getSpotPrices(
-              poolTokens[0].address,
-            );
+            const spotPrices = await vault.getSpotPrices(sortedTokens[0]);
             for (let i = 1; i < poolTokens.length; i++) {
               await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
             }
 
-            const amounts = tokens.map(_ =>
-              toWei(Math.floor(1 + Math.random())),
-            );
+            const amounts = valueArray(ONE, tokens.length);
 
             for (let i = 0; i < tokens.length; i++) {
-              await tokens[i].approve(vault.address, amounts[i]);
+              await tokens[i].approve(vault.address, ONE);
             }
 
             const trx = await vault.deposit(
@@ -584,9 +558,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           });
 
           it("when vault value and deposit value are greater than minimum", async () => {
-            const spotPrices = await vault.getSpotPrices(
-              poolTokens[0].address,
-            );
+            const spotPrices = await vault.getSpotPrices(sortedTokens[0]);
             for (let i = 1; i < poolTokens.length; i++) {
               await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
             }
@@ -1082,7 +1054,10 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                tokenValueArray(sortedTokens, MIN_WEIGHT, poolTokens.length),
+                tokenWithValues(
+                  tokenAddresses,
+                  normalizeWeights(valueArray(MIN_WEIGHT, tokens.length)),
+                ),
                 blocknumber + 1,
                 blocknumber + 1000,
               ),
@@ -1174,7 +1149,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     describe("should be possible to multicall", async () => {
       beforeEach(async () => {
         for (let i = 0; i < poolTokens.length; i++) {
-          await poolTokens[i].approve(vault.address, ONE);
+          await poolTokens[i].approve(vault.address, toWei(100000));
         }
 
         for (let i = 1; i < poolTokens.length; i++) {
@@ -1185,9 +1160,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           tokenValueArray(sortedTokens, ONE, poolTokens.length),
           tokenWithValues(
             tokenAddresses,
-            normalizeWeights(
-              valueArray(ONE.div(tokens.length), tokens.length),
-            ),
+            normalizeWeights(valueArray(ONE, tokens.length)),
           ),
         );
       });
@@ -1307,7 +1280,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         tokenValueArray(sortedTokens, ONE, poolTokens.length),
         tokenWithValues(
           tokenAddresses,
-          normalizeWeights(valueArray(ONE.div(tokens.length), tokens.length)),
+          normalizeWeights(valueArray(ONE, tokens.length)),
         ),
       );
     });
@@ -1318,10 +1291,10 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       for (let i = 0; i < poolTokens.length; i++) {
         expect(spotPrices[i]).to.equal(toWei(0));
         expect(
-          await vault.getSpotPrice(TOKEN.address, poolTokens[i].address),
+          await vault.getSpotPrice(TOKEN.address, sortedTokens[i]),
         ).to.equal(toWei(0));
         expect(
-          await vault.getSpotPrice(poolTokens[i].address, TOKEN.address),
+          await vault.getSpotPrice(sortedTokens[i], TOKEN.address),
         ).to.equal(toWei(0));
       }
     });
@@ -1346,7 +1319,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
       it("when token is pool token", async () => {
         const poolToken = await vault.pool();
-        await expect(vault.sweep(poolToken, toWei(1))).to.be.revertedWith(
+        await expect(vault.sweep(poolToken, ONE)).to.be.revertedWith(
           "Aera__CannotSweepPoolToken",
         );
       });
@@ -1373,7 +1346,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         tokenValueArray(sortedTokens, ONE, poolTokens.length),
         tokenWithValues(
           tokenAddresses,
-          normalizeWeights(valueArray(ONE.div(tokens.length), tokens.length)),
+          normalizeWeights(valueArray(ONE, tokens.length)),
         ),
       );
     });
@@ -1536,9 +1509,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           tokenValueArray(sortedTokens, ONE, poolTokens.length),
           tokenWithValues(
             tokenAddresses,
-            normalizeWeights(
-              valueArray(ONE.div(tokens.length), tokens.length),
-            ),
+            normalizeWeights(valueArray(ONE, tokens.length)),
           ),
         );
       });
@@ -1657,10 +1628,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
           for (let i = 0; i < poolTokens.length; i++) {
             expect(
-              await vault.getSpotPrice(
-                poolTokens[i].address,
-                poolTokens[0].address,
-              ),
+              await vault.getSpotPrice(sortedTokens[i], sortedTokens[0]),
             ).to.be.closeTo(
               oraclePrices[i].mul(1e10),
               oraclePrices[i]
@@ -1684,9 +1652,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           tokenValueArray(sortedTokens, ONE, poolTokens.length),
           tokenWithValues(
             tokenAddresses,
-            normalizeWeights(
-              valueArray(ONE.div(tokens.length), tokens.length),
-            ),
+            normalizeWeights(valueArray(ONE, tokens.length)),
           ),
         );
       });
