@@ -703,19 +703,33 @@ contract AeraVaultV2 is
         }
 
         IERC20[] memory poolTokens = getPoolTokens();
+        uint256 numPoolTokens = poolTokens.length;
 
         uint256[] memory targetWeights = getValuesFromTokenWithValues(
             tokenWithWeight,
             poolTokens,
-            false
+            true
         );
+
+        checkWeights(targetWeights);
+
+        uint256 weightSum;
+        uint256[] memory targetPoolWeights = new uint256[](numPoolTokens);
+
+        for (uint256 i = 0; i < numPoolTokens; i++) {
+            targetPoolWeights[i] = targetWeights[i];
+            weightSum += targetWeights[i];
+        }
+
+        targetPoolWeights = normalizeWeights(targetPoolWeights, weightSum);
 
         poolController.updateWeightsGradually(
             block.timestamp,
             block.timestamp,
-            targetWeights
+            targetPoolWeights
         );
         poolController.setSwapEnabled(true);
+
         // slither-disable-next-line reentrancy-events
         emit EnabledTradingWithWeights(block.timestamp, targetWeights);
     }
@@ -1233,9 +1247,8 @@ contract AeraVaultV2 is
             for (uint256 i = 0; i < numPoolTokens; i++) {
                 if (i != numeraireAssetIndex) {
                     weights[i] =
-                        (poolNewHoldings[i] * ONE * ONE) /
-                        numeraireAssetHolding /
-                        determinedPrices[i];
+                        (poolNewHoldings[i] * determinedPrices[i]) /
+                        numeraireAssetHolding;
                 }
                 if (amounts[i] > 0) {
                     newBalances[i] = poolNewHoldings[i] - poolHoldings[i];
@@ -1824,10 +1837,10 @@ contract AeraVaultV2 is
                 continue;
             }
             prices[i] = calcSpotPrice(
-                poolHoldings[i],
-                weights[i],
                 numeraireAssetHolding,
                 numeraireAssetWeight,
+                poolHoldings[i],
+                weights[i],
                 swapFee
             );
         }

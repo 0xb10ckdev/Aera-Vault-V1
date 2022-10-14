@@ -85,10 +85,10 @@ contract AeraVaultV2Mock is AeraVaultV2 {
                     spotPrices[i] = ONE;
                 } else {
                     spotPrices[i] = calcSpotPrice(
-                        poolHoldings[i],
-                        weights[i],
                         poolHoldings[tokenInId],
                         weights[tokenInId],
+                        poolHoldings[i],
+                        weights[i],
                         swapFee
                     );
                 }
