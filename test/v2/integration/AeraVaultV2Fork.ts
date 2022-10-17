@@ -64,7 +64,7 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
   let factory: ManagedPoolFactory;
   let poolTokens: IERC20[];
   let tokens: IERC20[];
-  let yieldBearingAssets: ERC4626Mock[];
+  let yieldTokens: ERC4626Mock[];
   let sortedTokens: string[];
   let unsortedTokens: string[];
   let oracles: OracleMock[];
@@ -83,12 +83,10 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
         sortedTokens,
         unsortedTokens,
       } = await setupTokens());
-      yieldBearingAssets = await setupYieldBearingAssets(
-        sortedTokens.slice(0, 2),
-      );
+      yieldTokens = await setupYieldBearingAssets(sortedTokens.slice(0, 2));
       oracles = await setupOracles();
 
-      tokens = [...poolTokens, ...yieldBearingAssets];
+      tokens = [...poolTokens, ...yieldTokens];
       oracleAddress = oracles.map((oracle: OracleMock) => oracle.address);
       oracleAddress[0] = ZERO_ADDRESS;
       validWeights = valueArray(ONE.div(poolTokens.length), poolTokens.length);
@@ -124,8 +122,8 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
         poolTokens: sortedTokens,
         weights: validWeights,
         oracles: oracleAddress,
-        yieldBearingAssets: yieldBearingAssets.map((token, index) => ({
-          asset: token.address,
+        yieldTokens: yieldTokens.map((token, index) => ({
+          token: token.address,
           underlyingIndex: index,
         })),
         numeraireAssetIndex: 0,
@@ -254,14 +252,16 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
     });
 
     it("when token is not sorted in ascending order", async () => {
-      const yieldBearingAssetsWithUnsortedTokens =
-        await setupYieldBearingAssets(unsortedTokens.slice(0, 2));
+      const yieldTokensWithUnsortedTokens = await setupYieldBearingAssets(
+        unsortedTokens.slice(0, 2),
+      );
       validParams.poolTokens = unsortedTokens;
-      validParams.yieldBearingAssets =
-        yieldBearingAssetsWithUnsortedTokens.map((token, index) => ({
-          asset: token.address,
+      validParams.yieldTokens = yieldTokensWithUnsortedTokens.map(
+        (token, index) => ({
+          token: token.address,
           underlyingIndex: index,
-        }));
+        }),
+      );
 
       await expect(deployVault(validParams)).to.be.revertedWith(
         BALANCER_ERRORS.UNSORTED_ARRAY,
@@ -270,13 +270,15 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
 
     it("when token is duplicated", async () => {
       validParams.poolTokens = [sortedTokens[0], ...sortedTokens.slice(0, -1)];
-      const yieldBearingAssetsWithDuplicatedTokens =
-        await setupYieldBearingAssets(validParams.poolTokens.slice(0, 2));
-      validParams.yieldBearingAssets =
-        yieldBearingAssetsWithDuplicatedTokens.map((token, index) => ({
-          asset: token.address,
+      const yieldTokensWithDuplicatedTokens = await setupYieldBearingAssets(
+        validParams.poolTokens.slice(0, 2),
+      );
+      validParams.yieldTokens = yieldTokensWithDuplicatedTokens.map(
+        (token, index) => ({
+          token: token.address,
           underlyingIndex: index,
-        }));
+        }),
+      );
 
       await expect(deployVault(validParams)).to.be.revertedWith(
         BALANCER_ERRORS.UNSORTED_ARRAY,
@@ -337,7 +339,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
   let poolTokens: IERC20[];
   let tokens: IERC20[];
   let tokenAddresses: string[];
-  let yieldBearingAssets: ERC4626Mock[];
+  let yieldTokens: ERC4626Mock[];
   let sortedTokens: string[];
   let oracles: OracleMock[];
   let oracleAddresses: string[];
@@ -388,29 +390,25 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       sortedTokens,
       unsortedTokens,
     } = await setupTokens());
-    yieldBearingAssets = await setupYieldBearingAssets(
-      sortedTokens.slice(0, 2),
-    );
+    yieldTokens = await setupYieldBearingAssets(sortedTokens.slice(0, 2));
     oracles = await setupOracles();
 
-    tokens = [...poolTokens, ...yieldBearingAssets];
+    tokens = [...poolTokens, ...yieldTokens];
     tokenAddresses = tokens.map(token => token.address);
     unsortedTokens = [
       ...unsortedTokens,
-      ...yieldBearingAssets.map(token => token.address),
+      ...yieldTokens.map(token => token.address),
     ];
     oracleAddresses = oracles.map((oracle: OracleMock) => oracle.address);
     oracleAddresses[0] = ZERO_ADDRESS;
 
     await Promise.all(
-      yieldBearingAssets.map((token, index) =>
+      yieldTokens.map((token, index) =>
         poolTokens[index].approve(token.address, toWei("10000")),
       ),
     );
     await Promise.all(
-      yieldBearingAssets.map(token =>
-        token.deposit(toWei("10000"), admin.address),
-      ),
+      yieldTokens.map(token => token.deposit(toWei("10000"), admin.address)),
     );
 
     const validatorMock =
@@ -448,7 +446,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         poolTokens: sortedTokens,
         weights: validWeights,
         oracles: oracleAddresses,
-        yieldBearingAssets: yieldBearingAssets.map(token => token.address),
+        yieldTokens: yieldTokens.map(token => token.address),
         numeraireAssetIndex: 0,
         swapFeePercentage: MIN_SWAP_FEE,
         manager: manager.address,
@@ -681,7 +679,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       );
 
       const underlyingTotalWeights = [...normalizedWeights];
-      yieldBearingAssets.forEach((_, index) => {
+      yieldTokens.forEach((_, index) => {
         underlyingTotalWeights[index] = underlyingTotalWeights[index].add(
           normalizedWeights[index + poolTokens.length],
         );
@@ -689,7 +687,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
       const { holdings, adminBalances: newAdminBalances } = await getState();
       const poolHoldings = valueArray(ONE, poolTokens.length);
-      for (let i = 0; i < yieldBearingAssets.length; i++) {
+      for (let i = 0; i < yieldTokens.length; i++) {
         const underlyingBalance = ONE.mul(
           normalizedWeights[i + poolTokens.length],
         ).div(underlyingTotalWeights[i]);
@@ -698,8 +696,8 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           .toString();
 
         expect(
-          await yieldBearingAssets[i].convertToAssets(
-            await yieldBearingAssets[i].balanceOf(vault.address),
+          await yieldTokens[i].convertToAssets(
+            await yieldTokens[i].balanceOf(vault.address),
           ),
         ).to.equal(underlyingBalance);
       }
@@ -869,10 +867,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
             const amounts = valueArray(toWei(0.1), tokens.length);
 
-            await Promise.all([
-              ethers.provider.send("evm_setAutomine", [false]),
-              ethers.provider.send("evm_setIntervalMining", [0]),
-            ]);
+            await ethers.provider.send("evm_setAutomine", [false]);
 
             const trx1 = await vault.deposit(
               tokenWithValues(tokenAddresses, amounts),
@@ -897,10 +892,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             expect(receipt1.status).to.equal(1);
             expect(receipt2.status).to.equal(0);
 
-            await Promise.all([
-              ethers.provider.send("evm_setAutomine", [true]),
-              ethers.provider.send("evm_setIntervalMining", [0]),
-            ]);
+            await ethers.provider.send("evm_setAutomine", [true]);
           });
         });
 
@@ -1061,7 +1053,6 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             );
 
             await ethers.provider.send("evm_setAutomine", [false]);
-            await ethers.provider.send("evm_setIntervalMining", [0]);
 
             const trx1 = await vault.depositRiskingArbitrage(
               tokenWithValues(tokenAddresses, amounts),
@@ -1087,7 +1078,6 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             expect(receipt2.status).to.equal(0);
 
             await ethers.provider.send("evm_setAutomine", [true]);
-            await ethers.provider.send("evm_setIntervalMining", [0]);
           });
         });
 
@@ -1270,10 +1260,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
               toWei(Math.floor(10 + Math.random() * 10)),
             );
 
-            await Promise.all([
-              ethers.provider.send("evm_setAutomine", [false]),
-              ethers.provider.send("evm_setIntervalMining", [0]),
-            ]);
+            await ethers.provider.send("evm_setAutomine", [false]);
 
             const trx1 = await vault.withdraw(
               tokenWithValues(tokenAddresses, amounts),
@@ -1286,7 +1273,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
             try {
               await Promise.all([trx1.wait(), trx2.wait()]);
-            } catch {
+            } catch (e) {
               // empty
             }
 
@@ -1298,10 +1285,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             expect(receipt1.status).to.equal(1);
             expect(receipt2.status).to.equal(0);
 
-            await Promise.all([
-              ethers.provider.send("evm_setAutomine", [true]),
-              ethers.provider.send("evm_setIntervalMining", [0]),
-            ]);
+            await ethers.provider.send("evm_setAutomine", [true]);
           });
         });
 

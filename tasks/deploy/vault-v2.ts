@@ -54,16 +54,13 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       .toString();
     vaultConfig.weights = weights;
 
-    const yieldBearingAssets = vaultConfig.yieldBearingAssets;
-    vaultConfig.yieldBearingAssets = [];
-    for (let i = 0; i < yieldBearingAssets.length; i++) {
-      const asset = await ethers.getContractAt(
-        "ERC4626",
-        yieldBearingAssets[i],
-      );
+    const yieldTokens = vaultConfig.yieldTokens;
+    vaultConfig.yieldTokens = [];
+    for (let i = 0; i < yieldTokens.length; i++) {
+      const asset = await ethers.getContractAt("ERC4626", yieldTokens[i]);
       const underlyingAsset = await asset.asset();
-      vaultConfig.yieldBearingAssets.push({
-        asset: yieldBearingAssets[i],
+      vaultConfig.yieldTokens.push({
+        token: yieldTokens[i],
         underlyingIndex: vaultConfig.poolTokens.findIndex(
           (poolToken: string) => poolToken == underlyingAsset,
         ),
@@ -98,7 +95,7 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       console.log("Tokens:\n", vaultConfig.poolTokens.join("\n"));
       console.log("Weights:\n", vaultConfig.weights.join("\n"));
       console.log("Oracles:\n", vaultConfig.oracles.join("\n"));
-      console.log("YieldBearingAssets:\n", yieldBearingAssets.join("\n"));
+      console.log("YieldTokens:\n", yieldTokens.join("\n"));
       console.log("Numeraire Asset Index:\n", vaultConfig.numeraireAssetIndex);
       console.log(`Swap Fee: ${vaultConfig.swapFeePercentage}`);
       console.log(`Manager: ${vaultConfig.manager}`);
