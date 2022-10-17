@@ -19,7 +19,7 @@ export type VaultParams = {
   poolTokens: string[];
   weights: string[];
   oracles: string[];
-  yieldBearingAssets: { asset: string; underlyingIndex: BigNumberish }[];
+  yieldTokens: { token: string; underlyingIndex: BigNumberish }[];
   numeraireAssetIndex: number;
   swapFeePercentage: BigNumberish;
   manager: string;
@@ -53,7 +53,7 @@ export const deployVault = async (
     poolTokens: params.poolTokens,
     weights: params.weights,
     oracles: params.oracles,
-    yieldBearingAssets: params.yieldBearingAssets,
+    yieldTokens: params.yieldTokens,
     numeraireAssetIndex: params.numeraireAssetIndex,
     swapFeePercentage: params.swapFeePercentage,
     manager: params.manager,

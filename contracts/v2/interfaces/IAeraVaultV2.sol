@@ -20,8 +20,8 @@ interface IAeraVaultV2 is
     IProtocolAPIV2
 {
     // Structure for yield-bearing asset.
-    struct YieldBearingAsset {
-        IERC4626 asset;
+    struct YieldToken {
+        IERC4626 token;
         uint256 underlyingIndex;
     }
 
@@ -33,7 +33,7 @@ interface IAeraVaultV2 is
     // weights: Token weights.
     // oracles: Chainlink oracle addresses.
     //          All oracles should be in reference to the same asset.
-    // yieldBearingAssets: Yield bearing asset addresses.
+    // yieldTokens: Yield bearing asset addresses.
     // numeraireAssetIndex: Index of base token for oracles.
     // swapFeePercentage: Pool swap fee.
     // manager: Vault manager address.
@@ -55,7 +55,7 @@ interface IAeraVaultV2 is
         IERC20[] poolTokens;
         uint256[] weights;
         AggregatorV2V3Interface[] oracles;
-        YieldBearingAsset[] yieldBearingAssets;
+        YieldToken[] yieldTokens;
         uint256 numeraireAssetIndex;
         uint256 swapFeePercentage;
         address manager;
