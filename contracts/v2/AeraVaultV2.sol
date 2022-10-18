@@ -459,13 +459,11 @@ contract AeraVaultV2 is
         IERC20[] memory poolTokens = getPoolTokens();
         uint256[] memory amounts = getValuesFromTokenWithValues(
             tokenWithAmount,
-            poolTokens,
-            false
+            poolTokens
         );
         uint256[] memory targetWeights = getValuesFromTokenWithValues(
             tokenWithWeight,
-            poolTokens,
-            true
+            poolTokens
         );
 
         checkWeights(targetWeights);
@@ -473,49 +471,25 @@ contract AeraVaultV2 is
         uint256 numPoolTokens = poolTokens.length;
         uint256 numYieldTokens = yieldTokens.length;
         uint256[] memory balances = new uint256[](numPoolTokens);
-        uint256[] memory underlyingBalances = new uint256[](numPoolTokens);
 
         for (uint256 i = 0; i < numPoolTokens; i++) {
             balances[i] = depositToken(poolTokens[i], amounts[i]);
-            underlyingBalances[i] = balances[i];
         }
-
-        if (numYieldTokens > 0) {
-            uint256[]
-                memory underlyingTotalWeights = getUnderlyingTotalWeights(
-                    targetWeights,
-                    numPoolTokens
-                );
-
-            uint256 index = numPoolTokens;
-            uint256 underlyingIndex;
-            uint256 depositAmount;
-            for (uint256 i = 0; i < numYieldTokens; i++) {
-                underlyingIndex = yieldTokens[i].underlyingIndex;
-                depositAmount =
-                    (balances[underlyingIndex] * targetWeights[index]) /
-                    underlyingTotalWeights[underlyingIndex];
-                underlyingBalances[underlyingIndex] -= depositAmount;
-
-                depositUnderlyingAsset(
-                    i,
-                    poolTokens[underlyingIndex],
-                    depositAmount
-                );
-
-                ++index;
-            }
+        uint256 index = numPoolTokens;
+        for (uint256 i = 0; i < numYieldTokens; i++) {
+            depositToken(yieldTokens[i].token, amounts[index]);
+            ++index;
         }
 
         bytes memory initUserData = abi.encode(
             IBVault.JoinKind.INIT,
-            underlyingBalances
+            balances
         );
 
         IBVault.JoinPoolRequest memory joinPoolRequest = IBVault
             .JoinPoolRequest({
                 assets: poolTokens,
-                maxAmountsIn: underlyingBalances,
+                maxAmountsIn: balances,
                 userData: initUserData,
                 fromInternalBalance: false
             });
@@ -703,8 +677,7 @@ contract AeraVaultV2 is
 
         uint256[] memory targetWeights = getValuesFromTokenWithValues(
             tokenWithWeight,
-            poolTokens,
-            true
+            poolTokens
         );
 
         checkWeights(targetWeights);
@@ -853,8 +826,7 @@ contract AeraVaultV2 is
         uint256 numPoolTokens = poolTokens.length;
         uint256[] memory targetWeights = getValuesFromTokenWithValues(
             tokenWithWeight,
-            poolTokens,
-            true
+            poolTokens
         );
 
         checkWeights(targetWeights);
@@ -928,8 +900,7 @@ contract AeraVaultV2 is
         (poolTokens, poolHoldings, ) = getPoolTokensData();
         uint256[] memory targetWeights = getValuesFromTokenWithValues(
             tokenWithWeight,
-            poolTokens,
-            true
+            poolTokens
         );
 
         checkWeights(targetWeights);
@@ -1216,8 +1187,7 @@ contract AeraVaultV2 is
 
         uint256[] memory amounts = getValuesFromTokenWithValues(
             tokenWithAmount,
-            poolTokens,
-            true
+            poolTokens
         );
 
         // slither-disable-next-line uninitialized-local
@@ -1334,8 +1304,7 @@ contract AeraVaultV2 is
         uint256[] memory balances = new uint256[](numTokens);
         uint256[] memory amounts = getValuesFromTokenWithValues(
             tokenWithAmount,
-            tokens,
-            false
+            getPoolTokens()
         );
 
         for (uint256 i = 0; i < numTokens; i++) {
@@ -1496,32 +1465,20 @@ contract AeraVaultV2 is
     /// @return Array of values.
     function getValuesFromTokenWithValues(
         TokenValue[] calldata tokenWithValues,
-        IERC20[] memory poolTokens,
-        bool withYieldTokens
+        IERC20[] memory poolTokens
     ) internal view returns (uint256[] memory) {
         uint256 numPoolTokens = poolTokens.length;
         uint256 numYieldTokens = yieldTokens.length;
-        uint256 numTokenWithValues = tokenWithValues.length;
+        uint256 numTokens = numPoolTokens + numYieldTokens;
 
-        if (!withYieldTokens && numPoolTokens != numTokenWithValues) {
+        if (numTokens != tokenWithValues.length) {
             revert Aera__ValueLengthIsNotSame(
-                numPoolTokens,
-                numTokenWithValues
-            );
-        }
-        if (
-            withYieldTokens &&
-            numPoolTokens + numYieldTokens != numTokenWithValues
-        ) {
-            revert Aera__ValueLengthIsNotSame(
-                numPoolTokens + numYieldTokens,
-                numTokenWithValues
+                numTokens,
+                tokenWithValues.length
             );
         }
 
-        uint256[] memory values = new uint256[](
-            withYieldTokens ? numPoolTokens + numYieldTokens : numPoolTokens
-        );
+        uint256[] memory values = new uint256[](numTokens);
         for (uint256 i = 0; i < numPoolTokens; i++) {
             if (tokenWithValues[i].token != address(poolTokens[i])) {
                 revert Aera__DifferentTokensInPosition(
@@ -1533,22 +1490,19 @@ contract AeraVaultV2 is
             values[i] = tokenWithValues[i].value;
         }
 
-        if (withYieldTokens) {
-            uint256 index = numPoolTokens;
-            for (uint256 i = 0; i < numYieldTokens; i++) {
-                if (
-                    tokenWithValues[index].token !=
-                    address(yieldTokens[i].token)
-                ) {
-                    revert Aera__DifferentTokensInPosition(
-                        tokenWithValues[index].token,
-                        address(yieldTokens[i].token),
-                        index
-                    );
-                }
-                values[index] = tokenWithValues[index].value;
-                ++index;
+        uint256 index = numPoolTokens;
+        for (uint256 i = 0; i < numYieldTokens; i++) {
+            if (
+                tokenWithValues[index].token != address(yieldTokens[i].token)
+            ) {
+                revert Aera__DifferentTokensInPosition(
+                    tokenWithValues[index].token,
+                    address(yieldTokens[i].token),
+                    index
+                );
             }
+            values[index] = tokenWithValues[index].value;
+            ++index;
         }
 
         return values;
