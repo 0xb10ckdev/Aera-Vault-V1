@@ -108,11 +108,11 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
     await Promise.all(
       yieldTokens.map((token, index) =>
-        poolTokens[index].approve(token.address, toWei("10000")),
+        poolTokens[index].approve(token.address, toWei("100000")),
       ),
     );
     await Promise.all(
-      yieldTokens.map(token => token.deposit(toWei("10000"), admin.address)),
+      yieldTokens.map(token => token.deposit(toWei("100000"), admin.address)),
     );
 
     const validatorMock =
@@ -274,7 +274,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       it("when token and amount length is not same", async () => {
         await expect(
           vault.initialDeposit(
-            tokenValueArray(sortedTokens, ONE, poolTokens.length + 1),
+            tokenValueArray(tokenAddresses, ONE, tokens.length + 1),
             tokenWithValues(
               tokenAddresses,
               normalizeWeights(valueArray(ONE, tokens.length)),
@@ -286,7 +286,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       it("when token is not sorted", async () => {
         await expect(
           vault.initialDeposit(
-            tokenValueArray(unsortedTokens, ONE, poolTokens.length),
+            tokenValueArray(unsortedTokens, ONE, tokens.length),
             tokenWithValues(
               tokenAddresses,
               normalizeWeights(valueArray(ONE, tokens.length)),
@@ -297,16 +297,16 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
       it("when amount exceeds allowance", async () => {
         const validAmounts = tokenValueArray(
-          sortedTokens,
+          tokenAddresses,
           ONE,
-          poolTokens.length,
+          tokens.length,
         );
 
         await expect(
           vault.initialDeposit(
             [
               {
-                token: sortedTokens[0],
+                token: tokenAddresses[0],
                 value: toWei(3),
               },
               ...validAmounts.slice(1),
@@ -323,7 +323,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             [
               ...validAmounts.slice(0, -1),
               {
-                token: sortedTokens[poolTokens.length - 1],
+                token: tokenAddresses[tokens.length - 1],
                 value: toWei(3),
               },
             ],
@@ -338,7 +338,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
     it("should be possible to initialize the vault", async () => {
       await vault.initialDeposit(
-        tokenValueArray(sortedTokens, ONE, poolTokens.length),
+        tokenValueArray(tokenAddresses, ONE, tokens.length),
         tokenWithValues(
           tokenAddresses,
           normalizeWeights(valueArray(ONE, tokens.length)),
@@ -360,7 +360,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       }
 
       await vault.initialDeposit(
-        tokenValueArray(sortedTokens, ONE, poolTokens.length),
+        tokenValueArray(tokenAddresses, ONE, tokens.length),
         tokenWithValues(
           tokenAddresses,
           normalizeWeights(valueArray(ONE, tokens.length)),
@@ -371,7 +371,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     it("should be reverted to initialize the vault again", async () => {
       await expect(
         vault.initialDeposit(
-          tokenValueArray(sortedTokens, ONE, poolTokens.length),
+          tokenValueArray(tokenAddresses, ONE, tokens.length),
           tokenWithValues(
             tokenAddresses,
             normalizeWeights(valueArray(ONE, tokens.length)),
@@ -1144,8 +1144,8 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
     describe("should be possible to multicall", async () => {
       beforeEach(async () => {
-        for (let i = 0; i < poolTokens.length; i++) {
-          await poolTokens[i].approve(vault.address, toWei(100000));
+        for (let i = 0; i < tokens.length; i++) {
+          await tokens[i].approve(vault.address, toWei(100000));
         }
 
         for (let i = 1; i < poolTokens.length; i++) {
@@ -1153,7 +1153,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         }
 
         await vault.initialDeposit(
-          tokenValueArray(sortedTokens, ONE, poolTokens.length),
+          tokenValueArray(tokenAddresses, ONE, tokens.length),
           tokenWithValues(
             tokenAddresses,
             normalizeWeights(valueArray(ONE, tokens.length)),
@@ -1269,11 +1269,11 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     let TOKEN: IERC20;
     beforeEach(async () => {
       ({ TOKEN } = await deployToken());
-      for (let i = 0; i < poolTokens.length; i++) {
-        await poolTokens[i].approve(vault.address, ONE);
+      for (let i = 0; i < tokens.length; i++) {
+        await tokens[i].approve(vault.address, ONE);
       }
       await vault.initialDeposit(
-        tokenValueArray(sortedTokens, ONE, poolTokens.length),
+        tokenValueArray(tokenAddresses, ONE, tokens.length),
         tokenWithValues(
           tokenAddresses,
           normalizeWeights(valueArray(ONE, tokens.length)),
@@ -1330,8 +1330,8 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
   describe("Claim Manager Fees", () => {
     beforeEach(async () => {
-      for (let i = 0; i < poolTokens.length; i++) {
-        await poolTokens[i].approve(vault.address, ONE);
+      for (let i = 0; i < tokens.length; i++) {
+        await tokens[i].approve(vault.address, ONE);
       }
 
       for (let i = 1; i < poolTokens.length; i++) {
@@ -1339,7 +1339,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       }
 
       await vault.initialDeposit(
-        tokenValueArray(sortedTokens, ONE, poolTokens.length),
+        tokenValueArray(tokenAddresses, ONE, tokens.length),
         tokenWithValues(
           tokenAddresses,
           normalizeWeights(valueArray(ONE, tokens.length)),
@@ -1498,11 +1498,11 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
     describe("Enable Trading", () => {
       beforeEach(async () => {
-        for (let i = 0; i < poolTokens.length; i++) {
-          await poolTokens[i].approve(vault.address, ONE);
+        for (let i = 0; i < tokens.length; i++) {
+          await tokens[i].approve(vault.address, ONE);
         }
         await vault.initialDeposit(
-          tokenValueArray(sortedTokens, ONE, poolTokens.length),
+          tokenValueArray(tokenAddresses, ONE, tokens.length),
           tokenWithValues(
             tokenAddresses,
             normalizeWeights(valueArray(ONE, tokens.length)),
@@ -1639,11 +1639,11 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
     describe("Disable Trading", () => {
       beforeEach(async () => {
-        for (let i = 0; i < poolTokens.length; i++) {
-          await poolTokens[i].approve(vault.address, ONE);
+        for (let i = 0; i < tokens.length; i++) {
+          await tokens[i].approve(vault.address, ONE);
         }
         await vault.initialDeposit(
-          tokenValueArray(sortedTokens, ONE, poolTokens.length),
+          tokenValueArray(tokenAddresses, ONE, tokens.length),
           tokenWithValues(
             tokenAddresses,
             normalizeWeights(valueArray(ONE, tokens.length)),
