@@ -4,7 +4,7 @@
   "symbol": "TEST",
   "poolTokens": [],
   "oracles": [],
-  "yieldBearingAssets": [],
+  "yieldTokens": [],
   "numeraireAssetIndex": 0,
   "swapFeePercentage": "1000000000000",
   "manager": "0x",
