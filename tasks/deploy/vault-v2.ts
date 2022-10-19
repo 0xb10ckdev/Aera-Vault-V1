@@ -3,6 +3,7 @@ import { task, types } from "hardhat/config";
 import { readFile } from "fs/promises";
 import { getConfig } from "../../scripts/config";
 import { toWei } from "../../test/v1/constants";
+
 import {
   MAX_ORACLE_DELAY,
   MAX_ORACLE_SPOT_DIVERGENCE,
@@ -31,9 +32,14 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
   .setAction(async (taskArgs, { ethers, network }) => {
     const config = getConfig(network.config.chainId || 1);
 
-    const vaultConfig = JSON.parse(
-      await readFile(taskArgs.configPath, "utf8"),
-    );
+    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+    let vaultConfig: any = {};
+    try {
+      vaultConfig = JSON.parse(await readFile(taskArgs.configPath, "utf8"));
+    } catch (e) {
+      console.error("Invliad json file is provided for vault configuration");
+      return;
+    }
 
     vaultConfig.minSignificantDepositValue =
       vaultConfig.minSignificantDepositValue || MIN_SIGNIFICANT_DEPOSIT_VALUE;
@@ -41,13 +47,22 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       vaultConfig.maxOracleSpotDivergence || MAX_ORACLE_SPOT_DIVERGENCE;
     vaultConfig.maxOracleDelay =
       vaultConfig.maxOracleDelay || MAX_ORACLE_DELAY;
-    vaultConfig.merkleOrchard =
-      config.merkleOrchard || ethers.constants.AddressZero;
 
+    if (!vaultConfig.merkleOrchard) {
+      console.warn(
+        "Use default Merkle Orchard address since it's not provided",
+      );
+      vaultConfig.merkleOrchard =
+        config.merkleOrchard || ethers.constants.AddressZero;
+    }
+
+    // Generate temporary weights for pool creation
+    // Token weights will be adjusted at initialization
     const avgWeight = toWei(1).div(vaultConfig.poolTokens.length);
     const weights = Array.from({ length: vaultConfig.poolTokens.length }, _ =>
       avgWeight.toString(),
     );
+    // Make the sum of weights be one
     weights[0] = toWei(1)
       .sub(avgWeight.mul(vaultConfig.poolTokens.length))
       .add(weights[0])
