@@ -5,7 +5,8 @@ import "../../v1/dependencies/openzeppelin/IERC20.sol";
 import "../dependencies/openzeppelin/ERC4626.sol";
 
 /**
- * @dev Mock ERC4626 token with initial total supply and custom decimals.
+ * @dev Mock ERC4626 token with initial total supply.
+ *      It just wrap tokens by using ERC4626 of OpenZeppelin.
  *      THIS CONTRACT IS FOR TESTING PURPOSES ONLY. DO NOT USE IN PRODUCTION.
  */
 contract ERC4626Mock is ERC4626 {
