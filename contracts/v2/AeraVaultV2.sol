@@ -1196,11 +1196,7 @@ contract AeraVaultV2 is
             (determinedPrices, priceType) = getDeterminedPrices(amounts);
         }
 
-        uint256[] memory newBalances = depositTokens(
-            poolTokens,
-            amounts,
-            numPoolTokens
-        );
+        uint256[] memory newBalances = depositTokens(amounts, numPoolTokens);
 
         uint256[] memory poolNewHoldings = getPoolHoldings();
         uint256 weightSum;
@@ -1245,32 +1241,20 @@ contract AeraVaultV2 is
 
     /// @notice Deposit amount of tokens.
     /// @dev Will only be called by depositTokensAndUpdateWeights().
-    /// @param tokens Array of pool tokens.
     /// @param amounts Deposit token amounts.
     /// @param numPoolTokens Number of pool tokens.
-    function depositTokens(
-        IERC20[] memory tokens,
-        uint256[] memory amounts,
-        uint256 numPoolTokens
-    ) internal returns (uint256[] memory newBalances) {
-        uint256 numYieldTokens = yieldTokens.length;
-        newBalances = new uint256[](numPoolTokens + numYieldTokens);
+    function depositTokens(uint256[] memory amounts, uint256 numPoolTokens)
+        internal
+        returns (uint256[] memory newBalances)
+    {
+        IERC20[] memory tokens = getTokens();
+        uint256 numTokens = tokens.length;
+        newBalances = new uint256[](numTokens);
 
-        for (uint256 i = 0; i < numPoolTokens; i++) {
+        for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] > 0) {
                 newBalances[i] = depositToken(tokens[i], amounts[i]);
             }
-        }
-
-        uint256 index = numPoolTokens;
-        for (uint256 i = 0; i < numYieldTokens; i++) {
-            if (amounts[index] > 0) {
-                newBalances[index] = depositToken(
-                    yieldTokens[i].token,
-                    amounts[index]
-                );
-            }
-            ++index;
         }
 
         depositToPool(getPoolTokenValues(newBalances, numPoolTokens));
