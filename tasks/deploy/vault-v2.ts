@@ -49,9 +49,11 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       vaultConfig.maxOracleDelay || MAX_ORACLE_DELAY;
 
     if (!vaultConfig.merkleOrchard) {
-      console.warn(
-        "Use default Merkle Orchard address since it's not provided",
-      );
+      if (!taskArgs.silent) {
+        console.warn(
+          "Use default Merkle Orchard address since it's not provided",
+        );
+      }
       vaultConfig.merkleOrchard =
         config.merkleOrchard || ethers.constants.AddressZero;
     }
