@@ -976,7 +976,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       });
     });
 
-    describe.only("when call setTargetWeights", () => {
+    describe("when call setTargetWeights", () => {
       describe("should be reverted to call setTargetWeights", async () => {
         it("when called from non-owner", async () => {
           await expect(
@@ -1036,7 +1036,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         });
       });
 
-      describe.only("should be possible to call setTargetWeights", async () => {
+      describe("should be possible to call setTargetWeights", async () => {
         describe("when underlying tokens are enough to mint yield tokens", async () => {
           it("update weights of only underlying tokens and yield tokens", async () => {
             const weights = await vault.getNormalizedWeights();

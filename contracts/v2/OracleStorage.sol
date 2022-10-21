@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
-import "./dependencies/chainlink/interfaces/AggregatorV2V3Interface.sol";
 import "./interfaces/IOracleStorage.sol";
 
 /// @title Oracle Storage management contract.
@@ -54,7 +53,7 @@ contract OracleStorage is IOracleStorage {
     uint256 internal immutable oracleUnit18;
     uint256 internal immutable oracleUnit19;
 
-    /// @dev Index of asset to be used as base token for oracles.
+    /// @dev Number of oracles.
     uint256 internal immutable numOracles;
 
     /// @dev Index of asset to be used as base token for oracles.
