@@ -1051,9 +1051,8 @@ contract AeraVaultV2 is
         uint256[] memory underlyingBalances = getUnderlyingBalances();
         (uint256[] memory oraclePrices, ) = getOraclePrices();
 
-        uint256 value = getVaultValue(
-            poolHoldings,
-            underlyingBalances,
+        uint256 value = getValue(
+            getUnderlyingTotalBalances(poolHoldings, underlyingBalances),
             oraclePrices
         );
 
@@ -1695,8 +1694,10 @@ contract AeraVaultV2 is
             uint256[] memory updatedAt
         ) = getOraclePrices();
         uint256[] memory spotPrices = getSpotPrices(poolHoldings);
-        uint256[]
-            memory underlyingTotalBalances = getUnderlyingTotalBalances();
+        uint256[] memory underlyingTotalBalances = getUnderlyingTotalBalances(
+            poolHoldings,
+            getUnderlyingBalances()
+        );
 
         if (
             getValue(underlyingTotalBalances, spotPrices) <
@@ -1757,22 +1758,6 @@ contract AeraVaultV2 is
         }
 
         return value;
-    }
-
-    function getVaultValue(
-        uint256[] memory holdings,
-        uint256[] memory underlyingBalances,
-        uint256[] memory oraclePrices
-    ) internal view returns (uint256 value) {
-        for (uint256 i = 0; i < underlyingBalances.length; i++) {
-            if (underlyingBalances[i] > 0) {
-                holdings[yieldTokens[i].underlyingIndex] += underlyingBalances[
-                    i
-                ];
-            }
-        }
-
-        value = getValue(holdings, oraclePrices);
     }
 
     /// @notice Calculate spot prices of tokens vs base token.
@@ -1876,6 +1861,7 @@ contract AeraVaultV2 is
         );
 
         adjustPoolWeights(
+            poolHoldings,
             currentUnderlyingTotalWeights,
             underlyingWeights,
             targetWeights,
@@ -1885,12 +1871,15 @@ contract AeraVaultV2 is
     }
 
     function adjustPoolWeights(
+        uint256[] memory poolHoldings,
         uint256[] memory currentUnderlyingTotalWeights,
         uint256[] memory underlyingWeights,
         uint256[] memory targetWeights,
         uint256 period,
         uint256 numPoolTokens
     ) internal {
+        uint256[] memory newPoolHoldings = getPoolHoldings();
+        uint256[] memory poolWeights = pool.getNormalizedWeights();
         uint256[]
             memory targetUnderlyingTotalWeights = getUnderlyingTotalWeights(
                 targetWeights,
@@ -1904,6 +1893,9 @@ contract AeraVaultV2 is
                 underlyingWeights[i] +
                 targetUnderlyingTotalWeights[i] -
                 currentUnderlyingTotalWeights[i];
+            underlyingWeights[i] =
+                (poolWeights[i] * newPoolHoldings[i]) /
+                poolHoldings[i];
             weightSum += underlyingWeights[i];
             targetWeightSum += targetUnderlyingTotalWeights[i];
         }
@@ -1955,28 +1947,29 @@ contract AeraVaultV2 is
         return underlyingBalances;
     }
 
-    function getUnderlyingTotalBalances()
-        internal
-        view
-        returns (uint256[] memory)
-    {
-        uint256[] memory underlyingBalances = getPoolHoldings();
+    function getUnderlyingTotalBalances(
+        uint256[] memory poolHoldings,
+        uint256[] memory underlyingBalances
+    ) internal view returns (uint256[] memory) {
+        uint256 numPoolHoldings = poolHoldings.length;
         uint256 numYieldTokens = yieldTokens.length;
+        uint256[] memory underlyingTotalBalances = new uint256[](
+            numPoolHoldings
+        );
 
-        YieldToken memory yieldToken;
-        uint256 index = getPoolTokens().length;
-        for (uint256 i = 0; i < numYieldTokens; i++) {
-            yieldToken = yieldTokens[i];
-            underlyingBalances[yieldToken.underlyingIndex] += yieldToken
-                .token
-                .convertToAssets(
-                    yieldToken.token.balanceOf(address(this)) -
-                        managersFeeTotal[index]
-                );
-            ++index;
+        for (uint256 i = 0; i < numPoolHoldings; i++) {
+            underlyingTotalBalances[i] = poolHoldings[i];
         }
 
-        return underlyingBalances;
+        for (uint256 i = 0; i < numYieldTokens; i++) {
+            if (underlyingBalances[i] > 0) {
+                underlyingTotalBalances[
+                    yieldTokens[i].underlyingIndex
+                ] += underlyingBalances[i];
+            }
+        }
+
+        return underlyingTotalBalances;
     }
 
     function calcNormalizedWeights(
@@ -2040,9 +2033,8 @@ contract AeraVaultV2 is
 
         checkOracleStatus(updatedAt);
 
-        uint256 value = getVaultValue(
-            poolHoldings,
-            underlyingBalances,
+        uint256 value = getValue(
+            getUnderlyingTotalBalances(poolHoldings, underlyingBalances),
             oraclePrices
         );
 
@@ -2101,8 +2093,12 @@ contract AeraVaultV2 is
         uint256[] memory balances,
         uint256[] memory necessaryAmounts,
         uint256 numPoolTokens
-    ) internal returns (uint256[] memory remainingAmounts) {
-        remainingAmounts = balances;
+    ) internal returns (uint256[] memory) {
+        uint256[] memory remainingAmounts = new uint256[](numPoolTokens);
+        for (uint256 i = 0; i < numPoolTokens; i++) {
+            remainingAmounts[i] = balances[i];
+        }
+
         uint256[] memory currentBalances = new uint256[](numPoolTokens);
         for (uint256 i = 0; i < numPoolTokens; i++) {
             if (necessaryAmounts[i] > remainingAmounts[i]) {
