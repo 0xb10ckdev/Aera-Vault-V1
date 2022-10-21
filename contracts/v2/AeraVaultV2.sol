@@ -1407,6 +1407,7 @@ contract AeraVaultV2 is
             newFees[i] = poolTokens[i].balanceOf(address(this)) - balances[i];
             // slither-disable-next-line reentrancy-benign
             managersFee[manager][i] += newFees[i];
+            // slither-disable-next-line reentrancy-no-eth
             managersFeeTotal[i] += newFees[i];
         }
 
@@ -1416,6 +1417,7 @@ contract AeraVaultV2 is
             newFee = (holdings[i] * feeIndex * managementFee) / ONE;
             // slither-disable-next-line reentrancy-benign
             managersFee[manager][i] += newFee;
+            // slither-disable-next-line reentrancy-no-eth
             managersFeeTotal[i] += newFee;
         }
     }
