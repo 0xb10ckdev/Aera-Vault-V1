@@ -370,9 +370,8 @@ contract AeraVaultV2 is
         YieldTokenStorage(vaultParams.yieldTokens)
     {
         uint256 numPoolTokens = vaultParams.poolTokens.length;
-        uint256 numYieldTokens = vaultParams.yieldTokens.length;
 
-        checkVaultParams(vaultParams, numPoolTokens, numYieldTokens);
+        checkVaultParams(vaultParams, numPoolTokens);
 
         address[] memory assetManagers = new address[](numPoolTokens);
         for (uint256 i = 0; i < numPoolTokens; i++) {
@@ -1823,8 +1822,7 @@ contract AeraVaultV2 is
                 poolHoldings,
                 underlyingBalances,
                 targetWeights,
-                numPoolTokens,
-                numYieldTokens
+                numPoolTokens
             );
 
         uint256[]
@@ -1841,8 +1839,7 @@ contract AeraVaultV2 is
                 withdrawAmounts,
                 currentUnderlyingTotalWeights,
                 targetWeights,
-                numPoolTokens,
-                numYieldTokens
+                numPoolTokens
             );
 
         underlyingWeights = depositToYieldTokens(
@@ -2006,8 +2003,7 @@ contract AeraVaultV2 is
         uint256[] memory poolHoldings,
         uint256[] memory underlyingBalances,
         uint256[] memory targetWeights,
-        uint256 numPoolTokens,
-        uint256 numYieldTokens
+        uint256 numPoolTokens
     )
         internal
         view
@@ -2060,8 +2056,7 @@ contract AeraVaultV2 is
     function calcNecessaryAmounts(
         uint256[] memory depositAmounts,
         uint256[] memory balances,
-        uint256 numPoolTokens,
-        uint256 numYieldTokens
+        uint256 numPoolTokens
     ) internal returns (uint256[] memory necessaryAmounts) {
         uint256[] memory poolHoldings = getPoolHoldings();
         uint256[] memory underlyingIndexes = getUnderlyingIndexes();
@@ -2135,8 +2130,7 @@ contract AeraVaultV2 is
             uint256[] memory necessaryAmounts = calcNecessaryAmounts(
                 depositAmounts,
                 balances,
-                numPoolTokens,
-                numYieldTokens
+                numPoolTokens
             );
 
             balances = withdrawNecessaryTokensFromPool(
@@ -2197,8 +2191,7 @@ contract AeraVaultV2 is
         uint256[] memory withdrawAmounts,
         uint256[] memory currentUnderlyingTotalWeights,
         uint256[] memory targetWeights,
-        uint256 numPoolTokens,
-        uint256 numYieldTokens
+        uint256 numPoolTokens
     )
         internal
         returns (uint256[] memory amounts, uint256[] memory underlyingWeights)
@@ -2324,8 +2317,7 @@ contract AeraVaultV2 is
     /// @param numPoolTokens Number of tokens.
     function checkVaultParams(
         NewVaultParams memory vaultParams,
-        uint256 numPoolTokens,
-        uint256 numYieldTokens
+        uint256 numPoolTokens
     ) internal {
         if (numPoolTokens != vaultParams.weights.length) {
             revert Aera__ValueLengthIsNotSame(
