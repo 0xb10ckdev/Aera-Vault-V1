@@ -78,6 +78,9 @@ contract AeraVaultV2 is
     /// @notice Pool ID of Balancer pool on Vault.
     bytes32 public immutable poolId;
 
+    /// @notice Number of pool tokens.
+    uint256 public immutable numPoolTokens;
+
     /// @notice Timestamp when vault is created.
     uint256 public immutable createdAt;
 
@@ -369,9 +372,9 @@ contract AeraVaultV2 is
         )
         YieldTokenStorage(vaultParams.yieldTokens)
     {
-        uint256 numPoolTokens = vaultParams.poolTokens.length;
+        numPoolTokens = vaultParams.poolTokens.length;
 
-        checkVaultParams(vaultParams, numPoolTokens);
+        checkVaultParams(vaultParams);
 
         address[] memory assetManagers = new address[](numPoolTokens);
         for (uint256 i = 0; i < numPoolTokens; i++) {
@@ -473,7 +476,6 @@ contract AeraVaultV2 is
 
         checkWeights(targetWeights);
 
-        uint256 numPoolTokens = poolTokens.length;
         uint256[] memory balances = new uint256[](numPoolTokens);
         IERC4626[] memory yieldTokens = getYieldTokens();
 
@@ -682,7 +684,6 @@ contract AeraVaultV2 is
         }
 
         IERC20[] memory poolTokens = getPoolTokens();
-        uint256 numPoolTokens = poolTokens.length;
 
         uint256[] memory targetWeights = getValuesFromTokenWithValues(
             tokenWithWeight,
@@ -832,7 +833,6 @@ contract AeraVaultV2 is
         // Check if weight change ratio is exceeded
         uint256[] memory weights = pool.getNormalizedWeights();
         IERC20[] memory poolTokens = getPoolTokens();
-        uint256 numPoolTokens = poolTokens.length;
         uint256[] memory targetWeights = getValuesFromTokenWithValues(
             tokenWithWeight,
             poolTokens
@@ -914,7 +914,6 @@ contract AeraVaultV2 is
 
         checkWeights(targetWeights);
 
-        uint256 numPoolTokens = poolTokens.length;
         uint256[] memory underlyingBalances = getUnderlyingBalances();
 
         adjustYieldTokens(
@@ -922,8 +921,7 @@ contract AeraVaultV2 is
             poolHoldings,
             underlyingBalances,
             targetWeights,
-            period,
-            numPoolTokens
+            period
         );
 
         emit SetTargetWeights(
@@ -1018,7 +1016,6 @@ contract AeraVaultV2 is
     {
         (, uint256[] memory poolHoldings, ) = getPoolTokensData();
 
-        uint256 numPoolTokens = poolHoldings.length;
         IERC4626[] memory yieldTokens = getYieldTokens();
         holdings = new uint256[](numPoolTokens + numYieldTokens);
 
@@ -1054,8 +1051,7 @@ contract AeraVaultV2 is
         weights = calcNormalizedWeights(
             value,
             oraclePrices,
-            underlyingBalances,
-            poolHoldings.length
+            underlyingBalances
         );
     }
 
@@ -1098,7 +1094,6 @@ contract AeraVaultV2 is
         uint256[] memory poolHoldings;
         (poolTokens, poolHoldings, lastChangeBlock) = getPoolTokensData();
 
-        uint256 numPoolTokens = poolTokens.length;
         IERC4626[] memory yieldTokens = getYieldTokens();
         tokens = new IERC20[](numPoolTokens + numYieldTokens);
         holdings = new uint256[](numPoolTokens + numYieldTokens);
@@ -1128,7 +1123,6 @@ contract AeraVaultV2 is
     {
         (IERC20[] memory poolTokens, , ) = getPoolTokensData();
 
-        uint256 numPoolTokens = poolTokens.length;
         IERC4626[] memory yieldTokens = getYieldTokens();
         tokens = new IERC20[](numPoolTokens + numYieldTokens);
 
@@ -1136,8 +1130,10 @@ contract AeraVaultV2 is
             tokens[i] = poolTokens[i];
         }
 
+        uint256 index = numPoolTokens;
         for (uint256 i = 0; i < numYieldTokens; i++) {
-            tokens[i + numPoolTokens] = yieldTokens[i];
+            tokens[index] = yieldTokens[i];
+            ++index;
         }
     }
 
@@ -1197,7 +1193,6 @@ contract AeraVaultV2 is
         uint256[] memory poolHoldings;
         (poolTokens, poolHoldings, ) = getPoolTokensData();
         uint256[] memory weights = pool.getNormalizedWeights();
-        uint256 numPoolTokens = poolTokens.length;
 
         uint256[] memory amounts = getValuesFromTokenWithValues(
             tokenWithAmount,
@@ -1210,7 +1205,7 @@ contract AeraVaultV2 is
             (determinedPrices, priceType) = getDeterminedPrices(amounts);
         }
 
-        uint256[] memory newBalances = depositTokens(amounts, numPoolTokens);
+        uint256[] memory newBalances = depositTokens(amounts);
 
         uint256[] memory poolNewHoldings = getPoolHoldings();
         uint256 weightSum;
@@ -1256,8 +1251,7 @@ contract AeraVaultV2 is
     /// @notice Deposit amount of tokens.
     /// @dev Will only be called by depositTokensAndUpdateWeights().
     /// @param amounts Deposit token amounts.
-    /// @param numPoolTokens Number of pool tokens.
-    function depositTokens(uint256[] memory amounts, uint256 numPoolTokens)
+    function depositTokens(uint256[] memory amounts)
         internal
         returns (uint256[] memory newBalances)
     {
@@ -1271,7 +1265,7 @@ contract AeraVaultV2 is
             }
         }
 
-        depositToPool(getPoolTokenValues(newBalances, numPoolTokens));
+        depositToPool(getPoolTokenValues(newBalances));
     }
 
     function depositToPool(uint256[] memory amounts) internal {
@@ -1295,7 +1289,6 @@ contract AeraVaultV2 is
         uint256[] memory holdings;
         (tokens, holdings, ) = getTokensData();
         uint256 numTokens = tokens.length;
-        uint256 numPoolTokens = numTokens - numYieldTokens;
 
         uint256[] memory allowances = validator.allowance();
         uint256[] memory weights = pool.getNormalizedWeights();
@@ -1319,7 +1312,7 @@ contract AeraVaultV2 is
             }
         }
 
-        withdrawFromPool(getPoolTokenValues(amounts, numPoolTokens));
+        withdrawFromPool(getPoolTokenValues(amounts));
 
         uint256 weightSum;
         for (uint256 i = 0; i < numPoolTokens; i++) {
@@ -1383,8 +1376,6 @@ contract AeraVaultV2 is
 
         IERC20[] memory poolTokens = getPoolTokens();
         uint256[] memory holdings = getHoldings();
-
-        uint256 numPoolTokens = poolTokens.length;
 
         uint256[] memory newFees = new uint256[](numPoolTokens);
         uint256[] memory balances = new uint256[](numPoolTokens);
@@ -1467,7 +1458,6 @@ contract AeraVaultV2 is
         TokenValue[] calldata tokenWithValues,
         IERC20[] memory poolTokens
     ) internal view returns (uint256[] memory) {
-        uint256 numPoolTokens = poolTokens.length;
         uint256 numTokens = numPoolTokens + numYieldTokens;
 
         if (numTokens != tokenWithValues.length) {
@@ -1506,14 +1496,14 @@ contract AeraVaultV2 is
         return values;
     }
 
-    function getPoolTokenValues(uint256[] memory values, uint256 numPooltokens)
+    function getPoolTokenValues(uint256[] memory values)
         internal
-        pure
+        view
         returns (uint256[] memory poolTokenValues)
     {
-        poolTokenValues = new uint256[](numPooltokens);
+        poolTokenValues = new uint256[](numPoolTokens);
 
-        for (uint256 i = 0; i < numPooltokens; i++) {
+        for (uint256 i = 0; i < numPoolTokens; i++) {
             poolTokenValues[i] = values[i];
         }
     }
@@ -1811,8 +1801,7 @@ contract AeraVaultV2 is
         uint256[] memory poolHoldings,
         uint256[] memory underlyingBalances,
         uint256[] memory targetWeights,
-        uint256 period,
-        uint256 numPoolTokens
+        uint256 period
     ) internal {
         (
             uint256[] memory depositAmounts,
@@ -1821,14 +1810,12 @@ contract AeraVaultV2 is
         ) = calcAdjustmentAmounts(
                 poolHoldings,
                 underlyingBalances,
-                targetWeights,
-                numPoolTokens
+                targetWeights
             );
 
         uint256[]
             memory currentUnderlyingTotalWeights = getUnderlyingTotalWeights(
-                currentWeights,
-                numPoolTokens
+                currentWeights
             );
 
         (
@@ -1838,8 +1825,7 @@ contract AeraVaultV2 is
                 tokens,
                 withdrawAmounts,
                 currentUnderlyingTotalWeights,
-                targetWeights,
-                numPoolTokens
+                targetWeights
             );
 
         underlyingWeights = depositToYieldTokens(
@@ -1856,8 +1842,7 @@ contract AeraVaultV2 is
             currentUnderlyingTotalWeights,
             underlyingWeights,
             targetWeights,
-            period,
-            numPoolTokens
+            period
         );
     }
 
@@ -1866,15 +1851,13 @@ contract AeraVaultV2 is
         uint256[] memory currentUnderlyingTotalWeights,
         uint256[] memory underlyingWeights,
         uint256[] memory targetWeights,
-        uint256 period,
-        uint256 numPoolTokens
+        uint256 period
     ) internal {
         uint256[] memory newPoolHoldings = getPoolHoldings();
         uint256[] memory poolWeights = pool.getNormalizedWeights();
         uint256[]
             memory targetUnderlyingTotalWeights = getUnderlyingTotalWeights(
-                targetWeights,
-                numPoolTokens
+                targetWeights
             );
 
         uint256 weightSum;
@@ -1901,10 +1884,11 @@ contract AeraVaultV2 is
         );
     }
 
-    function getUnderlyingTotalWeights(
-        uint256[] memory weights,
-        uint256 numPoolTokens
-    ) internal view returns (uint256[] memory) {
+    function getUnderlyingTotalWeights(uint256[] memory weights)
+        internal
+        view
+        returns (uint256[] memory)
+    {
         uint256[] memory underlyingIndexes = getUnderlyingIndexes();
         uint256[] memory underlyingTotalWeights = new uint256[](numPoolTokens);
 
@@ -1964,8 +1948,7 @@ contract AeraVaultV2 is
     function calcNormalizedWeights(
         uint256 value,
         uint256[] memory oraclePrices,
-        uint256[] memory underlyingBalances,
-        uint256 numPoolTokens
+        uint256[] memory underlyingBalances
     ) internal view returns (uint256[] memory) {
         uint256[] memory poolWeights = pool.getNormalizedWeights();
         uint256[] memory underlyingIndexes = getUnderlyingIndexes();
@@ -1976,13 +1959,15 @@ contract AeraVaultV2 is
 
         uint256 weight;
         uint256 weightSum;
+        uint256 index = numPoolTokens;
         for (uint256 i = 0; i < numYieldTokens; i++) {
             weight =
                 (underlyingBalances[i] * oraclePrices[underlyingIndexes[i]]) /
                 value;
-            weights[i + numPoolTokens] = weight;
+            weights[index] = weight;
             poolWeightSum -= weight;
             weightSum += weight;
+            ++index;
         }
 
         for (uint256 i = 0; i < numPoolTokens; i++) {
@@ -2002,8 +1987,7 @@ contract AeraVaultV2 is
     function calcAdjustmentAmounts(
         uint256[] memory poolHoldings,
         uint256[] memory underlyingBalances,
-        uint256[] memory targetWeights,
-        uint256 numPoolTokens
+        uint256[] memory targetWeights
     )
         internal
         view
@@ -2028,8 +2012,7 @@ contract AeraVaultV2 is
         currentWeights = calcNormalizedWeights(
             value,
             oraclePrices,
-            underlyingBalances,
-            numPoolTokens
+            underlyingBalances
         );
 
         depositAmounts = new uint256[](numYieldTokens);
@@ -2055,8 +2038,7 @@ contract AeraVaultV2 is
 
     function calcNecessaryAmounts(
         uint256[] memory depositAmounts,
-        uint256[] memory balances,
-        uint256 numPoolTokens
+        uint256[] memory balances
     ) internal returns (uint256[] memory necessaryAmounts) {
         uint256[] memory poolHoldings = getPoolHoldings();
         uint256[] memory underlyingIndexes = getUnderlyingIndexes();
@@ -2079,8 +2061,7 @@ contract AeraVaultV2 is
     function withdrawNecessaryTokensFromPool(
         IERC20[] memory tokens,
         uint256[] memory balances,
-        uint256[] memory necessaryAmounts,
-        uint256 numPoolTokens
+        uint256[] memory necessaryAmounts
     ) internal returns (uint256[] memory) {
         uint256[] memory remainingAmounts = new uint256[](numPoolTokens);
         for (uint256 i = 0; i < numPoolTokens; i++) {
@@ -2123,24 +2104,22 @@ contract AeraVaultV2 is
         IERC20[] memory poolTokens = getPoolTokens();
         IERC4626[] memory yieldTokens = getYieldTokens();
         uint256[] memory underlyingIndexes = getUnderlyingIndexes();
-        uint256 numPoolTokens = poolTokens.length;
         uint256 underlyingIndex;
 
         {
             uint256[] memory necessaryAmounts = calcNecessaryAmounts(
                 depositAmounts,
-                balances,
-                numPoolTokens
+                balances
             );
 
             balances = withdrawNecessaryTokensFromPool(
                 poolTokens,
                 balances,
-                necessaryAmounts,
-                numPoolTokens
+                necessaryAmounts
             );
         }
 
+        uint256 index = numPoolTokens;
         for (uint256 i = 0; i < numYieldTokens; i++) {
             underlyingIndex = underlyingIndexes[i];
             if (depositAmounts[i] > 0) {
@@ -2151,19 +2130,16 @@ contract AeraVaultV2 is
                         depositAmounts[i]
                     );
                     balances[underlyingIndex] -= depositAmounts[i];
-                    underlyingWeights[underlyingIndex] -= targetWeights[
-                        i + numPoolTokens
-                    ];
+                    underlyingWeights[underlyingIndex] -= targetWeights[index];
                 } else {
                     underlyingWeights[underlyingIndex] -= currentWeights[
-                        i + numPoolTokens
+                        index
                     ];
                 }
             } else if (withdrawAmounts[i] == 0) {
-                underlyingWeights[underlyingIndex] -= currentWeights[
-                    i + numPoolTokens
-                ];
+                underlyingWeights[underlyingIndex] -= currentWeights[index];
             }
+            ++index;
         }
 
         for (uint256 i = 0; i < numPoolTokens; i++) {
@@ -2190,8 +2166,7 @@ contract AeraVaultV2 is
         IERC20[] memory tokens,
         uint256[] memory withdrawAmounts,
         uint256[] memory currentUnderlyingTotalWeights,
-        uint256[] memory targetWeights,
-        uint256 numPoolTokens
+        uint256[] memory targetWeights
     )
         internal
         returns (uint256[] memory amounts, uint256[] memory underlyingWeights)
@@ -2314,11 +2289,7 @@ contract AeraVaultV2 is
     /// @notice Check if the vaultParam is valid.
     /// @dev Will only be called by constructor.
     /// @param vaultParams Struct vault parameter to check.
-    /// @param numPoolTokens Number of tokens.
-    function checkVaultParams(
-        NewVaultParams memory vaultParams,
-        uint256 numPoolTokens
-    ) internal {
+    function checkVaultParams(NewVaultParams memory vaultParams) internal {
         if (numPoolTokens != vaultParams.weights.length) {
             revert Aera__ValueLengthIsNotSame(
                 numPoolTokens,
@@ -2344,7 +2315,7 @@ contract AeraVaultV2 is
             }
         }
 
-        checkValidator(vaultParams, numPoolTokens + numYieldTokens);
+        checkValidator(vaultParams);
 
         if (vaultParams.minFeeDuration == 0) {
             revert Aera__MinFeeDurationIsZero();
@@ -2378,12 +2349,8 @@ contract AeraVaultV2 is
 
     /// @notice Check if the validator is valid.
     /// @dev Will only be called by checkVaultParams().
-    /// @param vaultParams Struct vault parameter to check.
-    /// @param numPoolTokens Number of tokens.
-    function checkValidator(
-        NewVaultParams memory vaultParams,
-        uint256 numPoolTokens
-    ) internal {
+    /// @param vaultParams Struct vault parameter to check
+    function checkValidator(NewVaultParams memory vaultParams) internal {
         if (
             !ERC165Checker.supportsInterface(
                 vaultParams.validator,
@@ -2393,11 +2360,12 @@ contract AeraVaultV2 is
             revert Aera__ValidatorIsNotValid(vaultParams.validator);
         }
 
+        uint256 numTokens = numPoolTokens + numYieldTokens;
         uint256 numAllowances = IWithdrawalValidator(vaultParams.validator)
             .allowance()
             .length;
-        if (numPoolTokens != numAllowances) {
-            revert Aera__ValidatorIsNotMatched(numPoolTokens, numAllowances);
+        if (numTokens != numAllowances) {
+            revert Aera__ValidatorIsNotMatched(numTokens, numAllowances);
         }
     }
 
