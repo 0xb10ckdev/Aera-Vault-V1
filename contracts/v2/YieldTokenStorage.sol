@@ -122,8 +122,7 @@ contract YieldTokenStorage is IYieldTokenStorage {
         view
         returns (IERC4626[] memory)
     {
-        IERC4626[]
-            memory yieldTokens = new IERC4626[](numYieldTokens);
+        IERC4626[] memory yieldTokens = new IERC4626[](numYieldTokens);
 
         if (numYieldTokens > 0) { yieldTokens[0] = yieldToken0; } else { return yieldTokens; }
         if (numYieldTokens > 1) { yieldTokens[1] = yieldToken1; } else { return yieldTokens; }
@@ -153,29 +152,29 @@ contract YieldTokenStorage is IYieldTokenStorage {
     // prettier-ignore
     // solhint-disable-next-line code-complexity
     function getUnderlyingIndexes() public view returns (uint256[] memory) {
-        uint256[] memory underlyingIndexs = new uint256[](numYieldTokens);
+        uint256[] memory underlyingIndexes = new uint256[](numYieldTokens);
 
-        if (numYieldTokens > 0) { underlyingIndexs[0] = underlyingIndex0; } else { return underlyingIndexs; }
-        if (numYieldTokens > 1) { underlyingIndexs[1] = underlyingIndex1; } else { return underlyingIndexs; }
-        if (numYieldTokens > 2) { underlyingIndexs[2] = underlyingIndex2; } else { return underlyingIndexs; }
-        if (numYieldTokens > 3) { underlyingIndexs[3] = underlyingIndex3; } else { return underlyingIndexs; }
-        if (numYieldTokens > 4) { underlyingIndexs[4] = underlyingIndex4; } else { return underlyingIndexs; }
-        if (numYieldTokens > 5) { underlyingIndexs[5] = underlyingIndex5; } else { return underlyingIndexs; }
-        if (numYieldTokens > 6) { underlyingIndexs[6] = underlyingIndex6; } else { return underlyingIndexs; }
-        if (numYieldTokens > 7) { underlyingIndexs[7] = underlyingIndex7; } else { return underlyingIndexs; }
-        if (numYieldTokens > 8) { underlyingIndexs[8] = underlyingIndex8; } else { return underlyingIndexs; }
-        if (numYieldTokens > 9) { underlyingIndexs[9] = underlyingIndex9; } else { return underlyingIndexs; }
-        if (numYieldTokens > 10) { underlyingIndexs[10] = underlyingIndex10; } else { return underlyingIndexs; }
-        if (numYieldTokens > 11) { underlyingIndexs[11] = underlyingIndex11; } else { return underlyingIndexs; }
-        if (numYieldTokens > 12) { underlyingIndexs[12] = underlyingIndex12; } else { return underlyingIndexs; }
-        if (numYieldTokens > 13) { underlyingIndexs[13] = underlyingIndex13; } else { return underlyingIndexs; }
-        if (numYieldTokens > 14) { underlyingIndexs[14] = underlyingIndex14; } else { return underlyingIndexs; }
-        if (numYieldTokens > 15) { underlyingIndexs[15] = underlyingIndex15; } else { return underlyingIndexs; }
-        if (numYieldTokens > 16) { underlyingIndexs[16] = underlyingIndex16; } else { return underlyingIndexs; }
-        if (numYieldTokens > 17) { underlyingIndexs[17] = underlyingIndex17; } else { return underlyingIndexs; }
-        if (numYieldTokens > 18) { underlyingIndexs[18] = underlyingIndex18; } else { return underlyingIndexs; }
-        if (numYieldTokens > 19) { underlyingIndexs[19] = underlyingIndex19; } else { return underlyingIndexs; }
+        if (numYieldTokens > 0) { underlyingIndexes[0] = underlyingIndex0; } else { return underlyingIndexes; }
+        if (numYieldTokens > 1) { underlyingIndexes[1] = underlyingIndex1; } else { return underlyingIndexes; }
+        if (numYieldTokens > 2) { underlyingIndexes[2] = underlyingIndex2; } else { return underlyingIndexes; }
+        if (numYieldTokens > 3) { underlyingIndexes[3] = underlyingIndex3; } else { return underlyingIndexes; }
+        if (numYieldTokens > 4) { underlyingIndexes[4] = underlyingIndex4; } else { return underlyingIndexes; }
+        if (numYieldTokens > 5) { underlyingIndexes[5] = underlyingIndex5; } else { return underlyingIndexes; }
+        if (numYieldTokens > 6) { underlyingIndexes[6] = underlyingIndex6; } else { return underlyingIndexes; }
+        if (numYieldTokens > 7) { underlyingIndexes[7] = underlyingIndex7; } else { return underlyingIndexes; }
+        if (numYieldTokens > 8) { underlyingIndexes[8] = underlyingIndex8; } else { return underlyingIndexes; }
+        if (numYieldTokens > 9) { underlyingIndexes[9] = underlyingIndex9; } else { return underlyingIndexes; }
+        if (numYieldTokens > 10) { underlyingIndexes[10] = underlyingIndex10; } else { return underlyingIndexes; }
+        if (numYieldTokens > 11) { underlyingIndexes[11] = underlyingIndex11; } else { return underlyingIndexes; }
+        if (numYieldTokens > 12) { underlyingIndexes[12] = underlyingIndex12; } else { return underlyingIndexes; }
+        if (numYieldTokens > 13) { underlyingIndexes[13] = underlyingIndex13; } else { return underlyingIndexes; }
+        if (numYieldTokens > 14) { underlyingIndexes[14] = underlyingIndex14; } else { return underlyingIndexes; }
+        if (numYieldTokens > 15) { underlyingIndexes[15] = underlyingIndex15; } else { return underlyingIndexes; }
+        if (numYieldTokens > 16) { underlyingIndexes[16] = underlyingIndex16; } else { return underlyingIndexes; }
+        if (numYieldTokens > 17) { underlyingIndexes[17] = underlyingIndex17; } else { return underlyingIndexes; }
+        if (numYieldTokens > 18) { underlyingIndexes[18] = underlyingIndex18; } else { return underlyingIndexes; }
+        if (numYieldTokens > 19) { underlyingIndexes[19] = underlyingIndex19; } else { return underlyingIndexes; }
 
-        return underlyingIndexs;
+        return underlyingIndexes;
     }
 }
