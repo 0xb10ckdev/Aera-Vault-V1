@@ -50,7 +50,7 @@ export const test = (
     oracles: OracleMock[];
     unsortedTokens: string[];
     snapshot: unknown;
-  }>
+  }>,
 ): void => {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
@@ -107,7 +107,7 @@ export const test = (
       sortedTokens,
       oracles,
       unsortedTokens,
-      snapshot
+      snapshot,
     } = await initalize());
   });
 
@@ -502,7 +502,9 @@ export const test = (
               await tokens[i].approve(vault.address, amounts[i]);
             }
 
-            const trx = await vault.deposit(tokenWithValues(sortedTokens, amounts));
+            const trx = await vault.deposit(
+              tokenWithValues(sortedTokens, amounts),
+            );
             const weights = await vault.getNormalizedWeights();
 
             const newSpotPrices = await vault.getSpotPrices(tokens[0].address);
@@ -544,7 +546,9 @@ export const test = (
               await tokens[i].approve(vault.address, amounts[i]);
             }
 
-            const trx = await vault.deposit(tokenWithValues(sortedTokens, amounts));
+            const trx = await vault.deposit(
+              tokenWithValues(sortedTokens, amounts),
+            );
             const weights = await vault.getNormalizedWeights();
 
             const newSpotPrices = await vault.getSpotPrices(tokens[0].address);
@@ -582,7 +586,9 @@ export const test = (
               await tokens[i].approve(vault.address, amounts[i]);
             }
 
-            const trx = await vault.deposit(tokenWithValues(sortedTokens, amounts));
+            const trx = await vault.deposit(
+              tokenWithValues(sortedTokens, amounts),
+            );
             const weights = await vault.getNormalizedWeights();
 
             const newSpotPrices = await vault.getSpotPrices(tokens[0].address);
