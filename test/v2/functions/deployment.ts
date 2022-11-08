@@ -3,30 +3,30 @@ import { expect } from "chai";
 import hre, { deployments, ethers } from "hardhat";
 import { getConfig } from "../../../scripts/config";
 import {
-  IERC20,
   ERC4626Mock,
+  IERC20,
   ManagedPoolFactory,
+  OracleMock,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
-  OracleMock,
 } from "../../../typechain";
 import {
   BALANCER_ERRORS,
   MAX_MANAGEMENT_FEE,
+  MAX_ORACLE_DELAY,
+  MAX_ORACLE_SPOT_DIVERGENCE,
   MAX_SWAP_FEE,
+  MIN_FEE_DURATION,
+  MIN_RELIABLE_VAULT_VALUE,
+  MIN_SIGNIFICANT_DEPOSIT_VALUE,
   MIN_SWAP_FEE,
   MIN_WEIGHT,
   ONE,
   ZERO_ADDRESS,
-  MIN_FEE_DURATION,
-  MIN_RELIABLE_VAULT_VALUE,
-  MIN_SIGNIFICANT_DEPOSIT_VALUE,
-  MAX_ORACLE_SPOT_DIVERGENCE,
-  MAX_ORACLE_DELAY,
 } from "../constants";
 import {
-  setupTokens,
   setupOracles,
+  setupTokens,
   setupYieldBearingAssets,
 } from "../fixtures";
 import {
