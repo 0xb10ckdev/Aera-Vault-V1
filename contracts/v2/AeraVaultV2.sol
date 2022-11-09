@@ -2204,7 +2204,11 @@ contract AeraVaultV2 is
         uint256 balance = underlyingAsset.balanceOf(address(this));
 
         // slither-disable-next-line unused-return
-        yieldToken.withdraw(amount, address(this), address(this));
+        yieldToken.withdraw(
+            Math.min(amount, yieldToken.maxWithdraw(address(this))),
+            address(this),
+            address(this)
+        );
 
         return underlyingAsset.balanceOf(address(this)) - balance;
     }
