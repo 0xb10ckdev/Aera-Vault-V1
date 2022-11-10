@@ -2230,7 +2230,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
               );
 
             const newHoldings = await vault.getHoldings();
-  
+
             for (let i = 0; i < tokens.length; i++) {
               if (underlyingIndexes.includes(i)) {
                 expect(newHoldings[i]).to.equal(holdings[i].add(toWei(0.001)));
@@ -2238,7 +2238,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             }
           });
         });
-        
+
         it("withdraw no assets when maximam withdrawal amount is zero", async () => {
           const weights = await vault.getNormalizedWeights();
           let targetWeights = [...weights];
