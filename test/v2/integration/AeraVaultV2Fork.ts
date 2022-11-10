@@ -2189,6 +2189,102 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
               expect(newWeights[i]).to.be.closeTo(targetWeights[i], DEVIATION);
             }
           });
+
+          it("withdraw only maximam withdrawal amount", async () => {
+            const weights = await vault.getNormalizedWeights();
+            let targetWeights = [...weights];
+            for (let i = 0; i < yieldTokens.length; i++) {
+              targetWeights[underlyingIndexes[i]] = targetWeights[
+                underlyingIndexes[i]
+              ].add(toWei(0.02));
+              targetWeights[i + poolTokens.length] = targetWeights[
+                i + poolTokens.length
+              ].sub(toWei(0.02));
+
+              await yieldTokens[i].setMaxWithdrawalAmount(toWei(0.001), true);
+            }
+
+            let weightSum = ONE;
+            let numAdjustedWeight = 0;
+            for (let i = 0; i < tokens.length; i++) {
+              if (i > poolTokens.length || underlyingIndexes.includes(i)) {
+                weightSum = weightSum.sub(targetWeights[i]);
+                numAdjustedWeight++;
+              }
+            }
+            for (let i = 0; i < poolTokens.length; i++) {
+              if (!underlyingIndexes.includes(i)) {
+                targetWeights[i] = weightSum.div(numAdjustedWeight);
+              }
+            }
+
+            targetWeights = normalizeWeights(targetWeights);
+
+            const holdings = await vault.getHoldings();
+
+            await vault
+              .connect(manager)
+              .setTargetWeights(
+                tokenWithValues(tokenAddresses, targetWeights),
+                100,
+              );
+
+            const newHoldings = await vault.getHoldings();
+  
+            for (let i = 0; i < tokens.length; i++) {
+              if (underlyingIndexes.includes(i)) {
+                expect(newHoldings[i]).to.equal(holdings[i].add(toWei(0.001)));
+              }
+            }
+          });
+        });
+        
+        it("withdraw no assets when maximam withdrawal amount is zero", async () => {
+          const weights = await vault.getNormalizedWeights();
+          let targetWeights = [...weights];
+          for (let i = 0; i < yieldTokens.length; i++) {
+            targetWeights[underlyingIndexes[i]] = targetWeights[
+              underlyingIndexes[i]
+            ].add(toWei(0.02));
+            targetWeights[i + poolTokens.length] = targetWeights[
+              i + poolTokens.length
+            ].sub(toWei(0.02));
+
+            await yieldTokens[i].setMaxWithdrawalAmount(toWei(0), true);
+          }
+
+          let weightSum = ONE;
+          let numAdjustedWeight = 0;
+          for (let i = 0; i < tokens.length; i++) {
+            if (i > poolTokens.length || underlyingIndexes.includes(i)) {
+              weightSum = weightSum.sub(targetWeights[i]);
+              numAdjustedWeight++;
+            }
+          }
+          for (let i = 0; i < poolTokens.length; i++) {
+            if (!underlyingIndexes.includes(i)) {
+              targetWeights[i] = weightSum.div(numAdjustedWeight);
+            }
+          }
+
+          targetWeights = normalizeWeights(targetWeights);
+
+          const holdings = await vault.getHoldings();
+
+          await vault
+            .connect(manager)
+            .setTargetWeights(
+              tokenWithValues(tokenAddresses, targetWeights),
+              100,
+            );
+
+          const newHoldings = await vault.getHoldings();
+
+          for (let i = 0; i < tokens.length; i++) {
+            if (underlyingIndexes.includes(i)) {
+              expect(newHoldings[i]).to.equal(holdings[i]);
+            }
+          }
         });
       });
     });
