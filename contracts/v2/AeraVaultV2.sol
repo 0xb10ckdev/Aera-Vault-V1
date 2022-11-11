@@ -1182,7 +1182,6 @@ contract AeraVaultV2 is
     ///      current active weights change schedule.
     /// @param tokenWithAmount Deposit tokens with amount.
     /// @param priceType Price type to be used.
-    // slither-disable-next-line uninitialized-local
     function depositTokensAndUpdateWeights(
         TokenValue[] calldata tokenWithAmount,
         PriceType priceType
@@ -1199,7 +1198,6 @@ contract AeraVaultV2 is
             poolTokens
         );
 
-        // slither-disable-next-line uninitialized-local
         uint256[] memory determinedPrices;
         if (priceType == PriceType.DETERMINED) {
             (determinedPrices, priceType) = getDeterminedPrices(amounts);
@@ -1413,7 +1411,6 @@ contract AeraVaultV2 is
         view
         returns (uint256)
     {
-        // slither-disable-next-line uninitialized-local
         uint256 feeIndex;
         if (block.timestamp > lastFeeCheckpoint) {
             feeIndex = block.timestamp - lastFeeCheckpoint;
@@ -2196,13 +2193,11 @@ contract AeraVaultV2 is
     }
 
     // solhint-disable no-empty-blocks
-    // slither-disable-next-line uninitialized-local
     function withdrawUnderlyingAsset(
         IERC4626 yieldToken,
         IERC20 underlyingAsset,
         uint256 amount
     ) internal returns (uint256) {
-        // slither-disable-next-line uninitialized-local
         try yieldToken.maxWithdraw(address(this)) returns (
             uint256 maxWithdrawalAmount
         ) {
