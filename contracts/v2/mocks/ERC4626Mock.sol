@@ -10,6 +10,7 @@ import "../dependencies/openzeppelin/ERC4626.sol";
  *      THIS CONTRACT IS FOR TESTING PURPOSES ONLY. DO NOT USE IN PRODUCTION.
  */
 contract ERC4626Mock is ERC4626 {
+    bool private paused;
     bool private useMaxWithdrawalAmount;
     uint256 private maxWithdrawalAmount;
 
@@ -27,6 +28,10 @@ contract ERC4626Mock is ERC4626 {
         override
         returns (uint256)
     {
+        if (paused) {
+            revert("Vault is paused");
+        }
+
         if (useMaxWithdrawalAmount) {
             return maxWithdrawalAmount;
         }
@@ -37,5 +42,9 @@ contract ERC4626Mock is ERC4626 {
     function setMaxWithdrawalAmount(uint256 amount, bool use) external {
         maxWithdrawalAmount = amount;
         useMaxWithdrawalAmount = use;
+    }
+
+    function pause() external {
+        paused = true;
     }
 }
