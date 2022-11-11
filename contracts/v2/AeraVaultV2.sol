@@ -2158,7 +2158,6 @@ contract AeraVaultV2 is
     ) internal {
         setAllowance(underlyingAsset, address(yieldToken), amount);
 
-        // slither-disable-next-line unused-return
         yieldToken.deposit(amount, address(this));
     }
 
@@ -2197,18 +2196,21 @@ contract AeraVaultV2 is
     }
 
     // solhint-disable no-empty-blocks
+    // slither-disable-next-line uninitialized-local
     function withdrawUnderlyingAsset(
         IERC4626 yieldToken,
         IERC20 underlyingAsset,
         uint256 amount
     ) internal returns (uint256) {
+        // slither-disable-next-line uninitialized-local
         try yieldToken.maxWithdraw(address(this)) returns (
             uint256 maxWithdrawalAmount
         ) {
+            // slither-disable-next-line variable-scope
             if (maxWithdrawalAmount > 0) {
                 uint256 balance = underlyingAsset.balanceOf(address(this));
 
-                // slither-disable-next-line unused-return
+                // slither-disable-next-line variable-scope
                 yieldToken.withdraw(
                     Math.min(amount, maxWithdrawalAmount),
                     address(this),
