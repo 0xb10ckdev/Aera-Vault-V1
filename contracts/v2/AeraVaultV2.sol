@@ -2196,25 +2196,28 @@ contract AeraVaultV2 is
         }
     }
 
+    // solhint-disable no-empty-blocks
     function withdrawUnderlyingAsset(
         IERC4626 yieldToken,
         IERC20 underlyingAsset,
         uint256 amount
     ) internal returns (uint256) {
-        uint256 maxWithdrawalAmount = yieldToken.maxWithdraw(address(this));
+        try yieldToken.maxWithdraw(address(this)) returns (
+            uint256 maxWithdrawalAmount
+        ) {
+            if (maxWithdrawalAmount > 0) {
+                uint256 balance = underlyingAsset.balanceOf(address(this));
 
-        if (maxWithdrawalAmount > 0) {
-            uint256 balance = underlyingAsset.balanceOf(address(this));
+                // slither-disable-next-line unused-return
+                yieldToken.withdraw(
+                    Math.min(amount, maxWithdrawalAmount),
+                    address(this),
+                    address(this)
+                );
 
-            // slither-disable-next-line unused-return
-            yieldToken.withdraw(
-                Math.min(amount, maxWithdrawalAmount),
-                address(this),
-                address(this)
-            );
-
-            return underlyingAsset.balanceOf(address(this)) - balance;
-        }
+                return underlyingAsset.balanceOf(address(this)) - balance;
+            }
+        } catch {}
     }
 
     /// @notice Get oracle prices.
