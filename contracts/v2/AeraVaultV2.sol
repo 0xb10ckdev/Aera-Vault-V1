@@ -1260,7 +1260,7 @@ contract AeraVaultV2 is
             if (amounts[i] > 0) {
                 newBalances[i] = depositToken(tokens[i], amounts[i]);
 
-                if (i > numPoolTokens) {
+                if (i < numPoolTokens) {
                     setAllowance(tokens[i], address(bVault), newBalances[i]);
                 }
             }
