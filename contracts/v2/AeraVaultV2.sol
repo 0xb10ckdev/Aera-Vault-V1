@@ -255,7 +255,7 @@ contract AeraVaultV2 is
         address sortedToken,
         uint256 index
     );
-    error Aera__DifferentUnderlyingIndex(
+    error Aera__WrongUnderlyingIndex(
         address yieldToken,
         uint256 underlyingIndex,
         address underlyingAsset,
@@ -2318,7 +2318,7 @@ contract AeraVaultV2 is
                 address(vaultParams.poolTokens[underlyingIndex]) !=
                 yieldToken.asset()
             ) {
-                revert Aera__DifferentUnderlyingIndex(
+                revert Aera__WrongUnderlyingIndex(
                     address(yieldToken),
                     underlyingIndex,
                     yieldToken.asset(),
