@@ -697,7 +697,7 @@ contract AeraVaultV2 is
 
         checkWeights(targetWeights);
 
-        uint256 weightSum;
+        uint256 weightSum = 0;
         uint256[] memory targetPoolWeights = new uint256[](numPoolTokens);
 
         for (uint256 i = 0; i < numPoolTokens; i++) {
@@ -846,7 +846,7 @@ contract AeraVaultV2 is
         checkWeights(targetWeights);
 
         uint256[] memory targetPoolWeights = new uint256[](numPoolTokens);
-        uint256 weightSum;
+        uint256 weightSum = 0;
         for (uint256 i = 0; i < numPoolTokens; i++) {
             targetPoolWeights[i] = targetWeights[i];
             weightSum += targetWeights[i];
@@ -893,7 +893,7 @@ contract AeraVaultV2 is
     {
         uint256[] memory weights = pool.getNormalizedWeights();
         uint256 numWeights = weights.length;
-        uint256 weightSum;
+        uint256 weightSum = 0;
 
         for (uint256 i = 0; i < numWeights; i++) {
             weightSum += weights[i];
@@ -1210,7 +1210,7 @@ contract AeraVaultV2 is
         uint256[] memory newBalances = depositTokens(amounts);
 
         uint256[] memory poolNewHoldings = getPoolHoldings();
-        uint256 weightSum;
+        uint256 weightSum = 0;
 
         if (priceType == PriceType.ORACLE) {
             uint256 numeraireAssetHolding = poolNewHoldings[
@@ -1318,7 +1318,7 @@ contract AeraVaultV2 is
 
         withdrawFromPool(getPoolTokenValues(amounts));
 
-        uint256 weightSum;
+        uint256 weightSum = 0;
         for (uint256 i = 0; i < numPoolTokens; i++) {
             if (amounts[i] > 0) {
                 balances[i] = tokens[i].balanceOf(address(this)) - balances[i];
@@ -1416,7 +1416,7 @@ contract AeraVaultV2 is
         view
         returns (uint256)
     {
-        uint256 feeIndex;
+        uint256 feeIndex = 0;
         if (block.timestamp > lastFeeCheckpoint) {
             feeIndex = block.timestamp - lastFeeCheckpoint;
         }
@@ -1728,7 +1728,7 @@ contract AeraVaultV2 is
         view
         returns (uint256)
     {
-        uint256 value;
+        uint256 value = 0;
 
         for (uint256 i = 0; i < prices.length; i++) {
             if (i == numeraireAssetIndex) {
@@ -1857,8 +1857,8 @@ contract AeraVaultV2 is
                 targetWeights
             );
 
-        uint256 weightSum;
-        uint256 targetWeightSum;
+        uint256 weightSum = 0;
+        uint256 targetWeightSum = 0;
         for (uint256 i = 0; i < numPoolTokens; i++) {
             targetUnderlyingTotalWeights[i] =
                 underlyingWeights[i] +
@@ -1954,8 +1954,8 @@ contract AeraVaultV2 is
             numPoolTokens + numYieldTokens
         );
 
-        uint256 weight;
-        uint256 weightSum;
+        uint256 weight = 0;
+        uint256 weightSum = 0;
         uint256 index = numPoolTokens;
         for (uint256 i = 0; i < numYieldTokens; i++) {
             weight =
@@ -2349,7 +2349,8 @@ contract AeraVaultV2 is
     }
 
     function checkWeights(uint256[] memory weights) internal pure {
-        uint256 weightSum;
+        uint256 weightSum = 0;
+
         for (uint256 i = 0; i < weights.length; i++) {
             weightSum += weights[i];
         }
