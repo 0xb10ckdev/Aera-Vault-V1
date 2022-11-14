@@ -1599,12 +1599,16 @@ contract AeraVaultV2 is
         address spender,
         uint256 amount
     ) internal {
+        clearAllowance(token, spender);
+        token.safeIncreaseAllowance(spender, amount);
+    }
+
+    function clearAllowance(IERC20 token, address spender) internal {
         // slither-disable-next-line calls-loop
         uint256 allowance = token.allowance(address(this), spender);
         if (allowance > 0) {
             token.safeDecreaseAllowance(spender, allowance);
         }
-        token.safeIncreaseAllowance(spender, amount);
     }
 
     /// @notice Return all funds to owner.
@@ -2147,6 +2151,8 @@ contract AeraVaultV2 is
         setAllowance(underlyingAsset, address(yieldToken), amount);
 
         yieldToken.deposit(amount, address(this));
+
+        clearAllowance(underlyingAsset, address(yieldToken));
     }
 
     function withdrawFromYieldTokens(
