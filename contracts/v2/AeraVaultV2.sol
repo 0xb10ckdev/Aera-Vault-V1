@@ -482,6 +482,7 @@ contract AeraVaultV2 is
         for (uint256 i = 0; i < numPoolTokens; i++) {
             if (amounts[i] > 0) {
                 balances[i] = depositToken(poolTokens[i], amounts[i]);
+                setAllowance(poolTokens[i], address(bVault), balances[i]);
             }
         }
         uint256 index = numPoolTokens;
@@ -1260,6 +1261,10 @@ contract AeraVaultV2 is
         for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] > 0) {
                 newBalances[i] = depositToken(tokens[i], amounts[i]);
+
+                if (i > numPoolTokens) {
+                    setAllowance(tokens[i], address(bVault), newBalances[i]);
+                }
             }
         }
 
@@ -1591,8 +1596,6 @@ contract AeraVaultV2 is
         token.safeTransferFrom(owner(), address(this), amount);
         // slither-disable-next-line calls-loop
         balance = token.balanceOf(address(this)) - balance;
-
-        setAllowance(token, address(bVault), balance);
 
         return balance;
     }
