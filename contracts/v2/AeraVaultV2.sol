@@ -19,8 +19,11 @@ import "./interfaces/IAeraVaultV2.sol";
 import "./OracleStorage.sol";
 
 /// @title Risk-managed treasury vault.
-/// @notice Managed n-asset vault that supports withdrawals
-///         in line with a pre-defined validator contract.
+/// @notice Managed n-asset vault with ERC20 tokens held
+///         in a Balancer pool and ERC4626 tokens held directly.
+///         A vault manager recommends weight changes that translate
+///         into Balancer weight updates and deposits/withdrawals
+///         in the underlying ERC4626 vaults.
 /// @dev Vault owner is the asset owner.
 contract AeraVaultV2 is
     IAeraVaultV2,
@@ -48,8 +51,8 @@ contract AeraVaultV2 is
     uint256 private constant SWAP_FEE_COOLDOWN_PERIOD = 1 minutes;
 
     /// @notice Largest possible weight change ratio per one second.
-    /// @dev It's the increment/decrement factor per one second.
-    ///      increment/decrement factor per n seconds: Fn = f * n
+    /// @dev The increment/decrement factor per one second.
+    ///      Increment/decrement factor per n seconds: Fn = f * n
     ///      Weight growth range for n seconds: [1 / Fn - 1, Fn - 1]
     ///      E.g. increment/decrement factor per 2000 seconds is 2
     ///      Weight growth range for 2000 seconds is [-50%, 100%]
@@ -72,19 +75,19 @@ contract AeraVaultV2 is
     /// @notice Balancer Merkle Orchard.
     IBMerkleOrchard public immutable merkleOrchard;
 
-    /// @notice Pool ID of Balancer pool on Vault.
+    /// @notice Pool ID of Balancer pool in Vault.
     bytes32 public immutable poolId;
 
-    /// @notice Timestamp when vault is created.
+    /// @notice Timestamp when vault was created.
     uint256 public immutable createdAt;
 
     /// @notice Minimum period to charge guaranteed management fee.
     uint256 public immutable minFeeDuration;
 
-    /// @notice Minimum reliable vault TVL. It will be measured in base token terms.
+    /// @notice Minimum reliable vault TVL measured in base token terms.
     uint256 public immutable minReliableVaultValue;
 
-    /// @notice Minimum significant deposit value. It will be measured in base token terms.
+    /// @notice Minimum significant deposit value measured in base token terms.
     uint256 public immutable minSignificantDepositValue;
 
     /// @notice Maximum oracle spot price divergence.
@@ -115,7 +118,7 @@ contract AeraVaultV2 is
     /// @notice True if oracle prices are enabled.
     bool public oraclesEnabled = true;
 
-    /// @notice Controls vault parameters.
+    /// @notice Submits vault parameters.
     address public manager;
 
     /// @notice Pending account to accept ownership of vault.
@@ -202,7 +205,7 @@ contract AeraVaultV2 is
     event SetSwapEnabled(bool swapEnabled);
 
     /// @notice Emitted when enableTradingWithWeights is called.
-    /// @param time timestamp of updates.
+    /// @param time Timestamp of updates.
     /// @param weights Target weights of tokens.
     event EnabledTradingWithWeights(uint256 time, uint256[] weights);
 
@@ -334,9 +337,9 @@ contract AeraVaultV2 is
 
     /// FUNCTIONS ///
 
-    /// @notice Initialize the contract by deploying new Balancer pool using the provided factory.
+    /// @notice Initialize the contract by deploying a new Balancer pool using the provided factory.
     /// @dev Tokens should be unique. Validator should conform to interface.
-    ///      These are checked by Balancer in internal transactions:
+    ///      The following pre-conditions are checked by Balancer in internal transactions:
     ///       If tokens are sorted in ascending order.
     ///       If swapFeePercentage is greater than minimum and less than maximum.
     ///       If total sum of weights is one.
@@ -1449,11 +1452,11 @@ contract AeraVaultV2 is
         return (oraclePrices, PriceType.ORACLE);
     }
 
-    /// @notice Calculate value of token amounts in base token term.
+    /// @notice Calculate value of token amounts in base token terms.
     /// @dev Will only be called by getDeterminedPrices().
     /// @param amounts Token amounts.
-    /// @param prices Token prices in base token.
-    /// @return Total value in base token term.
+    /// @param prices Token prices in base token terms.
+    /// @return Total value in base token terms.
     function getValue(uint256[] memory amounts, uint256[] memory prices)
         internal
         view
@@ -1600,9 +1603,9 @@ contract AeraVaultV2 is
         emit SetSwapEnabled(swapEnabled);
     }
 
-    /// @notice Check if the vaultParam is valid.
+    /// @notice Check vault initialization parameters.
     /// @dev Will only be called by constructor.
-    /// @param vaultParams Struct vault parameter to check.
+    /// @param vaultParams Initialization parameters.
     /// @param numTokens Number of tokens.
     function checkVaultParams(
         NewVaultParams memory vaultParams,
