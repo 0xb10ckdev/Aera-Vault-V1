@@ -81,6 +81,9 @@ contract AeraVaultV2 is
     /// @notice Number of pool tokens.
     uint256 public immutable numPoolTokens;
 
+    /// @notice Number of tokens.
+    uint256 public immutable numTokens;
+
     /// @notice Timestamp when vault is created.
     uint256 public immutable createdAt;
 
@@ -373,6 +376,7 @@ contract AeraVaultV2 is
         YieldTokenStorage(vaultParams.yieldTokens)
     {
         numPoolTokens = vaultParams.poolTokens.length;
+        numTokens = numPoolTokens + vaultParams.yieldTokens.length;
 
         checkVaultParams(vaultParams);
 
@@ -981,7 +985,6 @@ contract AeraVaultV2 is
 
         IERC20[] memory tokens = getTokens();
 
-        uint256 numTokens = tokens.length;
         uint256[] memory fees = managersFee[msg.sender];
 
         for (uint256 i = 0; i < numTokens; i++) {
@@ -1255,7 +1258,6 @@ contract AeraVaultV2 is
         returns (uint256[] memory newBalances)
     {
         IERC20[] memory tokens = getTokens();
-        uint256 numTokens = tokens.length;
         newBalances = new uint256[](numTokens);
 
         for (uint256 i = 0; i < numTokens; i++) {
@@ -1291,7 +1293,6 @@ contract AeraVaultV2 is
         IERC20[] memory tokens;
         uint256[] memory holdings;
         (tokens, holdings, ) = getTokensData();
-        uint256 numTokens = tokens.length;
 
         uint256[] memory allowances = validator.allowance();
         uint256[] memory weights = pool.getNormalizedWeights();
@@ -1401,7 +1402,6 @@ contract AeraVaultV2 is
         }
 
         uint256 newFee;
-        uint256 numTokens = numPoolTokens + numYieldTokens;
         for (uint256 i = numPoolTokens; i < numTokens; i++) {
             newFee = (holdings[i] * feeIndex * managementFee) / ONE;
             // slither-disable-next-line reentrancy-benign
@@ -1460,8 +1460,6 @@ contract AeraVaultV2 is
         TokenValue[] calldata tokenWithValues,
         IERC20[] memory poolTokens
     ) internal view returns (uint256[] memory) {
-        uint256 numTokens = numPoolTokens + numYieldTokens;
-
         if (numTokens != tokenWithValues.length) {
             revert Aera__ValueLengthIsNotSame(
                 numTokens,
@@ -1620,7 +1618,6 @@ contract AeraVaultV2 is
         IERC20[] memory tokens = getTokens();
         uint256[] memory poolHoldings = getPoolHoldings();
 
-        uint256 numTokens = tokens.length;
         amounts = new uint256[](numTokens);
 
         withdrawFromPool(poolHoldings);
@@ -2375,7 +2372,6 @@ contract AeraVaultV2 is
             revert Aera__ValidatorIsNotValid(vaultParams.validator);
         }
 
-        uint256 numTokens = numPoolTokens + numYieldTokens;
         uint256 numAllowances = IWithdrawalValidator(vaultParams.validator)
             .allowance()
             .length;
