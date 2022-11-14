@@ -2202,19 +2202,23 @@ contract AeraVaultV2 is
             uint256 maxWithdrawalAmount
         ) {
             // slither-disable-next-line variable-scope
-            if (maxWithdrawalAmount > 0) {
-                uint256 balance = underlyingAsset.balanceOf(address(this));
-
-                // slither-disable-next-line variable-scope
-                yieldToken.withdraw(
-                    Math.min(amount, maxWithdrawalAmount),
-                    address(this),
-                    address(this)
-                );
-
-                return underlyingAsset.balanceOf(address(this)) - balance;
+            if (maxWithdrawalAmount == 0) {
+                return 0;
             }
+
+            uint256 balance = underlyingAsset.balanceOf(address(this));
+
+            // slither-disable-next-line variable-scope
+            yieldToken.withdraw(
+                Math.min(amount, maxWithdrawalAmount),
+                address(this),
+                address(this)
+            );
+
+            return underlyingAsset.balanceOf(address(this)) - balance;
         } catch {}
+
+        return 0;
     }
 
     /// @notice Get oracle prices.
