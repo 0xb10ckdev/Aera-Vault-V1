@@ -271,7 +271,7 @@ contract AeraVaultV2 is
     error Aera__WeightIsAboveMax(uint256 actual, uint256 max);
     error Aera__WeightIsBelowMin(uint256 actual, uint256 min);
     error Aera__AmountIsBelowMin(uint256 actual, uint256 min);
-    error Aera__AmountExceedsAvailable(
+    error Aera__AmountExceedAvailable(
         address token,
         uint256 amount,
         uint256 available
@@ -1139,7 +1139,7 @@ contract AeraVaultV2 is
 
         for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] > holdings[i] || amounts[i] > allowances[i]) {
-                revert Aera__AmountExceedsAvailable(
+                revert Aera__AmountExceedAvailable(
                     address(tokens[i]),
                     amounts[i],
                     Math.min(holdings[i], allowances[i])
