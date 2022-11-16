@@ -18,6 +18,7 @@ import "./dependencies/chainlink/interfaces/AggregatorV2V3Interface.sol";
 import "./interfaces/IAeraVaultV2.sol";
 import "./OracleStorage.sol";
 import "./YieldTokenStorage.sol";
+import "hardhat/console.sol";
 
 /// @title Risk-managed treasury vault.
 /// @notice Managed n-asset vault that supports withdrawals
@@ -2143,16 +2144,29 @@ contract AeraVaultV2 is
         return underlyingWeights;
     }
 
+    // solhint-disable no-empty-blocks
     function depositUnderlyingAsset(
         IERC4626 yieldToken,
         IERC20 underlyingAsset,
         uint256 amount
     ) internal {
-        setAllowance(underlyingAsset, address(yieldToken), amount);
+        try yieldToken.maxDeposit(address(this)) returns (
+            uint256 maxDepositAmount
+        ) {
+            // slither-disable-next-line variable-scope
+            if (maxDepositAmount == 0) {
+                return;
+            }
 
-        yieldToken.deposit(amount, address(this));
+            // slither-disable-next-line variable-scope
+            uint256 depositAmount = Math.min(amount, maxDepositAmount);
 
-        clearAllowance(underlyingAsset, address(yieldToken));
+            setAllowance(underlyingAsset, address(yieldToken), depositAmount);
+
+            yieldToken.deposit(depositAmount, address(this));
+
+            clearAllowance(underlyingAsset, address(yieldToken));
+        } catch {}
     }
 
     function withdrawFromYieldTokens(
