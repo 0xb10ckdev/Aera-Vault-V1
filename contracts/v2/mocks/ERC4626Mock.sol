@@ -11,6 +11,10 @@ import "../dependencies/openzeppelin/ERC4626.sol";
  */
 contract ERC4626Mock is ERC4626 {
     bool private paused;
+
+    bool private useMaxDepositAmount;
+    uint256 private maxDepositAmount;
+
     bool private useMaxWithdrawalAmount;
     uint256 private maxWithdrawalAmount;
 
@@ -20,6 +24,29 @@ contract ERC4626Mock is ERC4626 {
         string memory name_,
         string memory symbol_
     ) ERC4626(asset_) ERC20(name_, symbol_) {}
+
+    function maxDeposit(address receiver)
+        public
+        view
+        virtual
+        override
+        returns (uint256)
+    {
+        if (paused) {
+            revert("Vault is paused");
+        }
+
+        if (useMaxDepositAmount) {
+            return maxDepositAmount;
+        }
+
+        return super.maxDeposit(receiver);
+    }
+
+    function setMaxDepositAmount(uint256 amount, bool use) external {
+        maxDepositAmount = amount;
+        useMaxDepositAmount = use;
+    }
 
     function maxWithdraw(address owner)
         public
@@ -36,7 +63,7 @@ contract ERC4626Mock is ERC4626 {
             return maxWithdrawalAmount;
         }
 
-        return _convertToAssets(balanceOf(owner), Math.Rounding.Down);
+        return super.maxWithdraw(owner);
     }
 
     function setMaxWithdrawalAmount(uint256 amount, bool use) external {
