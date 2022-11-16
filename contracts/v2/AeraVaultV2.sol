@@ -2149,13 +2149,13 @@ contract AeraVaultV2 is
         IERC4626 yieldToken,
         IERC20 underlyingAsset,
         uint256 amount
-    ) internal {
+    ) internal returns (uint256) {
         try yieldToken.maxDeposit(address(this)) returns (
             uint256 maxDepositAmount
         ) {
             // slither-disable-next-line variable-scope
             if (maxDepositAmount == 0) {
-                return;
+                return 0;
             }
 
             // slither-disable-next-line variable-scope
@@ -2166,7 +2166,11 @@ contract AeraVaultV2 is
             yieldToken.deposit(depositAmount, address(this));
 
             clearAllowance(underlyingAsset, address(yieldToken));
+
+            return depositAmount;
         } catch {}
+
+        return 0;
     }
 
     function withdrawFromYieldTokens(
