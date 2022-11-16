@@ -2043,6 +2043,110 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
               expect(newWeights[i]).to.be.closeTo(targetWeights[i], DEVIATION);
             }
           });
+
+          describe("when maximum deposit amount is low or invalid", async () => {
+            let targetWeights: BigNumber[] = [];
+
+            beforeEach(async () => {
+              const weights = await vault.getNormalizedWeights();
+              targetWeights = [...weights];
+              for (let i = 0; i < yieldTokens.length; i++) {
+                targetWeights[underlyingIndexes[i]] = targetWeights[
+                  underlyingIndexes[i]
+                ].sub(toWei(0.02));
+                targetWeights[i + poolTokens.length] = targetWeights[
+                  i + poolTokens.length
+                ].add(toWei(0.02));
+              }
+
+              let weightSum = ONE;
+              let numAdjustedWeight = 0;
+              for (let i = 0; i < tokens.length; i++) {
+                if (i > poolTokens.length || underlyingIndexes.includes(i)) {
+                  weightSum = weightSum.sub(targetWeights[i]);
+                  numAdjustedWeight++;
+                }
+              }
+              for (let i = 0; i < poolTokens.length; i++) {
+                if (!underlyingIndexes.includes(i)) {
+                  targetWeights[i] = weightSum.div(numAdjustedWeight);
+                }
+              }
+
+              targetWeights = normalizeWeights(targetWeights);
+            });
+
+            it("deposit only maximum deposit amount", async () => {
+              for (let i = 0; i < yieldTokens.length; i++) {
+                await yieldTokens[i].setMaxDepositAmount(toWei(0.001), true);
+              }
+
+              const holdings = await vault.getHoldings();
+
+              await vault
+                .connect(manager)
+                .setTargetWeights(
+                  tokenWithValues(tokenAddresses, targetWeights),
+                  100,
+                );
+
+              const newHoldings = await vault.getHoldings();
+
+              for (let i = 0; i < tokens.length; i++) {
+                if (underlyingIndexes.includes(i)) {
+                  expect(newHoldings[i]).to.equal(
+                    holdings[i].sub(toWei(0.001)),
+                  );
+                }
+              }
+            });
+
+            it("deposit no assets when maximum deposit amount is zero", async () => {
+              for (let i = 0; i < yieldTokens.length; i++) {
+                await yieldTokens[i].setMaxDepositAmount(toWei(0), true);
+              }
+
+              const holdings = await vault.getHoldings();
+
+              await vault
+                .connect(manager)
+                .setTargetWeights(
+                  tokenWithValues(tokenAddresses, targetWeights),
+                  100,
+                );
+
+              const newHoldings = await vault.getHoldings();
+
+              for (let i = 0; i < tokens.length; i++) {
+                if (underlyingIndexes.includes(i)) {
+                  expect(newHoldings[i]).to.equal(holdings[i]);
+                }
+              }
+            });
+
+            it("deposit no assets when maxDeposit reverts", async () => {
+              for (let i = 0; i < yieldTokens.length; i++) {
+                await yieldTokens[i].pause();
+              }
+
+              const holdings = await vault.getHoldings();
+
+              await vault
+                .connect(manager)
+                .setTargetWeights(
+                  tokenWithValues(tokenAddresses, targetWeights),
+                  100,
+                );
+
+              const newHoldings = await vault.getHoldings();
+
+              for (let i = 0; i < tokens.length; i++) {
+                if (underlyingIndexes.includes(i)) {
+                  expect(newHoldings[i]).to.equal(holdings[i]);
+                }
+              }
+            });
+          });
         });
 
         it("when underlying tokens are not enough to mint yield tokens", async () => {
