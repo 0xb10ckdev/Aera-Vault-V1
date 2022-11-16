@@ -18,7 +18,6 @@ import "./dependencies/chainlink/interfaces/AggregatorV2V3Interface.sol";
 import "./interfaces/IAeraVaultV2.sol";
 import "./OracleStorage.sol";
 import "./YieldTokenStorage.sol";
-import "hardhat/console.sol";
 
 /// @title Risk-managed treasury vault.
 /// @notice Managed n-asset vault that supports withdrawals
@@ -916,15 +915,17 @@ contract AeraVaultV2 is
 
         checkWeights(targetWeights);
 
+        uint256[] memory poolWeights = pool.getNormalizedWeights();
         uint256[] memory underlyingBalances = getUnderlyingBalances();
 
         adjustYieldTokens(
             poolTokens,
             poolHoldings,
             underlyingBalances,
-            targetWeights,
-            period
+            targetWeights
         );
+
+        adjustPoolWeights(poolHoldings, poolWeights, targetWeights, period);
 
         emit SetTargetWeights(
             block.timestamp,
@@ -1796,75 +1797,54 @@ contract AeraVaultV2 is
         IERC20[] memory tokens,
         uint256[] memory poolHoldings,
         uint256[] memory underlyingBalances,
-        uint256[] memory targetWeights,
-        uint256 period
+        uint256[] memory targetWeights
     ) internal {
         (
             uint256[] memory depositAmounts,
-            uint256[] memory withdrawAmounts,
-            uint256[] memory currentWeights
+            uint256[] memory withdrawAmounts
         ) = calcAdjustmentAmounts(
                 poolHoldings,
                 underlyingBalances,
                 targetWeights
             );
 
-        uint256[]
-            memory currentUnderlyingTotalWeights = getUnderlyingTotalWeights(
-                currentWeights
-            );
-
-        (
-            uint256[] memory balances,
-            uint256[] memory underlyingWeights
-        ) = withdrawFromYieldTokens(
-                tokens,
-                withdrawAmounts,
-                currentUnderlyingTotalWeights,
-                targetWeights
-            );
-
-        underlyingWeights = depositToYieldTokens(
-            depositAmounts,
-            withdrawAmounts,
-            balances,
-            underlyingWeights,
-            currentWeights,
-            targetWeights
+        uint256[] memory balances = withdrawFromYieldTokens(
+            tokens,
+            withdrawAmounts
         );
 
-        adjustPoolWeights(
-            poolHoldings,
-            currentUnderlyingTotalWeights,
-            underlyingWeights,
-            targetWeights,
-            period
-        );
+        depositToYieldTokens(depositAmounts, balances);
     }
 
     function adjustPoolWeights(
         uint256[] memory poolHoldings,
-        uint256[] memory currentUnderlyingTotalWeights,
-        uint256[] memory underlyingWeights,
+        uint256[] memory poolWeights,
         uint256[] memory targetWeights,
         uint256 period
     ) internal {
-        uint256[] memory newPoolHoldings = getPoolHoldings();
-        uint256[] memory poolWeights = pool.getNormalizedWeights();
+        uint256[] memory currentPoolHoldings = getPoolHoldings();
+        uint256[] memory currentWeights = getNormalizedWeights();
         uint256[]
             memory targetUnderlyingTotalWeights = getUnderlyingTotalWeights(
                 targetWeights
             );
+        uint256[] memory underlyingIndexes = getUnderlyingIndexes();
+
+        uint256[] memory underlyingWeights = new uint256[](numPoolTokens);
+
+        uint256 index = numPoolTokens;
+        for (uint256 i = 0; i < numYieldTokens; i++) {
+            targetUnderlyingTotalWeights[
+                underlyingIndexes[i]
+            ] -= currentWeights[index];
+            ++index;
+        }
 
         uint256 weightSum = 0;
         uint256 targetWeightSum = 0;
         for (uint256 i = 0; i < numPoolTokens; i++) {
-            targetUnderlyingTotalWeights[i] =
-                underlyingWeights[i] +
-                targetUnderlyingTotalWeights[i] -
-                currentUnderlyingTotalWeights[i];
             underlyingWeights[i] =
-                (poolWeights[i] * newPoolHoldings[i]) /
+                (poolWeights[i] * currentPoolHoldings[i]) /
                 poolHoldings[i];
             weightSum += underlyingWeights[i];
             targetWeightSum += targetUnderlyingTotalWeights[i];
@@ -1986,8 +1966,7 @@ contract AeraVaultV2 is
         view
         returns (
             uint256[] memory depositAmounts,
-            uint256[] memory withdrawAmounts,
-            uint256[] memory currentWeights
+            uint256[] memory withdrawAmounts
         )
     {
         (
@@ -2002,12 +1981,6 @@ contract AeraVaultV2 is
             oraclePrices
         );
 
-        currentWeights = calcNormalizedWeights(
-            value,
-            oraclePrices,
-            underlyingBalances
-        );
-
         depositAmounts = new uint256[](numYieldTokens);
         withdrawAmounts = new uint256[](numYieldTokens);
         uint256[] memory underlyingIndexes = getUnderlyingIndexes();
@@ -2019,11 +1992,11 @@ contract AeraVaultV2 is
                 targetBalance =
                     (value * targetWeights[index]) /
                     oraclePrices[underlyingIndexes[i]];
-                if (targetBalance > underlyingBalances[i]) {
-                    depositAmounts[i] = targetBalance - underlyingBalances[i];
-                } else {
-                    withdrawAmounts[i] = underlyingBalances[i] - targetBalance;
-                }
+            }
+            if (targetBalance > underlyingBalances[i]) {
+                depositAmounts[i] = targetBalance - underlyingBalances[i];
+            } else {
+                withdrawAmounts[i] = underlyingBalances[i] - targetBalance;
             }
             ++index;
         }
@@ -2088,49 +2061,38 @@ contract AeraVaultV2 is
 
     function depositToYieldTokens(
         uint256[] memory depositAmounts,
-        uint256[] memory withdrawAmounts,
-        uint256[] memory balances,
-        uint256[] memory underlyingWeights,
-        uint256[] memory currentWeights,
-        uint256[] memory targetWeights
-    ) internal returns (uint256[] memory) {
+        uint256[] memory balances
+    ) internal {
         IERC20[] memory poolTokens = getPoolTokens();
         IERC4626[] memory yieldTokens = getYieldTokens();
         uint256[] memory underlyingIndexes = getUnderlyingIndexes();
         uint256 underlyingIndex;
 
-        {
-            uint256[] memory necessaryAmounts = calcNecessaryAmounts(
-                depositAmounts,
-                balances
-            );
+        uint256[] memory necessaryAmounts = calcNecessaryAmounts(
+            depositAmounts,
+            balances
+        );
 
-            balances = withdrawNecessaryTokensFromPool(
-                poolTokens,
-                balances,
-                necessaryAmounts
-            );
-        }
+        balances = withdrawNecessaryTokensFromPool(
+            poolTokens,
+            balances,
+            necessaryAmounts
+        );
 
+        uint256 depositedAmount;
         uint256 index = numPoolTokens;
         for (uint256 i = 0; i < numYieldTokens; i++) {
             underlyingIndex = underlyingIndexes[i];
-            if (depositAmounts[i] > 0) {
-                if (depositAmounts[i] <= balances[underlyingIndex]) {
-                    depositUnderlyingAsset(
-                        yieldTokens[i],
-                        poolTokens[underlyingIndex],
-                        depositAmounts[i]
-                    );
-                    balances[underlyingIndex] -= depositAmounts[i];
-                    underlyingWeights[underlyingIndex] -= targetWeights[index];
-                } else {
-                    underlyingWeights[underlyingIndex] -= currentWeights[
-                        index
-                    ];
-                }
-            } else if (withdrawAmounts[i] == 0) {
-                underlyingWeights[underlyingIndex] -= currentWeights[index];
+            if (
+                depositAmounts[i] > 0 &&
+                depositAmounts[i] <= balances[underlyingIndex]
+            ) {
+                depositedAmount = depositUnderlyingAsset(
+                    yieldTokens[i],
+                    poolTokens[underlyingIndex],
+                    depositAmounts[i]
+                );
+                balances[underlyingIndex] -= depositedAmount;
             }
             ++index;
         }
@@ -2140,8 +2102,6 @@ contract AeraVaultV2 is
         }
 
         depositToPool(balances);
-
-        return underlyingWeights;
     }
 
     // solhint-disable no-empty-blocks
@@ -2175,21 +2135,11 @@ contract AeraVaultV2 is
 
     function withdrawFromYieldTokens(
         IERC20[] memory tokens,
-        uint256[] memory withdrawAmounts,
-        uint256[] memory currentUnderlyingTotalWeights,
-        uint256[] memory targetWeights
-    )
-        internal
-        returns (uint256[] memory amounts, uint256[] memory underlyingWeights)
-    {
+        uint256[] memory withdrawAmounts
+    ) internal returns (uint256[] memory amounts) {
         amounts = new uint256[](numPoolTokens);
-        underlyingWeights = new uint256[](numPoolTokens);
         IERC4626[] memory yieldTokens = getYieldTokens();
         uint256[] memory underlyingIndexes = getUnderlyingIndexes();
-
-        for (uint256 i = 0; i < numPoolTokens; i++) {
-            underlyingWeights[i] = currentUnderlyingTotalWeights[i];
-        }
 
         uint256 underlyingIndex;
         uint256 index = numPoolTokens;
@@ -2201,7 +2151,6 @@ contract AeraVaultV2 is
                     tokens[underlyingIndex],
                     withdrawAmounts[i]
                 );
-                underlyingWeights[underlyingIndex] -= targetWeights[index];
             }
             ++index;
         }
