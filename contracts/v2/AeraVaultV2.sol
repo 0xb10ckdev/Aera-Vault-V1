@@ -81,7 +81,7 @@ contract AeraVaultV2 is
     /// @notice Number of pool tokens.
     uint256 public immutable numPoolTokens;
 
-    /// @notice Number of tokens.
+    /// @notice Number of pool tokens and yield tokens.
     uint256 public immutable numTokens;
 
     /// @notice Timestamp when vault is created.
@@ -2138,6 +2138,8 @@ contract AeraVaultV2 is
 
     /// @notice Deposit the amounts of underlying assets to yield tokens.
     /// @dev Will only be called by adjustYieldTokens().
+    ///      After underlying assets are deposited to yield tokens, it deposits left
+    ///      tokens to Balancer Pool.
     /// @param depositAmounts Amounts of underlying assets to deposit to yield tokens.
     /// @param balances Balance of underlying assets in Vault.
     function depositToYieldTokens(
