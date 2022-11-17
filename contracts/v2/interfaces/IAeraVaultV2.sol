@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
-import "../../v1/interfaces/IUserAPI.sol";
 import "../../v1/interfaces/IMultiAssetVault.sol";
 import "../dependencies/chainlink/interfaces/AggregatorV2V3Interface.sol";
 import "../dependencies/openzeppelin/IERC4626.sol";
@@ -9,6 +8,8 @@ import "./IProtocolAPI.sol";
 import "./IProtocolAPIV2.sol";
 import "./IManagerAPI.sol";
 import "./IManagerAPIV2.sol";
+import "./IUserAPI.sol";
+import "./IUserAPIV2.sol";
 
 /// @title Interface for v2 vault.
 interface IAeraVaultV2 is
@@ -16,6 +17,7 @@ interface IAeraVaultV2 is
     IManagerAPI,
     IMultiAssetVault,
     IProtocolAPI,
+    IUserAPIV2,
     IManagerAPIV2,
     IProtocolAPIV2
 {
