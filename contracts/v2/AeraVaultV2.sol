@@ -202,16 +202,6 @@ contract AeraVaultV2 is
     /// @param weights Current weights of tokens.
     event CancelWeightUpdates(uint256[] weights);
 
-    /// @notice Emitted when setTargetWeights is called.
-    /// @param startTime Start timestamp of updates.
-    /// @param endTime End timestamp of updates.
-    /// @param weights Target weights of tokens.
-    event SetTargetWeights(
-        uint256 startTime,
-        uint256 endTime,
-        uint256[] weights
-    );
-
     /// @notice Emitted when using oracle prices is enabled/disabled.
     /// @param enabled New state of using oracle prices.
     event SetOraclesEnabled(bool enabled);
@@ -832,9 +822,9 @@ contract AeraVaultV2 is
             );
         }
 
-        // Check if weight change ratio is exceeded
-        uint256[] memory weights = pool.getNormalizedWeights();
-        IERC20[] memory poolTokens = getPoolTokens();
+        IERC20[] memory poolTokens;
+        uint256[] memory poolHoldings;
+        (poolTokens, poolHoldings, ) = getPoolTokensData();
         uint256[] memory targetWeights = getValuesFromTokenWithValues(
             tokenWithWeight,
             poolTokens
@@ -843,20 +833,25 @@ contract AeraVaultV2 is
         checkWeights(targetWeights);
 
         uint256[] memory targetPoolWeights = new uint256[](numPoolTokens);
-        uint256 weightSum = 0;
+        uint256 targetWeightSum = 0;
         for (uint256 i = 0; i < numPoolTokens; i++) {
             targetPoolWeights[i] = targetWeights[i];
-            weightSum += targetWeights[i];
+            targetWeightSum += targetWeights[i];
         }
 
-        targetPoolWeights = normalizeWeights(targetPoolWeights, weightSum);
+        targetPoolWeights = normalizeWeights(
+            targetPoolWeights,
+            targetWeightSum
+        );
 
+        // Check if weight change ratio is exceeded
+        uint256[] memory poolWeights = pool.getNormalizedWeights();
         uint256 duration = endTime - startTime;
         uint256 maximumRatio = MAX_WEIGHT_CHANGE_RATIO * duration;
 
         for (uint256 i = 0; i < numPoolTokens; i++) {
             uint256 changeRatio = getWeightChangeRatio(
-                weights[i],
+                poolWeights[i],
                 targetPoolWeights[i]
             );
 
@@ -869,10 +864,21 @@ contract AeraVaultV2 is
             }
         }
 
-        poolController.updateWeightsGradually(
+        uint256[] memory underlyingBalances = getUnderlyingBalances();
+
+        adjustYieldTokens(
+            poolTokens,
+            poolHoldings,
+            underlyingBalances,
+            targetWeights
+        );
+
+        adjustPoolWeights(
+            poolHoldings,
+            poolWeights,
+            targetWeights,
             startTime,
-            endTime,
-            targetPoolWeights
+            endTime
         );
 
         // slither-disable-next-line reentrancy-events
@@ -899,39 +905,6 @@ contract AeraVaultV2 is
 
         // slither-disable-next-line reentrancy-events
         emit CancelWeightUpdates(getNormalizedWeights());
-    }
-
-    function setTargetWeights(
-        TokenValue[] calldata tokenWithWeight,
-        uint256 period
-    ) external nonReentrant onlyManager {
-        IERC20[] memory poolTokens;
-        uint256[] memory poolHoldings;
-        (poolTokens, poolHoldings, ) = getPoolTokensData();
-        uint256[] memory targetWeights = getValuesFromTokenWithValues(
-            tokenWithWeight,
-            poolTokens
-        );
-
-        checkWeights(targetWeights);
-
-        uint256[] memory poolWeights = pool.getNormalizedWeights();
-        uint256[] memory underlyingBalances = getUnderlyingBalances();
-
-        adjustYieldTokens(
-            poolTokens,
-            poolHoldings,
-            underlyingBalances,
-            targetWeights
-        );
-
-        adjustPoolWeights(poolHoldings, poolWeights, targetWeights, period);
-
-        emit SetTargetWeights(
-            block.timestamp,
-            block.timestamp + period,
-            targetWeights
-        );
     }
 
     /// @inheritdoc IManagerAPI
@@ -1820,23 +1793,21 @@ contract AeraVaultV2 is
         uint256[] memory poolHoldings,
         uint256[] memory poolWeights,
         uint256[] memory targetWeights,
-        uint256 period
+        uint256 startTime,
+        uint256 endTime
     ) internal {
         uint256[] memory currentPoolHoldings = getPoolHoldings();
         uint256[] memory currentWeights = getNormalizedWeights();
-        uint256[]
-            memory targetUnderlyingTotalWeights = getUnderlyingTotalWeights(
-                targetWeights
-            );
+        uint256[] memory targetPoolWeights = getUnderlyingTotalWeights(
+            targetWeights
+        );
         uint256[] memory underlyingIndexes = getUnderlyingIndexes();
 
         uint256[] memory underlyingWeights = new uint256[](numPoolTokens);
 
         uint256 index = numPoolTokens;
         for (uint256 i = 0; i < numYieldTokens; i++) {
-            targetUnderlyingTotalWeights[
-                underlyingIndexes[i]
-            ] -= currentWeights[index];
+            targetPoolWeights[underlyingIndexes[i]] -= currentWeights[index];
             ++index;
         }
 
@@ -1847,16 +1818,16 @@ contract AeraVaultV2 is
                 (poolWeights[i] * currentPoolHoldings[i]) /
                 poolHoldings[i];
             weightSum += underlyingWeights[i];
-            targetWeightSum += targetUnderlyingTotalWeights[i];
+            targetWeightSum += targetPoolWeights[i];
         }
 
         updatePoolWeights(underlyingWeights, weightSum);
 
         updatePoolWeightsGradually(
-            targetUnderlyingTotalWeights,
+            targetPoolWeights,
             targetWeightSum,
-            block.timestamp,
-            block.timestamp + period
+            startTime,
+            endTime
         );
     }
 
@@ -2005,7 +1976,7 @@ contract AeraVaultV2 is
     function calcNecessaryAmounts(
         uint256[] memory depositAmounts,
         uint256[] memory balances
-    ) internal returns (uint256[] memory necessaryAmounts) {
+    ) internal view returns (uint256[] memory necessaryAmounts) {
         uint256[] memory poolHoldings = getPoolHoldings();
         uint256[] memory underlyingIndexes = getUnderlyingIndexes();
         necessaryAmounts = new uint256[](numPoolTokens);
