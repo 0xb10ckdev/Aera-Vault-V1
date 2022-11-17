@@ -8,8 +8,9 @@ import "./IProtocolAPI.sol";
 /// @notice Supports parameter submission.
 // slither-disable-next-line name-reused
 interface IManagerAPI {
-    /// @notice Initiate weight move to target in given update window.
-    /// @dev These are checked by Balancer in internal transactions:
+    /// @notice Initiate weight moves to target in the given update window.
+    /// @dev It adjusts the balance of assets in yield tokens according to weights.
+    ///      These are checked by Balancer in internal transactions:
     ///       If target weight length and token length match.
     ///       If total sum of target weights is one.
     ///       If target weight is greater than minimum.
