@@ -50,8 +50,8 @@ contract AeraVaultV2 is
     /// @notice Cooldown period for updating swap fee (1 minute).
     uint256 private constant SWAP_FEE_COOLDOWN_PERIOD = 1 minutes;
 
-    /// @notice Largest possible weight change ratio per one second.
-    /// @dev It's the increment/decrement factor per one second.
+    /// @notice Largest possible weight change ratio per second.
+    /// @dev It's the increment/decrement factor per second.
     ///      increment/decrement factor per n seconds: Fn = f * n
     ///      Weight growth range for n seconds: [1 / Fn - 1, Fn - 1]
     ///      E.g. increment/decrement factor per 2000 seconds is 2
@@ -84,10 +84,10 @@ contract AeraVaultV2 is
     /// @notice Number of pool tokens and yield tokens.
     uint256 public immutable numTokens;
 
-    /// @notice Timestamp when vault is created.
+    /// @notice Timestamp when the vault is created.
     uint256 public immutable createdAt;
 
-    /// @notice Minimum period to charge guaranteed management fee.
+    /// @notice Minimum period to charge a guaranteed management fee.
     uint256 public immutable minFeeDuration;
 
     /// @notice Minimum reliable vault TVL. It will be measured in base token terms.
@@ -175,7 +175,7 @@ contract AeraVaultV2 is
     /// @param amounts Withdrawn amounts.
     event DistributeManagerFees(address indexed manager, uint256[] amounts);
 
-    /// @notice Emitted when manager is changed.
+    /// @notice Emitted when a manager is changed.
     /// @param previousManager Previous manager address.
     /// @param manager New manager address.
     event ManagerChanged(
@@ -203,10 +203,10 @@ contract AeraVaultV2 is
     event CancelWeightUpdates(uint256[] weights);
 
     /// @notice Emitted when using oracle prices is enabled/disabled.
-    /// @param enabled New state of using oracle prices.
+    /// @param enabled A new state of using oracle prices.
     event SetOraclesEnabled(bool enabled);
 
-    /// @notice Emitted when swap is enabled/disabled.
+    /// @notice Emitted when the swap is enabled/disabled.
     /// @param swapEnabled New state of swap.
     event SetSwapEnabled(bool swapEnabled);
 
@@ -219,7 +219,7 @@ contract AeraVaultV2 is
     /// @param swapFee New swap fee.
     event SetSwapFee(uint256 swapFee);
 
-    /// @notice Emitted when vault is finalized.
+    /// @notice Emitted when the vault is finalized.
     /// @param caller Address of finalizer.
     /// @param amounts Returned token amounts.
     event Finalized(address indexed caller, uint256[] amounts);
@@ -332,7 +332,7 @@ contract AeraVaultV2 is
         _;
     }
 
-    /// @dev Throws if called before vault is initialized.
+    /// @dev Throws if called before the vault is initialized.
     modifier whenInitialized() {
         if (!initialized) {
             revert Aera__VaultNotInitialized();
@@ -340,7 +340,7 @@ contract AeraVaultV2 is
         _;
     }
 
-    /// @dev Throws if called after vault is finalized.
+    /// @dev Throws if called after the vault is finalized.
     modifier whenNotFinalized() {
         if (finalized) {
             revert Aera__VaultIsFinalized();
@@ -350,12 +350,12 @@ contract AeraVaultV2 is
 
     /// FUNCTIONS ///
 
-    /// @notice Initialize the contract by deploying new Balancer Pool using the provided factory.
-    /// @dev Tokens should be unique. Validator should conform to interface.
+    /// @notice Initialize the contract by deploying a new Balancer Pool using the provided factory.
+    /// @dev Tokens should be unique. The validator should conform to the interface.
     ///      These are checked by Balancer in internal transactions:
     ///       If tokens are sorted in ascending order.
-    ///       If swapFeePercentage is greater than minimum and less than maximum.
-    ///       If total sum of weights is one.
+    ///       If swapFeePercentage is greater than the minimum and less than the maximum.
+    ///       If the total sum of weights is one.
     /// @param vaultParams Struct vault parameter.
     constructor(NewVaultParams memory vaultParams)
         OracleStorage(
@@ -1190,7 +1190,7 @@ contract AeraVaultV2 is
             }
         }
 
-        /// It cancels current active weights change schedule
+        /// It cancels the current active weights change schedule
         /// and update weights with newWeights
         updatePoolWeights(weights, weightSum);
 
@@ -1233,7 +1233,7 @@ contract AeraVaultV2 is
         /// Set managed balance of pool as amounts
         /// i.e. Deposit amounts of tokens to pool from Aera Vault
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.UPDATE);
-        /// Decrease managed balance and increase cash balance of pool
+        /// Decrease managed balance and increase cash balance of the pool
         /// i.e. Move amounts from managed balance to cash balance
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.DEPOSIT);
     }
@@ -1295,7 +1295,7 @@ contract AeraVaultV2 is
             }
         }
 
-        /// It cancels current active weights change schedule
+        /// It cancels the current active weights change schedule
         /// and update weights with newWeights
         updatePoolWeights(weights, weightSum);
 
@@ -1310,11 +1310,11 @@ contract AeraVaultV2 is
     function withdrawFromPool(uint256[] memory amounts) internal {
         uint256[] memory managed = new uint256[](amounts.length);
 
-        /// Decrease cash balance and increase managed balance of pool
+        /// Decrease cash balance and increase managed balance of the pool
         /// i.e. Move amounts from cash balance to managed balance
-        /// and withdraw token amounts from pool to Aera Vault
+        /// and withdraw token amounts from the pool to Aera Vault
         updatePoolBalance(amounts, IBVault.PoolBalanceOpKind.WITHDRAW);
-        /// Adjust managed balance of pool as the zero array
+        /// Adjust managed balance of the pool as the zero array
         updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
     }
 
@@ -1322,7 +1322,7 @@ contract AeraVaultV2 is
     /// @dev Will only be called by claimManagerFees(), setManager(),
     ///      finalize(), depositTokensAndUpdateWeights(),
     ///      and withdrawTokens().
-    /// @param lockGuaranteedFee True if guaranteed fee should be locked.
+    /// @param lockGuaranteedFee True if the guaranteed fee should be locked.
     function lockManagerFees(bool lockGuaranteedFee) internal {
         if (managementFee == 0) {
             return;
@@ -1370,7 +1370,7 @@ contract AeraVaultV2 is
 
     /// @notice Calculate manager fee index.
     /// @dev Will only be called by lockManagerFees().
-    /// @param lockGuaranteedFee True if guaranteed fee should be locked.
+    /// @param lockGuaranteedFee True if the guaranteed fee should be locked.
     function getFeeIndex(bool lockGuaranteedFee)
         internal
         view
@@ -1393,7 +1393,7 @@ contract AeraVaultV2 is
         return feeIndex;
     }
 
-    /// @notice Calculate change ratio for weight upgrade.
+    /// @notice Calculate a change ratio for weight upgrade.
     /// @dev Will only be called by checkWeightChangeRatio().
     /// @param weight Current weight.
     /// @param targetWeight Target weight.
@@ -1409,7 +1409,7 @@ contract AeraVaultV2 is
                 : (ONE * targetWeight) / weight;
     }
 
-    /// @notice Return an array of values from given tokenWithValues.
+    /// @notice Return an array of values from the given tokenWithValues.
     /// @dev Will only be called by initialDeposit(), enableTradingWithWeights(),
     ///      depositTokensAndUpdateWeights(), withdrawTokens()
     ///      and updateWeightsGradually()
@@ -1518,7 +1518,7 @@ contract AeraVaultV2 is
         );
     }
 
-    /// @notice Normalize weights to make sum of weights be one.
+    /// @notice Normalize weights to make a sum of weights one.
     /// @dev Will only be called by enableTradingWithWeights() and updateWeightsGradually().
     /// @param weights Array of weights to be normalized.
     /// @param weightSum Current sum of weights.
@@ -1558,7 +1558,7 @@ contract AeraVaultV2 is
         return balance;
     }
 
-    /// @notice Set allowance of token for spender.
+    /// @notice Set allowance of token for a spender.
     /// @dev Will only be called by initialDeposit(), depositTokens(),
     ///      depositToYieldTokens() and depositUnderlyingAsset().
     /// @param token Token of address to set allowance.
@@ -1573,7 +1573,7 @@ contract AeraVaultV2 is
         token.safeIncreaseAllowance(spender, amount);
     }
 
-    /// @notice Reset allowance of token for spender.
+    /// @notice Reset allowance of token for a spender.
     /// @dev Will only be called by setAllowance() and depositUnderlyingAsset().
     /// @param token Token of address to set allowance.
     /// @param spender Address to give spend approval to.
@@ -1585,7 +1585,7 @@ contract AeraVaultV2 is
         }
     }
 
-    /// @notice Return all funds to owner.
+    /// @notice Return all funds to the owner.
     /// @dev Will only be called by finalize().
     /// @return amounts Exact returned amounts of tokens.
     function returnFunds() internal returns (uint256[] memory amounts) {
@@ -1699,11 +1699,11 @@ contract AeraVaultV2 is
         return (oraclePrices, PriceType.ORACLE);
     }
 
-    /// @notice Calculate value of token amounts in base token term.
+    /// @notice Calculate the value of token amounts in the base token term.
     /// @dev Will only be called by getDeterminedPrices().
     /// @param amounts Token amounts.
     /// @param prices Token prices in base token.
-    /// @return Total value in base token term.
+    /// @return Total value in the base token term.
     function getValue(uint256[] memory amounts, uint256[] memory prices)
         internal
         view
@@ -1723,7 +1723,7 @@ contract AeraVaultV2 is
         return value;
     }
 
-    /// @notice Calculate spot prices of tokens vs base token.
+    /// @notice Calculate spot prices of tokens vs the base token.
     /// @dev Will only be called by getDeterminedPrices().
     /// @param poolHoldings Balances of tokens in Balancer Pool.
     /// @return Spot prices of tokens vs base token.
@@ -1801,7 +1801,7 @@ contract AeraVaultV2 is
         depositToYieldTokens(depositAmounts, balances);
     }
 
-    /// @notice Adjust the weights of tokens in Balancer Pool.
+    /// @notice Adjust the weights of tokens in the Balancer Pool.
     /// @dev Will only be called by updateWeightsGradually().
     /// @param poolHoldings Balances of tokens in Balancer Pool.
     /// @param targetWeights Target weights of tokens in Vault.
@@ -1841,7 +1841,7 @@ contract AeraVaultV2 is
         );
     }
 
-    /// @notice Get total weights of pool tokens in Vault.
+    /// @notice Get the total weights of pool tokens in Vault.
     /// @dev Will only be called by adjustPoolWeights().
     /// @param weights Weights of tokens in Vault.
     /// @return underlyingTotalWeights Total weights of pool tokens.
@@ -1865,7 +1865,7 @@ contract AeraVaultV2 is
         return underlyingTotalWeights;
     }
 
-    /// @notice Get balance of underlying assets in yield tokens.
+    /// @notice Get the balance of underlying assets in yield tokens.
     /// @dev Will only be called by updateWeightsGradually(), getNormalizedWeights()
     ///      and getDeterminedPrices().
     /// @return underlyingBalances Total balance of underlying assets in yield tokens.
@@ -1889,7 +1889,7 @@ contract AeraVaultV2 is
         return underlyingBalances;
     }
 
-    /// @notice Get total balance of pool tokens in Vault.
+    /// @notice Get the total balance of pool tokens in Vault.
     /// @dev Will only be called by getNormalizedWeights(), getDeterminedPrices()
     ///      and calcAdjustmentAmounts().
     /// @param poolHoldings Balances of tokens in Balancer Pool.
@@ -1919,7 +1919,7 @@ contract AeraVaultV2 is
 
     /// @notice Calculate the normalized weights of tokens in Vault.
     /// @dev Will only be called by getNormalizedWeights().
-    /// @param value Total value in base token term.
+    /// @param value Total value in the base token term.
     /// @param oraclePrices Array of oracle prices.
     /// @param underlyingBalances Total balance of underlying assets in yield tokens.
     /// @return weights Normalized weights of tokens in Vault.
@@ -2015,7 +2015,7 @@ contract AeraVaultV2 is
     /// @notice Calculate the amounts of pool tokens to withdraw from Balancer Pool.
     /// @dev Will only be called by depositToYieldTokens().
     /// @param depositAmounts Amounts of underlying assets to deposit to yield tokens.
-    /// @param balances Balance of underlying assets in Vault.
+    /// @param balances The balance of underlying assets in Vault.
     /// @return necessaryAmounts Amounts of pool tokens to withdraw from Balancer Pool.
     function calcNecessaryAmounts(
         uint256[] memory depositAmounts,
@@ -2039,10 +2039,10 @@ contract AeraVaultV2 is
         }
     }
 
-    /// @notice Withdraw the amounts of pool tokens from Balancer Pool.
+    /// @notice Withdraw the amounts of pool tokens from the Balancer Pool.
     /// @dev Will only be called by depositToYieldTokens().
     /// @param tokens Array of pool tokens.
-    /// @param balances Balance of underlying assets in Vault.
+    /// @param balances The balance of underlying assets in Vault.
     /// @param necessaryAmounts Amounts of pool tokens to withdraw from Balancer Pool.
     /// @return newBalances Current balance of pool tokens in Vault after withdrawal.
     function withdrawNecessaryTokensFromPool(
@@ -2085,7 +2085,7 @@ contract AeraVaultV2 is
     ///      After underlying assets are deposited to yield tokens, it deposits left
     ///      tokens to Balancer Pool.
     /// @param depositAmounts Amounts of underlying assets to deposit to yield tokens.
-    /// @param balances Balance of underlying assets in Vault.
+    /// @param balances The balance of underlying assets in Vault.
     function depositToYieldTokens(
         uint256[] memory depositAmounts,
         uint256[] memory balances
@@ -2170,7 +2170,7 @@ contract AeraVaultV2 is
     /// @dev Will only be called by adjustYieldTokens().
     /// @param tokens Array of pool tokens.
     /// @param withdrawAmounts Amounts of underlying assets to withdraw from yield tokens.
-    /// @return amounts Exact withdrawn amounts of underlying asset.
+    /// @return amounts Exact withdrawn amounts of an underlying asset.
     function withdrawFromYieldTokens(
         IERC20[] memory tokens,
         uint256[] memory withdrawAmounts
@@ -2270,7 +2270,7 @@ contract AeraVaultV2 is
     /// @notice Check oracle status.
     /// @dev Will only be called by enableTradingWithOraclePrice()
     ///      and getDeterminedPrices().
-    ///      It checks if oracles are updated recently or oracles are enabled to use.
+    ///      It checks if oracles are updated recently or if oracles are enabled to use.
     /// @param updatedAt Last updated timestamp of oracles to check.
     function checkOracleStatus(uint256[] memory updatedAt) internal view {
         if (!oraclesEnabled) {
