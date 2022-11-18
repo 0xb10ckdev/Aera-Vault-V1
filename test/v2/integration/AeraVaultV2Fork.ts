@@ -2674,12 +2674,8 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         }
       });
 
-      it("when set swap fees and update weights", async () => {
+      it.only("when set swap fees and update weights", async () => {
         const newFee = MIN_SWAP_FEE.add(1);
-        const startWeights = await vault.getNormalizedWeights();
-        const startPoolWeights = normalizeWeights(
-          startWeights.slice(0, poolTokens.length),
-        );
         const timestamp = await getCurrentTime();
         const endWeights = [];
         const avgWeights = ONE.div(tokens.length);
@@ -2709,6 +2705,12 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           ]);
 
         expect(await vault.connect(manager).getSwapFee()).to.equal(newFee);
+
+        const weights = await vault.getNormalizedWeights();
+        const poolWeights = normalizeWeights(
+          weights.slice(0, poolTokens.length),
+        );
+
         await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION);
 
         const currentWeights = await vault.getNormalizedWeights();
@@ -2723,10 +2725,10 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
         for (let i = 0; i < poolTokens.length; i++) {
           const weightDelta = endPoolWeights[i]
-            .sub(startPoolWeights[i])
+            .sub(poolWeights[i])
             .mul(ptcProgress)
             .div(ONE);
-          expect(startPoolWeights[i].add(weightDelta)).to.be.closeTo(
+          expect(poolWeights[i].add(weightDelta)).to.be.closeTo(
             currentPoolWeights[i],
             DEVIATION,
           );
