@@ -832,53 +832,24 @@ contract AeraVaultV2 is
 
         checkWeights(targetWeights);
 
-        uint256[] memory targetPoolWeights = new uint256[](numPoolTokens);
-        uint256 targetWeightSum = 0;
-        for (uint256 i = 0; i < numPoolTokens; i++) {
-            targetPoolWeights[i] = targetWeights[i];
-            targetWeightSum += targetWeights[i];
-        }
+        adjustYieldTokens(poolTokens, poolHoldings, targetWeights);
 
-        targetPoolWeights = normalizeWeights(
-            targetPoolWeights,
-            targetWeightSum
-        );
-
-        // Check if weight change ratio is exceeded
-        uint256[] memory poolWeights = pool.getNormalizedWeights();
-        uint256 duration = endTime - startTime;
-        uint256 maximumRatio = MAX_WEIGHT_CHANGE_RATIO * duration;
-
-        for (uint256 i = 0; i < numPoolTokens; i++) {
-            uint256 changeRatio = getWeightChangeRatio(
-                poolWeights[i],
-                targetPoolWeights[i]
-            );
-
-            if (changeRatio > maximumRatio) {
-                revert Aera__WeightChangeRatioIsAboveMax(
-                    address(poolTokens[i]),
-                    changeRatio,
-                    maximumRatio
-                );
-            }
-        }
-
-        uint256[] memory underlyingBalances = getUnderlyingBalances();
-
-        adjustYieldTokens(
-            poolTokens,
+        uint256[] memory targetPoolWeights = adjustPoolWeights(
             poolHoldings,
-            underlyingBalances,
             targetWeights
         );
 
-        adjustPoolWeights(
-            poolHoldings,
-            poolWeights,
-            targetWeights,
+        checkWeightChangeRatio(
+            poolTokens,
+            targetPoolWeights,
             startTime,
             endTime
+        );
+
+        poolController.updateWeightsGradually(
+            startTime,
+            endTime,
+            targetPoolWeights
         );
 
         // slither-disable-next-line reentrancy-events
@@ -1423,7 +1394,7 @@ contract AeraVaultV2 is
     }
 
     /// @notice Calculate change ratio for weight upgrade.
-    /// @dev Will only be called by updateWeightsGradually().
+    /// @dev Will only be called by checkWeightChangeRatio().
     /// @param weight Current weight.
     /// @param targetWeight Target weight.
     /// @return Change ratio(>1) from current weight to target weight.
@@ -1538,34 +1509,17 @@ contract AeraVaultV2 is
     function updatePoolWeights(uint256[] memory weights, uint256 weightSum)
         internal
     {
-        updatePoolWeightsGradually(
-            weights,
-            weightSum,
+        uint256[] memory newWeights = normalizeWeights(weights, weightSum);
+
+        poolController.updateWeightsGradually(
             block.timestamp,
-            block.timestamp
+            block.timestamp,
+            newWeights
         );
     }
 
-    /// @notice Initiate weight of pool tokens moves to target in the given update window.
-    /// @dev Will only be called by adjustPoolWeights() and updatePoolWeights().
-    /// @param weights Target weights of pool tokens.
-    /// @param weightSum Sum of target weights.
-    /// @param startTime Timestamp at which weight movement should start.
-    /// @param endTime Timestamp at which the weights should reach target values.
-    function updatePoolWeightsGradually(
-        uint256[] memory weights,
-        uint256 weightSum,
-        uint256 startTime,
-        uint256 endTime
-    ) internal {
-        uint256[] memory newWeights = normalizeWeights(weights, weightSum);
-
-        poolController.updateWeightsGradually(startTime, endTime, newWeights);
-    }
-
     /// @notice Normalize weights to make sum of weights be one.
-    /// @dev Will only be called by enableTradingWithWeights(), updateWeightsGradually(),
-    ///      and updatePoolWeightsGradually().
+    /// @dev Will only be called by enableTradingWithWeights() and updateWeightsGradually().
     /// @param weights Array of weights to be normalized.
     /// @param weightSum Current sum of weights.
     /// @return newWeights Array of normalized weights.
@@ -1823,14 +1777,13 @@ contract AeraVaultV2 is
     /// @dev Will only be called by updateWeightsGradually().
     /// @param tokens Array of underlying assets.
     /// @param poolHoldings Balances of tokens in Balancer Pool.
-    /// @param underlyingBalances Balances of underlying assets in yield tokens.
     /// @param targetWeights Target weights of tokens in Vault.
     function adjustYieldTokens(
         IERC20[] memory tokens,
         uint256[] memory poolHoldings,
-        uint256[] memory underlyingBalances,
         uint256[] memory targetWeights
     ) internal {
+        uint256[] memory underlyingBalances = getUnderlyingBalances();
         (
             uint256[] memory depositAmounts,
             uint256[] memory withdrawAmounts
@@ -1851,25 +1804,18 @@ contract AeraVaultV2 is
     /// @notice Adjust the weights of tokens in Balancer Pool.
     /// @dev Will only be called by updateWeightsGradually().
     /// @param poolHoldings Balances of tokens in Balancer Pool.
-    /// @param poolWeights Weights of tokens in Balancer Pool.
     /// @param targetWeights Target weights of tokens in Vault.
-    /// @param startTime Timestamp at which weight movement should start.
-    /// @param endTime Timestamp at which the weights should reach target values.
+    /// @return targetPoolWeights Target weights of pool tokens should be scheduled.
     function adjustPoolWeights(
         uint256[] memory poolHoldings,
-        uint256[] memory poolWeights,
-        uint256[] memory targetWeights,
-        uint256 startTime,
-        uint256 endTime
-    ) internal {
+        uint256[] memory targetWeights
+    ) internal returns (uint256[] memory targetPoolWeights) {
+        uint256[] memory newPoolWeights = new uint256[](numPoolTokens);
+        targetPoolWeights = getUnderlyingTotalWeights(targetWeights);
         uint256[] memory currentPoolHoldings = getPoolHoldings();
+        uint256[] memory poolWeights = pool.getNormalizedWeights();
         uint256[] memory currentWeights = getNormalizedWeights();
-        uint256[] memory targetPoolWeights = getUnderlyingTotalWeights(
-            targetWeights
-        );
         uint256[] memory underlyingIndexes = getUnderlyingIndexes();
-
-        uint256[] memory underlyingWeights = new uint256[](numPoolTokens);
 
         uint256 index = numPoolTokens;
         for (uint256 i = 0; i < numYieldTokens; i++) {
@@ -1880,20 +1826,18 @@ contract AeraVaultV2 is
         uint256 weightSum = 0;
         uint256 targetWeightSum = 0;
         for (uint256 i = 0; i < numPoolTokens; i++) {
-            underlyingWeights[i] =
+            newPoolWeights[i] =
                 (poolWeights[i] * currentPoolHoldings[i]) /
                 poolHoldings[i];
-            weightSum += underlyingWeights[i];
+            weightSum += newPoolWeights[i];
             targetWeightSum += targetPoolWeights[i];
         }
 
-        updatePoolWeights(underlyingWeights, weightSum);
+        updatePoolWeights(newPoolWeights, weightSum);
 
-        updatePoolWeightsGradually(
+        targetPoolWeights = normalizeWeights(
             targetPoolWeights,
-            targetWeightSum,
-            startTime,
-            endTime
+            targetWeightSum
         );
     }
 
@@ -2360,6 +2304,40 @@ contract AeraVaultV2 is
         poolController.setSwapEnabled(swapEnabled);
         // slither-disable-next-line reentrancy-events
         emit SetSwapEnabled(swapEnabled);
+    }
+
+    /// @notice Check weight change ratio for weight upgrade.
+    /// @dev Will only be called by updateWeightsGradually().
+    /// @param poolTokens IERC20 tokens of Balancer Pool.
+    /// @param targetPoolWeights Target weights of pool tokens.
+    /// @param startTime Timestamp at which weight movement should start.
+    /// @param endTime Timestamp at which the weights should reach target values.
+    function checkWeightChangeRatio(
+        IERC20[] memory poolTokens,
+        uint256[] memory targetPoolWeights,
+        uint256 startTime,
+        uint256 endTime
+    ) internal view {
+        uint256[] memory currentPoolWeights = pool.getNormalizedWeights();
+
+        // Check if weight change ratio is exceeded
+        uint256 duration = endTime - startTime;
+        uint256 maximumRatio = MAX_WEIGHT_CHANGE_RATIO * duration;
+
+        for (uint256 i = 0; i < numPoolTokens; i++) {
+            uint256 changeRatio = getWeightChangeRatio(
+                currentPoolWeights[i],
+                targetPoolWeights[i]
+            );
+
+            if (changeRatio > maximumRatio) {
+                revert Aera__WeightChangeRatioIsAboveMax(
+                    address(poolTokens[i]),
+                    changeRatio,
+                    maximumRatio
+                );
+            }
+        }
     }
 
     /// @notice Check if the vaultParam is valid.
