@@ -5,6 +5,7 @@ import "../../v1/dependencies/openzeppelin/IERC20.sol";
 
 /// @title Vault public interface.
 /// @notice Interface for vault arbitrageurs and other observers.
+// slither-disable-next-line name-reused
 interface IUserAPI {
     /// @notice Check if vault trading is enabled.
     /// @return If public swap is turned on, returns true, otherwise false.
