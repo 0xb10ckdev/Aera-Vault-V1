@@ -1535,6 +1535,22 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           ).to.be.revertedWith("Aera__CallerIsNotManager");
         });
 
+        it("when token and weight length is not same", async () => {
+          const timestamp = await getCurrentTime();
+          await expect(
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                tokenWithValues(
+                  tokenAddresses,
+                  normalizeWeights(valueArray(ONE, tokens.length - 1)),
+                ),
+                timestamp + 10,
+                timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 10,
+              ),
+          ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
+        });
+
         it("when token is not sorted", async () => {
           const timestamp = await getCurrentTime();
           await expect(
@@ -1549,6 +1565,23 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
                 timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 10,
               ),
           ).to.be.revertedWith("Aera__DifferentTokensInPosition");
+        });
+
+        it("when total sum of weights is not one", async () => {
+          const timestamp = await getCurrentTime();
+          await expect(
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                tokenValueArray(
+                  tokenAddresses,
+                  ONE.div(tokens.length).sub(1),
+                  tokens.length,
+                ),
+                timestamp + 10,
+                timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 10,
+              ),
+          ).to.be.revertedWith("Aera__SumOfWeightIsNotOne");
         });
 
         it("when start time is greater than maximum", async () => {
@@ -1678,24 +1711,46 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         });
 
         it("when weight is less than minimum", async () => {
-          const timestamp = await getCurrentTime();
-          const token0TargetWeight = toWei(0.0091);
+          const token0TargetWeight = toWei(0.009);
           const weights = await vault.getNormalizedWeights();
-          const validDuration = normalizeWeights(
+          const poolWeights = weights.slice(0, poolTokens.length);
+          const normalizedPoolWeights = normalizeWeights(
             weights.slice(0, poolTokens.length),
-          )[0]
+          );
+          let poolWeightSum = toWei(0);
+          let normalizedPoolWeightSum = toWei(0);
+          poolWeights.forEach(
+            weight => (poolWeightSum = poolWeightSum.add(weight)),
+          );
+          normalizedPoolWeights.forEach(
+            weight =>
+              (normalizedPoolWeightSum = normalizedPoolWeightSum.add(weight)),
+          );
+
+          const validDuration = normalizedPoolWeights[0]
             .mul(ONE)
             .div(token0TargetWeight)
             .div(MAX_WEIGHT_CHANGE_RATIO)
             .add(10);
-          const targetWeights = normalizeWeights([
+          const targetPoolWeights = [
             token0TargetWeight,
             ...valueArray(
-              ONE.sub(token0TargetWeight).div(poolTokens.length - 1),
+              normalizedPoolWeightSum
+                .sub(token0TargetWeight)
+                .div(poolTokens.length - 1),
               poolTokens.length - 1,
+            ),
+          ];
+          const targetWeights = normalizeWeights([
+            ...targetPoolWeights.map(weight =>
+              BigNumber.from(weight)
+                .mul(poolWeightSum)
+                .div(normalizedPoolWeightSum),
             ),
             ...weights.slice(poolTokens.length, tokens.length),
           ]);
+
+          const timestamp = await getCurrentTime();
 
           await expect(
             vault
@@ -1709,58 +1764,545 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         });
       });
 
-      it("should be possible to call updateWeightsGradually", async () => {
-        const startWeights = await vault.getNormalizedWeights();
-        const startPoolWeights = normalizeWeights(
-          startWeights.slice(0, poolTokens.length),
-        );
-        const timestamp = await getCurrentTime();
-        const endWeights = [];
-        const avgWeights = ONE.div(tokens.length);
-        const startTime = timestamp + 10;
-        const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
-        for (let i = 0; i < tokens.length; i += 2) {
-          if (i < tokens.length - 1) {
-            endWeights.push(avgWeights.add(toWei((i + 1) / 100)));
-            endWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
-          } else {
-            endWeights.push(avgWeights);
+      describe("should be possible to call updateWeightsGradually", async () => {
+        it("when no yield tokens should be adjusted", async () => {
+          const startWeights = await vault.getNormalizedWeights();
+          const startPoolWeights = normalizeWeights(
+            startWeights.slice(0, poolTokens.length),
+          );
+          const timestamp = await getCurrentTime();
+          const endWeights = [];
+          const startTime = timestamp + 10;
+          const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
+
+          for (let i = 0; i < poolTokens.length; i += 2) {
+            if (i < poolTokens.length - 1) {
+              endWeights.push(startWeights[i].add(toWei((i + 1) / 100)));
+              endWeights.push(startWeights[i + 1].sub(toWei((i + 1) / 100)));
+            } else {
+              endWeights.push(startWeights[i]);
+            }
           }
-        }
-        const endPoolWeights = normalizeWeights(
-          normalizeWeights(endWeights).slice(0, poolTokens.length),
-        );
+          for (let i = poolTokens.length; i < tokens.length; i++) {
+            endWeights.push(startWeights[i]);
+          }
 
-        await vault
-          .connect(manager)
-          .updateWeightsGradually(
-            tokenWithValues(tokenAddresses, normalizeWeights(endWeights)),
-            startTime,
-            endTime,
+          const endPoolWeights = normalizeWeights(
+            normalizeWeights(endWeights).slice(0, poolTokens.length),
           );
 
-        await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION);
+          await vault
+            .connect(manager)
+            .updateWeightsGradually(
+              tokenWithValues(tokenAddresses, normalizeWeights(endWeights)),
+              startTime,
+              endTime,
+            );
 
-        const currentWeights = await vault.getNormalizedWeights();
-        const currentPoolWeights = normalizeWeights(
-          currentWeights.slice(0, poolTokens.length),
-        );
+          await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION);
 
-        const currentTime = await getCurrentTime();
-        const ptcProgress = ONE.mul(currentTime - startTime).div(
-          endTime - startTime,
-        );
-
-        for (let i = 0; i < poolTokens.length; i++) {
-          const weightDelta = endPoolWeights[i]
-            .sub(startPoolWeights[i])
-            .mul(ptcProgress)
-            .div(ONE);
-          expect(startPoolWeights[i].add(weightDelta)).to.be.closeTo(
-            currentPoolWeights[i],
-            DEVIATION,
+          const currentWeights = await vault.getNormalizedWeights();
+          const currentPoolWeights = normalizeWeights(
+            currentWeights.slice(0, poolTokens.length),
           );
-        }
+
+          const currentTime = await getCurrentTime();
+          const ptcProgress = ONE.mul(currentTime - startTime).div(
+            endTime - startTime,
+          );
+
+          for (let i = 0; i < poolTokens.length; i++) {
+            const weightDelta = endPoolWeights[i]
+              .sub(startPoolWeights[i])
+              .mul(ptcProgress)
+              .div(ONE);
+            expect(startPoolWeights[i].add(weightDelta)).to.be.closeTo(
+              currentPoolWeights[i],
+              DEVIATION,
+            );
+          }
+        });
+
+        describe("when yield tokens should be adjusted", async () => {
+          let startTime: number;
+          let endTime: number;
+
+          beforeEach(async function () {
+            const timestamp = await getCurrentTime();
+            startTime = timestamp + 10;
+            endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
+          });
+
+          describe("when underlying tokens are enough to mint yield tokens", async () => {
+            it("update weights of only underlying tokens and yield tokens", async () => {
+              const weights = await vault.getNormalizedWeights();
+              const targetWeights = [...weights];
+              for (let i = 0; i < yieldTokens.length; i++) {
+                targetWeights[underlyingIndexes[i]] = targetWeights[
+                  underlyingIndexes[i]
+                ].sub(toWei(0.01));
+                targetWeights[i + poolTokens.length] = targetWeights[
+                  i + poolTokens.length
+                ].add(toWei(0.01));
+              }
+
+              await vault
+                .connect(manager)
+                .updateWeightsGradually(
+                  tokenWithValues(tokenAddresses, targetWeights),
+                  startTime,
+                  endTime,
+                );
+
+              const newWeights = await vault.getNormalizedWeights();
+
+              for (let i = 0; i < tokens.length; i++) {
+                expect(newWeights[i]).to.be.closeTo(
+                  targetWeights[i],
+                  DEVIATION,
+                );
+              }
+            });
+
+            it("update weights of all tokens", async () => {
+              const weights = await vault.getNormalizedWeights();
+              let targetWeights = [...weights];
+              for (let i = 0; i < yieldTokens.length; i++) {
+                targetWeights[underlyingIndexes[i]] = targetWeights[
+                  underlyingIndexes[i]
+                ].sub(toWei(0.01));
+                targetWeights[i + poolTokens.length] = targetWeights[
+                  i + poolTokens.length
+                ].add(toWei(0.01));
+              }
+
+              let weightSum = ONE;
+              let numAdjustedWeight = 0;
+              for (let i = 0; i < tokens.length; i++) {
+                if (i > poolTokens.length || underlyingIndexes.includes(i)) {
+                  weightSum = weightSum.sub(targetWeights[i]);
+                  numAdjustedWeight++;
+                }
+              }
+              for (let i = 0; i < poolTokens.length; i++) {
+                if (!underlyingIndexes.includes(i)) {
+                  targetWeights[i] = weightSum.div(numAdjustedWeight);
+                }
+              }
+
+              targetWeights = normalizeWeights(targetWeights);
+
+              await vault
+                .connect(manager)
+                .updateWeightsGradually(
+                  tokenWithValues(tokenAddresses, targetWeights),
+                  startTime,
+                  endTime,
+                );
+
+              let newWeights = await vault.getNormalizedWeights();
+
+              for (let i = 0; i < tokens.length; i++) {
+                if (i >= poolTokens.length) {
+                  expect(newWeights[i]).to.be.closeTo(
+                    targetWeights[i],
+                    DEVIATION,
+                  );
+                } else if (!underlyingIndexes.includes(i)) {
+                  expect(newWeights[i]).to.be.closeTo(weights[i], DEVIATION);
+                }
+              }
+
+              await increaseTime(endTime - (await getCurrentTime()));
+
+              newWeights = await vault.getNormalizedWeights();
+
+              for (let i = 0; i < tokens.length; i++) {
+                expect(newWeights[i]).to.be.closeTo(
+                  targetWeights[i],
+                  DEVIATION,
+                );
+              }
+            });
+
+            describe("when maximum deposit amount is low or invalid", async () => {
+              let targetWeights: BigNumber[] = [];
+
+              beforeEach(async () => {
+                const weights = await vault.getNormalizedWeights();
+                targetWeights = [...weights];
+                for (let i = 0; i < yieldTokens.length; i++) {
+                  targetWeights[underlyingIndexes[i]] = targetWeights[
+                    underlyingIndexes[i]
+                  ].sub(toWei(0.02));
+                  targetWeights[i + poolTokens.length] = targetWeights[
+                    i + poolTokens.length
+                  ].add(toWei(0.02));
+                }
+
+                let weightSum = ONE;
+                let numAdjustedWeight = 0;
+                for (let i = 0; i < tokens.length; i++) {
+                  if (i > poolTokens.length || underlyingIndexes.includes(i)) {
+                    weightSum = weightSum.sub(targetWeights[i]);
+                    numAdjustedWeight++;
+                  }
+                }
+                for (let i = 0; i < poolTokens.length; i++) {
+                  if (!underlyingIndexes.includes(i)) {
+                    targetWeights[i] = weightSum.div(numAdjustedWeight);
+                  }
+                }
+
+                targetWeights = normalizeWeights(targetWeights);
+              });
+
+              it("deposit only maximum deposit amount", async () => {
+                for (let i = 0; i < yieldTokens.length; i++) {
+                  await yieldTokens[i].setMaxDepositAmount(toWei(0.001), true);
+                }
+
+                const holdings = await vault.getHoldings();
+
+                await vault
+                  .connect(manager)
+                  .updateWeightsGradually(
+                    tokenWithValues(tokenAddresses, targetWeights),
+                    startTime,
+                    endTime,
+                  );
+
+                const newHoldings = await vault.getHoldings();
+
+                for (let i = 0; i < tokens.length; i++) {
+                  if (underlyingIndexes.includes(i)) {
+                    expect(newHoldings[i]).to.equal(
+                      holdings[i].sub(toWei(0.001)),
+                    );
+                  }
+                }
+              });
+
+              it("deposit no assets when maximum deposit amount is zero", async () => {
+                for (let i = 0; i < yieldTokens.length; i++) {
+                  await yieldTokens[i].setMaxDepositAmount(toWei(0), true);
+                }
+
+                const holdings = await vault.getHoldings();
+
+                await vault
+                  .connect(manager)
+                  .updateWeightsGradually(
+                    tokenWithValues(tokenAddresses, targetWeights),
+                    startTime,
+                    endTime,
+                  );
+
+                const newHoldings = await vault.getHoldings();
+
+                for (let i = 0; i < tokens.length; i++) {
+                  if (underlyingIndexes.includes(i)) {
+                    expect(newHoldings[i]).to.equal(holdings[i]);
+                  }
+                }
+              });
+
+              it("deposit no assets when maxDeposit reverts", async () => {
+                for (let i = 0; i < yieldTokens.length; i++) {
+                  await yieldTokens[i].pause();
+                }
+
+                const holdings = await vault.getHoldings();
+
+                await vault
+                  .connect(manager)
+                  .updateWeightsGradually(
+                    tokenWithValues(tokenAddresses, targetWeights),
+                    startTime,
+                    endTime,
+                  );
+
+                const newHoldings = await vault.getHoldings();
+
+                for (let i = 0; i < tokens.length; i++) {
+                  if (underlyingIndexes.includes(i)) {
+                    expect(newHoldings[i]).to.equal(holdings[i]);
+                  }
+                }
+              });
+            });
+          });
+
+          it("when underlying tokens are not enough to mint yield tokens", async () => {
+            const weights = await vault.getNormalizedWeights();
+            let targetWeights = [...weights];
+            for (let i = 0; i < yieldTokens.length; i++) {
+              targetWeights[underlyingIndexes[i]] = toWei(0.1);
+              targetWeights[i + poolTokens.length] = toWei(0.9);
+            }
+            for (let i = 0; i < poolTokens.length; i++) {
+              if (!underlyingIndexes.includes(i)) {
+                targetWeights[i] = toWei(0.1);
+              }
+            }
+
+            targetWeights = normalizeWeights(targetWeights);
+
+            await vault
+              .connect(manager)
+              .updateWeightsGradually(
+                tokenWithValues(tokenAddresses, targetWeights),
+                startTime,
+                endTime,
+              );
+
+            let newWeights = await vault.getNormalizedWeights();
+
+            for (let i = 0; i < tokens.length; i++) {
+              expect(newWeights[i]).to.be.closeTo(weights[i], DEVIATION);
+            }
+
+            await increaseTime(endTime - (await getCurrentTime()));
+
+            newWeights = await vault.getNormalizedWeights();
+
+            for (let i = 0; i < yieldTokens.length; i++) {
+              expect(newWeights[i + poolTokens.length]).to.be.closeTo(
+                weights[i + poolTokens.length],
+                DEVIATION,
+              );
+              expect(newWeights[underlyingIndexes[i]]).to.be.closeTo(
+                targetWeights[i + poolTokens.length]
+                  .add(targetWeights[underlyingIndexes[i]])
+                  .sub(weights[i + poolTokens.length]),
+                DEVIATION,
+              );
+            }
+            for (let i = 0; i < tokens.length; i++) {
+              if (i >= poolTokens.length) {
+                expect(newWeights[i]).to.be.closeTo(weights[i], DEVIATION);
+                expect(
+                  newWeights[underlyingIndexes[i - poolTokens.length]],
+                ).to.be.closeTo(
+                  targetWeights[i]
+                    .add(
+                      targetWeights[underlyingIndexes[i - poolTokens.length]],
+                    )
+                    .sub(weights[i]),
+                  DEVIATION,
+                );
+              } else if (!underlyingIndexes.includes(i)) {
+                expect(newWeights[i]).to.be.closeTo(
+                  targetWeights[i],
+                  DEVIATION,
+                );
+              }
+            }
+          });
+
+          describe("when redeem yield tokens", async () => {
+            it("update weights of only underlying tokens and yield tokens", async () => {
+              const weights = await vault.getNormalizedWeights();
+              const targetWeights = [...weights];
+              for (let i = 0; i < yieldTokens.length; i++) {
+                targetWeights[underlyingIndexes[i]] = targetWeights[
+                  underlyingIndexes[i]
+                ].add(toWei(0.01));
+                targetWeights[i + poolTokens.length] = targetWeights[
+                  i + poolTokens.length
+                ].sub(toWei(0.01));
+              }
+
+              await vault
+                .connect(manager)
+                .updateWeightsGradually(
+                  tokenWithValues(tokenAddresses, targetWeights),
+                  startTime,
+                  endTime,
+                );
+
+              const newWeights = await vault.getNormalizedWeights();
+
+              for (let i = 0; i < tokens.length; i++) {
+                expect(newWeights[i]).to.be.closeTo(
+                  targetWeights[i],
+                  DEVIATION,
+                );
+              }
+            });
+
+            it("update weights of all tokens", async () => {
+              const weights = await vault.getNormalizedWeights();
+              let targetWeights = [...weights];
+              for (let i = 0; i < yieldTokens.length; i++) {
+                targetWeights[underlyingIndexes[i]] = targetWeights[
+                  underlyingIndexes[i]
+                ].add(toWei(0.01));
+                targetWeights[i + poolTokens.length] = targetWeights[
+                  i + poolTokens.length
+                ].sub(toWei(0.01));
+              }
+
+              let weightSum = ONE;
+              let numAdjustedWeight = 0;
+              for (let i = 0; i < tokens.length; i++) {
+                if (i > poolTokens.length || underlyingIndexes.includes(i)) {
+                  weightSum = weightSum.sub(targetWeights[i]);
+                  numAdjustedWeight++;
+                }
+              }
+              for (let i = 0; i < poolTokens.length; i++) {
+                if (!underlyingIndexes.includes(i)) {
+                  targetWeights[i] = weightSum.div(numAdjustedWeight);
+                }
+              }
+
+              targetWeights = normalizeWeights(targetWeights);
+
+              await vault
+                .connect(manager)
+                .updateWeightsGradually(
+                  tokenWithValues(tokenAddresses, targetWeights),
+                  startTime,
+                  endTime,
+                );
+
+              let newWeights = await vault.getNormalizedWeights();
+
+              for (let i = 0; i < tokens.length; i++) {
+                if (i >= poolTokens.length) {
+                  expect(newWeights[i]).to.be.closeTo(
+                    targetWeights[i],
+                    DEVIATION,
+                  );
+                } else if (!underlyingIndexes.includes(i)) {
+                  expect(newWeights[i]).to.be.closeTo(weights[i], DEVIATION);
+                }
+              }
+
+              await increaseTime(endTime - (await getCurrentTime()));
+
+              newWeights = await vault.getNormalizedWeights();
+
+              for (let i = 0; i < tokens.length; i++) {
+                expect(newWeights[i]).to.be.closeTo(
+                  targetWeights[i],
+                  DEVIATION,
+                );
+              }
+            });
+
+            describe("when maximum withdrawal amount is low or invalid", async () => {
+              let targetWeights: BigNumber[] = [];
+
+              beforeEach(async () => {
+                const weights = await vault.getNormalizedWeights();
+                targetWeights = [...weights];
+                for (let i = 0; i < yieldTokens.length; i++) {
+                  targetWeights[underlyingIndexes[i]] = targetWeights[
+                    underlyingIndexes[i]
+                  ].add(toWei(0.02));
+                  targetWeights[i + poolTokens.length] = targetWeights[
+                    i + poolTokens.length
+                  ].sub(toWei(0.02));
+                }
+
+                let weightSum = ONE;
+                let numAdjustedWeight = 0;
+                for (let i = 0; i < tokens.length; i++) {
+                  if (i > poolTokens.length || underlyingIndexes.includes(i)) {
+                    weightSum = weightSum.sub(targetWeights[i]);
+                    numAdjustedWeight++;
+                  }
+                }
+                for (let i = 0; i < poolTokens.length; i++) {
+                  if (!underlyingIndexes.includes(i)) {
+                    targetWeights[i] = weightSum.div(numAdjustedWeight);
+                  }
+                }
+
+                targetWeights = normalizeWeights(targetWeights);
+              });
+
+              it("withdraw only maximum withdrawal amount", async () => {
+                for (let i = 0; i < yieldTokens.length; i++) {
+                  await yieldTokens[i].setMaxWithdrawalAmount(
+                    toWei(0.001),
+                    true,
+                  );
+                }
+
+                const holdings = await vault.getHoldings();
+
+                await vault
+                  .connect(manager)
+                  .updateWeightsGradually(
+                    tokenWithValues(tokenAddresses, targetWeights),
+                    startTime,
+                    endTime,
+                  );
+
+                const newHoldings = await vault.getHoldings();
+
+                for (let i = 0; i < tokens.length; i++) {
+                  if (underlyingIndexes.includes(i)) {
+                    expect(newHoldings[i]).to.equal(
+                      holdings[i].add(toWei(0.001)),
+                    );
+                  }
+                }
+              });
+
+              it("withdraw no assets when maximum withdrawal amount is zero", async () => {
+                for (let i = 0; i < yieldTokens.length; i++) {
+                  await yieldTokens[i].setMaxWithdrawalAmount(toWei(0), true);
+                }
+
+                const holdings = await vault.getHoldings();
+
+                await vault
+                  .connect(manager)
+                  .updateWeightsGradually(
+                    tokenWithValues(tokenAddresses, targetWeights),
+                    startTime,
+                    endTime,
+                  );
+
+                const newHoldings = await vault.getHoldings();
+
+                for (let i = 0; i < tokens.length; i++) {
+                  if (underlyingIndexes.includes(i)) {
+                    expect(newHoldings[i]).to.equal(holdings[i]);
+                  }
+                }
+              });
+
+              it("withdraw no assets when maxWithdraw reverts", async () => {
+                for (let i = 0; i < yieldTokens.length; i++) {
+                  await yieldTokens[i].pause();
+                }
+
+                const holdings = await vault.getHoldings();
+
+                await vault
+                  .connect(manager)
+                  .updateWeightsGradually(
+                    tokenWithValues(tokenAddresses, targetWeights),
+                    startTime,
+                    endTime,
+                  );
+
+                const newHoldings = await vault.getHoldings();
+
+                for (let i = 0; i < tokens.length; i++) {
+                  if (underlyingIndexes.includes(i)) {
+                    expect(newHoldings[i]).to.equal(holdings[i]);
+                  }
+                }
+              });
+            });
+          });
+        });
       });
 
       describe("should cancel current weight update", async () => {
@@ -1793,9 +2335,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
           const newWeights = await vault.getNormalizedWeights();
 
-          for (let i = 0; i < 1000; i++) {
-            await ethers.provider.send("evm_mine", []);
-          }
+          await increaseTime(endTime - (await getCurrentTime()));
 
           const currentWeights = await vault.getNormalizedWeights();
 
@@ -1835,14 +2375,12 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             );
 
           await vault.withdraw(
-            tokenValueArray(tokenAddresses, toWei(50), tokens.length),
+            tokenValueArray(tokenAddresses, toWei(10), tokens.length),
           );
 
           const newWeights = await vault.getNormalizedWeights();
 
-          for (let i = 0; i < 1000; i++) {
-            await ethers.provider.send("evm_mine", []);
-          }
+          await increaseTime(endTime - (await getCurrentTime()));
 
           const currentWeights = await vault.getNormalizedWeights();
 
@@ -1896,511 +2434,6 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         for (let i = 0; i < tokens.length; i++) {
           expect(newWeights[i]).to.equal(currentWeights[i]);
         }
-      });
-    });
-
-    describe("when call setTargetWeights", () => {
-      describe("should be reverted to call setTargetWeights", async () => {
-        it("when called from non-owner", async () => {
-          await expect(
-            vault
-              .connect(user)
-              .setTargetWeights(
-                tokenWithValues(
-                  tokenAddresses,
-                  normalizeWeights(valueArray(ONE, tokens.length)),
-                ),
-                100,
-              ),
-          ).to.be.revertedWith("Aera__CallerIsNotManager");
-        });
-
-        it("when token and weight length is not same", async () => {
-          await expect(
-            vault
-              .connect(manager)
-              .setTargetWeights(
-                tokenWithValues(
-                  tokenAddresses,
-                  normalizeWeights(valueArray(ONE, tokens.length - 1)),
-                ),
-                100,
-              ),
-          ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
-        });
-
-        it("when token is not sorted", async () => {
-          await expect(
-            vault
-              .connect(manager)
-              .setTargetWeights(
-                tokenWithValues(
-                  unsortedTokens,
-                  normalizeWeights(valueArray(ONE, tokens.length)),
-                ),
-                100,
-              ),
-          ).to.be.revertedWith("Aera__DifferentTokensInPosition");
-        });
-
-        it("when total sum of weights is not one", async () => {
-          await expect(
-            vault
-              .connect(manager)
-              .setTargetWeights(
-                tokenValueArray(
-                  tokenAddresses,
-                  ONE.div(tokens.length).sub(1),
-                  tokens.length,
-                ),
-                100,
-              ),
-          ).to.be.revertedWith("Aera__SumOfWeightIsNotOne");
-        });
-      });
-
-      describe("should be possible to call setTargetWeights", async () => {
-        describe("when underlying tokens are enough to mint yield tokens", async () => {
-          it("update weights of only underlying tokens and yield tokens", async () => {
-            const weights = await vault.getNormalizedWeights();
-            const targetWeights = [...weights];
-            for (let i = 0; i < yieldTokens.length; i++) {
-              targetWeights[underlyingIndexes[i]] = targetWeights[
-                underlyingIndexes[i]
-              ].sub(toWei(0.01));
-              targetWeights[i + poolTokens.length] = targetWeights[
-                i + poolTokens.length
-              ].add(toWei(0.01));
-            }
-
-            await vault
-              .connect(manager)
-              .setTargetWeights(
-                tokenWithValues(tokenAddresses, targetWeights),
-                100,
-              );
-
-            const newWeights = await vault.getNormalizedWeights();
-
-            for (let i = 0; i < tokens.length; i++) {
-              expect(newWeights[i]).to.be.closeTo(targetWeights[i], DEVIATION);
-            }
-          });
-
-          it("update weights of all tokens", async () => {
-            const weights = await vault.getNormalizedWeights();
-            let targetWeights = [...weights];
-            for (let i = 0; i < yieldTokens.length; i++) {
-              targetWeights[underlyingIndexes[i]] = targetWeights[
-                underlyingIndexes[i]
-              ].sub(toWei(0.01));
-              targetWeights[i + poolTokens.length] = targetWeights[
-                i + poolTokens.length
-              ].add(toWei(0.01));
-            }
-
-            let weightSum = ONE;
-            let numAdjustedWeight = 0;
-            for (let i = 0; i < tokens.length; i++) {
-              if (i > poolTokens.length || underlyingIndexes.includes(i)) {
-                weightSum = weightSum.sub(targetWeights[i]);
-                numAdjustedWeight++;
-              }
-            }
-            for (let i = 0; i < poolTokens.length; i++) {
-              if (!underlyingIndexes.includes(i)) {
-                targetWeights[i] = weightSum.div(numAdjustedWeight);
-              }
-            }
-
-            targetWeights = normalizeWeights(targetWeights);
-
-            await vault
-              .connect(manager)
-              .setTargetWeights(
-                tokenWithValues(tokenAddresses, targetWeights),
-                100,
-              );
-
-            let newWeights = await vault.getNormalizedWeights();
-
-            for (let i = 0; i < tokens.length; i++) {
-              if (i >= poolTokens.length) {
-                expect(newWeights[i]).to.be.closeTo(
-                  targetWeights[i],
-                  DEVIATION,
-                );
-              } else if (!underlyingIndexes.includes(i)) {
-                expect(newWeights[i]).to.be.closeTo(weights[i], DEVIATION);
-              }
-            }
-
-            await increaseTime(100);
-
-            newWeights = await vault.getNormalizedWeights();
-
-            for (let i = 0; i < tokens.length; i++) {
-              expect(newWeights[i]).to.be.closeTo(targetWeights[i], DEVIATION);
-            }
-          });
-
-          describe("when maximum deposit amount is low or invalid", async () => {
-            let targetWeights: BigNumber[] = [];
-
-            beforeEach(async () => {
-              const weights = await vault.getNormalizedWeights();
-              targetWeights = [...weights];
-              for (let i = 0; i < yieldTokens.length; i++) {
-                targetWeights[underlyingIndexes[i]] = targetWeights[
-                  underlyingIndexes[i]
-                ].sub(toWei(0.02));
-                targetWeights[i + poolTokens.length] = targetWeights[
-                  i + poolTokens.length
-                ].add(toWei(0.02));
-              }
-
-              let weightSum = ONE;
-              let numAdjustedWeight = 0;
-              for (let i = 0; i < tokens.length; i++) {
-                if (i > poolTokens.length || underlyingIndexes.includes(i)) {
-                  weightSum = weightSum.sub(targetWeights[i]);
-                  numAdjustedWeight++;
-                }
-              }
-              for (let i = 0; i < poolTokens.length; i++) {
-                if (!underlyingIndexes.includes(i)) {
-                  targetWeights[i] = weightSum.div(numAdjustedWeight);
-                }
-              }
-
-              targetWeights = normalizeWeights(targetWeights);
-            });
-
-            it("deposit only maximum deposit amount", async () => {
-              for (let i = 0; i < yieldTokens.length; i++) {
-                await yieldTokens[i].setMaxDepositAmount(toWei(0.001), true);
-              }
-
-              const holdings = await vault.getHoldings();
-
-              await vault
-                .connect(manager)
-                .setTargetWeights(
-                  tokenWithValues(tokenAddresses, targetWeights),
-                  100,
-                );
-
-              const newHoldings = await vault.getHoldings();
-
-              for (let i = 0; i < tokens.length; i++) {
-                if (underlyingIndexes.includes(i)) {
-                  expect(newHoldings[i]).to.equal(
-                    holdings[i].sub(toWei(0.001)),
-                  );
-                }
-              }
-            });
-
-            it("deposit no assets when maximum deposit amount is zero", async () => {
-              for (let i = 0; i < yieldTokens.length; i++) {
-                await yieldTokens[i].setMaxDepositAmount(toWei(0), true);
-              }
-
-              const holdings = await vault.getHoldings();
-
-              await vault
-                .connect(manager)
-                .setTargetWeights(
-                  tokenWithValues(tokenAddresses, targetWeights),
-                  100,
-                );
-
-              const newHoldings = await vault.getHoldings();
-
-              for (let i = 0; i < tokens.length; i++) {
-                if (underlyingIndexes.includes(i)) {
-                  expect(newHoldings[i]).to.equal(holdings[i]);
-                }
-              }
-            });
-
-            it("deposit no assets when maxDeposit reverts", async () => {
-              for (let i = 0; i < yieldTokens.length; i++) {
-                await yieldTokens[i].pause();
-              }
-
-              const holdings = await vault.getHoldings();
-
-              await vault
-                .connect(manager)
-                .setTargetWeights(
-                  tokenWithValues(tokenAddresses, targetWeights),
-                  100,
-                );
-
-              const newHoldings = await vault.getHoldings();
-
-              for (let i = 0; i < tokens.length; i++) {
-                if (underlyingIndexes.includes(i)) {
-                  expect(newHoldings[i]).to.equal(holdings[i]);
-                }
-              }
-            });
-          });
-        });
-
-        it("when underlying tokens are not enough to mint yield tokens", async () => {
-          const weights = await vault.getNormalizedWeights();
-          let targetWeights = [...weights];
-          for (let i = 0; i < yieldTokens.length; i++) {
-            targetWeights[underlyingIndexes[i]] = toWei(0.1);
-            targetWeights[i + poolTokens.length] = toWei(0.9);
-          }
-          for (let i = 0; i < poolTokens.length; i++) {
-            if (!underlyingIndexes.includes(i)) {
-              targetWeights[i] = toWei(0.1);
-            }
-          }
-
-          targetWeights = normalizeWeights(targetWeights);
-
-          await vault
-            .connect(manager)
-            .setTargetWeights(
-              tokenWithValues(tokenAddresses, targetWeights),
-              100,
-            );
-
-          let newWeights = await vault.getNormalizedWeights();
-
-          for (let i = 0; i < tokens.length; i++) {
-            expect(newWeights[i]).to.be.closeTo(weights[i], DEVIATION);
-          }
-
-          await increaseTime(100);
-
-          newWeights = await vault.getNormalizedWeights();
-
-          for (let i = 0; i < yieldTokens.length; i++) {
-            expect(newWeights[i + poolTokens.length]).to.be.closeTo(
-              weights[i + poolTokens.length],
-              DEVIATION,
-            );
-            expect(newWeights[underlyingIndexes[i]]).to.be.closeTo(
-              targetWeights[i + poolTokens.length]
-                .add(targetWeights[underlyingIndexes[i]])
-                .sub(weights[i + poolTokens.length]),
-              DEVIATION,
-            );
-          }
-          for (let i = 0; i < tokens.length; i++) {
-            if (i >= poolTokens.length) {
-              expect(newWeights[i]).to.be.closeTo(weights[i], DEVIATION);
-              expect(
-                newWeights[underlyingIndexes[i - poolTokens.length]],
-              ).to.be.closeTo(
-                targetWeights[i]
-                  .add(targetWeights[underlyingIndexes[i - poolTokens.length]])
-                  .sub(weights[i]),
-                DEVIATION,
-              );
-            } else if (!underlyingIndexes.includes(i)) {
-              expect(newWeights[i]).to.be.closeTo(targetWeights[i], DEVIATION);
-            }
-          }
-        });
-
-        describe("when redeem yield tokens", async () => {
-          it("update weights of only underlying tokens and yield tokens", async () => {
-            const weights = await vault.getNormalizedWeights();
-            const targetWeights = [...weights];
-            for (let i = 0; i < yieldTokens.length; i++) {
-              targetWeights[underlyingIndexes[i]] = targetWeights[
-                underlyingIndexes[i]
-              ].add(toWei(0.01));
-              targetWeights[i + poolTokens.length] = targetWeights[
-                i + poolTokens.length
-              ].sub(toWei(0.01));
-            }
-
-            await vault
-              .connect(manager)
-              .setTargetWeights(
-                tokenWithValues(tokenAddresses, targetWeights),
-                100,
-              );
-
-            const newWeights = await vault.getNormalizedWeights();
-
-            for (let i = 0; i < tokens.length; i++) {
-              expect(newWeights[i]).to.be.closeTo(targetWeights[i], DEVIATION);
-            }
-          });
-
-          it("update weights of all tokens", async () => {
-            const weights = await vault.getNormalizedWeights();
-            let targetWeights = [...weights];
-            for (let i = 0; i < yieldTokens.length; i++) {
-              targetWeights[underlyingIndexes[i]] = targetWeights[
-                underlyingIndexes[i]
-              ].add(toWei(0.01));
-              targetWeights[i + poolTokens.length] = targetWeights[
-                i + poolTokens.length
-              ].sub(toWei(0.01));
-            }
-
-            let weightSum = ONE;
-            let numAdjustedWeight = 0;
-            for (let i = 0; i < tokens.length; i++) {
-              if (i > poolTokens.length || underlyingIndexes.includes(i)) {
-                weightSum = weightSum.sub(targetWeights[i]);
-                numAdjustedWeight++;
-              }
-            }
-            for (let i = 0; i < poolTokens.length; i++) {
-              if (!underlyingIndexes.includes(i)) {
-                targetWeights[i] = weightSum.div(numAdjustedWeight);
-              }
-            }
-
-            targetWeights = normalizeWeights(targetWeights);
-
-            await vault
-              .connect(manager)
-              .setTargetWeights(
-                tokenWithValues(tokenAddresses, targetWeights),
-                100,
-              );
-
-            let newWeights = await vault.getNormalizedWeights();
-
-            for (let i = 0; i < tokens.length; i++) {
-              if (i >= poolTokens.length) {
-                expect(newWeights[i]).to.be.closeTo(
-                  targetWeights[i],
-                  DEVIATION,
-                );
-              } else if (!underlyingIndexes.includes(i)) {
-                expect(newWeights[i]).to.be.closeTo(weights[i], DEVIATION);
-              }
-            }
-
-            await increaseTime(100);
-
-            newWeights = await vault.getNormalizedWeights();
-
-            for (let i = 0; i < tokens.length; i++) {
-              expect(newWeights[i]).to.be.closeTo(targetWeights[i], DEVIATION);
-            }
-          });
-
-          describe("when maximum withdrawal amount is low or invalid", async () => {
-            let targetWeights: BigNumber[] = [];
-
-            beforeEach(async () => {
-              const weights = await vault.getNormalizedWeights();
-              targetWeights = [...weights];
-              for (let i = 0; i < yieldTokens.length; i++) {
-                targetWeights[underlyingIndexes[i]] = targetWeights[
-                  underlyingIndexes[i]
-                ].add(toWei(0.02));
-                targetWeights[i + poolTokens.length] = targetWeights[
-                  i + poolTokens.length
-                ].sub(toWei(0.02));
-              }
-
-              let weightSum = ONE;
-              let numAdjustedWeight = 0;
-              for (let i = 0; i < tokens.length; i++) {
-                if (i > poolTokens.length || underlyingIndexes.includes(i)) {
-                  weightSum = weightSum.sub(targetWeights[i]);
-                  numAdjustedWeight++;
-                }
-              }
-              for (let i = 0; i < poolTokens.length; i++) {
-                if (!underlyingIndexes.includes(i)) {
-                  targetWeights[i] = weightSum.div(numAdjustedWeight);
-                }
-              }
-
-              targetWeights = normalizeWeights(targetWeights);
-            });
-
-            it("withdraw only maximum withdrawal amount", async () => {
-              for (let i = 0; i < yieldTokens.length; i++) {
-                await yieldTokens[i].setMaxWithdrawalAmount(
-                  toWei(0.001),
-                  true,
-                );
-              }
-
-              const holdings = await vault.getHoldings();
-
-              await vault
-                .connect(manager)
-                .setTargetWeights(
-                  tokenWithValues(tokenAddresses, targetWeights),
-                  100,
-                );
-
-              const newHoldings = await vault.getHoldings();
-
-              for (let i = 0; i < tokens.length; i++) {
-                if (underlyingIndexes.includes(i)) {
-                  expect(newHoldings[i]).to.equal(
-                    holdings[i].add(toWei(0.001)),
-                  );
-                }
-              }
-            });
-
-            it("withdraw no assets when maximum withdrawal amount is zero", async () => {
-              for (let i = 0; i < yieldTokens.length; i++) {
-                await yieldTokens[i].setMaxWithdrawalAmount(toWei(0), true);
-              }
-
-              const holdings = await vault.getHoldings();
-
-              await vault
-                .connect(manager)
-                .setTargetWeights(
-                  tokenWithValues(tokenAddresses, targetWeights),
-                  100,
-                );
-
-              const newHoldings = await vault.getHoldings();
-
-              for (let i = 0; i < tokens.length; i++) {
-                if (underlyingIndexes.includes(i)) {
-                  expect(newHoldings[i]).to.equal(holdings[i]);
-                }
-              }
-            });
-
-            it("withdraw no assets when maxWithdraw reverts", async () => {
-              for (let i = 0; i < yieldTokens.length; i++) {
-                await yieldTokens[i].pause();
-              }
-
-              const holdings = await vault.getHoldings();
-
-              await vault
-                .connect(manager)
-                .setTargetWeights(
-                  tokenWithValues(tokenAddresses, targetWeights),
-                  100,
-                );
-
-              const newHoldings = await vault.getHoldings();
-
-              for (let i = 0; i < tokens.length; i++) {
-                if (underlyingIndexes.includes(i)) {
-                  expect(newHoldings[i]).to.equal(holdings[i]);
-                }
-              }
-            });
-          });
-        });
       });
     });
 
