@@ -1311,7 +1311,7 @@ contract AeraVaultV2 is
     ///      withdrawNecessaryTokensFromPool() and lockManagerFees().
     /// @param amounts The amounts of tokens to withdraw.
     function withdrawFromPool(uint256[] memory amounts) internal {
-        uint256[] memory managed = new uint256[](amounts.length);
+        uint256[] memory managed = new uint256[](numPoolTokens);
 
         /// Decrease cash balance and increase managed balance of the pool
         /// i.e. Move amounts from cash balance to managed balance
@@ -1488,14 +1488,13 @@ contract AeraVaultV2 is
         uint256[] memory amounts,
         IBVault.PoolBalanceOpKind kind
     ) internal {
-        uint256 numAmounts = amounts.length;
         IBVault.PoolBalanceOp[] memory ops = new IBVault.PoolBalanceOp[](
-            numAmounts
+            numPoolTokens
         );
         IERC20[] memory poolTokens = getPoolTokens();
 
         bytes32 balancerPoolId = poolId;
-        for (uint256 i = 0; i < numAmounts; i++) {
+        for (uint256 i = 0; i < numPoolTokens; i++) {
             ops[i].kind = kind;
             ops[i].poolId = balancerPoolId;
             ops[i].token = poolTokens[i];
@@ -1880,7 +1879,7 @@ contract AeraVaultV2 is
         underlyingBalances = new uint256[](numYieldTokens);
         IERC4626[] memory yieldTokens = getYieldTokens();
 
-        uint256 index = getPoolTokens().length;
+        uint256 index = numPoolTokens;
         for (uint256 i = 0; i < numYieldTokens; i++) {
             underlyingBalances[i] = yieldTokens[i].convertToAssets(
                 yieldTokens[i].balanceOf(address(this)) -
