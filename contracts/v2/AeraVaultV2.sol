@@ -449,7 +449,7 @@ contract AeraVaultV2 is
 
     /// PROTOCOL API ///
 
-    /// @inheritdoc IProtocolAPIV2
+    /// @inheritdoc IProtocolAPI
     function initialDeposit(
         TokenValue[] calldata tokenWithAmount,
         TokenValue[] calldata tokenWithWeight
@@ -538,7 +538,7 @@ contract AeraVaultV2 is
         depositTokensAndUpdateWeights(tokenWithAmount, PriceType.DETERMINED);
     }
 
-    /// @inheritdoc IProtocolAPIV2
+    /// @inheritdoc IProtocolAPI
     function depositRiskingArbitrage(TokenValue[] calldata tokenWithAmount)
         external
         override
@@ -550,7 +550,7 @@ contract AeraVaultV2 is
         depositTokensAndUpdateWeights(tokenWithAmount, PriceType.SPOT);
     }
 
-    /// @inheritdoc IProtocolAPIV2
+    /// @inheritdoc IProtocolAPI
     // slither-disable-next-line incorrect-equality
     function depositRiskingArbitrageIfBalanceUnchanged(
         TokenValue[] calldata tokenWithAmount
@@ -709,7 +709,7 @@ contract AeraVaultV2 is
         emit EnabledTradingWithWeights(block.timestamp, targetWeights);
     }
 
-    /// @inheritdoc IProtocolAPIV2
+    /// @inheritdoc IProtocolAPI
     // slither-disable-next-line calls-loop
     function enableTradingWithOraclePrice()
         external
@@ -749,7 +749,7 @@ contract AeraVaultV2 is
         emit UpdateWeightsWithOraclePrice(prices, pool.getNormalizedWeights());
     }
 
-    /// @inheritdoc IProtocolAPIV2
+    /// @inheritdoc IProtocolAPI
     function setOraclesEnabled(bool enabled)
         external
         override
@@ -988,7 +988,7 @@ contract AeraVaultV2 is
         }
     }
 
-    /// @inheritdoc IUserAPIV2
+    /// @inheritdoc IUserAPI
     function getNormalizedWeights()
         public
         view
@@ -1034,7 +1034,7 @@ contract AeraVaultV2 is
         return pool.getSwapFeePercentage();
     }
 
-    /// @inheritdoc IUserAPIV2
+    /// @inheritdoc IUserAPI
     function getTokensData()
         public
         view
@@ -1069,7 +1069,7 @@ contract AeraVaultV2 is
         }
     }
 
-    /// @inheritdoc IUserAPIV2
+    /// @inheritdoc IUserAPI
     function getTokens()
         public
         view

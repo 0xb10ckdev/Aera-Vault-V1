@@ -41,4 +41,9 @@ interface IManagerAPI {
     /// @notice Disable swap.
     function disableTrading() external;
     */
+
+    /* This function is defined in IProtocolAPI.sol
+    /// @notice Enable or disable using oracle prices.
+    function setOraclesEnabled(bool enabled) external;
+    */
 }
