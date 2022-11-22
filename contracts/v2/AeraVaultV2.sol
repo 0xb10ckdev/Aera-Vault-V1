@@ -2060,27 +2060,41 @@ contract AeraVaultV2 is
     /// @notice Calculate the amounts of pool tokens to withdraw from Balancer Pool.
     /// @dev Will only be called by depositToYieldTokens().
     /// @param underlyingIndexes Array of underlying indexes.
+    /// @param poolHoldings Balances of tokens in Balancer Pool.
     /// @param depositAmounts Amounts of underlying assets to deposit to yield tokens.
     /// @param balances The balance of underlying assets in Vault.
     /// @return necessaryAmounts Amounts of pool tokens to withdraw from Balancer Pool.
     function calcNecessaryAmounts(
         uint256[] memory underlyingIndexes,
+        uint256[] memory poolHoldings,
         uint256[] memory depositAmounts,
         uint256[] memory balances
     ) internal view returns (uint256[] memory necessaryAmounts) {
+        uint256[] memory availableHoldings = new uint256[](numPoolTokens);
+        uint256[] memory poolWeights = pool.getNormalizedWeights();
+
+        for (uint256 i = 0; i < numPoolTokens; i++) {
+            availableHoldings[i] =
+                (poolHoldings[i] * (poolWeights[i] - MIN_WEIGHT)) /
+                poolWeights[i];
+        }
+
         necessaryAmounts = new uint256[](numPoolTokens);
-        uint256[] memory poolHoldings = getPoolHoldings();
-        uint256 underlyingIndex;
 
         for (uint256 i = 0; i < numYieldTokens; i++) {
-            underlyingIndex = underlyingIndexes[i];
             if (depositAmounts[i] > 0) {
-                if (
-                    necessaryAmounts[underlyingIndex] + depositAmounts[i] <
-                    poolHoldings[underlyingIndex] + balances[underlyingIndex]
-                ) {
-                    necessaryAmounts[underlyingIndex] += depositAmounts[i];
-                }
+                necessaryAmounts[underlyingIndexes[i]] += depositAmounts[i];
+            }
+        }
+        for (uint256 i = 0; i < numPoolTokens; i++) {
+            if (necessaryAmounts[i] <= balances[i]) {
+                necessaryAmounts[i] = 0;
+            } else if (
+                necessaryAmounts[i] > availableHoldings[i] + balances[i]
+            ) {
+                necessaryAmounts[i] = availableHoldings[i];
+            } else {
+                necessaryAmounts[i] -= balances[i];
             }
         }
     }
@@ -2103,11 +2117,6 @@ contract AeraVaultV2 is
 
         uint256[] memory currentBalances = new uint256[](numPoolTokens);
         for (uint256 i = 0; i < numPoolTokens; i++) {
-            if (necessaryAmounts[i] > newBalances[i]) {
-                necessaryAmounts[i] -= newBalances[i];
-            } else {
-                necessaryAmounts[i] = 0;
-            }
             if (necessaryAmounts[i] > 0) {
                 currentBalances[i] = tokens[i].balanceOf(address(this));
             }
@@ -2144,10 +2153,9 @@ contract AeraVaultV2 is
         uint256[] memory depositAmounts,
         uint256[] memory balances
     ) internal {
-        uint256 underlyingIndex;
-
         uint256[] memory necessaryAmounts = calcNecessaryAmounts(
             underlyingIndexes,
+            poolHoldings,
             depositAmounts,
             balances
         );
@@ -2158,18 +2166,16 @@ contract AeraVaultV2 is
             necessaryAmounts
         );
 
+        uint256 underlyingIndex;
         uint256 depositedAmount;
         uint256 index = numPoolTokens;
         for (uint256 i = 0; i < numYieldTokens; i++) {
             underlyingIndex = underlyingIndexes[i];
-            if (
-                depositAmounts[i] > 0 &&
-                depositAmounts[i] <= balances[underlyingIndex]
-            ) {
+            if (depositAmounts[i] > 0 && balances[underlyingIndex] > 0) {
                 depositedAmount = depositUnderlyingAsset(
                     yieldTokens[i],
                     poolTokens[underlyingIndex],
-                    depositAmounts[i]
+                    Math.min(depositAmounts[i], balances[i])
                 );
                 balances[underlyingIndex] -= depositedAmount;
             }
