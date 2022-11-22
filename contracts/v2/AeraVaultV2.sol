@@ -41,6 +41,9 @@ contract AeraVaultV2 is
 
     uint256 internal constant ONE = 10**18;
 
+    /// @notice Mininum weight of pool tokens in Balancer Pool.
+    uint256 private constant MIN_WEIGHT = 0.01e18;
+
     /// @notice Minimum period for weight change duration.
     uint256 private constant MINIMUM_WEIGHT_CHANGE_DURATION = 4 hours;
 
@@ -835,9 +838,17 @@ contract AeraVaultV2 is
 
         checkWeights(targetWeights);
 
-        adjustYieldTokens(poolTokens, poolHoldings, targetWeights);
+        uint256[] memory underlyingIndexes = getUnderlyingIndexes();
+
+        adjustYieldTokens(
+            poolTokens,
+            underlyingIndexes,
+            poolHoldings,
+            targetWeights
+        );
 
         uint256[] memory targetPoolWeights = adjustPoolWeights(
+            underlyingIndexes,
             poolHoldings,
             targetWeights
         );
@@ -995,17 +1006,23 @@ contract AeraVaultV2 is
         returns (uint256[] memory weights)
     {
         uint256[] memory poolHoldings = getPoolHoldings();
+        uint256[] memory underlyingIndexes = getUnderlyingIndexes();
         uint256[] memory underlyingBalances = getUnderlyingBalances();
         (uint256[] memory oraclePrices, ) = getOraclePrices();
 
         uint256 value = getValue(
-            getUnderlyingTotalBalances(poolHoldings, underlyingBalances),
+            getUnderlyingTotalBalances(
+                underlyingIndexes,
+                poolHoldings,
+                underlyingBalances
+            ),
             oraclePrices
         );
 
         weights = calcNormalizedWeights(
             value,
             oraclePrices,
+            underlyingIndexes,
             underlyingBalances
         );
     }
@@ -1660,7 +1677,9 @@ contract AeraVaultV2 is
             uint256[] memory updatedAt
         ) = getOraclePrices();
         uint256[] memory spotPrices = getSpotPrices(poolHoldings);
+        uint256[] memory underlyingIndexes = getUnderlyingIndexes();
         uint256[] memory underlyingTotalBalances = getUnderlyingTotalBalances(
+            underlyingIndexes,
             poolHoldings,
             getUnderlyingBalances()
         );
@@ -1777,47 +1796,65 @@ contract AeraVaultV2 is
 
     /// @notice Adjust the balance of underlying assets in yield tokens.
     /// @dev Will only be called by updateWeightsGradually().
-    /// @param tokens Array of underlying assets.
+    /// @param poolTokens Array of pool tokens.
+    /// @param underlyingIndexes Array of underlying indexes.
     /// @param poolHoldings Balances of tokens in Balancer Pool.
     /// @param targetWeights Target weights of tokens in Vault.
     function adjustYieldTokens(
-        IERC20[] memory tokens,
+        IERC20[] memory poolTokens,
+        uint256[] memory underlyingIndexes,
         uint256[] memory poolHoldings,
         uint256[] memory targetWeights
     ) internal {
         uint256[] memory underlyingBalances = getUnderlyingBalances();
+        IERC4626[] memory yieldTokens = getYieldTokens();
+
         (
             uint256[] memory depositAmounts,
             uint256[] memory withdrawAmounts
         ) = calcAdjustmentAmounts(
+                underlyingIndexes,
                 poolHoldings,
                 underlyingBalances,
                 targetWeights
             );
 
         uint256[] memory balances = withdrawFromYieldTokens(
-            tokens,
+            poolTokens,
+            yieldTokens,
+            underlyingIndexes,
             withdrawAmounts
         );
 
-        depositToYieldTokens(depositAmounts, balances);
+        depositToYieldTokens(
+            poolTokens,
+            yieldTokens,
+            underlyingIndexes,
+            poolHoldings,
+            depositAmounts,
+            balances
+        );
     }
 
     /// @notice Adjust the weights of tokens in the Balancer Pool.
     /// @dev Will only be called by updateWeightsGradually().
+    /// @param underlyingIndexes Array of underlying indexes.
     /// @param poolHoldings Balances of tokens in Balancer Pool.
     /// @param targetWeights Target weights of tokens in Vault.
     /// @return targetPoolWeights Target weights of pool tokens should be scheduled.
     function adjustPoolWeights(
+        uint256[] memory underlyingIndexes,
         uint256[] memory poolHoldings,
         uint256[] memory targetWeights
     ) internal returns (uint256[] memory targetPoolWeights) {
         uint256[] memory newPoolWeights = new uint256[](numPoolTokens);
-        targetPoolWeights = getUnderlyingTotalWeights(targetWeights);
+        targetPoolWeights = getUnderlyingTotalWeights(
+            underlyingIndexes,
+            targetWeights
+        );
         uint256[] memory currentPoolHoldings = getPoolHoldings();
         uint256[] memory poolWeights = pool.getNormalizedWeights();
         uint256[] memory currentWeights = getNormalizedWeights();
-        uint256[] memory underlyingIndexes = getUnderlyingIndexes();
 
         uint256 index = numPoolTokens;
         for (uint256 i = 0; i < numYieldTokens; i++) {
@@ -1845,15 +1882,14 @@ contract AeraVaultV2 is
 
     /// @notice Get the total weights of pool tokens in Vault.
     /// @dev Will only be called by adjustPoolWeights().
+    /// @param underlyingIndexes Array of underlying indexes.
     /// @param weights Weights of tokens in Vault.
     /// @return underlyingTotalWeights Total weights of pool tokens.
-    function getUnderlyingTotalWeights(uint256[] memory weights)
-        internal
-        view
-        returns (uint256[] memory underlyingTotalWeights)
-    {
+    function getUnderlyingTotalWeights(
+        uint256[] memory underlyingIndexes,
+        uint256[] memory weights
+    ) internal view returns (uint256[] memory underlyingTotalWeights) {
         underlyingTotalWeights = new uint256[](numPoolTokens);
-        uint256[] memory underlyingIndexes = getUnderlyingIndexes();
 
         for (uint256 i = 0; i < numPoolTokens; i++) {
             underlyingTotalWeights[i] = weights[i];
@@ -1894,15 +1930,16 @@ contract AeraVaultV2 is
     /// @notice Get the total balance of pool tokens in Vault.
     /// @dev Will only be called by getNormalizedWeights(), getDeterminedPrices()
     ///      and calcAdjustmentAmounts().
+    /// @param underlyingIndexes Array of underlying indexes.
     /// @param poolHoldings Balances of tokens in Balancer Pool.
     /// @param underlyingBalances Total balance of underlying assets in yield tokens.
     /// @return underlyingTotalBalances Total balance of pool tokens.
     function getUnderlyingTotalBalances(
+        uint256[] memory underlyingIndexes,
         uint256[] memory poolHoldings,
         uint256[] memory underlyingBalances
     ) internal view returns (uint256[] memory underlyingTotalBalances) {
         underlyingTotalBalances = new uint256[](numPoolTokens);
-        uint256[] memory underlyingIndexes = getUnderlyingIndexes();
 
         for (uint256 i = 0; i < numPoolTokens; i++) {
             underlyingTotalBalances[i] = poolHoldings[i];
@@ -1923,16 +1960,17 @@ contract AeraVaultV2 is
     /// @dev Will only be called by getNormalizedWeights().
     /// @param value Total value in the base token term.
     /// @param oraclePrices Array of oracle prices.
+    /// @param underlyingIndexes Array of underlying indexes.
     /// @param underlyingBalances Total balance of underlying assets in yield tokens.
     /// @return weights Normalized weights of tokens in Vault.
     function calcNormalizedWeights(
         uint256 value,
         uint256[] memory oraclePrices,
+        uint256[] memory underlyingIndexes,
         uint256[] memory underlyingBalances
     ) internal view returns (uint256[] memory weights) {
         weights = new uint256[](numTokens);
         uint256[] memory poolWeights = pool.getNormalizedWeights();
-        uint256[] memory underlyingIndexes = getUnderlyingIndexes();
         uint256 poolWeightSum = ONE;
 
         uint256 weight = 0;
@@ -1964,12 +2002,14 @@ contract AeraVaultV2 is
 
     /// @notice Calculate the amounts of underlying assets of yield tokens to adjust.
     /// @dev Will only be called by adjustYieldTokens().
+    /// @param underlyingIndexes Array of underlying indexes.
     /// @param poolHoldings Balances of tokens in Balancer Pool.
     /// @param underlyingBalances Total balance of underlying assets in yield tokens.
     /// @param targetWeights Target weights of tokens in Vault.
     /// @return depositAmounts Amounts of underlying assets to deposit to yield tokens.
     /// @return withdrawAmounts Amounts of underlying assets to withdraw from yield tokens.
     function calcAdjustmentAmounts(
+        uint256[] memory underlyingIndexes,
         uint256[] memory poolHoldings,
         uint256[] memory underlyingBalances,
         uint256[] memory targetWeights
@@ -1989,13 +2029,16 @@ contract AeraVaultV2 is
         checkOracleStatus(updatedAt);
 
         uint256 value = getValue(
-            getUnderlyingTotalBalances(poolHoldings, underlyingBalances),
+            getUnderlyingTotalBalances(
+                underlyingIndexes,
+                poolHoldings,
+                underlyingBalances
+            ),
             oraclePrices
         );
 
         depositAmounts = new uint256[](numYieldTokens);
         withdrawAmounts = new uint256[](numYieldTokens);
-        uint256[] memory underlyingIndexes = getUnderlyingIndexes();
 
         uint256 targetBalance;
         uint256 index = numPoolTokens;
@@ -2016,16 +2059,17 @@ contract AeraVaultV2 is
 
     /// @notice Calculate the amounts of pool tokens to withdraw from Balancer Pool.
     /// @dev Will only be called by depositToYieldTokens().
+    /// @param underlyingIndexes Array of underlying indexes.
     /// @param depositAmounts Amounts of underlying assets to deposit to yield tokens.
     /// @param balances The balance of underlying assets in Vault.
     /// @return necessaryAmounts Amounts of pool tokens to withdraw from Balancer Pool.
     function calcNecessaryAmounts(
+        uint256[] memory underlyingIndexes,
         uint256[] memory depositAmounts,
         uint256[] memory balances
     ) internal view returns (uint256[] memory necessaryAmounts) {
         necessaryAmounts = new uint256[](numPoolTokens);
         uint256[] memory poolHoldings = getPoolHoldings();
-        uint256[] memory underlyingIndexes = getUnderlyingIndexes();
         uint256 underlyingIndex;
 
         for (uint256 i = 0; i < numYieldTokens; i++) {
@@ -2086,18 +2130,24 @@ contract AeraVaultV2 is
     /// @dev Will only be called by adjustYieldTokens().
     ///      After underlying assets are deposited to yield tokens, it deposits left
     ///      tokens to Balancer Pool.
+    /// @param poolTokens Array of pool tokens.
+    /// @param yieldTokens Array of yield tokens.
+    /// @param underlyingIndexes Array of underlying indexes.
+    /// @param poolHoldings Balances of tokens in Balancer Pool.
     /// @param depositAmounts Amounts of underlying assets to deposit to yield tokens.
     /// @param balances The balance of underlying assets in Vault.
     function depositToYieldTokens(
+        IERC20[] memory poolTokens,
+        IERC4626[] memory yieldTokens,
+        uint256[] memory underlyingIndexes,
+        uint256[] memory poolHoldings,
         uint256[] memory depositAmounts,
         uint256[] memory balances
     ) internal {
-        IERC20[] memory poolTokens = getPoolTokens();
-        IERC4626[] memory yieldTokens = getYieldTokens();
-        uint256[] memory underlyingIndexes = getUnderlyingIndexes();
         uint256 underlyingIndex;
 
         uint256[] memory necessaryAmounts = calcNecessaryAmounts(
+            underlyingIndexes,
             depositAmounts,
             balances
         );
@@ -2170,16 +2220,18 @@ contract AeraVaultV2 is
 
     /// @notice Withdraw the amounts of underlying assets from yield tokens.
     /// @dev Will only be called by adjustYieldTokens().
-    /// @param tokens Array of pool tokens.
+    /// @param poolTokens Array of pool tokens.
+    /// @param yieldTokens Array of yield tokens.
+    /// @param underlyingIndexes Array of underlying indexes.
     /// @param withdrawAmounts Amounts of underlying assets to withdraw from yield tokens.
     /// @return amounts Exact withdrawn amounts of an underlying asset.
     function withdrawFromYieldTokens(
-        IERC20[] memory tokens,
+        IERC20[] memory poolTokens,
+        IERC4626[] memory yieldTokens,
+        uint256[] memory underlyingIndexes,
         uint256[] memory withdrawAmounts
     ) internal returns (uint256[] memory amounts) {
         amounts = new uint256[](numPoolTokens);
-        IERC4626[] memory yieldTokens = getYieldTokens();
-        uint256[] memory underlyingIndexes = getUnderlyingIndexes();
 
         uint256 underlyingIndex;
         uint256 index = numPoolTokens;
@@ -2188,7 +2240,7 @@ contract AeraVaultV2 is
                 underlyingIndex = underlyingIndexes[i];
                 amounts[underlyingIndex] += withdrawUnderlyingAsset(
                     yieldTokens[i],
-                    tokens[underlyingIndex],
+                    poolTokens[underlyingIndex],
                     withdrawAmounts[i]
                 );
             }
