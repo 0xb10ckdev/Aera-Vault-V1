@@ -1004,7 +1004,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           beforeEach(async function () {
             const timestamp = await getCurrentTime();
             startTime = timestamp + 10;
-            endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
+            endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 10000;
           });
 
           describe("when underlying tokens are enough to mint yield tokens", async () => {
