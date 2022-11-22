@@ -1830,7 +1830,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           beforeEach(async function () {
             const timestamp = await getCurrentTime();
             startTime = timestamp + 10;
-            endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
+            endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 10000;
           });
 
           describe("when underlying tokens are enough to mint yield tokens", async () => {
@@ -2035,18 +2035,18 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
           it("when underlying tokens are not enough to mint yield tokens", async () => {
             const weights = await vault.getNormalizedWeights();
+            let poolWeights = normalizeWeights(
+              weights.slice(0, poolTokens.length),
+            );
             let targetWeights = [...weights];
             for (let i = 0; i < yieldTokens.length; i++) {
               targetWeights[underlyingIndexes[i]] = toWei(0.1);
               targetWeights[i + poolTokens.length] = toWei(0.9);
-            }
-            for (let i = 0; i < poolTokens.length; i++) {
-              if (!underlyingIndexes.includes(i)) {
-                targetWeights[i] = toWei(0.1);
-              }
+              poolWeights[underlyingIndexes[i]] = MIN_WEIGHT;
             }
 
             targetWeights = normalizeWeights(targetWeights);
+            poolWeights = normalizeWeights(poolWeights);
 
             await vault
               .connect(manager)
@@ -2057,9 +2057,27 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
               );
 
             let newWeights = await vault.getNormalizedWeights();
+            const newPoolWeights = normalizeWeights(
+              newWeights.slice(0, poolTokens.length),
+            );
 
-            for (let i = 0; i < tokens.length; i++) {
-              expect(newWeights[i]).to.be.closeTo(weights[i], DEVIATION);
+            for (let i = 0; i < poolTokens.length; i++) {
+              expect(newPoolWeights[i]).to.be.closeTo(
+                poolWeights[i],
+                DEVIATION,
+              );
+            }
+            for (let i = 0; i < yieldTokens.length; i++) {
+              expect(
+                newWeights[i + poolTokens.length].add(
+                  newWeights[underlyingIndexes[i]],
+                ),
+              ).to.be.closeTo(
+                weights[i + poolTokens.length].add(
+                  weights[underlyingIndexes[i]],
+                ),
+                DEVIATION,
+              );
             }
 
             await increaseTime(endTime - (await getCurrentTime()));
@@ -2067,36 +2085,16 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             newWeights = await vault.getNormalizedWeights();
 
             for (let i = 0; i < yieldTokens.length; i++) {
-              expect(newWeights[i + poolTokens.length]).to.be.closeTo(
-                weights[i + poolTokens.length],
+              expect(
+                newWeights[i + poolTokens.length].add(
+                  newWeights[underlyingIndexes[i]],
+                ),
+              ).to.be.closeTo(
+                targetWeights[i + poolTokens.length].add(
+                  targetWeights[underlyingIndexes[i]],
+                ),
                 DEVIATION,
               );
-              expect(newWeights[underlyingIndexes[i]]).to.be.closeTo(
-                targetWeights[i + poolTokens.length]
-                  .add(targetWeights[underlyingIndexes[i]])
-                  .sub(weights[i + poolTokens.length]),
-                DEVIATION,
-              );
-            }
-            for (let i = 0; i < tokens.length; i++) {
-              if (i >= poolTokens.length) {
-                expect(newWeights[i]).to.be.closeTo(weights[i], DEVIATION);
-                expect(
-                  newWeights[underlyingIndexes[i - poolTokens.length]],
-                ).to.be.closeTo(
-                  targetWeights[i]
-                    .add(
-                      targetWeights[underlyingIndexes[i - poolTokens.length]],
-                    )
-                    .sub(weights[i]),
-                  DEVIATION,
-                );
-              } else if (!underlyingIndexes.includes(i)) {
-                expect(newWeights[i]).to.be.closeTo(
-                  targetWeights[i],
-                  DEVIATION,
-                );
-              }
             }
           });
 
@@ -2674,7 +2672,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         }
       });
 
-      it.only("when set swap fees and update weights", async () => {
+      it("when set swap fees and update weights", async () => {
         const newFee = MIN_SWAP_FEE.add(1);
         const timestamp = await getCurrentTime();
         const endWeights = [];
