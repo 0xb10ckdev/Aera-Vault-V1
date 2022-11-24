@@ -127,9 +127,21 @@ export function testWithdraw(): void {
               ? await this.vault.getSpotPrices(this.sortedTokens[i])
               : [];
 
-          await this.vault.withdraw(
+          const trx = await this.vault.withdraw(
             tokenWithValues(this.tokenAddresses, amounts),
           );
+
+          const weights = await this.vault.getNormalizedWeights();
+
+          await expect(trx)
+            .to.emit(this.vault, "Withdraw")
+            .withArgs(
+              amounts,
+              amounts,
+              valueArray(toWei(100000), this.tokens.length),
+              weights,
+            );
+
           const newManagersFeeTotal = await this.getManagersFeeTotal();
 
           if (i < this.poolTokens.length) {
@@ -191,9 +203,100 @@ export function testWithdraw(): void {
           );
         }
 
-        await this.vault.withdraw(
+        const trx = await this.vault.withdraw(
           tokenWithValues(this.tokenAddresses, amounts),
         );
+
+        const weights = await this.vault.getNormalizedWeights();
+
+        await expect(trx)
+          .to.emit(this.vault, "Withdraw")
+          .withArgs(
+            amounts,
+            amounts,
+            valueArray(toWei(100000), this.tokens.length),
+            weights,
+          );
+
+        const newManagersFeeTotal = await this.getManagersFeeTotal();
+
+        const { holdings: newHoldings, adminBalances: newAdminBalances } =
+          await this.getState();
+
+        for (let i = 0; i < this.poolTokens.length; i++) {
+          const newSpotPrices = await this.vault.getSpotPrices(
+            this.sortedTokens[i],
+          );
+
+          expect(
+            await this.vault.getSpotPrice(
+              this.sortedTokens[i],
+              this.sortedTokens[(i + 1) % this.poolTokens.length],
+            ),
+          ).to.equal(newSpotPrices[(i + 1) % this.poolTokens.length]);
+
+          for (let j = 0; j < this.poolTokens.length; j++) {
+            expect(newSpotPrices[j]).to.be.closeTo(
+              spotPrices[i][j],
+              spotPrices[i][j].mul(PRICE_DEVIATION).div(ONE).toNumber(),
+            );
+          }
+        }
+        for (let i = 0; i < this.tokens.length; i++) {
+          expect(await this.vault.holding(i)).to.equal(newHoldings[i]);
+          expect(newHoldings[i]).to.equal(
+            holdings[i]
+              .sub(amounts[i])
+              .sub(newManagersFeeTotal[i])
+              .add(managersFeeTotal[i]),
+          );
+          expect(newAdminBalances[i]).to.equal(
+            adminBalances[i].add(amounts[i]),
+          );
+        }
+      });
+
+      it("when withdrawing tokens with withdrawIfBalanceUnchanged", async function () {
+        for (let i = 0; i < this.tokens.length; i++) {
+          await this.tokens[i].approve(this.vault.address, toWei(100000));
+        }
+        await this.vault.depositRiskingArbitrage(
+          tokenValueArray(
+            this.tokenAddresses,
+            toWei(10000),
+            this.tokens.length,
+          ),
+        );
+
+        const { holdings, adminBalances } = await this.getState();
+        const managersFeeTotal = await this.getManagersFeeTotal();
+
+        const amounts = this.tokens.map(() =>
+          toWei(Math.floor(10 + Math.random() * 10)),
+        );
+
+        const spotPrices = [];
+        for (let i = 0; i < this.poolTokens.length; i++) {
+          spotPrices.push(
+            await this.vault.getSpotPrices(this.sortedTokens[i]),
+          );
+        }
+
+        const trx = await this.vault.withdraw(
+          tokenWithValues(this.tokenAddresses, amounts),
+        );
+
+        const weights = await this.vault.getNormalizedWeights();
+
+        await expect(trx)
+          .to.emit(this.vault, "Withdraw")
+          .withArgs(
+            amounts,
+            amounts,
+            valueArray(toWei(100000), this.tokens.length),
+            weights,
+          );
+
         const newManagersFeeTotal = await this.getManagersFeeTotal();
 
         const { holdings: newHoldings, adminBalances: newAdminBalances } =

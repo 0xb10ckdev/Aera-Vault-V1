@@ -37,7 +37,10 @@ export function testDisableTrading(): void {
     expect(await this.vault.isSwapEnabled()).to.equal(true);
 
     expect(await this.vault.estimateGas.disableTrading()).to.below(52000);
-    await this.vault.connect(this.manager).disableTrading();
+
+    await expect(this.vault.connect(this.manager).disableTrading())
+      .to.emit(this.vault, "SetSwapEnabled")
+      .withArgs(false);
 
     expect(await this.vault.isSwapEnabled()).to.equal(false);
   });

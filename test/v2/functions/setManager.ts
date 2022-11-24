@@ -24,7 +24,11 @@ export function testSetManager(): void {
 
   it("should be possible to change manager", async function () {
     expect(await this.vault.manager()).to.equal(this.manager.address);
-    await this.vault.setManager(this.user.address);
+
+    await expect(this.vault.setManager(this.user.address))
+      .to.emit(this.vault, "ManagerChanged")
+      .withArgs(this.manager.address, this.user.address);
+
     expect(await this.vault.manager()).to.equal(this.user.address);
   });
 }

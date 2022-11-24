@@ -1,5 +1,6 @@
 export { testDeployment } from "../functions/deployment";
 export { testFunctionCallsWhenNotInitialized } from "../functions/callFunctionsWhenNotInitialized";
+export { testFunctionCallsWhenFinalized } from "../functions/callFunctionsWhenFinalized";
 export { testInitialDeposit } from "../functions/initialDeposit";
 export { testDeposit } from "../functions/deposit";
 export { testDepositRiskingArbitrage } from "../functions/depositRiskingArbitrage";

@@ -47,7 +47,10 @@ export function testSetSwapFee(): void {
     expect(
       await this.vault.connect(this.manager).estimateGas.setSwapFee(newFee),
     ).to.below(90000);
-    await this.vault.connect(this.manager).setSwapFee(newFee);
+
+    await expect(this.vault.connect(this.manager).setSwapFee(newFee))
+      .to.emit(this.vault, "SetSwapFee")
+      .withArgs(newFee);
 
     expect(await this.vault.getSwapFee()).to.equal(newFee);
   });

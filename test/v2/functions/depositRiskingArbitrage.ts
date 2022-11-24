@@ -87,9 +87,16 @@ export function testDepositRiskingArbitrage(): void {
             ? await this.vault.getSpotPrices(this.sortedTokens[i])
             : [];
 
-        await this.vault.depositRiskingArbitrage(
+        const trx = await this.vault.depositRiskingArbitrage(
           tokenWithValues(this.tokenAddresses, amounts),
         );
+
+        const weights = await this.vault.getNormalizedWeights();
+
+        await expect(trx)
+          .to.emit(this.vault, "Deposit")
+          .withArgs(amounts, amounts, weights);
+
         const newManagersFeeTotal = await this.getManagersFeeTotal();
 
         const { holdings: newHoldings, adminBalances: newAdminBalances } =
@@ -139,9 +146,74 @@ export function testDepositRiskingArbitrage(): void {
         await this.tokens[i].approve(this.vault.address, amounts[i]);
       }
 
-      await this.vault.depositRiskingArbitrage(
+      const trx = await this.vault.depositRiskingArbitrage(
         tokenWithValues(this.tokenAddresses, amounts),
       );
+
+      const weights = await this.vault.getNormalizedWeights();
+
+      await expect(trx)
+        .to.emit(this.vault, "Deposit")
+        .withArgs(amounts, amounts, weights);
+
+      const managersFeeTotal = await this.getManagersFeeTotal();
+
+      const { holdings: newHoldings, adminBalances: newAdminBalances } =
+        await this.getState();
+
+      for (let i = 0; i < this.poolTokens.length; i++) {
+        const newSpotPrices = await this.vault.getSpotPrices(
+          this.sortedTokens[i],
+        );
+
+        expect(
+          await this.vault.getSpotPrice(
+            this.sortedTokens[i],
+            this.sortedTokens[(i + 1) % this.poolTokens.length],
+          ),
+        ).to.equal(newSpotPrices[(i + 1) % this.poolTokens.length]);
+
+        for (let j = 0; j < this.poolTokens.length; j++) {
+          expect(newSpotPrices[j]).to.be.closeTo(
+            spotPrices[i][j],
+            spotPrices[i][j].mul(PRICE_DEVIATION).div(ONE).toNumber(),
+          );
+        }
+      }
+      for (let i = 0; i < this.tokens.length; i++) {
+        expect(await this.vault.holding(i)).to.equal(newHoldings[i]);
+        expect(newHoldings[i]).to.equal(
+          holdings[i].add(amounts[i]).sub(managersFeeTotal[i]),
+        );
+        expect(newAdminBalances[i]).to.equal(adminBalances[i].sub(amounts[i]));
+      }
+    });
+
+    it("when depositing tokens with depositRiskingArbitrageIfBalanceUnchanged", async function () {
+      const { holdings, adminBalances } = await this.getState();
+
+      const amounts = this.tokens.map(() =>
+        toWei(Math.floor(10 + Math.random() * 10)),
+      );
+
+      const spotPrices = [];
+      for (let i = 0; i < this.poolTokens.length; i++) {
+        spotPrices.push(await this.vault.getSpotPrices(this.sortedTokens[i]));
+      }
+      for (let i = 0; i < this.tokens.length; i++) {
+        await this.tokens[i].approve(this.vault.address, amounts[i]);
+      }
+
+      const trx = await this.vault.depositRiskingArbitrageIfBalanceUnchanged(
+        tokenWithValues(this.tokenAddresses, amounts),
+      );
+
+      const weights = await this.vault.getNormalizedWeights();
+
+      await expect(trx)
+        .to.emit(this.vault, "Deposit")
+        .withArgs(amounts, amounts, weights);
+
       const managersFeeTotal = await this.getManagersFeeTotal();
 
       const { holdings: newHoldings, adminBalances: newAdminBalances } =

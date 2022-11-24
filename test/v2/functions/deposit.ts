@@ -201,7 +201,15 @@ export function testDeposit(): void {
         await this.tokens[i].approve(this.vault.address, amounts[i]);
       }
 
-      await this.vault.deposit(tokenWithValues(this.tokenAddresses, amounts));
+      const trx = await this.vault.deposit(
+        tokenWithValues(this.tokenAddresses, amounts),
+      );
+
+      const weights = await this.vault.getNormalizedWeights();
+
+      await expect(trx)
+        .to.emit(this.vault, "Deposit")
+        .withArgs(amounts, amounts, weights);
 
       const newSpotPrices = await this.vault.getSpotPrices(
         this.sortedTokens[0],
@@ -236,7 +244,15 @@ export function testDeposit(): void {
         await this.tokens[i].approve(this.vault.address, amounts[i]);
       }
 
-      await this.vault.deposit(tokenWithValues(this.tokenAddresses, amounts));
+      const trx = await this.vault.deposit(
+        tokenWithValues(this.tokenAddresses, amounts),
+      );
+
+      const weights = await this.vault.getNormalizedWeights();
+
+      await expect(trx)
+        .to.emit(this.vault, "Deposit")
+        .withArgs(amounts, amounts, weights);
 
       const newSpotPrices = await this.vault.getSpotPrices(
         this.sortedTokens[0],
@@ -271,7 +287,15 @@ export function testDeposit(): void {
         await this.tokens[i].approve(this.vault.address, amounts[i]);
       }
 
-      await this.vault.deposit(tokenWithValues(this.tokenAddresses, amounts));
+      const trx = await this.vault.deposit(
+        tokenWithValues(this.tokenAddresses, amounts),
+      );
+
+      const weights = await this.vault.getNormalizedWeights();
+
+      await expect(trx)
+        .to.emit(this.vault, "Deposit")
+        .withArgs(amounts, amounts, weights);
 
       const newSpotPrices = await this.vault.getSpotPrices(
         this.sortedTokens[0],

@@ -40,9 +40,12 @@ export function testCancelWeightUpdates(): void {
 
     await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION / 2);
 
-    await this.vault.connect(this.manager).cancelWeightUpdates();
-
+    const trx = await this.vault.connect(this.manager).cancelWeightUpdates();
     const newWeights = await this.vault.getNormalizedWeights();
+
+    await expect(trx)
+      .to.emit(this.vault, "CancelWeightUpdates")
+      .withArgs(newWeights);
 
     await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION / 2);
 

@@ -1,10 +1,12 @@
 import { expect } from "chai";
 import { DEVIATION, ONE } from "../constants";
 import {
+  getTimestamp,
   normalizeWeights,
   tokenValueArray,
   tokenWithValues,
   toWei,
+  valueArray,
 } from "../utils";
 
 export function testEnableTradingWithWeights(): void {
@@ -78,9 +80,18 @@ export function testEnableTradingWithWeights(): void {
       }
     }
 
-    await this.vault.enableTradingWithWeights(
+    const trx = await this.vault.enableTradingWithWeights(
       tokenWithValues(this.tokenAddresses, normalizeWeights(endWeights)),
     );
+
+    const currentTime = await getTimestamp(trx.blockNumber);
+
+    await expect(trx)
+      .to.emit(this.vault, "EnabledTradingWithWeights")
+      .withArgs(
+        currentTime,
+        normalizeWeights(valueArray(ONE, this.tokens.length)),
+      );
 
     const endPoolWeights = normalizeWeights(
       normalizeWeights(endWeights).slice(0, this.poolTokens.length),
