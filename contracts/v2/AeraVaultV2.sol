@@ -57,14 +57,14 @@ contract AeraVaultV2 is
     uint256 private constant SWAP_FEE_COOLDOWN_PERIOD = 1 minutes;
 
     /// @notice Largest possible weight change ratio per second.
-    /// @dev The increment/decrement factor per one second.
+    /// @dev The increment/decrement factor per second.
     ///      Increment/decrement factor per n seconds: Fn = f * n
     ///      Weight growth range for n seconds: [1 / Fn - 1, Fn - 1]
     ///      E.g. increment/decrement factor per 2000 seconds is 2
     ///      Weight growth range for 2000 seconds is [-50%, 100%]
     uint256 private constant MAX_WEIGHT_CHANGE_RATIO = 10**15;
 
-    /// @notice Largest management fee earned proportion per one second.
+    /// @notice Largest management fee earned proportion per second.
     /// @dev 0.0000001% per second, i.e. 3.1536% per year.
     ///      0.0000001% * (365 * 24 * 60 * 60) = 3.1536%
     uint256 private constant MAX_MANAGEMENT_FEE = 10**9;
@@ -290,7 +290,7 @@ contract AeraVaultV2 is
     error Aera__WeightIsAboveMax(uint256 actual, uint256 max);
     error Aera__WeightIsBelowMin(uint256 actual, uint256 min);
     error Aera__AmountIsBelowMin(uint256 actual, uint256 min);
-    error Aera__AmountExceedAvailable(
+    error Aera__AmountExceedsAvailable(
         address token,
         uint256 amount,
         uint256 available
@@ -1280,7 +1280,7 @@ contract AeraVaultV2 is
 
         for (uint256 i = 0; i < numTokens; i++) {
             if (amounts[i] > holdings[i] || amounts[i] > allowances[i]) {
-                revert Aera__AmountExceedAvailable(
+                revert Aera__AmountExceedsAvailable(
                     address(tokens[i]),
                     amounts[i],
                     Math.min(holdings[i], allowances[i])
