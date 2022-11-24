@@ -49,6 +49,7 @@ import {
   testEnableTradingWithOraclePrice,
   testEnableTradingWithWeights,
   testFinalize,
+  testFunctionCallsWhenFinalized,
   testFunctionCallsWhenNotInitialized,
   testGetSpotPrices,
   testInitialDeposit,
@@ -290,7 +291,13 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     });
 
     describe("when finalize", function () {
-      testFinalize();
+      describe("should be reverted to call functions when finalized", async () => {
+        testFunctionCallsWhenFinalized();
+      })
+
+      describe("initialize Vault", function () {
+        testFinalize();
+      });
     });
 
     describe("when enable/disable trading", function () {
