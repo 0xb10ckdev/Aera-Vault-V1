@@ -29,9 +29,45 @@ import {
   valueArray,
 } from "../utils";
 import { ONE } from "../constants";
+import { IERC20 } from "../../../typechain";
 
 export function testAeraVaultV2(): void {
   describe("Aera Vault V2 Mainnet Functionality", function () {
+    beforeEach(async function () {
+      this.getUserBalances = async (address: string) => {
+        const balances = await Promise.all(
+          this.tokens.map((token: IERC20) => token.balanceOf(address)),
+        );
+        return balances;
+      };
+
+      this.getManagersFeeTotal = async function () {
+        const managersFeeTotal = await Promise.all(
+          Array.from(Array(this.tokens.length).keys()).map(index =>
+            this.vault.managersFeeTotal(index),
+          ),
+        );
+        return managersFeeTotal;
+      };
+
+      this.getState = async (
+        managerAddress: string | null = null,
+        adminAddress: string | null = null,
+      ) => {
+        const [holdings, adminBalances, managerBalances] = await Promise.all([
+          this.vault.getHoldings(),
+          this.getUserBalances(adminAddress || this.admin.address),
+          this.getUserBalances(managerAddress || this.manager.address),
+        ]);
+
+        return {
+          holdings,
+          adminBalances,
+          managerBalances,
+        };
+      };
+    });
+
     describe("when Vault not initialized", function () {
       describe("should be reverted to call functions", async function () {
         testFunctionCallsWhenNotInitialized();
