@@ -57,7 +57,6 @@ import {
   testSetManager,
   testSetOraclesEnabled,
   testSetSwapFee,
-  testSetTargetWeights,
   testSweep,
   testUpdateWeightsGradually,
   testWithdraw,
@@ -298,7 +297,6 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       describe("with enableTradingRiskingArbitrage function", function () {
         testEnableTradingRiskingArbitrage();
       });
-
 
       describe("with enableTradingWithWeights function", function () {
         testEnableTradingWithWeights();
