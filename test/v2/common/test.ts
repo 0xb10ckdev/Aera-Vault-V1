@@ -51,6 +51,7 @@ export const test = (
     unsortedTokens: string[];
     snapshot: unknown;
   }>,
+  isIntegrationTest = false,
 ): void => {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
@@ -244,29 +245,35 @@ export const test = (
         ).to.be.revertedWith("ERC20: insufficient allowance");
       });
 
-      it("when amount is zero", async () => {
-        const validAmounts = tokenValueArray(sortedTokens, ONE, tokens.length);
+      if (isIntegrationTest) {
+        it("when amount is zero", async () => {
+          const validAmounts = tokenValueArray(
+            sortedTokens,
+            ONE,
+            tokens.length,
+          );
 
-        await expect(
-          vault.initialDeposit([
-            {
-              token: sortedTokens[0],
-              value: 0,
-            },
-            ...validAmounts.slice(1),
-          ]),
-        ).to.be.revertedWith(BALANCER_ERRORS.ZERO_INVARIANT);
+          await expect(
+            vault.initialDeposit([
+              {
+                token: sortedTokens[0],
+                value: 0,
+              },
+              ...validAmounts.slice(1),
+            ]),
+          ).to.be.revertedWith(BALANCER_ERRORS.ZERO_INVARIANT);
 
-        await expect(
-          vault.initialDeposit([
-            ...validAmounts.slice(0, -1),
-            {
-              token: sortedTokens[tokens.length - 1],
-              value: 0,
-            },
-          ]),
-        ).to.be.revertedWith(BALANCER_ERRORS.ZERO_INVARIANT);
-      });
+          await expect(
+            vault.initialDeposit([
+              ...validAmounts.slice(0, -1),
+              {
+                token: sortedTokens[tokens.length - 1],
+                value: 0,
+              },
+            ]),
+          ).to.be.revertedWith(BALANCER_ERRORS.ZERO_INVARIANT);
+        });
+      }
     });
 
     it("should be possible to initialize the vault", async () => {
@@ -422,57 +429,61 @@ export const test = (
             ).to.be.revertedWith("Aera__OraclePriceIsInvalid");
           });
 
-          it("when balance is changed in the same block", async () => {
-            await validator.setAllowances(valueArray(toWei(1), tokens.length));
-            await vault.withdraw(
-              tokenValueArray(sortedTokens, toWei(0.9), tokens.length),
-            );
+          if (isIntegrationTest) {
+            it("when balance is changed in the same block", async () => {
+              await validator.setAllowances(
+                valueArray(toWei(1), tokens.length),
+              );
+              await vault.withdraw(
+                tokenValueArray(sortedTokens, toWei(0.9), tokens.length),
+              );
 
-            const spotPrices = await vault.getSpotPrices(tokens[0].address);
-            for (let i = 1; i < tokens.length; i++) {
-              await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
-            }
+              const spotPrices = await vault.getSpotPrices(tokens[0].address);
+              for (let i = 1; i < tokens.length; i++) {
+                await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
+              }
 
-            const amounts = tokens.map(_ =>
-              toWei(Math.floor(1 + Math.random())),
-            );
+              const amounts = tokens.map(_ =>
+                toWei(Math.floor(1 + Math.random())),
+              );
 
-            for (let i = 0; i < tokens.length; i++) {
-              await tokens[i].approve(vault.address, amounts[i].mul(2));
-            }
+              for (let i = 0; i < tokens.length; i++) {
+                await tokens[i].approve(vault.address, amounts[i].mul(2));
+              }
 
-            await ethers.provider.send("evm_setAutomine", [false]);
-            await ethers.provider.send("evm_setIntervalMining", [0]);
+              await ethers.provider.send("evm_setAutomine", [false]);
+              await ethers.provider.send("evm_setIntervalMining", [0]);
 
-            const trx1 = await vault.deposit(
-              tokenWithValues(sortedTokens, amounts),
-            );
-            const trx2 = await vault.depositIfBalanceUnchanged(
-              tokenWithValues(sortedTokens, amounts),
-            );
+              const trx1 = await vault.deposit(
+                tokenWithValues(sortedTokens, amounts),
+              );
+              const trx2 = await vault.depositIfBalanceUnchanged(
+                tokenWithValues(sortedTokens, amounts),
+              );
 
-            await ethers.provider.send("evm_mine", []);
+              await ethers.provider.send("evm_mine", []);
 
-            try {
-              await trx1.wait();
-              await trx2.wait();
-            } catch {
-              // empty
-            }
+              try {
+                await trx1.wait();
+                await trx2.wait();
+              } catch {
+                // empty
+              }
 
-            const receipt1 = await ethers.provider.getTransactionReceipt(
-              trx1.hash,
-            );
-            const receipt2 = await ethers.provider.getTransactionReceipt(
-              trx2.hash,
-            );
+              const receipt1 = await ethers.provider.getTransactionReceipt(
+                trx1.hash,
+              );
+              const receipt2 = await ethers.provider.getTransactionReceipt(
+                trx2.hash,
+              );
 
-            expect(receipt1.status).to.equal(1);
-            expect(receipt2.status).to.equal(0);
+              expect(receipt1.status).to.equal(1);
+              expect(receipt2.status).to.equal(0);
 
-            await ethers.provider.send("evm_setAutomine", [true]);
-            await ethers.provider.send("evm_setIntervalMining", [0]);
-          });
+              await ethers.provider.send("evm_setAutomine", [true]);
+              await ethers.provider.send("evm_setIntervalMining", [0]);
+            });
+          }
         });
 
         describe("should be possible to deposit tokens", async () => {
@@ -647,47 +658,50 @@ export const test = (
             ).to.be.revertedWith("ERC20: insufficient allowance");
           });
 
-          it("when balance is changed in the same block", async () => {
-            const amounts = tokens.map(_ =>
-              toWei(Math.floor(10 + Math.random() * 10)),
-            );
+          if (isIntegrationTest) {
+            it("when balance is changed in the same block", async () => {
+              const amounts = tokens.map(_ =>
+                toWei(Math.floor(10 + Math.random() * 10)),
+              );
 
-            for (let i = 0; i < tokens.length; i++) {
-              await tokens[i].approve(vault.address, amounts[i].mul(2));
-            }
+              for (let i = 0; i < tokens.length; i++) {
+                await tokens[i].approve(vault.address, amounts[i].mul(2));
+              }
 
-            await ethers.provider.send("evm_setAutomine", [false]);
-            await ethers.provider.send("evm_setIntervalMining", [0]);
+              await ethers.provider.send("evm_setAutomine", [false]);
+              await ethers.provider.send("evm_setIntervalMining", [0]);
 
-            const trx1 = await vault.depositRiskingArbitrage(
-              tokenWithValues(sortedTokens, amounts),
-            );
-            const trx2 = await vault.depositRiskingArbitrageIfBalanceUnchanged(
-              tokenWithValues(sortedTokens, amounts),
-            );
+              const trx1 = await vault.depositRiskingArbitrage(
+                tokenWithValues(sortedTokens, amounts),
+              );
+              const trx2 =
+                await vault.depositRiskingArbitrageIfBalanceUnchanged(
+                  tokenWithValues(sortedTokens, amounts),
+                );
 
-            await ethers.provider.send("evm_mine", []);
+              await ethers.provider.send("evm_mine", []);
 
-            try {
-              await trx1.wait();
-              await trx2.wait();
-            } catch {
-              // empty
-            }
+              try {
+                await trx1.wait();
+                await trx2.wait();
+              } catch {
+                // empty
+              }
 
-            const receipt1 = await ethers.provider.getTransactionReceipt(
-              trx1.hash,
-            );
-            const receipt2 = await ethers.provider.getTransactionReceipt(
-              trx2.hash,
-            );
+              const receipt1 = await ethers.provider.getTransactionReceipt(
+                trx1.hash,
+              );
+              const receipt2 = await ethers.provider.getTransactionReceipt(
+                trx2.hash,
+              );
 
-            expect(receipt1.status).to.equal(1);
-            expect(receipt2.status).to.equal(0);
+              expect(receipt1.status).to.equal(1);
+              expect(receipt2.status).to.equal(0);
 
-            await ethers.provider.send("evm_setAutomine", [true]);
-            await ethers.provider.send("evm_setIntervalMining", [0]);
-          });
+              await ethers.provider.send("evm_setAutomine", [true]);
+              await ethers.provider.send("evm_setIntervalMining", [0]);
+            });
+          }
         });
 
         describe("should be possible to deposit tokens", async () => {
@@ -859,50 +873,52 @@ export const test = (
             ).to.be.revertedWith("Aera__AmountExceedAvailable");
           });
 
-          it("when balance is changed in the same block", async () => {
-            for (let i = 0; i < tokens.length; i++) {
-              await tokens[i].approve(vault.address, toWei(100000));
-            }
-            await vault.depositRiskingArbitrage(
-              tokenValueArray(sortedTokens, toWei(10000), tokens.length),
-            );
+          if (isIntegrationTest) {
+            it("when balance is changed in the same block", async () => {
+              for (let i = 0; i < tokens.length; i++) {
+                await tokens[i].approve(vault.address, toWei(100000));
+              }
+              await vault.depositRiskingArbitrage(
+                tokenValueArray(sortedTokens, toWei(10000), tokens.length),
+              );
 
-            const amounts = tokens.map(_ =>
-              toWei(Math.floor(10 + Math.random() * 10)),
-            );
+              const amounts = tokens.map(_ =>
+                toWei(Math.floor(10 + Math.random() * 10)),
+              );
 
-            await ethers.provider.send("evm_setAutomine", [false]);
-            await ethers.provider.send("evm_setIntervalMining", [0]);
+              await ethers.provider.send("evm_setAutomine", [false]);
+              await ethers.provider.send("evm_setIntervalMining", [0]);
 
-            const trx1 = await vault.withdraw(
-              tokenWithValues(sortedTokens, amounts),
-            );
-            const trx2 = await vault.withdrawIfBalanceUnchanged(
-              tokenWithValues(sortedTokens, amounts),
-            );
+              const trx1 = await vault.withdraw(
+                tokenWithValues(sortedTokens, amounts),
+              );
+              const trx2 = await vault.withdrawIfBalanceUnchanged(
+                tokenWithValues(sortedTokens, amounts),
+              );
 
-            await ethers.provider.send("evm_mine", []);
+              await ethers.provider.send("evm_mine", []);
 
-            try {
-              await trx1.wait();
-              await trx2.wait();
-            } catch {
-              // empty
-            }
+              try {
+                await trx1.wait();
+                await trx2.wait();
+              } catch {
+                // empty
+              }
 
-            const receipt1 = await ethers.provider.getTransactionReceipt(
-              trx1.hash,
-            );
-            const receipt2 = await ethers.provider.getTransactionReceipt(
-              trx2.hash,
-            );
+              const receipt1 = await ethers.provider.getTransactionReceipt(
+                trx1.hash,
+              );
+              const receipt2 = await ethers.provider.getTransactionReceipt(
+                trx2.hash,
+              );
 
-            expect(receipt1.status).to.equal(1);
-            expect(receipt2.status).to.equal(0);
+              expect(receipt1.status).to.equal(1);
+              expect(receipt2.status).to.equal(0);
 
-            await ethers.provider.send("evm_setAutomine", [true]);
-            await ethers.provider.send("evm_setIntervalMining", [0]);
-          });
+              await ethers.provider.send("evm_setAutomine", [true]);
+              await ethers.provider.send("evm_setIntervalMining", [0]);
+            });
+          }
         });
 
         describe("should be possible to withdraw ", async () => {
