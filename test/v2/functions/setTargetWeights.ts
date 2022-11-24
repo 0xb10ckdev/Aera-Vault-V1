@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import { BigNumber } from "ethers";
 import { DEVIATION, ONE } from "../constants";
 import {
   increaseTime,
@@ -302,6 +303,114 @@ export function testSetTargetWeights(): void {
         for (let i = 0; i < this.tokens.length; i++) {
           expect(newWeights[i]).to.be.closeTo(targetWeights[i], DEVIATION);
         }
+      });
+
+      describe("when maximum withdrawal amount is low or invalid", async function () {
+        let targetWeights: BigNumber[] = [];
+
+        beforeEach(async function () {
+          const weights = await this.vault.getNormalizedWeights();
+          targetWeights = [...weights];
+          for (let i = 0; i < this.yieldTokens.length; i++) {
+            targetWeights[this.underlyingIndexes[i]] = targetWeights[
+              this.underlyingIndexes[i]
+            ].add(toWei(0.02));
+            targetWeights[i + this.poolTokens.length] = targetWeights[
+              i + this.poolTokens.length
+            ].sub(toWei(0.02));
+          }
+
+          let weightSum = ONE;
+          let numAdjustedWeight = 0;
+          for (let i = 0; i < this.tokens.length; i++) {
+            if (
+              i > this.poolTokens.length ||
+              this.underlyingIndexes.includes(i)
+            ) {
+              weightSum = weightSum.sub(targetWeights[i]);
+              numAdjustedWeight++;
+            }
+          }
+          for (let i = 0; i < this.poolTokens.length; i++) {
+            if (!this.underlyingIndexes.includes(i)) {
+              targetWeights[i] = weightSum.div(numAdjustedWeight);
+            }
+          }
+
+          targetWeights = normalizeWeights(targetWeights);
+        });
+
+        it("withdraw only maximum withdrawal amount", async function () {
+          for (let i = 0; i < this.yieldTokens.length; i++) {
+            await this.yieldTokens[i].setMaxWithdrawalAmount(
+              toWei(0.001),
+              true,
+            );
+          }
+
+          const holdings = await this.vault.getHoldings();
+
+          await this.vault
+            .connect(this.manager)
+            .setTargetWeights(
+              tokenWithValues(this.tokenAddresses, targetWeights),
+              100,
+            );
+
+          const newHoldings = await this.vault.getHoldings();
+
+          for (let i = 0; i < this.tokens.length; i++) {
+            if (this.underlyingIndexes.includes(i)) {
+              expect(newHoldings[i]).to.equal(holdings[i].add(toWei(0.001)));
+            }
+          }
+        });
+
+        it("withdraw no assets when maximum withdrawal amount is zero", async function () {
+          for (let i = 0; i < this.yieldTokens.length; i++) {
+            await this.yieldTokens[i].setMaxWithdrawalAmount(toWei(0), true);
+          }
+
+          const holdings = await this.vault.getHoldings();
+
+          await this.vault
+            .connect(this.manager)
+            .setTargetWeights(
+              tokenWithValues(this.tokenAddresses, targetWeights),
+              100,
+            );
+
+          const newHoldings = await this.vault.getHoldings();
+
+          for (let i = 0; i < this.tokens.length; i++) {
+            if (this.underlyingIndexes.includes(i)) {
+              expect(newHoldings[i]).to.equal(holdings[i]);
+            }
+          }
+        });
+
+        it("withdraw no assets when maxWithdraw reverts", async function () {
+          for (let i = 0; i < this.yieldTokens.length; i++) {
+            await this.yieldTokens[i].pause();
+          }
+
+          const holdings = await this.vault.getHoldings();
+
+          await this.vault
+            .connect(this.manager)
+            .setTargetWeights(
+              tokenWithValues(this.tokenAddresses, targetWeights),
+              100,
+            );
+
+          const newHoldings = await this.vault.getHoldings();
+
+          for (let i = 0; i < this.tokens.length; i++) {
+            if (this.underlyingIndexes.includes(i)) {
+              expect(newHoldings[i]).to.equal(holdings[i]);
+            }
+          }
+        });
       });
     });
   });
