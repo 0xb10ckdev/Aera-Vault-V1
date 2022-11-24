@@ -57,6 +57,7 @@ import {
   testSetManager,
   testSetOraclesEnabled,
   testSetSwapFee,
+  testSetTargetWeights,
   testSweep,
   testUpdateWeightsGradually,
   testWithdraw,
@@ -287,6 +288,10 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
     describe("when call cancelWeightUpdates()", function () {
       testCancelWeightUpdates();
+    });
+
+    describe("when call setTargetWeights", function () {
+      testSetTargetWeights();
     });
 
     describe("when finalize", function () {
