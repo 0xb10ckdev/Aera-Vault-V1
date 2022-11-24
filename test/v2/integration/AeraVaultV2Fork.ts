@@ -299,6 +299,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         testEnableTradingRiskingArbitrage();
       });
 
+
       describe("with enableTradingWithWeights function", function () {
         testEnableTradingWithWeights();
       });
