@@ -30,7 +30,8 @@ export function testEnableTradingWithOraclePrice(): void {
       this.vault.connect(this.manager).enableTradingWithOraclePrice(),
     )
       .to.emit(this.vault, "SetSwapEnabled")
-      .withArgs(true);
+      .withArgs(true)
+      .to.emit(this.vault, "UpdateWeightsWithOraclePrice");
 
     for (let i = 0; i < this.poolTokens.length; i++) {
       expect(

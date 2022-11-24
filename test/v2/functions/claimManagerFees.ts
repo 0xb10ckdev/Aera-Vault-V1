@@ -87,6 +87,10 @@ export function testClaimManagerFees(): void {
           managerBalances[index].add(managerFee[index]),
         );
       });
+
+      await expect(trx)
+        .to.emit(this.vault, "DistributeManagerFees")
+        .withArgs(this.manager.address, managerFee);
     });
 
     it("when called from old manager", async function () {
@@ -125,7 +129,9 @@ export function testClaimManagerFees(): void {
         );
       });
 
-      await this.vault.connect(this.manager).claimManagerFees();
+      await expect(this.vault.connect(this.manager).claimManagerFees())
+        .to.emit(this.vault, "DistributeManagerFees")
+        .withArgs(this.manager.address, managerFee);
 
       const newManagerBalances = await this.getUserBalances(
         this.manager.address,

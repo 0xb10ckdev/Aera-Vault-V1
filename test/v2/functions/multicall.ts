@@ -82,7 +82,7 @@ export function testMulticall(): void {
         spotPrices.push(await this.vault.getSpotPrices(this.sortedTokens[i]));
       }
 
-      await this.vault.multicall([
+      const trx = await this.vault.multicall([
         iface.encodeFunctionData("disableTrading", []),
         iface.encodeFunctionData("depositRiskingArbitrage", [
           tokenWithValues(this.tokenAddresses, amounts),
@@ -90,7 +90,18 @@ export function testMulticall(): void {
         iface.encodeFunctionData("enableTradingRiskingArbitrage", []),
       ]);
 
+      const weights = await this.vault.getNormalizedWeights();
+
+      await expect(trx)
+        .to.emit(this.vault, "SetSwapEnabled")
+        .withArgs(false)
+        .to.emit(this.vault, "Deposit")
+        .withArgs(amounts, amounts, weights)
+        .to.emit(this.vault, "SetSwapEnabled")
+        .withArgs(true);
+
       expect(await this.vault.isSwapEnabled()).to.equal(true);
+
       const managersFeeTotal = await this.getManagersFeeTotal();
 
       const { holdings: newHoldings, adminBalances: newAdminBalances } =
@@ -123,10 +134,6 @@ export function testMulticall(): void {
 
     it("when set swap fees and update weights", async function () {
       const newFee = MIN_SWAP_FEE.add(1);
-      const startWeights = await this.vault.getNormalizedWeights();
-      const startPoolWeights = normalizeWeights(
-        startWeights.slice(0, this.poolTokens.length),
-      );
       const timestamp = await getCurrentTime();
       const endWeights = [];
       const avgWeights = ONE.div(this.tokens.length);
@@ -140,45 +147,37 @@ export function testMulticall(): void {
           endWeights.push(avgWeights);
         }
       }
-      const endPoolWeights = normalizeWeights(
-        normalizeWeights(endWeights).slice(0, this.poolTokens.length),
-      );
 
-      await this.vault
-        .connect(this.manager)
-        .multicall([
-          iface.encodeFunctionData("setSwapFee", [newFee]),
-          iface.encodeFunctionData("updateWeightsGradually", [
-            tokenWithValues(this.tokenAddresses, normalizeWeights(endWeights)),
-            startTime,
-            endTime,
+      await expect(
+        this.vault
+          .connect(this.manager)
+          .multicall([
+            iface.encodeFunctionData("setSwapFee", [newFee]),
+            iface.encodeFunctionData("updateWeightsGradually", [
+              tokenWithValues(
+                this.tokenAddresses,
+                normalizeWeights(endWeights),
+              ),
+              startTime,
+              endTime,
+            ]),
           ]),
-        ]);
+      )
+        .to.emit(this.vault, "SetSwapFee")
+        .withArgs(newFee)
+        .to.emit(this.vault, "UpdateWeightsGradually")
+        .withArgs(startTime, endTime, normalizeWeights(endWeights));
 
       expect(await this.vault.connect(this.manager).getSwapFee()).to.equal(
         newFee,
       );
-      await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION);
 
-      const currentWeights = await this.vault.getNormalizedWeights();
-      const currentPoolWeights = normalizeWeights(
-        currentWeights.slice(0, this.poolTokens.length),
-      );
+      await increaseTime(endTime - (await getCurrentTime()));
 
-      const currentTime = await getCurrentTime();
-      const ptcProgress = ONE.mul(currentTime - startTime).div(
-        endTime - startTime,
-      );
+      const newWeights = await this.vault.getNormalizedWeights();
 
-      for (let i = 0; i < this.poolTokens.length; i++) {
-        const weightDelta = endPoolWeights[i]
-          .sub(startPoolWeights[i])
-          .mul(ptcProgress)
-          .div(ONE);
-        expect(startPoolWeights[i].add(weightDelta)).to.be.closeTo(
-          currentPoolWeights[i],
-          DEVIATION,
-        );
+      for (let i = 0; i < this.tokens.length; i++) {
+        expect(endWeights[i]).to.be.closeTo(newWeights[i], DEVIATION);
       }
     });
 
@@ -202,7 +201,7 @@ export function testMulticall(): void {
         spotPrices.push(await this.vault.getSpotPrices(this.sortedTokens[i]));
       }
 
-      await this.vault.multicall([
+      const trx = await this.vault.multicall([
         iface.encodeFunctionData("disableTrading", []),
         iface.encodeFunctionData("withdraw", [
           tokenWithValues(this.tokenAddresses, amounts),
@@ -210,7 +209,23 @@ export function testMulticall(): void {
         iface.encodeFunctionData("enableTradingRiskingArbitrage", []),
       ]);
 
+      const weights = await this.vault.getNormalizedWeights();
+
+      await expect(trx)
+        .to.emit(this.vault, "SetSwapEnabled")
+        .withArgs(false)
+        .to.emit(this.vault, "Withdraw")
+        .withArgs(
+          amounts,
+          amounts,
+          valueArray(toWei(100000), this.tokens.length),
+          weights,
+        )
+        .to.emit(this.vault, "SetSwapEnabled")
+        .withArgs(true);
+
       expect(await this.vault.isSwapEnabled()).to.equal(true);
+
       const newManagersFeeTotal = await this.getManagersFeeTotal();
 
       const { holdings: newHoldings, adminBalances: newAdminBalances } =

@@ -22,7 +22,7 @@ export function testUpdateWeightsGradually(): void {
   describe("should be reverted to call updateWeightsGradually", async function () {
     it("when called from non-manager", async function () {
       await expect(
-        this.this.vault.updateWeightsGradually(
+        this.vault.updateWeightsGradually(
           tokenWithValues(
             this.tokenAddresses,
             normalizeWeights(valueArray(ONE, this.tokens.length)),
@@ -289,13 +289,17 @@ export function testUpdateWeightsGradually(): void {
         normalizeWeights(endWeights).slice(0, this.poolTokens.length),
       );
 
-      await this.vault
-        .connect(this.manager)
-        .updateWeightsGradually(
-          tokenWithValues(this.tokenAddresses, normalizeWeights(endWeights)),
-          startTime,
-          endTime,
-        );
+      await expect(
+        this.vault
+          .connect(this.manager)
+          .updateWeightsGradually(
+            tokenWithValues(this.tokenAddresses, normalizeWeights(endWeights)),
+            startTime,
+            endTime,
+          ),
+      )
+        .to.emit(this.vault, "UpdateWeightsGradually")
+        .withArgs(startTime, endTime, normalizeWeights(endWeights));
 
       await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION);
 
@@ -344,13 +348,17 @@ export function testUpdateWeightsGradually(): void {
             ].add(toWei(0.01));
           }
 
-          await this.vault
-            .connect(this.manager)
-            .updateWeightsGradually(
-              tokenWithValues(this.tokenAddresses, targetWeights),
-              startTime,
-              endTime,
-            );
+          await expect(
+            this.vault
+              .connect(this.manager)
+              .updateWeightsGradually(
+                tokenWithValues(this.tokenAddresses, targetWeights),
+                startTime,
+                endTime,
+              ),
+          )
+            .to.emit(this.vault, "UpdateWeightsGradually")
+            .withArgs(startTime, endTime, targetWeights);
 
           const newWeights = await this.vault.getNormalizedWeights();
 
@@ -390,13 +398,17 @@ export function testUpdateWeightsGradually(): void {
 
           targetWeights = normalizeWeights(targetWeights);
 
-          await this.vault
-            .connect(this.manager)
-            .updateWeightsGradually(
-              tokenWithValues(this.tokenAddresses, targetWeights),
-              startTime,
-              endTime,
-            );
+          await expect(
+            this.vault
+              .connect(this.manager)
+              .updateWeightsGradually(
+                tokenWithValues(this.tokenAddresses, targetWeights),
+                startTime,
+                endTime,
+              ),
+          )
+            .to.emit(this.vault, "UpdateWeightsGradually")
+            .withArgs(startTime, endTime, targetWeights);
 
           let newWeights = await this.vault.getNormalizedWeights();
 
@@ -462,13 +474,17 @@ export function testUpdateWeightsGradually(): void {
 
             const holdings = await this.vault.getHoldings();
 
-            await this.vault
-              .connect(this.manager)
-              .updateWeightsGradually(
-                tokenWithValues(this.tokenAddresses, targetWeights),
-                startTime,
-                endTime,
-              );
+            await expect(
+              this.vault
+                .connect(this.manager)
+                .updateWeightsGradually(
+                  tokenWithValues(this.tokenAddresses, targetWeights),
+                  startTime,
+                  endTime,
+                ),
+            )
+              .to.emit(this.vault, "UpdateWeightsGradually")
+              .withArgs(startTime, endTime, targetWeights);
 
             const newHoldings = await this.vault.getHoldings();
 
@@ -486,13 +502,17 @@ export function testUpdateWeightsGradually(): void {
 
             const holdings = await this.vault.getHoldings();
 
-            await this.vault
-              .connect(this.manager)
-              .updateWeightsGradually(
-                tokenWithValues(this.tokenAddresses, targetWeights),
-                startTime,
-                endTime,
-              );
+            await expect(
+              this.vault
+                .connect(this.manager)
+                .updateWeightsGradually(
+                  tokenWithValues(this.tokenAddresses, targetWeights),
+                  startTime,
+                  endTime,
+                ),
+            )
+              .to.emit(this.vault, "UpdateWeightsGradually")
+              .withArgs(startTime, endTime, targetWeights);
 
             const newHoldings = await this.vault.getHoldings();
 
@@ -510,13 +530,17 @@ export function testUpdateWeightsGradually(): void {
 
             const holdings = await this.vault.getHoldings();
 
-            await this.vault
-              .connect(this.manager)
-              .updateWeightsGradually(
-                tokenWithValues(this.tokenAddresses, targetWeights),
-                startTime,
-                endTime,
-              );
+            await expect(
+              this.vault
+                .connect(this.manager)
+                .updateWeightsGradually(
+                  tokenWithValues(this.tokenAddresses, targetWeights),
+                  startTime,
+                  endTime,
+                ),
+            )
+              .to.emit(this.vault, "UpdateWeightsGradually")
+              .withArgs(startTime, endTime, targetWeights);
 
             const newHoldings = await this.vault.getHoldings();
 
@@ -544,13 +568,17 @@ export function testUpdateWeightsGradually(): void {
         targetWeights = normalizeWeights(targetWeights);
         poolWeights = normalizeWeights(poolWeights);
 
-        await this.vault
-          .connect(this.manager)
-          .updateWeightsGradually(
-            tokenWithValues(this.tokenAddresses, targetWeights),
-            startTime,
-            endTime,
-          );
+        await expect(
+          this.vault
+            .connect(this.manager)
+            .updateWeightsGradually(
+              tokenWithValues(this.tokenAddresses, targetWeights),
+              startTime,
+              endTime,
+            ),
+        )
+          .to.emit(this.vault, "UpdateWeightsGradually")
+          .withArgs(startTime, endTime, targetWeights);
 
         let newWeights = await this.vault.getNormalizedWeights();
         const newPoolWeights = normalizeWeights(
@@ -604,13 +632,17 @@ export function testUpdateWeightsGradually(): void {
             ].sub(toWei(0.01));
           }
 
-          await this.vault
-            .connect(this.manager)
-            .updateWeightsGradually(
-              tokenWithValues(this.tokenAddresses, targetWeights),
-              startTime,
-              endTime,
-            );
+          await expect(
+            this.vault
+              .connect(this.manager)
+              .updateWeightsGradually(
+                tokenWithValues(this.tokenAddresses, targetWeights),
+                startTime,
+                endTime,
+              ),
+          )
+            .to.emit(this.vault, "UpdateWeightsGradually")
+            .withArgs(startTime, endTime, targetWeights);
 
           const newWeights = await this.vault.getNormalizedWeights();
 
@@ -650,13 +682,17 @@ export function testUpdateWeightsGradually(): void {
 
           targetWeights = normalizeWeights(targetWeights);
 
-          await this.vault
-            .connect(this.manager)
-            .updateWeightsGradually(
-              tokenWithValues(this.tokenAddresses, targetWeights),
-              startTime,
-              endTime,
-            );
+          await expect(
+            this.vault
+              .connect(this.manager)
+              .updateWeightsGradually(
+                tokenWithValues(this.tokenAddresses, targetWeights),
+                startTime,
+                endTime,
+              ),
+          )
+            .to.emit(this.vault, "UpdateWeightsGradually")
+            .withArgs(startTime, endTime, targetWeights);
 
           let newWeights = await this.vault.getNormalizedWeights();
 
@@ -722,13 +758,17 @@ export function testUpdateWeightsGradually(): void {
 
             const holdings = await this.vault.getHoldings();
 
-            await this.vault
-              .connect(this.manager)
-              .updateWeightsGradually(
-                tokenWithValues(this.tokenAddresses, targetWeights),
-                startTime,
-                endTime,
-              );
+            await expect(
+              this.vault
+                .connect(this.manager)
+                .updateWeightsGradually(
+                  tokenWithValues(this.tokenAddresses, targetWeights),
+                  startTime,
+                  endTime,
+                ),
+            )
+              .to.emit(this.vault, "UpdateWeightsGradually")
+              .withArgs(startTime, endTime, targetWeights);
 
             const newHoldings = await this.vault.getHoldings();
 
@@ -746,13 +786,17 @@ export function testUpdateWeightsGradually(): void {
 
             const holdings = await this.vault.getHoldings();
 
-            await this.vault
-              .connect(this.manager)
-              .updateWeightsGradually(
-                tokenWithValues(this.tokenAddresses, targetWeights),
-                startTime,
-                endTime,
-              );
+            await expect(
+              this.vault
+                .connect(this.manager)
+                .updateWeightsGradually(
+                  tokenWithValues(this.tokenAddresses, targetWeights),
+                  startTime,
+                  endTime,
+                ),
+            )
+              .to.emit(this.vault, "UpdateWeightsGradually")
+              .withArgs(startTime, endTime, targetWeights);
 
             const newHoldings = await this.vault.getHoldings();
 
@@ -770,13 +814,17 @@ export function testUpdateWeightsGradually(): void {
 
             const holdings = await this.vault.getHoldings();
 
-            await this.vault
-              .connect(this.manager)
-              .updateWeightsGradually(
-                tokenWithValues(this.tokenAddresses, targetWeights),
-                startTime,
-                endTime,
-              );
+            await expect(
+              this.vault
+                .connect(this.manager)
+                .updateWeightsGradually(
+                  tokenWithValues(this.tokenAddresses, targetWeights),
+                  startTime,
+                  endTime,
+                ),
+            )
+              .to.emit(this.vault, "UpdateWeightsGradually")
+              .withArgs(startTime, endTime, targetWeights);
 
             const newHoldings = await this.vault.getHoldings();
 

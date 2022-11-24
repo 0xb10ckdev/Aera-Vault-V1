@@ -10,7 +10,9 @@ export function testEnableTradingRiskingArbitrage(): void {
   it("should be possible to enable trading", async function () {
     const weights = await this.vault.getNormalizedWeights();
 
-    await this.vault.enableTradingRiskingArbitrage();
+    await expect(this.vault.enableTradingRiskingArbitrage())
+      .to.emit(this.vault, "SetSwapEnabled")
+      .withArgs(true);
 
     const currentWeights = await this.vault.getNormalizedWeights();
 
