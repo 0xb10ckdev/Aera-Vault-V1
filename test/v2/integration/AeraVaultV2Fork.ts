@@ -290,10 +290,6 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       testCancelWeightUpdates();
     });
 
-    describe("when call setTargetWeights", function () {
-      testSetTargetWeights();
-    });
-
     describe("when finalize", function () {
       testFinalize();
     });
