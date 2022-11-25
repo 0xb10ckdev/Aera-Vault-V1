@@ -74,7 +74,7 @@ export function testMulticall(): void {
       const { holdings, adminBalances } = await this.getState();
 
       const amounts = this.tokens.map(() =>
-        toWei(Math.floor(Math.random() * 100)),
+        toWei(Math.floor(10 + Math.random() * 10)),
       );
 
       const spotPrices = [];
@@ -193,7 +193,7 @@ export function testMulticall(): void {
       const managersFeeTotal = await this.getManagersFeeTotal();
 
       const amounts = this.tokens.map(() =>
-        toWei(Math.floor(Math.random() * 100)),
+        toWei(Math.floor(10 + Math.random() * 10)),
       );
 
       const spotPrices = [];
