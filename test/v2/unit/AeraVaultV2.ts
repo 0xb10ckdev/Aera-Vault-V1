@@ -25,6 +25,7 @@ describe("Unit Test", function () {
     this.oracles = deployedData.oracles;
     this.oracleAddresses = deployedData.oracleAddresses;
     this.unsortedTokens = deployedData.unsortedTokens;
+    this.isForkTest = false;
   });
 
   afterEach(async function () {

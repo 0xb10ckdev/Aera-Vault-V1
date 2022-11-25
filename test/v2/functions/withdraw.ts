@@ -66,47 +66,49 @@ export function testWithdraw(): void {
       });
 
       it("when balance is changed in the same block", async function () {
-        for (let i = 0; i < this.tokens.length; i++) {
-          await this.tokens[i].approve(this.vault.address, toWei(100000));
+        if (this.isForkTest) {
+          for (let i = 0; i < this.tokens.length; i++) {
+            await this.tokens[i].approve(this.vault.address, toWei(100000));
+          }
+          await this.vault.depositRiskingArbitrage(
+            tokenValueArray(
+              this.tokenAddresses,
+              toWei(10000),
+              this.tokens.length,
+            ),
+          );
+
+          const amounts = this.tokens.map(() =>
+            toWei(Math.floor(10 + Math.random() * 10)),
+          );
+
+          await ethers.provider.send("evm_setAutomine", [false]);
+
+          const trx1 = await this.vault.withdraw(
+            tokenWithValues(this.tokenAddresses, amounts),
+          );
+          const trx2 = await this.vault.withdrawIfBalanceUnchanged(
+            tokenWithValues(this.tokenAddresses, amounts),
+          );
+
+          await ethers.provider.send("evm_mine", []);
+
+          try {
+            await Promise.all([trx1.wait(), trx2.wait()]);
+          } catch (e) {
+            // empty
+          }
+
+          const [receipt1, receipt2] = await Promise.all([
+            ethers.provider.getTransactionReceipt(trx1.hash),
+            ethers.provider.getTransactionReceipt(trx2.hash),
+          ]);
+
+          expect(receipt1.status).to.equal(1);
+          expect(receipt2.status).to.equal(0);
+
+          await ethers.provider.send("evm_setAutomine", [true]);
         }
-        await this.vault.depositRiskingArbitrage(
-          tokenValueArray(
-            this.tokenAddresses,
-            toWei(10000),
-            this.tokens.length,
-          ),
-        );
-
-        const amounts = this.tokens.map(() =>
-          toWei(Math.floor(10 + Math.random() * 10)),
-        );
-
-        await ethers.provider.send("evm_setAutomine", [false]);
-
-        const trx1 = await this.vault.withdraw(
-          tokenWithValues(this.tokenAddresses, amounts),
-        );
-        const trx2 = await this.vault.withdrawIfBalanceUnchanged(
-          tokenWithValues(this.tokenAddresses, amounts),
-        );
-
-        await ethers.provider.send("evm_mine", []);
-
-        try {
-          await Promise.all([trx1.wait(), trx2.wait()]);
-        } catch (e) {
-          // empty
-        }
-
-        const [receipt1, receipt2] = await Promise.all([
-          ethers.provider.getTransactionReceipt(trx1.hash),
-          ethers.provider.getTransactionReceipt(trx2.hash),
-        ]);
-
-        expect(receipt1.status).to.equal(1);
-        expect(receipt2.status).to.equal(0);
-
-        await ethers.provider.send("evm_setAutomine", [true]);
       });
     });
 

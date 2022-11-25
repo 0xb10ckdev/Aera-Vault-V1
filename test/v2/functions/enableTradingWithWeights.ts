@@ -6,7 +6,6 @@ import {
   tokenValueArray,
   tokenWithValues,
   toWei,
-  valueArray,
 } from "../utils";
 
 export function testEnableTradingWithWeights(): void {
@@ -88,10 +87,7 @@ export function testEnableTradingWithWeights(): void {
 
     await expect(trx)
       .to.emit(this.vault, "EnabledTradingWithWeights")
-      .withArgs(
-        currentTime,
-        normalizeWeights(valueArray(ONE, this.tokens.length)),
-      );
+      .withArgs(currentTime, normalizeWeights(endWeights));
 
     const endPoolWeights = normalizeWeights(
       normalizeWeights(endWeights).slice(0, this.poolTokens.length),

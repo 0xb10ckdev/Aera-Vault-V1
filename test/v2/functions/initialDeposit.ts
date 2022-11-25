@@ -83,27 +83,29 @@ export function testInitialDeposit(): void {
     });
 
     it("when amount is zero", async function () {
-      const validAmounts = tokenValueArray(
-        this.tokenAddresses,
-        ONE,
-        this.tokens.length,
-      );
+      if (this.isForkTest) {
+        const validAmounts = tokenValueArray(
+          this.tokenAddresses,
+          ONE,
+          this.tokens.length,
+        );
 
-      await expect(
-        this.vault.initialDeposit(
-          [
-            {
-              token: this.tokenAddresses[0],
-              value: 0,
-            },
-            ...validAmounts.slice(1),
-          ],
-          tokenWithValues(
-            this.tokenAddresses,
-            normalizeWeights(valueArray(ONE, this.tokens.length)),
+        await expect(
+          this.vault.initialDeposit(
+            [
+              {
+                token: this.tokenAddresses[0],
+                value: 0,
+              },
+              ...validAmounts.slice(1),
+            ],
+            tokenWithValues(
+              this.tokenAddresses,
+              normalizeWeights(valueArray(ONE, this.tokens.length)),
+            ),
           ),
-        ),
-      ).to.be.revertedWith(BALANCER_ERRORS.ZERO_INVARIANT);
+        ).to.be.revertedWith(BALANCER_ERRORS.ZERO_INVARIANT);
+      }
     });
 
     it("when vault is already initialized ", async function () {
