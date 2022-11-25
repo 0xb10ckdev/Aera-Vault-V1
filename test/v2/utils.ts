@@ -3,6 +3,7 @@ import { deployments, ethers } from "hardhat";
 import { AeraVaultV2Mock, AeraVaultV2Mock__factory } from "../../typechain";
 import { MAX_MANAGEMENT_FEE, ZERO_ADDRESS } from "../v1/constants";
 import {
+  ONE,
   MIN_FEE_DURATION,
   MAX_ORACLE_DELAY,
   MAX_ORACLE_SPOT_DIVERGENCE,
@@ -15,9 +16,10 @@ export type VaultParams = {
   factory: string;
   name: string;
   symbol: string;
-  tokens: string[];
+  poolTokens: string[];
   weights: string[];
   oracles: string[];
+  yieldTokens: { token: string; underlyingIndex: BigNumberish }[];
   numeraireAssetIndex: number;
   swapFeePercentage: BigNumberish;
   manager: string;
@@ -48,9 +50,10 @@ export const deployVault = async (
     factory: params.factory,
     name: params.name,
     symbol: params.symbol,
-    tokens: params.tokens,
+    poolTokens: params.poolTokens,
     weights: params.weights,
     oracles: params.oracles,
+    yieldTokens: params.yieldTokens,
     numeraireAssetIndex: params.numeraireAssetIndex,
     swapFeePercentage: params.swapFeePercentage,
     manager: params.manager,
@@ -74,4 +77,24 @@ export const toUnit = (
   decimals: number,
 ): BigNumber => {
   return ethers.utils.parseUnits(value.toString(), decimals);
+};
+
+export const getWeightSum = (weights: BigNumberish[]): BigNumber => {
+  let sum = BigNumber.from(0);
+  weights.forEach((weight: BigNumberish) => (sum = sum.add(weight)));
+
+  return sum;
+};
+
+export const normalizeWeights = (weights: BigNumberish[]): BigNumber[] => {
+  let sum = getWeightSum(weights);
+  const adjustedWeights = weights.map(
+    (weight: BigNumberish) =>
+      (weight = BigNumber.from(weight).mul(ONE).div(sum)),
+  );
+
+  sum = getWeightSum(adjustedWeights);
+  adjustedWeights[0] = adjustedWeights[0].add(ONE).sub(sum);
+
+  return adjustedWeights;
 };
