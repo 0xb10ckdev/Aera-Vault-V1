@@ -186,7 +186,7 @@ export function testUpdateWeightsGradually(): void {
         startWeights.slice(0, this.poolTokens.length),
       )[0]
         .mul(ONE)
-        .div(MAX_WEIGHT_CHANGE_RATIO + 2)
+        .div(MAX_WEIGHT_CHANGE_RATIO + 10)
         .div(MINIMUM_WEIGHT_CHANGE_DURATION + 1);
       const targetWeights = normalizeWeights([
         targetWeight0,
