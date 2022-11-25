@@ -2,9 +2,11 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
 import hre, { deployments, ethers } from "hardhat";
+import { writeFile, rm } from "fs/promises";
 import { getConfig } from "../../../scripts/config";
 import {
   IERC20,
+  ERC4626Mock,
   BaseManagedPoolFactory__factory,
   ManagedPoolFactory,
   ManagedPoolFactory__factory,
@@ -34,13 +36,19 @@ import {
   MAX_ORACLE_SPOT_DIVERGENCE,
   MAX_ORACLE_DELAY,
 } from "../constants";
-import { deployToken, setupTokens, setupOracles } from "../fixtures";
+import {
+  deployToken,
+  setupTokens,
+  setupOracles,
+  setupYieldBearingAssets,
+} from "../fixtures";
 import {
   deployFactory,
   deployVault,
   getCurrentTime,
   getTimestamp,
   increaseTime,
+  normalizeWeights,
   toWei,
   tokenValueArray,
   tokenWithValues,
@@ -54,7 +62,9 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
   let manager: SignerWithAddress;
   let validator: WithdrawalValidatorMock;
   let factory: ManagedPoolFactory;
+  let poolTokens: IERC20[];
   let tokens: IERC20[];
+  let yieldTokens: ERC4626Mock[];
   let sortedTokens: string[];
   let unsortedTokens: string[];
   let oracles: OracleMock[];
@@ -68,11 +78,18 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
       snapshot = await ethers.provider.send("evm_snapshot", []);
       ({ admin, manager } = await ethers.getNamedSigners());
 
-      ({ tokens, sortedTokens, unsortedTokens } = await setupTokens());
+      ({
+        tokens: poolTokens,
+        sortedTokens,
+        unsortedTokens,
+      } = await setupTokens());
+      yieldTokens = await setupYieldBearingAssets(sortedTokens.slice(0, 2));
       oracles = await setupOracles();
+
+      tokens = [...poolTokens, ...yieldTokens];
       oracleAddress = oracles.map((oracle: OracleMock) => oracle.address);
       oracleAddress[0] = ZERO_ADDRESS;
-      validWeights = valueArray(ONE.div(tokens.length), tokens.length);
+      validWeights = valueArray(ONE.div(poolTokens.length), poolTokens.length);
 
       await deployments.deploy("Validator", {
         contract: "WithdrawalValidatorMock",
@@ -102,9 +119,13 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
         factory: factory.address,
         name: "Test",
         symbol: "TEST",
-        tokens: sortedTokens,
+        poolTokens: sortedTokens,
         weights: validWeights,
         oracles: oracleAddress,
+        yieldTokens: yieldTokens.map((token, index) => ({
+          token: token.address,
+          underlyingIndex: index,
+        })),
         numeraireAssetIndex: 0,
         swapFeePercentage: MIN_SWAP_FEE,
         manager: manager.address,
@@ -139,7 +160,7 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
     });
 
     it("when numeraire asset index exceeds token length", async () => {
-      validParams.numeraireAssetIndex = tokens.length;
+      validParams.numeraireAssetIndex = poolTokens.length;
       await expect(deployVault(validParams)).to.be.revertedWith(
         "Aera__NumeraireAssetIndexExceedsTokenLength",
       );
@@ -222,7 +243,7 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
         );
       const mismatchedValidator = await validatorMock
         .connect(admin)
-        .deploy(tokens.length - 1);
+        .deploy(poolTokens.length - 1);
       validParams.validator = mismatchedValidator.address;
 
       await expect(deployVault(validParams)).to.be.revertedWith(
@@ -231,14 +252,34 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
     });
 
     it("when token is not sorted in ascending order", async () => {
-      validParams.tokens = unsortedTokens;
+      const yieldTokensWithUnsortedTokens = await setupYieldBearingAssets(
+        unsortedTokens.slice(0, 2),
+      );
+      validParams.poolTokens = unsortedTokens;
+      validParams.yieldTokens = yieldTokensWithUnsortedTokens.map(
+        (token, index) => ({
+          token: token.address,
+          underlyingIndex: index,
+        }),
+      );
+
       await expect(deployVault(validParams)).to.be.revertedWith(
         BALANCER_ERRORS.UNSORTED_ARRAY,
       );
     });
 
     it("when token is duplicated", async () => {
-      validParams.tokens = [sortedTokens[0], ...sortedTokens.slice(0, -1)];
+      validParams.poolTokens = [sortedTokens[0], ...sortedTokens.slice(0, -1)];
+      const yieldTokensWithDuplicatedTokens = await setupYieldBearingAssets(
+        validParams.poolTokens.slice(0, 2),
+      );
+      validParams.yieldTokens = yieldTokensWithDuplicatedTokens.map(
+        (token, index) => ({
+          token: token.address,
+          underlyingIndex: index,
+        }),
+      );
+
       await expect(deployVault(validParams)).to.be.revertedWith(
         BALANCER_ERRORS.UNSORTED_ARRAY,
       );
@@ -259,7 +300,7 @@ describe("Aera Vault V2 Mainnet Deployment", function () {
     });
 
     it("when total sum of weights is not one", async () => {
-      validParams.weights = valueArray(MIN_WEIGHT, tokens.length);
+      validParams.weights = valueArray(MIN_WEIGHT, poolTokens.length);
       await expect(deployVault(validParams)).to.be.revertedWith(
         BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT,
       );
@@ -295,7 +336,11 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
   let vault: AeraVaultV2Mock;
   let validator: WithdrawalValidatorMock;
   let factory: ManagedPoolFactory;
+  let poolTokens: IERC20[];
   let tokens: IERC20[];
+  let tokenAddresses: string[];
+  let yieldTokens: ERC4626Mock[];
+  let underlyingIndexes: number[];
   let sortedTokens: string[];
   let oracles: OracleMock[];
   let oracleAddresses: string[];
@@ -341,57 +386,90 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     const config = getConfig(hre.network.config.chainId || 1);
 
     ({ admin, manager, user } = await ethers.getNamedSigners());
-    ({ tokens, sortedTokens, unsortedTokens } = await setupTokens());
+    ({
+      tokens: poolTokens,
+      sortedTokens,
+      unsortedTokens,
+    } = await setupTokens());
+    yieldTokens = await setupYieldBearingAssets(sortedTokens.slice(0, 2));
+    underlyingIndexes = [0, 1];
     oracles = await setupOracles();
+
+    tokens = [...poolTokens, ...yieldTokens];
+    tokenAddresses = tokens.map(token => token.address);
+    unsortedTokens = [
+      ...unsortedTokens,
+      ...yieldTokens.map(token => token.address),
+    ];
     oracleAddresses = oracles.map((oracle: OracleMock) => oracle.address);
     oracleAddresses[0] = ZERO_ADDRESS;
+
+    await Promise.all(
+      yieldTokens.map((token, index) =>
+        poolTokens[index].approve(token.address, toWei("100000")),
+      ),
+    );
+    await Promise.all(
+      yieldTokens.map(token => token.deposit(toWei("100000"), admin.address)),
+    );
 
     const validatorMock =
       await ethers.getContractFactory<WithdrawalValidatorMock__factory>(
         "WithdrawalValidatorMock",
       );
-
-    validator = await validatorMock.connect(admin).deploy(tokens.length);
-
     const baseManagedPoolFactoryContract =
       await ethers.getContractFactory<BaseManagedPoolFactory__factory>(
         "BaseManagedPoolFactory",
       );
-    const baseManagedPoolFactory = await baseManagedPoolFactoryContract
-      .connect(admin)
-      .deploy(config.bVault);
-
     const managedPoolFactoryContract =
       await ethers.getContractFactory<ManagedPoolFactory__factory>(
         "ManagedPoolFactory",
       );
+
+    validator = await validatorMock.connect(admin).deploy(tokens.length);
+    const baseManagedPoolFactory = await baseManagedPoolFactoryContract
+      .connect(admin)
+      .deploy(config.bVault);
     factory = await managedPoolFactoryContract
       .connect(admin)
       .deploy(baseManagedPoolFactory.address);
 
-    const validWeights = valueArray(ONE.div(tokens.length), tokens.length);
+    const validWeights = valueArray(
+      ONE.div(poolTokens.length),
+      poolTokens.length,
+    );
+
+    await writeFile(
+      ".testConfig.json",
+      JSON.stringify({
+        factory: factory.address,
+        name: "Test",
+        symbol: "TEST",
+        poolTokens: sortedTokens,
+        weights: validWeights,
+        oracles: oracleAddresses,
+        yieldTokens: yieldTokens.map(token => token.address),
+        numeraireAssetIndex: 0,
+        swapFeePercentage: MIN_SWAP_FEE,
+        manager: manager.address,
+        validator: validator.address,
+        minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
+        minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE,
+        maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE,
+        maxOracleDelay: MAX_ORACLE_DELAY,
+        minFeeDuration: MIN_FEE_DURATION,
+        managementFee: MAX_MANAGEMENT_FEE,
+        description: "Test vault description",
+      }),
+    );
 
     vault = await hre.run("deploy:vaultV2", {
-      factory: factory.address,
-      name: "Test",
-      symbol: "TEST",
-      tokens: sortedTokens.join(","),
-      weights: validWeights.join(","),
-      oracles: oracleAddresses.join(","),
-      numeraireAssetIndex: "0",
-      swapFee: MIN_SWAP_FEE.toString(),
-      manager: manager.address,
-      validator: validator.address,
-      minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE.toString(),
-      minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE.toString(),
-      maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE.toString(),
-      maxOracleDelay: MAX_ORACLE_DELAY.toString(),
-      minFeeDuration: MIN_FEE_DURATION.toString(),
-      managementFee: MAX_MANAGEMENT_FEE.toString(),
-      description: "Test vault description",
+      configPath: ".testConfig.json",
       silent: true,
       test: true,
     });
+
+    await rm(".testConfig.json");
   });
 
   afterEach(async () => {
@@ -408,14 +486,14 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     describe("should be reverted to call functions", async () => {
       it("when call deposit", async () => {
         await expect(
-          vault.deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
+          vault.deposit(tokenValueArray(tokenAddresses, ONE, tokens.length)),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
 
       it("when call depositIfBalanceUnchanged", async () => {
         await expect(
           vault.depositIfBalanceUnchanged(
-            tokenValueArray(sortedTokens, ONE, tokens.length),
+            tokenValueArray(tokenAddresses, ONE, tokens.length),
           ),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
@@ -423,7 +501,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       it("when call depositRiskingArbitrage", async () => {
         await expect(
           vault.depositRiskingArbitrage(
-            tokenValueArray(sortedTokens, ONE, tokens.length),
+            tokenValueArray(tokenAddresses, ONE, tokens.length),
           ),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
@@ -431,21 +509,21 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       it("when call depositRiskingArbitrageIfBalanceUnchanged", async () => {
         await expect(
           vault.depositRiskingArbitrageIfBalanceUnchanged(
-            tokenValueArray(sortedTokens, ONE, tokens.length),
+            tokenValueArray(tokenAddresses, ONE, tokens.length),
           ),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
 
       it("when call withdraw", async () => {
         await expect(
-          vault.withdraw(tokenValueArray(sortedTokens, ONE, tokens.length)),
+          vault.withdraw(tokenValueArray(tokenAddresses, ONE, tokens.length)),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
 
       it("when call withdrawIfBalanceUnchanged", async () => {
         await expect(
           vault.withdrawIfBalanceUnchanged(
-            tokenValueArray(sortedTokens, ONE, tokens.length),
+            tokenValueArray(tokenAddresses, ONE, tokens.length),
           ),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
@@ -456,10 +534,9 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           vault
             .connect(manager)
             .updateWeightsGradually(
-              tokenValueArray(
-                sortedTokens,
-                ONE.div(tokens.length),
-                tokens.length,
+              tokenWithValues(
+                tokenAddresses,
+                normalizeWeights(valueArray(ONE, tokens.length)),
               ),
               blocknumber + 1,
               blocknumber + 1000,
@@ -490,7 +567,11 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       it("when token and amount length is not same", async () => {
         await expect(
           vault.initialDeposit(
-            tokenValueArray(sortedTokens, ONE, tokens.length + 1),
+            tokenValueArray(tokenAddresses, ONE, tokens.length + 1),
+            tokenWithValues(
+              tokenAddresses,
+              normalizeWeights(valueArray(ONE, tokens.length)),
+            ),
           ),
         ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
       });
@@ -499,70 +580,147 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         await expect(
           vault.initialDeposit(
             tokenValueArray(unsortedTokens, ONE, tokens.length),
+            tokenWithValues(
+              tokenAddresses,
+              normalizeWeights(valueArray(ONE, tokens.length)),
+            ),
           ),
         ).to.be.revertedWith("Aera__DifferentTokensInPosition");
       });
 
       it("when amount exceeds allowance", async () => {
-        const validAmounts = tokenValueArray(sortedTokens, ONE, tokens.length);
+        const validAmounts = tokenValueArray(
+          tokenAddresses,
+          ONE,
+          tokens.length,
+        );
 
         await expect(
-          vault.initialDeposit([
-            {
-              token: sortedTokens[0],
-              value: toWei(3),
-            },
-            ...validAmounts.slice(1),
-          ]),
+          vault.initialDeposit(
+            [
+              {
+                token: sortedTokens[0],
+                value: toWei(3),
+              },
+              ...validAmounts.slice(1),
+            ],
+            tokenWithValues(
+              tokenAddresses,
+              normalizeWeights(valueArray(ONE, tokens.length)),
+            ),
+          ),
         ).to.be.revertedWith("ERC20: insufficient allowance");
 
         await expect(
-          vault.initialDeposit([
-            ...validAmounts.slice(0, -1),
-            {
-              token: sortedTokens[tokens.length - 1],
-              value: toWei(3),
-            },
-          ]),
+          vault.initialDeposit(
+            [
+              ...validAmounts.slice(0, -1),
+              {
+                token: tokenAddresses[tokens.length - 1],
+                value: toWei(3),
+              },
+            ],
+            tokenWithValues(
+              tokenAddresses,
+              normalizeWeights(valueArray(ONE, tokens.length)),
+            ),
+          ),
         ).to.be.revertedWith("ERC20: insufficient allowance");
       });
 
       it("when amount is zero", async () => {
-        const validAmounts = tokenValueArray(sortedTokens, ONE, tokens.length);
+        const validAmounts = tokenValueArray(
+          tokenAddresses,
+          ONE,
+          tokens.length,
+        );
 
         await expect(
-          vault.initialDeposit([
-            {
-              token: sortedTokens[0],
-              value: 0,
-            },
-            ...validAmounts.slice(1),
-          ]),
-        ).to.be.revertedWith(BALANCER_ERRORS.ZERO_INVARIANT);
-
-        await expect(
-          vault.initialDeposit([
-            ...validAmounts.slice(0, -1),
-            {
-              token: sortedTokens[tokens.length - 1],
-              value: 0,
-            },
-          ]),
+          vault.initialDeposit(
+            [
+              {
+                token: tokenAddresses[0],
+                value: 0,
+              },
+              ...validAmounts.slice(1),
+            ],
+            tokenWithValues(
+              tokenAddresses,
+              normalizeWeights(valueArray(ONE, tokens.length)),
+            ),
+          ),
         ).to.be.revertedWith(BALANCER_ERRORS.ZERO_INVARIANT);
       });
     });
 
     it("should be possible to initialize the vault", async () => {
+      for (let i = 0; i < tokens.length; i++) {
+        await tokens[i].approve(vault.address, toWei(10000));
+      }
+
+      const oraclePrices: BigNumber[] = [toUnit(1, 8)];
+      for (let i = 1; i < poolTokens.length; i++) {
+        oraclePrices.push(toWei(0.1 + Math.random()).div(1e10));
+        await oracles[i].setLatestAnswer(oraclePrices[i]);
+      }
+
+      const amounts = tokens.map(_ =>
+        toWei(Math.floor(1000 + Math.random() * 5000)),
+      );
+      const normalizedWeights = normalizeWeights(
+        valueArray(ONE, tokens.length),
+      );
+
       const balances = await getUserBalances(admin.address);
 
       await vault.initialDeposit(
-        tokenValueArray(sortedTokens, ONE, tokens.length),
+        tokenWithValues(tokenAddresses, amounts),
+        tokenWithValues(tokenAddresses, normalizedWeights),
       );
 
       const { holdings, adminBalances: newAdminBalances } = await getState();
+
+      const underlyingBalances = [];
+      let totalValue = BigNumber.from(0);
+
       for (let i = 0; i < tokens.length; i++) {
-        expect(newAdminBalances[i]).to.equal(balances[i].sub(ONE));
-        expect(holdings[i]).to.equal(ONE);
+        if (i < poolTokens.length) {
+          totalValue = totalValue.add(
+            holdings[i].mul(oraclePrices[i]).div(1e8),
+          );
+        } else {
+          const index = i - poolTokens.length;
+          underlyingBalances[index] = await yieldTokens[index].convertToAssets(
+            holdings[i],
+          );
+          totalValue = totalValue.add(
+            underlyingBalances[index]
+              .mul(oraclePrices[underlyingIndexes[index]])
+              .div(1e8),
+          );
+        }
+      }
+
+      const weights = tokens.map(_ => BigNumber.from(0));
+      let sumYieldTokenWeights = BigNumber.from(0);
+      for (let i = 0; i < yieldTokens.length; i++) {
+        const index = i + poolTokens.length;
+        weights[index] = underlyingBalances[i]
+          .mul(oraclePrices[underlyingIndexes[i]])
+          .mul(1e10)
+          .div(totalValue);
+        sumYieldTokenWeights = sumYieldTokenWeights.add(weights[index]);
+      }
+      for (let i = 0; i < poolTokens.length; i++) {
+        weights[i] = ONE.sub(sumYieldTokenWeights).div(poolTokens.length);
+      }
+
+      const newWeights = await vault.getNormalizedWeights();
+
+      for (let i = 0; i < tokens.length; i++) {
+        expect(newAdminBalances[i]).to.equal(balances[i].sub(amounts[i]));
+        expect(holdings[i]).to.equal(amounts[i]);
+        expect(newWeights[i]).to.be.closeTo(weights[i], DEVIATION);
       }
     });
   });
@@ -572,15 +730,28 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       for (let i = 0; i < tokens.length; i++) {
         await tokens[i].approve(vault.address, toWei(100));
       }
+
+      for (let i = 1; i < poolTokens.length; i++) {
+        await oracles[i].setLatestAnswer(toUnit(1, 8));
+      }
+
       await vault.initialDeposit(
-        tokenValueArray(sortedTokens, ONE, tokens.length),
+        tokenValueArray(tokenAddresses, ONE, tokens.length),
+        tokenWithValues(
+          tokenAddresses,
+          normalizeWeights(valueArray(ONE, tokens.length)),
+        ),
       );
     });
 
     it("should be reverted to initialize the vault again", async () => {
       await expect(
         vault.initialDeposit(
-          tokenValueArray(sortedTokens, ONE, tokens.length),
+          tokenValueArray(tokenAddresses, ONE, tokens.length),
+          tokenWithValues(
+            tokenAddresses,
+            normalizeWeights(valueArray(ONE, tokens.length)),
+          ),
         ),
       ).to.be.revertedWith("Aera__VaultIsAlreadyInitialized");
     });
@@ -592,14 +763,14 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             await expect(
               vault
                 .connect(user)
-                .deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
+                .deposit(tokenValueArray(tokenAddresses, ONE, tokens.length)),
             ).to.be.revertedWith("Ownable: caller is not the owner");
           });
 
           it("when token and amount length is not same", async () => {
             await expect(
               vault.deposit(
-                tokenValueArray(sortedTokens, ONE, tokens.length + 1),
+                tokenValueArray(tokenAddresses, ONE, tokens.length + 1),
               ),
             ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
           });
@@ -613,20 +784,20 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           });
 
           it("when amount exceeds allowance", async () => {
-            const spotPrices = await vault.getSpotPrices(tokens[0].address);
-            for (let i = 1; i < tokens.length; i++) {
+            const spotPrices = await vault.getSpotPrices(sortedTokens[0]);
+            for (let i = 1; i < poolTokens.length; i++) {
               await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
             }
             await expect(
               vault.deposit(
-                tokenValueArray(sortedTokens, toWei(100), tokens.length),
+                tokenValueArray(tokenAddresses, toWei(100), tokens.length),
               ),
             ).to.be.revertedWith("ERC20: insufficient allowance");
           });
 
           it("when oracle is disabled", async () => {
-            const spotPrices = await vault.getSpotPrices(tokens[0].address);
-            for (let i = 1; i < tokens.length; i++) {
+            const spotPrices = await vault.getSpotPrices(sortedTokens[0]);
+            for (let i = 1; i < poolTokens.length; i++) {
               await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
             }
 
@@ -640,14 +811,14 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
             await vault.setOraclesEnabled(false);
             await expect(
-              vault.deposit(tokenWithValues(sortedTokens, amounts)),
+              vault.deposit(tokenWithValues(tokenAddresses, amounts)),
             ).to.be.revertedWith("Aera__OraclesAreDisabled");
           });
 
           it("when oracle is delayed beyond maximum", async () => {
             const timestamp = await getCurrentTime();
-            const spotPrices = await vault.getSpotPrices(tokens[0].address);
-            for (let i = 1; i < tokens.length; i++) {
+            const spotPrices = await vault.getSpotPrices(sortedTokens[0]);
+            for (let i = 1; i < poolTokens.length; i++) {
               await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
               await oracles[i].setUpdatedAt(timestamp - MAX_ORACLE_DELAY);
             }
@@ -661,13 +832,13 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             }
 
             await expect(
-              vault.deposit(tokenWithValues(sortedTokens, amounts)),
+              vault.deposit(tokenWithValues(tokenAddresses, amounts)),
             ).to.be.revertedWith("Aera__OracleIsDelayedBeyondMax");
           });
 
           it("when oracle and spot price divergence exceeds maximum", async () => {
-            const spotPrices = await vault.getSpotPrices(tokens[0].address);
-            for (let i = 1; i < tokens.length; i++) {
+            const spotPrices = await vault.getSpotPrices(sortedTokens[0]);
+            for (let i = 1; i < poolTokens.length; i++) {
               await oracles[i].setLatestAnswer(
                 spotPrices[i]
                   .mul(ONE)
@@ -685,7 +856,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             }
 
             await expect(
-              vault.deposit(tokenWithValues(sortedTokens, amounts)),
+              vault.deposit(tokenWithValues(tokenAddresses, amounts)),
             ).to.be.revertedWith("Aera__OracleSpotPriceDivergenceExceedsMax");
           });
 
@@ -701,73 +872,57 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             }
 
             await expect(
-              vault.deposit(tokenWithValues(sortedTokens, amounts)),
+              vault.deposit(tokenWithValues(tokenAddresses, amounts)),
             ).to.be.revertedWith("Aera__OraclePriceIsInvalid");
           });
 
           it("when balance is changed in the same block", async () => {
-            await validator.setAllowances(valueArray(toWei(1), tokens.length));
-            await vault.withdraw(
-              tokenValueArray(sortedTokens, toWei(0.9), tokens.length),
-            );
-
-            const spotPrices = await vault.getSpotPrices(tokens[0].address);
-            for (let i = 1; i < tokens.length; i++) {
+            const spotPrices = await vault.getSpotPrices(sortedTokens[0]);
+            for (let i = 1; i < poolTokens.length; i++) {
               await oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
             }
 
-            const amounts = tokens.map(_ =>
-              toWei(Math.floor(1 + Math.random())),
-            );
-
-            for (let i = 0; i < tokens.length; i++) {
-              await tokens[i].approve(vault.address, amounts[i].mul(2));
-            }
+            const amounts = valueArray(toWei(0.1), tokens.length);
 
             await ethers.provider.send("evm_setAutomine", [false]);
-            await ethers.provider.send("evm_setIntervalMining", [0]);
 
             const trx1 = await vault.deposit(
-              tokenWithValues(sortedTokens, amounts),
+              tokenWithValues(tokenAddresses, amounts),
             );
             const trx2 = await vault.depositIfBalanceUnchanged(
-              tokenWithValues(sortedTokens, amounts),
+              tokenWithValues(tokenAddresses, amounts),
             );
 
             await ethers.provider.send("evm_mine", []);
 
             try {
-              await trx1.wait();
-              await trx2.wait();
+              await Promise.all([trx1.wait(), trx2.wait()]);
             } catch {
               // empty
             }
 
-            const receipt1 = await ethers.provider.getTransactionReceipt(
-              trx1.hash,
-            );
-            const receipt2 = await ethers.provider.getTransactionReceipt(
-              trx2.hash,
-            );
+            const [receipt1, receipt2] = await Promise.all([
+              ethers.provider.getTransactionReceipt(trx1.hash),
+              ethers.provider.getTransactionReceipt(trx2.hash),
+            ]);
 
             expect(receipt1.status).to.equal(1);
             expect(receipt2.status).to.equal(0);
 
             await ethers.provider.send("evm_setAutomine", [true]);
-            await ethers.provider.send("evm_setIntervalMining", [0]);
           });
         });
 
         describe("should be possible to deposit tokens", async () => {
           it("when vault value is less than minimum", async () => {
-            await validator.setAllowances(valueArray(toWei(1), tokens.length));
+            await validator.setAllowances(valueArray(ONE, tokens.length));
             await vault.withdraw(
-              tokenValueArray(sortedTokens, toWei(0.9), tokens.length),
+              tokenValueArray(tokenAddresses, toWei(0.3), tokens.length),
             );
 
-            const spotPrices = await vault.getSpotPrices(tokens[0].address);
-            const oraclePrices: BigNumber[] = [ONE];
-            for (let i = 1; i < tokens.length; i++) {
+            const spotPrices = await vault.getSpotPrices(sortedTokens[0]);
+            const oraclePrices: BigNumber[] = [toUnit(1, 8)];
+            for (let i = 1; i < poolTokens.length; i++) {
               oraclePrices.push(
                 spotPrices[i]
                   .mul(ONE)
@@ -785,11 +940,11 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
               await tokens[i].approve(vault.address, amounts[i]);
             }
 
-            await vault.deposit(tokenWithValues(sortedTokens, amounts));
+            await vault.deposit(tokenWithValues(tokenAddresses, amounts));
 
-            const newSpotPrices = await vault.getSpotPrices(tokens[0].address);
+            const newSpotPrices = await vault.getSpotPrices(sortedTokens[0]);
 
-            for (let i = 1; i < tokens.length; i++) {
+            for (let i = 1; i < poolTokens.length; i++) {
               expect(newSpotPrices[i]).to.be.closeTo(
                 oraclePrices[i].mul(1e10),
                 oraclePrices[i]
@@ -802,9 +957,9 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           });
 
           it("when deposit value is less than minimum", async () => {
-            const spotPrices = await vault.getSpotPrices(tokens[0].address);
-            const oraclePrices: BigNumber[] = [ONE];
-            for (let i = 1; i < tokens.length; i++) {
+            const spotPrices = await vault.getSpotPrices(sortedTokens[0]);
+            const oraclePrices: BigNumber[] = [toUnit(1, 8)];
+            for (let i = 1; i < poolTokens.length; i++) {
               oraclePrices.push(
                 spotPrices[i]
                   .mul(ONE)
@@ -822,11 +977,11 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
               await tokens[i].approve(vault.address, amounts[i]);
             }
 
-            await vault.deposit(tokenWithValues(sortedTokens, amounts));
+            await vault.deposit(tokenWithValues(tokenAddresses, amounts));
 
-            const newSpotPrices = await vault.getSpotPrices(tokens[0].address);
+            const newSpotPrices = await vault.getSpotPrices(sortedTokens[0]);
 
-            for (let i = 1; i < tokens.length; i++) {
+            for (let i = 1; i < poolTokens.length; i++) {
               expect(newSpotPrices[i]).to.be.closeTo(
                 spotPrices[i],
                 spotPrices[i].mul(PRICE_DEVIATION).div(ONE).toNumber(),
@@ -835,9 +990,9 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           });
 
           it("when vault value and deposit value are greater than minimum", async () => {
-            const spotPrices = await vault.getSpotPrices(tokens[0].address);
-            const oraclePrices: BigNumber[] = [ONE];
-            for (let i = 1; i < tokens.length; i++) {
+            const spotPrices = await vault.getSpotPrices(sortedTokens[0]);
+            const oraclePrices: BigNumber[] = [toUnit(1, 8)];
+            for (let i = 1; i < poolTokens.length; i++) {
               oraclePrices.push(
                 spotPrices[i]
                   .mul(ONE)
@@ -848,18 +1003,18 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             }
 
             const amounts = tokens.map(_ =>
-              toWei(Math.floor(10 + Math.random() * 10)),
+              toWei(Math.floor(5 + Math.random() * 10)),
             );
 
             for (let i = 0; i < tokens.length; i++) {
               await tokens[i].approve(vault.address, amounts[i]);
             }
 
-            await vault.deposit(tokenWithValues(sortedTokens, amounts));
+            await vault.deposit(tokenWithValues(tokenAddresses, amounts));
 
-            const newSpotPrices = await vault.getSpotPrices(tokens[0].address);
+            const newSpotPrices = await vault.getSpotPrices(sortedTokens[0]);
 
-            for (let i = 1; i < tokens.length; i++) {
+            for (let i = 1; i < poolTokens.length; i++) {
               expect(newSpotPrices[i]).to.be.closeTo(
                 oraclePrices[i].mul(1e10),
                 oraclePrices[i]
@@ -880,7 +1035,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
               vault
                 .connect(user)
                 .depositRiskingArbitrage(
-                  tokenValueArray(sortedTokens, ONE, tokens.length),
+                  tokenValueArray(tokenAddresses, ONE, tokens.length),
                 ),
             ).to.be.revertedWith("Ownable: caller is not the owner");
           });
@@ -888,7 +1043,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           it("when token and amount length is not same", async () => {
             await expect(
               vault.depositRiskingArbitrage(
-                tokenValueArray(sortedTokens, ONE, tokens.length + 1),
+                tokenValueArray(tokenAddresses, ONE, tokens.length + 1),
               ),
             ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
           });
@@ -904,7 +1059,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           it("when amount exceeds allowance", async () => {
             await expect(
               vault.depositRiskingArbitrage(
-                tokenValueArray(sortedTokens, toWei(100), tokens.length),
+                tokenValueArray(tokenAddresses, toWei(100), tokens.length),
               ),
             ).to.be.revertedWith("ERC20: insufficient allowance");
           });
@@ -914,41 +1069,32 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
               toWei(Math.floor(10 + Math.random() * 10)),
             );
 
-            for (let i = 0; i < tokens.length; i++) {
-              await tokens[i].approve(vault.address, amounts[i].mul(2));
-            }
-
             await ethers.provider.send("evm_setAutomine", [false]);
-            await ethers.provider.send("evm_setIntervalMining", [0]);
 
             const trx1 = await vault.depositRiskingArbitrage(
-              tokenWithValues(sortedTokens, amounts),
+              tokenWithValues(tokenAddresses, amounts),
             );
             const trx2 = await vault.depositRiskingArbitrageIfBalanceUnchanged(
-              tokenWithValues(sortedTokens, amounts),
+              tokenWithValues(tokenAddresses, amounts),
             );
 
             await ethers.provider.send("evm_mine", []);
 
             try {
-              await trx1.wait();
-              await trx2.wait();
+              await Promise.all([trx1.wait(), trx2.wait()]);
             } catch {
               // empty
             }
 
-            const receipt1 = await ethers.provider.getTransactionReceipt(
-              trx1.hash,
-            );
-            const receipt2 = await ethers.provider.getTransactionReceipt(
-              trx2.hash,
-            );
+            const [receipt1, receipt2] = await Promise.all([
+              ethers.provider.getTransactionReceipt(trx1.hash),
+              ethers.provider.getTransactionReceipt(trx2.hash),
+            ]);
 
             expect(receipt1.status).to.equal(1);
             expect(receipt2.status).to.equal(0);
 
             await ethers.provider.send("evm_setAutomine", [true]);
-            await ethers.provider.send("evm_setIntervalMining", [0]);
           });
         });
 
@@ -961,26 +1107,33 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
               const amounts = new Array(tokens.length).fill(0);
               amounts[i] = toWei(5);
 
-              const spotPrices = await vault.getSpotPrices(tokens[i].address);
+              const spotPrices =
+                i < poolTokens.length
+                  ? await vault.getSpotPrices(sortedTokens[i])
+                  : [];
 
               await vault.depositRiskingArbitrage(
-                tokenWithValues(sortedTokens, amounts),
+                tokenWithValues(tokenAddresses, amounts),
               );
               const newManagersFeeTotal = await getManagersFeeTotal();
 
-              const newSpotPrices = await vault.getSpotPrices(
-                tokens[i].address,
-              );
               const {
                 holdings: newHoldings,
                 adminBalances: newAdminBalances,
               } = await getState();
 
-              for (let j = 0; j < tokens.length; j++) {
-                expect(newSpotPrices[j]).to.closeTo(
-                  spotPrices[j],
-                  spotPrices[j].mul(PRICE_DEVIATION).div(ONE).toNumber(),
+              if (i < poolTokens.length) {
+                const newSpotPrices = await vault.getSpotPrices(
+                  sortedTokens[i],
                 );
+                for (let j = 0; j < poolTokens.length; j++) {
+                  expect(newSpotPrices[j]).to.closeTo(
+                    spotPrices[j],
+                    spotPrices[j].mul(PRICE_DEVIATION).div(ONE).toNumber(),
+                  );
+                }
+              }
+              for (let j = 0; j < tokens.length; j++) {
                 expect(newHoldings[j]).to.equal(
                   holdings[j]
                     .add(amounts[j])
@@ -1006,38 +1159,39 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             );
 
             const spotPrices = [];
+            for (let i = 0; i < poolTokens.length; i++) {
+              spotPrices.push(await vault.getSpotPrices(sortedTokens[i]));
+            }
             for (let i = 0; i < tokens.length; i++) {
               await tokens[i].approve(vault.address, amounts[i]);
-              spotPrices.push(await vault.getSpotPrices(tokens[i].address));
             }
 
             await vault.depositRiskingArbitrage(
-              tokenWithValues(sortedTokens, amounts),
+              tokenWithValues(tokenAddresses, amounts),
             );
             const managersFeeTotal = await getManagersFeeTotal();
 
             const { holdings: newHoldings, adminBalances: newAdminBalances } =
               await getState();
 
-            for (let i = 0; i < tokens.length; i++) {
-              const newSpotPrices = await vault.getSpotPrices(
-                tokens[i].address,
-              );
+            for (let i = 0; i < poolTokens.length; i++) {
+              const newSpotPrices = await vault.getSpotPrices(sortedTokens[i]);
 
               expect(
                 await vault.getSpotPrice(
-                  tokens[i].address,
-                  tokens[(i + 1) % tokens.length].address,
+                  sortedTokens[i],
+                  sortedTokens[(i + 1) % poolTokens.length],
                 ),
-              ).to.equal(newSpotPrices[(i + 1) % tokens.length]);
+              ).to.equal(newSpotPrices[(i + 1) % poolTokens.length]);
 
-              for (let j = 0; j < tokens.length; j++) {
+              for (let j = 0; j < poolTokens.length; j++) {
                 expect(newSpotPrices[j]).to.be.closeTo(
                   spotPrices[i][j],
                   spotPrices[i][j].mul(PRICE_DEVIATION).div(ONE).toNumber(),
                 );
               }
-
+            }
+            for (let i = 0; i < tokens.length; i++) {
               expect(await vault.holding(i)).to.equal(newHoldings[i]);
               expect(newHoldings[i]).to.equal(
                 holdings[i].add(amounts[i]).sub(managersFeeTotal[i]),
@@ -1056,7 +1210,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         it("should revert to withdraw tokens", async () => {
           await expect(
             vault.withdraw(
-              tokenValueArray(sortedTokens, toWei(5), tokens.length),
+              tokenValueArray(tokenAddresses, toWei(5), tokens.length),
             ),
           ).to.be.revertedWith("Aera__AmountExceedAvailable");
         });
@@ -1074,14 +1228,14 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             await expect(
               vault
                 .connect(user)
-                .withdraw(tokenValueArray(sortedTokens, ONE, tokens.length)),
+                .withdraw(tokenValueArray(tokenAddresses, ONE, tokens.length)),
             ).to.be.revertedWith("Ownable: caller is not the owner");
           });
 
           it("when token and amount length is not same", async () => {
             await expect(
               vault.withdraw(
-                tokenValueArray(sortedTokens, ONE, tokens.length + 1),
+                tokenValueArray(tokenAddresses, ONE, tokens.length + 1),
               ),
             ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
           });
@@ -1099,11 +1253,11 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             await expect(
               vault.withdraw([
                 {
-                  token: sortedTokens[0],
+                  token: tokenAddresses[0],
                   value: holdings[0].add(1),
                 },
                 ...tokenValueArray(
-                  sortedTokens.slice(1),
+                  tokenAddresses.slice(1),
                   ONE,
                   tokens.length - 1,
                 ),
@@ -1116,7 +1270,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
               await tokens[i].approve(vault.address, toWei(100000));
             }
             await vault.depositRiskingArbitrage(
-              tokenValueArray(sortedTokens, toWei(10000), tokens.length),
+              tokenValueArray(tokenAddresses, toWei(10000), tokens.length),
             );
 
             const amounts = tokens.map(_ =>
@@ -1124,43 +1278,38 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             );
 
             await ethers.provider.send("evm_setAutomine", [false]);
-            await ethers.provider.send("evm_setIntervalMining", [0]);
 
             const trx1 = await vault.withdraw(
-              tokenWithValues(sortedTokens, amounts),
+              tokenWithValues(tokenAddresses, amounts),
             );
             const trx2 = await vault.withdrawIfBalanceUnchanged(
-              tokenWithValues(sortedTokens, amounts),
+              tokenWithValues(tokenAddresses, amounts),
             );
 
             await ethers.provider.send("evm_mine", []);
 
             try {
-              await trx1.wait();
-              await trx2.wait();
-            } catch {
+              await Promise.all([trx1.wait(), trx2.wait()]);
+            } catch (e) {
               // empty
             }
 
-            const receipt1 = await ethers.provider.getTransactionReceipt(
-              trx1.hash,
-            );
-            const receipt2 = await ethers.provider.getTransactionReceipt(
-              trx2.hash,
-            );
+            const [receipt1, receipt2] = await Promise.all([
+              ethers.provider.getTransactionReceipt(trx1.hash),
+              ethers.provider.getTransactionReceipt(trx2.hash),
+            ]);
 
             expect(receipt1.status).to.equal(1);
             expect(receipt2.status).to.equal(0);
 
             await ethers.provider.send("evm_setAutomine", [true]);
-            await ethers.provider.send("evm_setIntervalMining", [0]);
           });
         });
 
         describe("should be possible to withdraw ", async () => {
           it("when withdrawing one token", async () => {
             await vault.depositRiskingArbitrage(
-              tokenValueArray(sortedTokens, toWei(5), tokens.length),
+              tokenValueArray(tokenAddresses, toWei(5), tokens.length),
             );
             let { holdings, adminBalances } = await getState();
             let managersFeeTotal = await getManagersFeeTotal();
@@ -1169,24 +1318,32 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
               const amounts = new Array(tokens.length).fill(0);
               amounts[i] = toWei(5);
 
-              const spotPrices = await vault.getSpotPrices(tokens[i].address);
+              const spotPrices =
+                i < poolTokens.length
+                  ? await vault.getSpotPrices(sortedTokens[i])
+                  : [];
 
-              await vault.withdraw(tokenWithValues(sortedTokens, amounts));
+              await vault.withdraw(tokenWithValues(tokenAddresses, amounts));
               const newManagersFeeTotal = await getManagersFeeTotal();
 
-              const newSpotPrices = await vault.getSpotPrices(
-                tokens[i].address,
-              );
+              if (i < poolTokens.length) {
+                const newSpotPrices = await vault.getSpotPrices(
+                  sortedTokens[i],
+                );
+                for (let j = 0; j < poolTokens.length; j++) {
+                  expect(newSpotPrices[j]).to.closeTo(
+                    spotPrices[j],
+                    spotPrices[j].mul(PRICE_DEVIATION).div(ONE).toNumber(),
+                  );
+                }
+              }
+
               const {
                 holdings: newHoldings,
                 adminBalances: newAdminBalances,
               } = await getState();
 
               for (let j = 0; j < tokens.length; j++) {
-                expect(newSpotPrices[j]).to.closeTo(
-                  spotPrices[j],
-                  spotPrices[j].mul(PRICE_DEVIATION).div(ONE).toNumber(),
-                );
                 expect(newHoldings[j]).to.equal(
                   holdings[j]
                     .sub(amounts[j])
@@ -1209,7 +1366,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
               await tokens[i].approve(vault.address, toWei(100000));
             }
             await vault.depositRiskingArbitrage(
-              tokenValueArray(sortedTokens, toWei(10000), tokens.length),
+              tokenValueArray(tokenAddresses, toWei(10000), tokens.length),
             );
 
             const { holdings, adminBalances } = await getState();
@@ -1220,35 +1377,34 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             );
 
             const spotPrices = [];
-            for (let i = 0; i < tokens.length; i++) {
-              spotPrices.push(await vault.getSpotPrices(tokens[i].address));
+            for (let i = 0; i < poolTokens.length; i++) {
+              spotPrices.push(await vault.getSpotPrices(sortedTokens[i]));
             }
 
-            await vault.withdraw(tokenWithValues(sortedTokens, amounts));
+            await vault.withdraw(tokenWithValues(tokenAddresses, amounts));
             const newManagersFeeTotal = await getManagersFeeTotal();
 
             const { holdings: newHoldings, adminBalances: newAdminBalances } =
               await getState();
 
-            for (let i = 0; i < tokens.length; i++) {
-              const newSpotPrices = await vault.getSpotPrices(
-                tokens[i].address,
-              );
+            for (let i = 0; i < poolTokens.length; i++) {
+              const newSpotPrices = await vault.getSpotPrices(sortedTokens[i]);
 
               expect(
                 await vault.getSpotPrice(
-                  tokens[i].address,
-                  tokens[(i + 1) % tokens.length].address,
+                  sortedTokens[i],
+                  sortedTokens[(i + 1) % poolTokens.length],
                 ),
-              ).to.equal(newSpotPrices[(i + 1) % tokens.length]);
+              ).to.equal(newSpotPrices[(i + 1) % poolTokens.length]);
 
-              for (let j = 0; j < tokens.length; j++) {
+              for (let j = 0; j < poolTokens.length; j++) {
                 expect(newSpotPrices[j]).to.be.closeTo(
                   spotPrices[i][j],
                   spotPrices[i][j].mul(PRICE_DEVIATION).div(ONE).toNumber(),
                 );
               }
-
+            }
+            for (let i = 0; i < tokens.length; i++) {
               expect(await vault.holding(i)).to.equal(newHoldings[i]);
               expect(newHoldings[i]).to.equal(
                 holdings[i]
@@ -1280,23 +1436,30 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           const amounts = new Array(tokens.length).fill(0);
           amounts[i] = toWei(5);
 
-          const spotPrices = await vault.getSpotPrices(tokens[i].address);
+          const spotPrices =
+            i < poolTokens.length
+              ? await vault.getSpotPrices(sortedTokens[i])
+              : [];
 
           await vault.depositRiskingArbitrage(
-            tokenWithValues(sortedTokens, amounts),
+            tokenWithValues(tokenAddresses, amounts),
           );
-          await vault.withdraw(tokenWithValues(sortedTokens, amounts));
+          await vault.withdraw(tokenWithValues(tokenAddresses, amounts));
           const newManagersFeeTotal = await getManagersFeeTotal();
 
-          const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
+          if (i < poolTokens.length) {
+            const newSpotPrices = await vault.getSpotPrices(sortedTokens[i]);
+            for (let j = 0; j < poolTokens.length; j++) {
+              expect(newSpotPrices[j]).to.closeTo(
+                spotPrices[j],
+                spotPrices[j].mul(PRICE_DEVIATION).div(ONE).toNumber(),
+              );
+            }
+          }
           const { holdings: newHoldings, adminBalances: newAdminBalances } =
             await getState();
 
           for (let j = 0; j < tokens.length; j++) {
-            expect(newSpotPrices[j]).to.closeTo(
-              spotPrices[j],
-              spotPrices[j].mul(PRICE_DEVIATION).div(ONE).toNumber(),
-            );
             expect(newHoldings[j]).to.equal(
               holdings[j].sub(newManagersFeeTotal[j]).add(managersFeeTotal[j]),
             );
@@ -1317,37 +1480,37 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         );
 
         const spotPrices = [];
-        for (let i = 0; i < tokens.length; i++) {
-          await tokens[i].approve(vault.address, amounts[i]);
-          spotPrices.push(await vault.getSpotPrices(tokens[i].address));
+        for (let i = 0; i < poolTokens.length; i++) {
+          spotPrices.push(await vault.getSpotPrices(sortedTokens[i]));
         }
 
         await vault.depositRiskingArbitrage(
-          tokenWithValues(sortedTokens, amounts),
+          tokenWithValues(tokenAddresses, amounts),
         );
-        await vault.withdraw(tokenWithValues(sortedTokens, amounts));
+        await vault.withdraw(tokenWithValues(tokenAddresses, amounts));
         const managersFeeTotal = await getManagersFeeTotal();
 
         const { holdings: newHoldings, adminBalances: newAdminBalances } =
           await getState();
 
-        for (let i = 0; i < tokens.length; i++) {
-          const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
+        for (let i = 0; i < poolTokens.length; i++) {
+          const newSpotPrices = await vault.getSpotPrices(sortedTokens[i]);
 
           expect(
             await vault.getSpotPrice(
-              tokens[i].address,
-              tokens[(i + 1) % tokens.length].address,
+              sortedTokens[i],
+              sortedTokens[(i + 1) % poolTokens.length],
             ),
-          ).to.equal(newSpotPrices[(i + 1) % tokens.length]);
+          ).to.equal(newSpotPrices[(i + 1) % poolTokens.length]);
 
-          for (let j = 0; j < tokens.length; j++) {
+          for (let j = 0; j < poolTokens.length; j++) {
             expect(newSpotPrices[j]).to.be.closeTo(
               spotPrices[i][j],
               spotPrices[i][j].mul(PRICE_DEVIATION).div(ONE).toNumber(),
             );
           }
-
+        }
+        for (let i = 0; i < tokens.length; i++) {
           expect(await vault.holding(i)).to.equal(newHoldings[i]);
           expect(newHoldings[i]).to.equal(
             holdings[i].sub(managersFeeTotal[i]),
@@ -1357,20 +1520,35 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       });
     });
 
-    describe("when calling updateWeightsGradually()", () => {
+    describe("when call updateWeightsGradually()", () => {
       describe("should be reverted to call updateWeightsGradually", async () => {
         it("when called from non-manager", async () => {
           await expect(
             vault.updateWeightsGradually(
-              tokenValueArray(
-                sortedTokens,
-                ONE.div(tokens.length),
-                tokens.length,
+              tokenWithValues(
+                tokenAddresses,
+                normalizeWeights(valueArray(ONE, tokens.length)),
               ),
               0,
               1,
             ),
           ).to.be.revertedWith("Aera__CallerIsNotManager");
+        });
+
+        it("when token and weight length is not same", async () => {
+          const timestamp = await getCurrentTime();
+          await expect(
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                tokenWithValues(
+                  tokenAddresses,
+                  normalizeWeights(valueArray(ONE, tokens.length - 1)),
+                ),
+                timestamp + 10,
+                timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 10,
+              ),
+          ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
         });
 
         it("when token is not sorted", async () => {
@@ -1379,15 +1557,31 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                tokenValueArray(
+                tokenWithValues(
                   unsortedTokens,
-                  ONE.div(tokens.length),
-                  tokens.length,
+                  normalizeWeights(valueArray(ONE, tokens.length)),
                 ),
                 timestamp + 10,
                 timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 10,
               ),
           ).to.be.revertedWith("Aera__DifferentTokensInPosition");
+        });
+
+        it("when total sum of weights is not one", async () => {
+          const timestamp = await getCurrentTime();
+          await expect(
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                tokenValueArray(
+                  tokenAddresses,
+                  ONE.div(tokens.length).sub(1),
+                  tokens.length,
+                ),
+                timestamp + 10,
+                timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 10,
+              ),
+          ).to.be.revertedWith("Aera__SumOfWeightIsNotOne");
         });
 
         it("when start time is greater than maximum", async () => {
@@ -1396,10 +1590,9 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                tokenValueArray(
-                  sortedTokens,
-                  ONE.div(tokens.length),
-                  tokens.length,
+                tokenWithValues(
+                  tokenAddresses,
+                  normalizeWeights(valueArray(ONE, tokens.length)),
                 ),
                 2 ** 32,
                 timestamp,
@@ -1413,10 +1606,9 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                tokenValueArray(
-                  sortedTokens,
-                  ONE.div(tokens.length),
-                  tokens.length,
+                tokenWithValues(
+                  tokenAddresses,
+                  normalizeWeights(valueArray(ONE, tokens.length)),
                 ),
                 timestamp,
                 2 ** 32,
@@ -1430,10 +1622,9 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                tokenValueArray(
-                  sortedTokens,
-                  ONE.div(tokens.length),
-                  tokens.length,
+                tokenWithValues(
+                  tokenAddresses,
+                  normalizeWeights(valueArray(ONE, tokens.length)),
                 ),
                 timestamp - 2,
                 timestamp - 1,
@@ -1447,10 +1638,9 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                tokenValueArray(
-                  sortedTokens,
-                  ONE.div(tokens.length),
-                  tokens.length,
+                tokenWithValues(
+                  tokenAddresses,
+                  normalizeWeights(valueArray(ONE, tokens.length)),
                 ),
                 timestamp,
                 timestamp + 1,
@@ -1464,10 +1654,9 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                tokenValueArray(
-                  sortedTokens,
-                  ONE.div(tokens.length),
-                  tokens.length,
+                tokenWithValues(
+                  tokenAddresses,
+                  normalizeWeights(valueArray(ONE, tokens.length)),
                 ),
                 timestamp - 2,
                 timestamp + MINIMUM_WEIGHT_CHANGE_DURATION - 1,
@@ -1482,45 +1671,39 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
               .connect(manager)
               .updateWeightsGradually(
                 tokenValueArray(
-                  sortedTokens,
+                  tokenAddresses,
                   ONE.div(tokens.length).sub(1),
                   tokens.length,
                 ),
                 timestamp,
                 timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
               ),
-          ).to.be.revertedWith(BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT);
+          ).to.be.revertedWith("Aera__SumOfWeightIsNotOne");
         });
 
         it("when change ratio is greater than maximum", async () => {
           const timestamp = await getCurrentTime();
           const startWeights = await vault.getNormalizedWeights();
-          const targetWeight0 = startWeights[0]
+          const targetWeight0 = normalizeWeights(
+            startWeights.slice(0, poolTokens.length),
+          )[0]
             .mul(ONE)
             .div(MAX_WEIGHT_CHANGE_RATIO + 2)
             .div(MINIMUM_WEIGHT_CHANGE_DURATION + 1);
-          const targetWeights = [
+          const targetWeights = normalizeWeights([
             targetWeight0,
             ...valueArray(
-              ONE.sub(targetWeight0).div(tokens.length - 1),
-              tokens.length - 1,
+              ONE.sub(targetWeight0).div(poolTokens.length - 1),
+              poolTokens.length - 1,
             ),
-          ];
-
-          let weightSum = toWei(0);
-          for (let i = 0; i < tokens.length; i++) {
-            weightSum = weightSum.add(targetWeights[i]);
-          }
-
-          targetWeights[tokens.length - 1] = ONE.sub(weightSum).add(
-            targetWeights[tokens.length - 1],
-          );
+            ...startWeights.slice(poolTokens.length, tokens.length),
+          ]);
 
           await expect(
             vault
               .connect(manager)
               .updateWeightsGradually(
-                tokenWithValues(sortedTokens, targetWeights),
+                tokenWithValues(tokenAddresses, targetWeights),
                 timestamp,
                 timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
               ),
@@ -1528,76 +1711,596 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         });
 
         it("when weight is less than minimum", async () => {
-          const timestamp = await getCurrentTime();
           const token0TargetWeight = toWei(0.009);
-          const validDuration = ONE.mul(ONE)
-            .div(tokens.length)
+          const weights = await vault.getNormalizedWeights();
+          const poolWeights = weights.slice(0, poolTokens.length);
+          const normalizedPoolWeights = normalizeWeights(
+            weights.slice(0, poolTokens.length),
+          );
+          let poolWeightSum = toWei(0);
+          let normalizedPoolWeightSum = toWei(0);
+          poolWeights.forEach(
+            weight => (poolWeightSum = poolWeightSum.add(weight)),
+          );
+          normalizedPoolWeights.forEach(
+            weight =>
+              (normalizedPoolWeightSum = normalizedPoolWeightSum.add(weight)),
+          );
+
+          const validDuration = normalizedPoolWeights[0]
+            .mul(ONE)
             .div(token0TargetWeight)
             .div(MAX_WEIGHT_CHANGE_RATIO)
-            .add(1);
-          await expect(
-            vault.connect(manager).updateWeightsGradually(
-              [
-                {
-                  token: sortedTokens[0],
-                  value: token0TargetWeight,
-                },
-                ...tokenValueArray(
-                  sortedTokens.slice(1),
-                  ONE.sub(token0TargetWeight).div(tokens.length - 1),
-                  tokens.length - 1,
-                ),
-              ],
-              timestamp,
-              timestamp + validDuration.toNumber() + 1,
+            .add(10);
+          const targetPoolWeights = [
+            token0TargetWeight,
+            ...valueArray(
+              normalizedPoolWeightSum
+                .sub(token0TargetWeight)
+                .div(poolTokens.length - 1),
+              poolTokens.length - 1,
             ),
+          ];
+          const targetWeights = normalizeWeights([
+            ...targetPoolWeights.map(weight =>
+              BigNumber.from(weight)
+                .mul(poolWeightSum)
+                .div(normalizedPoolWeightSum),
+            ),
+            ...weights.slice(poolTokens.length, tokens.length),
+          ]);
+
+          const timestamp = await getCurrentTime();
+
+          await expect(
+            vault
+              .connect(manager)
+              .updateWeightsGradually(
+                tokenWithValues(tokenAddresses, targetWeights),
+                timestamp,
+                timestamp + validDuration.toNumber() + 1,
+              ),
           ).to.be.revertedWith(BALANCER_ERRORS.MIN_WEIGHT);
         });
       });
 
-      it("should be possible to call updateWeightsGradually", async () => {
-        const startWeights = await vault.getNormalizedWeights();
-        const timestamp = await getCurrentTime();
-        const endWeights = [];
-        const avgWeights = ONE.div(tokens.length);
-        const startTime = timestamp + 10;
-        const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
-        for (let i = 0; i < tokens.length; i += 2) {
-          if (i < tokens.length - 1) {
-            endWeights.push(avgWeights.add(toWei((i + 1) / 100)));
-            endWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
-          } else {
-            endWeights.push(avgWeights);
+      describe("should be possible to call updateWeightsGradually", async () => {
+        it("when no yield tokens should be adjusted", async () => {
+          const startWeights = await vault.getNormalizedWeights();
+          const startPoolWeights = normalizeWeights(
+            startWeights.slice(0, poolTokens.length),
+          );
+          const timestamp = await getCurrentTime();
+          const endWeights = [];
+          const startTime = timestamp + 10;
+          const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
+
+          for (let i = 0; i < poolTokens.length; i += 2) {
+            if (i < poolTokens.length - 1) {
+              endWeights.push(startWeights[i].add(toWei((i + 1) / 100)));
+              endWeights.push(startWeights[i + 1].sub(toWei((i + 1) / 100)));
+            } else {
+              endWeights.push(startWeights[i]);
+            }
           }
-        }
+          for (let i = poolTokens.length; i < tokens.length; i++) {
+            endWeights.push(startWeights[i]);
+          }
 
-        await vault
-          .connect(manager)
-          .updateWeightsGradually(
-            tokenWithValues(sortedTokens, endWeights),
-            startTime,
-            endTime,
+          const endPoolWeights = normalizeWeights(
+            normalizeWeights(endWeights).slice(0, poolTokens.length),
           );
 
-        await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION);
+          await vault
+            .connect(manager)
+            .updateWeightsGradually(
+              tokenWithValues(tokenAddresses, normalizeWeights(endWeights)),
+              startTime,
+              endTime,
+            );
 
-        const currentWeights = await vault.getNormalizedWeights();
+          await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION);
 
-        const currentTime = await getCurrentTime();
-        const ptcProgress = ONE.mul(currentTime - startTime).div(
-          endTime - startTime,
-        );
-
-        for (let i = 0; i < tokens.length; i++) {
-          const weightDelta = endWeights[i]
-            .sub(startWeights[i])
-            .mul(ptcProgress)
-            .div(ONE);
-          expect(startWeights[i].add(weightDelta)).to.be.closeTo(
-            currentWeights[i],
-            DEVIATION,
+          const currentWeights = await vault.getNormalizedWeights();
+          const currentPoolWeights = normalizeWeights(
+            currentWeights.slice(0, poolTokens.length),
           );
-        }
+
+          const currentTime = await getCurrentTime();
+          const ptcProgress = ONE.mul(currentTime - startTime).div(
+            endTime - startTime,
+          );
+
+          for (let i = 0; i < poolTokens.length; i++) {
+            const weightDelta = endPoolWeights[i]
+              .sub(startPoolWeights[i])
+              .mul(ptcProgress)
+              .div(ONE);
+            expect(startPoolWeights[i].add(weightDelta)).to.be.closeTo(
+              currentPoolWeights[i],
+              DEVIATION,
+            );
+          }
+        });
+
+        describe("when yield tokens should be adjusted", async () => {
+          let startTime: number;
+          let endTime: number;
+
+          beforeEach(async function () {
+            const timestamp = await getCurrentTime();
+            startTime = timestamp + 10;
+            endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 10000;
+          });
+
+          describe("when underlying tokens are enough to mint yield tokens", async () => {
+            it("update weights of only underlying tokens and yield tokens", async () => {
+              const weights = await vault.getNormalizedWeights();
+              const targetWeights = [...weights];
+              for (let i = 0; i < yieldTokens.length; i++) {
+                targetWeights[underlyingIndexes[i]] = targetWeights[
+                  underlyingIndexes[i]
+                ].sub(toWei(0.01));
+                targetWeights[i + poolTokens.length] = targetWeights[
+                  i + poolTokens.length
+                ].add(toWei(0.01));
+              }
+
+              await vault
+                .connect(manager)
+                .updateWeightsGradually(
+                  tokenWithValues(tokenAddresses, targetWeights),
+                  startTime,
+                  endTime,
+                );
+
+              const newWeights = await vault.getNormalizedWeights();
+
+              for (let i = 0; i < tokens.length; i++) {
+                expect(newWeights[i]).to.be.closeTo(
+                  targetWeights[i],
+                  DEVIATION,
+                );
+              }
+            });
+
+            it("update weights of all tokens", async () => {
+              const weights = await vault.getNormalizedWeights();
+              let targetWeights = [...weights];
+              for (let i = 0; i < yieldTokens.length; i++) {
+                targetWeights[underlyingIndexes[i]] = targetWeights[
+                  underlyingIndexes[i]
+                ].sub(toWei(0.01));
+                targetWeights[i + poolTokens.length] = targetWeights[
+                  i + poolTokens.length
+                ].add(toWei(0.01));
+              }
+
+              let weightSum = ONE;
+              let numAdjustedWeight = 0;
+              for (let i = 0; i < tokens.length; i++) {
+                if (i > poolTokens.length || underlyingIndexes.includes(i)) {
+                  weightSum = weightSum.sub(targetWeights[i]);
+                  numAdjustedWeight++;
+                }
+              }
+              for (let i = 0; i < poolTokens.length; i++) {
+                if (!underlyingIndexes.includes(i)) {
+                  targetWeights[i] = weightSum.div(numAdjustedWeight);
+                }
+              }
+
+              targetWeights = normalizeWeights(targetWeights);
+
+              await vault
+                .connect(manager)
+                .updateWeightsGradually(
+                  tokenWithValues(tokenAddresses, targetWeights),
+                  startTime,
+                  endTime,
+                );
+
+              let newWeights = await vault.getNormalizedWeights();
+
+              for (let i = 0; i < tokens.length; i++) {
+                if (i >= poolTokens.length) {
+                  expect(newWeights[i]).to.be.closeTo(
+                    targetWeights[i],
+                    DEVIATION,
+                  );
+                } else if (!underlyingIndexes.includes(i)) {
+                  expect(newWeights[i]).to.be.closeTo(weights[i], DEVIATION);
+                }
+              }
+
+              await increaseTime(endTime - (await getCurrentTime()));
+
+              newWeights = await vault.getNormalizedWeights();
+
+              for (let i = 0; i < tokens.length; i++) {
+                expect(newWeights[i]).to.be.closeTo(
+                  targetWeights[i],
+                  DEVIATION,
+                );
+              }
+            });
+
+            describe("when maximum deposit amount is low or invalid", async () => {
+              let targetWeights: BigNumber[] = [];
+
+              beforeEach(async () => {
+                const weights = await vault.getNormalizedWeights();
+                targetWeights = [...weights];
+                for (let i = 0; i < yieldTokens.length; i++) {
+                  targetWeights[underlyingIndexes[i]] = targetWeights[
+                    underlyingIndexes[i]
+                  ].sub(toWei(0.02));
+                  targetWeights[i + poolTokens.length] = targetWeights[
+                    i + poolTokens.length
+                  ].add(toWei(0.02));
+                }
+
+                let weightSum = ONE;
+                let numAdjustedWeight = 0;
+                for (let i = 0; i < tokens.length; i++) {
+                  if (i > poolTokens.length || underlyingIndexes.includes(i)) {
+                    weightSum = weightSum.sub(targetWeights[i]);
+                    numAdjustedWeight++;
+                  }
+                }
+                for (let i = 0; i < poolTokens.length; i++) {
+                  if (!underlyingIndexes.includes(i)) {
+                    targetWeights[i] = weightSum.div(numAdjustedWeight);
+                  }
+                }
+
+                targetWeights = normalizeWeights(targetWeights);
+              });
+
+              it("deposit only maximum deposit amount", async () => {
+                for (let i = 0; i < yieldTokens.length; i++) {
+                  await yieldTokens[i].setMaxDepositAmount(toWei(0.001), true);
+                }
+
+                const holdings = await vault.getHoldings();
+
+                await vault
+                  .connect(manager)
+                  .updateWeightsGradually(
+                    tokenWithValues(tokenAddresses, targetWeights),
+                    startTime,
+                    endTime,
+                  );
+
+                const newHoldings = await vault.getHoldings();
+
+                for (let i = 0; i < tokens.length; i++) {
+                  if (underlyingIndexes.includes(i)) {
+                    expect(newHoldings[i]).to.equal(
+                      holdings[i].sub(toWei(0.001)),
+                    );
+                  }
+                }
+              });
+
+              it("deposit no assets when maximum deposit amount is zero", async () => {
+                for (let i = 0; i < yieldTokens.length; i++) {
+                  await yieldTokens[i].setMaxDepositAmount(toWei(0), true);
+                }
+
+                const holdings = await vault.getHoldings();
+
+                await vault
+                  .connect(manager)
+                  .updateWeightsGradually(
+                    tokenWithValues(tokenAddresses, targetWeights),
+                    startTime,
+                    endTime,
+                  );
+
+                const newHoldings = await vault.getHoldings();
+
+                for (let i = 0; i < tokens.length; i++) {
+                  if (underlyingIndexes.includes(i)) {
+                    expect(newHoldings[i]).to.equal(holdings[i]);
+                  }
+                }
+              });
+
+              it("deposit no assets when maxDeposit reverts", async () => {
+                for (let i = 0; i < yieldTokens.length; i++) {
+                  await yieldTokens[i].pause();
+                }
+
+                const holdings = await vault.getHoldings();
+
+                await vault
+                  .connect(manager)
+                  .updateWeightsGradually(
+                    tokenWithValues(tokenAddresses, targetWeights),
+                    startTime,
+                    endTime,
+                  );
+
+                const newHoldings = await vault.getHoldings();
+
+                for (let i = 0; i < tokens.length; i++) {
+                  if (underlyingIndexes.includes(i)) {
+                    expect(newHoldings[i]).to.equal(holdings[i]);
+                  }
+                }
+              });
+            });
+          });
+
+          it("when underlying tokens are not enough to mint yield tokens", async () => {
+            const weights = await vault.getNormalizedWeights();
+            let poolWeights = normalizeWeights(
+              weights.slice(0, poolTokens.length),
+            );
+            let targetWeights = [...weights];
+            for (let i = 0; i < yieldTokens.length; i++) {
+              targetWeights[underlyingIndexes[i]] = toWei(0.1);
+              targetWeights[i + poolTokens.length] = toWei(0.9);
+              poolWeights[underlyingIndexes[i]] = MIN_WEIGHT;
+            }
+
+            targetWeights = normalizeWeights(targetWeights);
+            poolWeights = normalizeWeights(poolWeights);
+
+            await vault
+              .connect(manager)
+              .updateWeightsGradually(
+                tokenWithValues(tokenAddresses, targetWeights),
+                startTime,
+                endTime,
+              );
+
+            let newWeights = await vault.getNormalizedWeights();
+            const newPoolWeights = normalizeWeights(
+              newWeights.slice(0, poolTokens.length),
+            );
+
+            for (let i = 0; i < poolTokens.length; i++) {
+              expect(newPoolWeights[i]).to.be.closeTo(
+                poolWeights[i],
+                DEVIATION,
+              );
+            }
+            for (let i = 0; i < yieldTokens.length; i++) {
+              expect(
+                newWeights[i + poolTokens.length].add(
+                  newWeights[underlyingIndexes[i]],
+                ),
+              ).to.be.closeTo(
+                weights[i + poolTokens.length].add(
+                  weights[underlyingIndexes[i]],
+                ),
+                DEVIATION,
+              );
+            }
+
+            await increaseTime(endTime - (await getCurrentTime()));
+
+            newWeights = await vault.getNormalizedWeights();
+
+            for (let i = 0; i < yieldTokens.length; i++) {
+              expect(
+                newWeights[i + poolTokens.length].add(
+                  newWeights[underlyingIndexes[i]],
+                ),
+              ).to.be.closeTo(
+                targetWeights[i + poolTokens.length].add(
+                  targetWeights[underlyingIndexes[i]],
+                ),
+                DEVIATION,
+              );
+            }
+          });
+
+          describe("when redeem yield tokens", async () => {
+            it("update weights of only underlying tokens and yield tokens", async () => {
+              const weights = await vault.getNormalizedWeights();
+              const targetWeights = [...weights];
+              for (let i = 0; i < yieldTokens.length; i++) {
+                targetWeights[underlyingIndexes[i]] = targetWeights[
+                  underlyingIndexes[i]
+                ].add(toWei(0.01));
+                targetWeights[i + poolTokens.length] = targetWeights[
+                  i + poolTokens.length
+                ].sub(toWei(0.01));
+              }
+
+              await vault
+                .connect(manager)
+                .updateWeightsGradually(
+                  tokenWithValues(tokenAddresses, targetWeights),
+                  startTime,
+                  endTime,
+                );
+
+              const newWeights = await vault.getNormalizedWeights();
+
+              for (let i = 0; i < tokens.length; i++) {
+                expect(newWeights[i]).to.be.closeTo(
+                  targetWeights[i],
+                  DEVIATION,
+                );
+              }
+            });
+
+            it("update weights of all tokens", async () => {
+              const weights = await vault.getNormalizedWeights();
+              let targetWeights = [...weights];
+              for (let i = 0; i < yieldTokens.length; i++) {
+                targetWeights[underlyingIndexes[i]] = targetWeights[
+                  underlyingIndexes[i]
+                ].add(toWei(0.01));
+                targetWeights[i + poolTokens.length] = targetWeights[
+                  i + poolTokens.length
+                ].sub(toWei(0.01));
+              }
+
+              let weightSum = ONE;
+              let numAdjustedWeight = 0;
+              for (let i = 0; i < tokens.length; i++) {
+                if (i > poolTokens.length || underlyingIndexes.includes(i)) {
+                  weightSum = weightSum.sub(targetWeights[i]);
+                  numAdjustedWeight++;
+                }
+              }
+              for (let i = 0; i < poolTokens.length; i++) {
+                if (!underlyingIndexes.includes(i)) {
+                  targetWeights[i] = weightSum.div(numAdjustedWeight);
+                }
+              }
+
+              targetWeights = normalizeWeights(targetWeights);
+
+              await vault
+                .connect(manager)
+                .updateWeightsGradually(
+                  tokenWithValues(tokenAddresses, targetWeights),
+                  startTime,
+                  endTime,
+                );
+
+              let newWeights = await vault.getNormalizedWeights();
+
+              for (let i = 0; i < tokens.length; i++) {
+                if (i >= poolTokens.length) {
+                  expect(newWeights[i]).to.be.closeTo(
+                    targetWeights[i],
+                    DEVIATION,
+                  );
+                } else if (!underlyingIndexes.includes(i)) {
+                  expect(newWeights[i]).to.be.closeTo(weights[i], DEVIATION);
+                }
+              }
+
+              await increaseTime(endTime - (await getCurrentTime()));
+
+              newWeights = await vault.getNormalizedWeights();
+
+              for (let i = 0; i < tokens.length; i++) {
+                expect(newWeights[i]).to.be.closeTo(
+                  targetWeights[i],
+                  DEVIATION,
+                );
+              }
+            });
+
+            describe("when maximum withdrawal amount is low or invalid", async () => {
+              let targetWeights: BigNumber[] = [];
+
+              beforeEach(async () => {
+                const weights = await vault.getNormalizedWeights();
+                targetWeights = [...weights];
+                for (let i = 0; i < yieldTokens.length; i++) {
+                  targetWeights[underlyingIndexes[i]] = targetWeights[
+                    underlyingIndexes[i]
+                  ].add(toWei(0.02));
+                  targetWeights[i + poolTokens.length] = targetWeights[
+                    i + poolTokens.length
+                  ].sub(toWei(0.02));
+                }
+
+                let weightSum = ONE;
+                let numAdjustedWeight = 0;
+                for (let i = 0; i < tokens.length; i++) {
+                  if (i > poolTokens.length || underlyingIndexes.includes(i)) {
+                    weightSum = weightSum.sub(targetWeights[i]);
+                    numAdjustedWeight++;
+                  }
+                }
+                for (let i = 0; i < poolTokens.length; i++) {
+                  if (!underlyingIndexes.includes(i)) {
+                    targetWeights[i] = weightSum.div(numAdjustedWeight);
+                  }
+                }
+
+                targetWeights = normalizeWeights(targetWeights);
+              });
+
+              it("withdraw only maximum withdrawal amount", async () => {
+                for (let i = 0; i < yieldTokens.length; i++) {
+                  await yieldTokens[i].setMaxWithdrawalAmount(
+                    toWei(0.001),
+                    true,
+                  );
+                }
+
+                const holdings = await vault.getHoldings();
+
+                await vault
+                  .connect(manager)
+                  .updateWeightsGradually(
+                    tokenWithValues(tokenAddresses, targetWeights),
+                    startTime,
+                    endTime,
+                  );
+
+                const newHoldings = await vault.getHoldings();
+
+                for (let i = 0; i < tokens.length; i++) {
+                  if (underlyingIndexes.includes(i)) {
+                    expect(newHoldings[i]).to.equal(
+                      holdings[i].add(toWei(0.001)),
+                    );
+                  }
+                }
+              });
+
+              it("withdraw no assets when maximum withdrawal amount is zero", async () => {
+                for (let i = 0; i < yieldTokens.length; i++) {
+                  await yieldTokens[i].setMaxWithdrawalAmount(toWei(0), true);
+                }
+
+                const holdings = await vault.getHoldings();
+
+                await vault
+                  .connect(manager)
+                  .updateWeightsGradually(
+                    tokenWithValues(tokenAddresses, targetWeights),
+                    startTime,
+                    endTime,
+                  );
+
+                const newHoldings = await vault.getHoldings();
+
+                for (let i = 0; i < tokens.length; i++) {
+                  if (underlyingIndexes.includes(i)) {
+                    expect(newHoldings[i]).to.equal(holdings[i]);
+                  }
+                }
+              });
+
+              it("withdraw no assets when maxWithdraw reverts", async () => {
+                for (let i = 0; i < yieldTokens.length; i++) {
+                  await yieldTokens[i].pause();
+                }
+
+                const holdings = await vault.getHoldings();
+
+                await vault
+                  .connect(manager)
+                  .updateWeightsGradually(
+                    tokenWithValues(tokenAddresses, targetWeights),
+                    startTime,
+                    endTime,
+                  );
+
+                const newHoldings = await vault.getHoldings();
+
+                for (let i = 0; i < tokens.length; i++) {
+                  if (underlyingIndexes.includes(i)) {
+                    expect(newHoldings[i]).to.equal(holdings[i]);
+                  }
+                }
+              });
+            });
+          });
+        });
       });
 
       describe("should cancel current weight update", async () => {
@@ -1619,20 +2322,18 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           await vault
             .connect(manager)
             .updateWeightsGradually(
-              tokenWithValues(sortedTokens, endWeights),
+              tokenWithValues(tokenAddresses, normalizeWeights(endWeights)),
               startTime,
               endTime,
             );
 
           await vault.depositRiskingArbitrage(
-            tokenValueArray(sortedTokens, toWei(50), tokens.length),
+            tokenValueArray(tokenAddresses, toWei(50), tokens.length),
           );
 
           const newWeights = await vault.getNormalizedWeights();
 
-          for (let i = 0; i < 1000; i++) {
-            await ethers.provider.send("evm_mine", []);
-          }
+          await increaseTime(endTime - (await getCurrentTime()));
 
           const currentWeights = await vault.getNormalizedWeights();
 
@@ -1646,7 +2347,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             valueArray(toWei(100000), tokens.length),
           );
           await vault.depositRiskingArbitrage(
-            tokenValueArray(sortedTokens, toWei(50), tokens.length),
+            tokenValueArray(tokenAddresses, toWei(50), tokens.length),
           );
 
           const timestamp = await getCurrentTime();
@@ -1666,20 +2367,18 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
           await vault
             .connect(manager)
             .updateWeightsGradually(
-              tokenWithValues(sortedTokens, endWeights),
+              tokenWithValues(tokenAddresses, normalizeWeights(endWeights)),
               startTime,
               endTime,
             );
 
           await vault.withdraw(
-            tokenValueArray(sortedTokens, toWei(50), tokens.length),
+            tokenValueArray(tokenAddresses, toWei(10), tokens.length),
           );
 
           const newWeights = await vault.getNormalizedWeights();
 
-          for (let i = 0; i < 1000; i++) {
-            await ethers.provider.send("evm_mine", []);
-          }
+          await increaseTime(endTime - (await getCurrentTime()));
 
           const currentWeights = await vault.getNormalizedWeights();
 
@@ -1690,7 +2389,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       });
     });
 
-    describe("when calling cancelWeightUpdates()", () => {
+    describe("when call cancelWeightUpdates()", () => {
       it("should be reverted when called from non-manager", async () => {
         await expect(vault.cancelWeightUpdates()).to.be.revertedWith(
           "Aera__CallerIsNotManager",
@@ -1715,7 +2414,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         await vault
           .connect(manager)
           .updateWeightsGradually(
-            tokenWithValues(sortedTokens, endWeights),
+            tokenWithValues(tokenAddresses, normalizeWeights(endWeights)),
             startTime,
             endTime,
           );
@@ -1736,7 +2435,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       });
     });
 
-    describe("when finalizing", () => {
+    describe("when finalize", () => {
       describe("should be reverted to call finalize", async () => {
         it("when called from non-owner", async () => {
           await expect(vault.connect(user).finalize()).to.be.revertedWith(
@@ -1760,14 +2459,14 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
         it("when call deposit", async () => {
           await expect(
-            vault.deposit(tokenValueArray(sortedTokens, ONE, tokens.length)),
+            vault.deposit(tokenValueArray(tokenAddresses, ONE, tokens.length)),
           ).to.be.revertedWith("Aera__VaultIsFinalized");
         });
 
         it("when call depositIfBalanceUnchanged", async () => {
           await expect(
             vault.depositIfBalanceUnchanged(
-              tokenValueArray(sortedTokens, ONE, tokens.length),
+              tokenValueArray(tokenAddresses, ONE, tokens.length),
             ),
           ).to.be.revertedWith("Aera__VaultIsFinalized");
         });
@@ -1775,7 +2474,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         it("when call depositRiskingArbitrage", async () => {
           await expect(
             vault.depositRiskingArbitrage(
-              tokenValueArray(sortedTokens, ONE, tokens.length),
+              tokenValueArray(tokenAddresses, ONE, tokens.length),
             ),
           ).to.be.revertedWith("Aera__VaultIsFinalized");
         });
@@ -1783,21 +2482,23 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         it("when call depositRiskingArbitrageIfBalanceUnchanged", async () => {
           await expect(
             vault.depositRiskingArbitrageIfBalanceUnchanged(
-              tokenValueArray(sortedTokens, ONE, tokens.length),
+              tokenValueArray(tokenAddresses, ONE, tokens.length),
             ),
           ).to.be.revertedWith("Aera__VaultIsFinalized");
         });
 
         it("when call withdraw", async () => {
           await expect(
-            vault.withdraw(tokenValueArray(sortedTokens, ONE, tokens.length)),
+            vault.withdraw(
+              tokenValueArray(tokenAddresses, ONE, tokens.length),
+            ),
           ).to.be.revertedWith("Aera__VaultIsFinalized");
         });
 
         it("when call withdrawIfBalanceUnchanged", async () => {
           await expect(
             vault.withdrawIfBalanceUnchanged(
-              tokenValueArray(sortedTokens, ONE, tokens.length),
+              tokenValueArray(tokenAddresses, ONE, tokens.length),
             ),
           ).to.be.revertedWith("Aera__VaultIsFinalized");
         });
@@ -1808,7 +2509,10 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             vault
               .connect(manager)
               .updateWeightsGradually(
-                tokenValueArray(sortedTokens, MIN_WEIGHT, tokens.length),
+                tokenWithValues(
+                  tokenAddresses,
+                  normalizeWeights(valueArray(MIN_WEIGHT, tokens.length)),
+                ),
                 blocknumber + 1,
                 blocknumber + 1000,
               ),
@@ -1845,7 +2549,9 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         const newHoldings: BigNumber[] = [];
         holdings.forEach((holding: BigNumber) => {
           newHoldings.push(
-            holding.mul(ONE.sub(MAX_MANAGEMENT_FEE.mul(feeIndex))).div(ONE),
+            holding.sub(
+              holding.mul(MAX_MANAGEMENT_FEE).mul(feeIndex).div(ONE),
+            ),
           );
         });
 
@@ -1896,10 +2602,19 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
     describe("should be possible to multicall", async () => {
       beforeEach(async () => {
         for (let i = 0; i < tokens.length; i++) {
-          await tokens[i].approve(vault.address, ONE);
+          await tokens[i].approve(vault.address, toWei(100000));
         }
+
+        for (let i = 1; i < poolTokens.length; i++) {
+          await oracles[i].setLatestAnswer(toUnit(1, 8));
+        }
+
         await vault.initialDeposit(
-          tokenValueArray(sortedTokens, ONE, tokens.length),
+          tokenValueArray(tokenAddresses, ONE, tokens.length),
+          tokenWithValues(
+            tokenAddresses,
+            normalizeWeights(valueArray(ONE, tokens.length)),
+          ),
         );
       });
 
@@ -1911,15 +2626,14 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         );
 
         const spotPrices = [];
-        for (let i = 0; i < tokens.length; i++) {
-          await tokens[i].approve(vault.address, amounts[i]);
-          spotPrices.push(await vault.getSpotPrices(tokens[i].address));
+        for (let i = 0; i < poolTokens.length; i++) {
+          spotPrices.push(await vault.getSpotPrices(sortedTokens[i]));
         }
 
         await vault.multicall([
           iface.encodeFunctionData("disableTrading", []),
           iface.encodeFunctionData("depositRiskingArbitrage", [
-            tokenWithValues(sortedTokens, amounts),
+            tokenWithValues(tokenAddresses, amounts),
           ]),
           iface.encodeFunctionData("enableTradingRiskingArbitrage", []),
         ]);
@@ -1930,23 +2644,24 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         const { holdings: newHoldings, adminBalances: newAdminBalances } =
           await getState();
 
-        for (let i = 0; i < tokens.length; i++) {
-          const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
+        for (let i = 0; i < poolTokens.length; i++) {
+          const newSpotPrices = await vault.getSpotPrices(sortedTokens[i]);
 
           expect(
             await vault.getSpotPrice(
-              tokens[i].address,
-              tokens[(i + 1) % tokens.length].address,
+              sortedTokens[i],
+              sortedTokens[(i + 1) % poolTokens.length],
             ),
-          ).to.equal(newSpotPrices[(i + 1) % tokens.length]);
+          ).to.equal(newSpotPrices[(i + 1) % poolTokens.length]);
 
-          for (let j = 0; j < tokens.length; j++) {
+          for (let j = 0; j < poolTokens.length; j++) {
             expect(newSpotPrices[j]).to.be.closeTo(
               spotPrices[i][j],
               DEVIATION,
             );
           }
-
+        }
+        for (let i = 0; i < tokens.length; i++) {
           expect(await vault.holding(i)).to.equal(newHoldings[i]);
           expect(newHoldings[i]).to.equal(
             holdings[i].add(amounts[i]).sub(managersFeeTotal[i]),
@@ -1959,7 +2674,6 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
       it("when set swap fees and update weights", async () => {
         const newFee = MIN_SWAP_FEE.add(1);
-        const startWeights = await vault.getNormalizedWeights();
         const timestamp = await getCurrentTime();
         const endWeights = [];
         const avgWeights = ONE.div(tokens.length);
@@ -1973,46 +2687,55 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             endWeights.push(avgWeights);
           }
         }
+        const endPoolWeights = normalizeWeights(
+          normalizeWeights(endWeights).slice(0, poolTokens.length),
+        );
 
         await vault
           .connect(manager)
           .multicall([
             iface.encodeFunctionData("setSwapFee", [newFee]),
             iface.encodeFunctionData("updateWeightsGradually", [
-              tokenWithValues(sortedTokens, endWeights),
+              tokenWithValues(tokenAddresses, normalizeWeights(endWeights)),
               startTime,
               endTime,
             ]),
           ]);
 
         expect(await vault.connect(manager).getSwapFee()).to.equal(newFee);
+
+        const weights = await vault.getNormalizedWeights();
+        const poolWeights = normalizeWeights(
+          weights.slice(0, poolTokens.length),
+        );
+
         await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION);
 
         const currentWeights = await vault.getNormalizedWeights();
+        const currentPoolWeights = normalizeWeights(
+          currentWeights.slice(0, poolTokens.length),
+        );
 
         const currentTime = await getCurrentTime();
         const ptcProgress = ONE.mul(currentTime - startTime).div(
           endTime - startTime,
         );
 
-        for (let i = 0; i < tokens.length; i++) {
-          const weightDelta = endWeights[i]
-            .sub(startWeights[i])
+        for (let i = 0; i < poolTokens.length; i++) {
+          const weightDelta = endPoolWeights[i]
+            .sub(poolWeights[i])
             .mul(ptcProgress)
             .div(ONE);
-          expect(startWeights[i].add(weightDelta)).to.be.closeTo(
-            currentWeights[i],
+          expect(poolWeights[i].add(weightDelta)).to.be.closeTo(
+            currentPoolWeights[i],
             DEVIATION,
           );
         }
       });
 
       it("when disable trading, withdraw and enable trading", async () => {
-        for (let i = 0; i < tokens.length; i++) {
-          await tokens[i].approve(vault.address, toWei(100000));
-        }
         await vault.depositRiskingArbitrage(
-          tokenValueArray(sortedTokens, toWei(10000), tokens.length),
+          tokenValueArray(tokenAddresses, toWei(10000), tokens.length),
         );
         await validator.setAllowances(
           valueArray(toWei(100000), tokens.length),
@@ -2026,14 +2749,14 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         );
 
         const spotPrices = [];
-        for (let i = 0; i < tokens.length; i++) {
-          spotPrices.push(await vault.getSpotPrices(tokens[i].address));
+        for (let i = 0; i < poolTokens.length; i++) {
+          spotPrices.push(await vault.getSpotPrices(sortedTokens[i]));
         }
 
         await vault.multicall([
           iface.encodeFunctionData("disableTrading", []),
           iface.encodeFunctionData("withdraw", [
-            tokenWithValues(sortedTokens, amounts),
+            tokenWithValues(tokenAddresses, amounts),
           ]),
           iface.encodeFunctionData("enableTradingRiskingArbitrage", []),
         ]);
@@ -2044,23 +2767,24 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         const { holdings: newHoldings, adminBalances: newAdminBalances } =
           await getState();
 
-        for (let i = 0; i < tokens.length; i++) {
-          const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
+        for (let i = 0; i < poolTokens.length; i++) {
+          const newSpotPrices = await vault.getSpotPrices(sortedTokens[i]);
 
           expect(
             await vault.getSpotPrice(
-              tokens[i].address,
-              tokens[(i + 1) % tokens.length].address,
+              sortedTokens[i],
+              sortedTokens[(i + 1) % poolTokens.length],
             ),
-          ).to.equal(newSpotPrices[(i + 1) % tokens.length]);
+          ).to.equal(newSpotPrices[(i + 1) % poolTokens.length]);
 
-          for (let j = 0; j < tokens.length; j++) {
+          for (let j = 0; j < poolTokens.length; j++) {
             expect(newSpotPrices[j]).to.be.closeTo(
               spotPrices[i][j],
-              DEVIATION,
+              spotPrices[i][j].mul(PRICE_DEVIATION).div(ONE).toNumber(),
             );
           }
-
+        }
+        for (let i = 0; i < tokens.length; i++) {
           expect(await vault.holding(i)).to.equal(newHoldings[i]);
           expect(newHoldings[i]).to.equal(
             holdings[i]
@@ -2083,21 +2807,30 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       for (let i = 0; i < tokens.length; i++) {
         await tokens[i].approve(vault.address, ONE);
       }
+
+      for (let i = 1; i < poolTokens.length; i++) {
+        await oracles[i].setLatestAnswer(toUnit(1, 8));
+      }
+
       await vault.initialDeposit(
-        tokenValueArray(sortedTokens, ONE, tokens.length),
+        tokenValueArray(tokenAddresses, ONE, tokens.length),
+        tokenWithValues(
+          tokenAddresses,
+          normalizeWeights(valueArray(ONE, tokens.length)),
+        ),
       );
     });
 
     it("should return zero for invalid token", async () => {
       const spotPrices = await vault.getSpotPrices(TOKEN.address);
 
-      for (let i = 0; i < tokens.length; i++) {
+      for (let i = 0; i < poolTokens.length; i++) {
         expect(spotPrices[i]).to.equal(toWei(0));
         expect(
-          await vault.getSpotPrice(TOKEN.address, tokens[i].address),
+          await vault.getSpotPrice(TOKEN.address, sortedTokens[i]),
         ).to.equal(toWei(0));
         expect(
-          await vault.getSpotPrice(tokens[i].address, TOKEN.address),
+          await vault.getSpotPrice(sortedTokens[i], TOKEN.address),
         ).to.equal(toWei(0));
       }
     });
@@ -2122,7 +2855,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
       it("when token is pool token", async () => {
         const poolToken = await vault.pool();
-        await expect(vault.sweep(poolToken, toWei(1))).to.be.revertedWith(
+        await expect(vault.sweep(poolToken, ONE)).to.be.revertedWith(
           "Aera__CannotSweepPoolToken",
         );
       });
@@ -2154,8 +2887,17 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
       for (let i = 0; i < tokens.length; i++) {
         await tokens[i].approve(vault.address, ONE);
       }
+
+      for (let i = 1; i < poolTokens.length; i++) {
+        await oracles[i].setLatestAnswer(toUnit(1, 8));
+      }
+
       await vault.initialDeposit(
-        tokenValueArray(sortedTokens, ONE, tokens.length),
+        tokenValueArray(tokenAddresses, ONE, tokens.length),
+        tokenWithValues(
+          tokenAddresses,
+          normalizeWeights(valueArray(ONE, tokens.length)),
+        ),
       );
     });
 
@@ -2164,7 +2906,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         await tokens[i].approve(vault.address, toWei(100000));
       }
       await vault.depositRiskingArbitrage(
-        tokenValueArray(sortedTokens, toWei(10000), tokens.length),
+        tokenValueArray(tokenAddresses, toWei(10000), tokens.length),
       );
 
       await expect(vault.claimManagerFees()).to.be.revertedWith(
@@ -2182,7 +2924,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         let holdings = await vault.getHoldings();
         const managerBalances = await getUserBalances(manager.address);
         const depositTrx = await vault.depositRiskingArbitrage(
-          tokenValueArray(sortedTokens, toWei(10000), tokens.length),
+          tokenValueArray(tokenAddresses, toWei(10000), tokens.length),
         );
 
         let currentTime = await getTimestamp(depositTrx.blockNumber);
@@ -2223,7 +2965,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         let holdings = await vault.getHoldings();
         const managerBalances = await getUserBalances(manager.address);
         const depositTrx = await vault.depositRiskingArbitrage(
-          tokenValueArray(sortedTokens, toWei(10000), tokens.length),
+          tokenValueArray(tokenAddresses, toWei(10000), tokens.length),
         );
 
         let currentTime = await getTimestamp(depositTrx.blockNumber);
@@ -2321,8 +3063,17 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         for (let i = 0; i < tokens.length; i++) {
           await tokens[i].approve(vault.address, ONE);
         }
+
+        for (let i = 1; i < poolTokens.length; i++) {
+          await oracles[i].setLatestAnswer(toUnit(1, 8));
+        }
+
         await vault.initialDeposit(
-          tokenValueArray(sortedTokens, ONE, tokens.length),
+          tokenValueArray(tokenAddresses, ONE, tokens.length),
+          tokenWithValues(
+            tokenAddresses,
+            normalizeWeights(valueArray(ONE, tokens.length)),
+          ),
         );
       });
 
@@ -2355,7 +3106,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
                 .connect(manager)
                 .enableTradingWithWeights(
                   tokenValueArray(
-                    sortedTokens,
+                    tokenAddresses,
                     ONE.div(tokens.length),
                     tokens.length,
                   ),
@@ -2383,19 +3134,19 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             await expect(
               vault.enableTradingWithWeights(
                 tokenValueArray(
-                  sortedTokens,
+                  tokenAddresses,
                   ONE.div(tokens.length).sub(1),
                   tokens.length,
                 ),
               ),
-            ).to.be.revertedWith(BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT);
+            ).to.be.revertedWith("Aera__SumOfWeightIsNotOne");
           });
 
           it("when swap is already enabled", async () => {
             await expect(
               vault.enableTradingWithWeights(
                 tokenValueArray(
-                  sortedTokens,
+                  tokenAddresses,
                   ONE.div(tokens.length),
                   tokens.length,
                 ),
@@ -2407,26 +3158,35 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         it("should be possible to enable trading", async () => {
           await vault.disableTrading();
 
-          const newWeights = [];
+          const endWeights = [];
           const avgWeights = ONE.div(tokens.length);
           for (let i = 0; i < tokens.length; i += 2) {
             if (i < tokens.length - 1) {
-              newWeights.push(avgWeights.add(toWei((i + 1) / 100)));
-              newWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
+              endWeights.push(avgWeights.add(toWei((i + 1) / 100)));
+              endWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
             } else {
-              newWeights.push(avgWeights);
+              endWeights.push(avgWeights);
             }
           }
 
           await vault.enableTradingWithWeights(
-            tokenWithValues(sortedTokens, newWeights),
+            tokenWithValues(tokenAddresses, normalizeWeights(endWeights)),
           );
 
+          const endPoolWeights = normalizeWeights(
+            normalizeWeights(endWeights).slice(0, poolTokens.length),
+          );
           const currentWeights = await vault.getNormalizedWeights();
+          const currentPoolWeights = normalizeWeights(
+            currentWeights.slice(0, poolTokens.length),
+          );
 
           expect(await vault.isSwapEnabled()).to.equal(true);
-          for (let i = 0; i < tokens.length; i++) {
-            expect(newWeights[i]).to.be.closeTo(currentWeights[i], DEVIATION);
+          for (let i = 0; i < poolTokens.length; i++) {
+            expect(endPoolWeights[i]).to.be.closeTo(
+              currentPoolWeights[i],
+              DEVIATION,
+            );
           }
         });
       });
@@ -2449,7 +3209,7 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
 
         it("should be possible to enable trading", async () => {
           const oraclePrices: BigNumber[] = [toUnit(1, 8)];
-          for (let i = 1; i < tokens.length; i++) {
+          for (let i = 1; i < poolTokens.length; i++) {
             oraclePrices.push(
               toUnit(Math.floor((0.1 + Math.random()) * 50), 8),
             );
@@ -2460,9 +3220,9 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
             .to.emit(vault, "SetSwapEnabled")
             .withArgs(true);
 
-          for (let i = 0; i < tokens.length; i++) {
+          for (let i = 0; i < poolTokens.length; i++) {
             expect(
-              await vault.getSpotPrice(tokens[i].address, tokens[0].address),
+              await vault.getSpotPrice(sortedTokens[i], sortedTokens[0]),
             ).to.be.closeTo(
               oraclePrices[i].mul(1e10),
               oraclePrices[i]
@@ -2482,8 +3242,17 @@ describe("Aera Vault V2 Mainnet Functionality", function () {
         for (let i = 0; i < tokens.length; i++) {
           await tokens[i].approve(vault.address, ONE);
         }
+
+        for (let i = 1; i < poolTokens.length; i++) {
+          await oracles[i].setLatestAnswer(toUnit(1, 8));
+        }
+
         await vault.initialDeposit(
-          tokenValueArray(sortedTokens, ONE, tokens.length),
+          tokenValueArray(tokenAddresses, ONE, tokens.length),
+          tokenWithValues(
+            tokenAddresses,
+            normalizeWeights(valueArray(ONE, tokens.length)),
+          ),
         );
       });
 

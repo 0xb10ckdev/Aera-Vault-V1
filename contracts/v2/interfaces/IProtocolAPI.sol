@@ -10,7 +10,7 @@ interface IProtocolAPI {
     // token: Token address.
     // value: Amount of weight of token.
     struct TokenValue {
-        IERC20 token;
+        address token;
         uint256 value;
     }
 
@@ -23,7 +23,11 @@ interface IProtocolAPI {
     ///      This is checked by Balancer in internal transactions:
     ///       If token amount is not zero when join pool.
     /// @param tokenWithAmount Deposit tokens with amount.
-    function initialDeposit(TokenValue[] memory tokenWithAmount) external;
+    /// @param tokenWithWeight Weight of tokens in the vault.
+    function initialDeposit(
+        TokenValue[] memory tokenWithAmount,
+        TokenValue[] memory tokenWithWeight
+    ) external;
 
     /// @notice Deposit tokens into vault.
     /// @dev It calls updateWeights() function
@@ -38,6 +42,22 @@ interface IProtocolAPI {
     /// @param tokenWithAmount Deposit token with amount.
     function depositIfBalanceUnchanged(TokenValue[] memory tokenWithAmount)
         external;
+
+    /// @notice Deposit tokens into vault.
+    /// @dev It calls updateWeights() function
+    ///      which cancels current active weights change schedule.
+    /// @param tokenWithAmount Deposit tokens with amount.
+    function depositRiskingArbitrage(TokenValue[] memory tokenWithAmount)
+        external;
+
+    /// @notice Deposit tokens into vault.
+    /// @dev It calls updateWeights() function
+    ///      which cancels current active weights change schedule.
+    ///      It reverts if balances were updated in the current block.
+    /// @param tokenWithAmount Deposit token with amount.
+    function depositRiskingArbitrageIfBalanceUnchanged(
+        TokenValue[] memory tokenWithAmount
+    ) external;
 
     /// @notice Withdraw tokens up to requested amounts.
     /// @dev It calls updateWeights() function
@@ -76,6 +96,12 @@ interface IProtocolAPI {
 
     /// @notice Disable swap.
     function disableTrading() external;
+
+    /// @notice Enable swap with oracle prices.
+    function enableTradingWithOraclePrice() external;
+
+    /// @notice Enable or disable using oracle prices.
+    function setOraclesEnabled(bool enabled) external;
 
     /// @notice Claim Balancer rewards.
     /// @dev It calls claimDistributions() function of Balancer MerkleOrchard.
