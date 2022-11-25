@@ -40,36 +40,39 @@ export function testDepositRiskingArbitrage(): void {
     });
 
     it("when balance is changed in the same block", async function () {
-      const amounts = this.tokens.map(() =>
-        toWei(Math.floor(10 + Math.random() * 10)),
-      );
+      if (this.isForkTest) {
+        const amounts = this.tokens.map(() =>
+          toWei(Math.floor(10 + Math.random() * 10)),
+        );
 
-      await ethers.provider.send("evm_setAutomine", [false]);
+        await ethers.provider.send("evm_setAutomine", [false]);
 
-      const trx1 = await this.vault.depositRiskingArbitrage(
-        tokenWithValues(this.tokenAddresses, amounts),
-      );
-      const trx2 = await this.vault.depositRiskingArbitrageIfBalanceUnchanged(
-        tokenWithValues(this.tokenAddresses, amounts),
-      );
+        const trx1 = await this.vault.depositRiskingArbitrage(
+          tokenWithValues(this.tokenAddresses, amounts),
+        );
+        const trx2 =
+          await this.vault.depositRiskingArbitrageIfBalanceUnchanged(
+            tokenWithValues(this.tokenAddresses, amounts),
+          );
 
-      await ethers.provider.send("evm_mine", []);
+        await ethers.provider.send("evm_mine", []);
 
-      try {
-        await Promise.all([trx1.wait(), trx2.wait()]);
-      } catch {
-        // empty
+        try {
+          await Promise.all([trx1.wait(), trx2.wait()]);
+        } catch {
+          // empty
+        }
+
+        const [receipt1, receipt2] = await Promise.all([
+          ethers.provider.getTransactionReceipt(trx1.hash),
+          ethers.provider.getTransactionReceipt(trx2.hash),
+        ]);
+
+        expect(receipt1.status).to.equal(1);
+        expect(receipt2.status).to.equal(0);
+
+        await ethers.provider.send("evm_setAutomine", [true]);
       }
-
-      const [receipt1, receipt2] = await Promise.all([
-        ethers.provider.getTransactionReceipt(trx1.hash),
-        ethers.provider.getTransactionReceipt(trx2.hash),
-      ]);
-
-      expect(receipt1.status).to.equal(1);
-      expect(receipt2.status).to.equal(0);
-
-      await ethers.provider.send("evm_setAutomine", [true]);
     });
   });
 
