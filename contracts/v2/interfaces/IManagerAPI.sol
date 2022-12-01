@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
-import "../../v1/dependencies/openzeppelin/IERC20.sol";
+import "../dependencies/openzeppelin/IERC20.sol";
 import "./IProtocolAPI.sol";
 
 /// @title Interface for vault manager.

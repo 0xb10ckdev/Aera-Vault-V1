@@ -3,7 +3,7 @@
 
 pragma solidity ^0.8.0;
 
-import "../../../v1/dependencies/openzeppelin/Address.sol";
+import "./Address.sol";
 
 /**
  * @dev Provides a function to batch together multiple calls in a single external call.
