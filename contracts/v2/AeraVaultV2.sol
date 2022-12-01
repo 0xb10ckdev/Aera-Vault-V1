@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
-import "../v1/dependencies/openzeppelin/ERC165Checker.sol";
-import "../v1/dependencies/openzeppelin/IERC20.sol";
-import "../v1/dependencies/openzeppelin/Math.sol";
-import "../v1/dependencies/openzeppelin/Ownable.sol";
-import "../v1/dependencies/openzeppelin/ReentrancyGuard.sol";
-import "../v1/dependencies/openzeppelin/SafeERC20.sol";
-import "../v1/interfaces/IBManagedPool.sol";
-import "../v1/interfaces/IBManagedPoolController.sol";
-import "../v1/interfaces/IBManagedPoolFactory.sol";
-import "../v1/interfaces/IBMerkleOrchard.sol";
-import "../v1/interfaces/IBVault.sol";
-import "../v1/interfaces/IWithdrawalValidator.sol";
-import "../v2/dependencies/openzeppelin/Multicall.sol";
-import "./dependencies/chainlink/interfaces/AggregatorV2V3Interface.sol";
+import "./dependencies/openzeppelin/ERC165Checker.sol";
+import "./dependencies/openzeppelin/IERC20.sol";
+import "./dependencies/openzeppelin/Math.sol";
+import "./dependencies/openzeppelin/Multicall.sol";
+import "./dependencies/openzeppelin/Ownable.sol";
+import "./dependencies/openzeppelin/ReentrancyGuard.sol";
+import "./dependencies/openzeppelin/SafeERC20.sol";
 import "./interfaces/IAeraVaultV2.sol";
+import "./interfaces/IBManagedPool.sol";
+import "./interfaces/IBManagedPoolController.sol";
+import "./interfaces/IBManagedPoolFactory.sol";
+import "./interfaces/IBMerkleOrchard.sol";
+import "./interfaces/IBVault.sol";
+import "./interfaces/IWithdrawalValidator.sol";
+import "./dependencies/chainlink/interfaces/AggregatorV2V3Interface.sol";
 import "./OracleStorage.sol";
 import "./YieldTokenStorage.sol";
 
