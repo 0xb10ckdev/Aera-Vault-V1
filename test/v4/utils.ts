@@ -1,9 +1,6 @@
 import { Signer } from "ethers";
 import { ethers } from "hardhat";
-import {
-  ManagerWhitelist,
-  ManagerWhitelist__factory,
-} from "../../typechain";
+import { ManagerWhitelist, ManagerWhitelist__factory } from "../../typechain";
 
 export * from "../v1/utils";
 
