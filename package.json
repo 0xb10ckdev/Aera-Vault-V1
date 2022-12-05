@@ -106,6 +106,9 @@
     "test": "yarn test:unit && yarn test:integration",
     "gas": "cross-env REPORT_GAS=true hardhat test",
     "size": "cross-env REPORT_SIZE=true hardhat compile",
-    "typechain": "hardhat typechain"
+    "typechain": "hardhat typechain",
+    "typechain-v1": "hardhat typechain --config hardhat.config.v1.ts",
+    "typechain-v2": "hardhat typechain --config hardhat.config.v2.ts",
+    "typechain-v4": "hardhat typechain --config hardhat.config.v4.ts"
   }
 }
