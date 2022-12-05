@@ -4,7 +4,7 @@ import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { AeraMedian } from "../../../typechain";
 import { ONE } from "../../v1/constants";
-import { toWei } from "../../v1/utils";
+import { toWei } from "../utils";
 
 describe("ChainLink Median Functionality", function () {
   let admin: SignerWithAddress;
