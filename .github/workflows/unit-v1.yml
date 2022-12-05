@@ -16,6 +16,11 @@ jobs:
         with:
           python-version: "3.9"
 
+      - name: get solc
+        uses: pontem-network/get-solc@master
+        with:
+          version: v0.8.11
+
       - name: Install Slither
         run: pip3 install slither-analyzer
 
@@ -43,8 +48,8 @@ jobs:
       - name: Parse Alchemy URL and append API key to .env file
         run: echo ${{ secrets.ALCHEMY_URL_DEV_MAINNET }} | rev | cut -d "/" -f 1 | rev | ( read ALCHEMY_API_KEY; echo ALCHEMY_API_KEY=$ALCHEMY_API_KEY >> .env )
 
-      - name: Run slither analyzer
-        run: yarn run slither
+      - name: Run slither analyzer for v1
+        run: yarn run slither-v1
 
       - name: Compile the contracts and generate TypeChain artifacts
         run: yarn run typechain
