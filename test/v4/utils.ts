@@ -2,7 +2,7 @@ import { Signer } from "ethers";
 import { ethers } from "hardhat";
 import { ManagerWhitelist, ManagerWhitelist__factory } from "../../typechain";
 
-export * from "../v1/utils";
+export { toWei } from "../v1/utils";
 
 export const deployManagerWhitelist = async (
   signer: Signer,
