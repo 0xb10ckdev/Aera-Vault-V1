@@ -5,15 +5,15 @@
 .yarn/*
 !.yarn/releases
 !.yarn/plugins
-artifacts/
-build/
-cache/
-coverage/
-dist/
-lib/
-node_modules/
-typechain/
-deployments/hardhat
+/artifacts/
+/build/
+/cache/
+/coverage/
+/dist/
+/lib/
+/node_modules/
+/typechain/
+/deployments/hardhat
 
 # files
 *.env
