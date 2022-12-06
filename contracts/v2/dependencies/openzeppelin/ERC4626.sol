@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.7.0) (token/ERC20/extensions/ERC4626.sol)
 
+// Blockvis/Auditless/Gauntlet update
+// Added _beforeWithdraw/_afterDeposit hooks to match
+// with solmate (https://github.com/transmissions11/solmate/blob/main/src/mixins/ERC4626.sol) implementation
+
 pragma solidity ^0.8.0;
 
 import "./ERC20.sol";
@@ -239,6 +243,8 @@ abstract contract ERC4626 is ERC20, IERC4626 {
         _mint(receiver, shares);
 
         emit Deposit(caller, receiver, assets, shares);
+
+        _afterDeposit(assets, shares);
     }
 
     /**
@@ -255,6 +261,8 @@ abstract contract ERC4626 is ERC20, IERC4626 {
             _spendAllowance(owner, caller, shares);
         }
 
+        _beforeWithdraw(assets, shares);
+
         // If _asset is ERC777, `transfer` can trigger a reentrancy AFTER the transfer happens through the
         // `tokensReceived` hook. On the other hand, the `tokensToSend` hook, that is triggered before the transfer,
         // calls the vault, which is assumed not malicious.
@@ -270,4 +278,12 @@ abstract contract ERC4626 is ERC20, IERC4626 {
     function _isVaultCollateralized() private view returns (bool) {
         return totalAssets() > 0 || totalSupply() == 0;
     }
+
+    /*//////////////////////////////////////////////////////////////
+                          INTERNAL HOOKS LOGIC
+    //////////////////////////////////////////////////////////////*/
+
+    function _beforeWithdraw(uint256 assets, uint256 shares) internal virtual {}
+
+    function _afterDeposit(uint256 assets, uint256 shares) internal virtual {}
 }

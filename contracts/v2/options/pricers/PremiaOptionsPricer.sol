@@ -12,4 +12,12 @@ contract PremiaOptionsPricer is ERC165, PutOptionsPricer {
             type(PutOptionsPricer).interfaceId == interfaceId ||
             super.supportsInterface(interfaceId);
     }
+
+    function getPremium(
+        uint256 strikePrice,
+        uint256 expiryTimestamp,
+        bool isPut
+    ) external view override returns (uint256 premium) {}
+
+    function getSpot() external view override returns (uint256 spotPrice) {}
 }
