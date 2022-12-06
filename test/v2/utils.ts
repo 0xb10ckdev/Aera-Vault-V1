@@ -1,6 +1,16 @@
 import { BigNumber, BigNumberish, Signer } from "ethers";
 import { deployments, ethers } from "hardhat";
-import { AeraVaultV2Mock, AeraVaultV2Mock__factory } from "../../typechain";
+import { getChainId, getConfig } from "../../scripts/config";
+import {
+  AeraVaultV2Mock,
+  AeraVaultV2Mock__factory,
+  CircuitBreakerLib__factory,
+  ControlledManagedPoolFactory,
+  ControlledManagedPoolFactory__factory,
+  ManagedPoolAddRemoveTokenLib__factory,
+  ManagedPoolFactory__factory,
+  ProtocolFeePercentagesProvider__factory,
+} from "../../typechain";
 import { MAX_MANAGEMENT_FEE, ZERO_ADDRESS } from "../v1/constants";
 import {
   ONE,
@@ -35,6 +45,59 @@ export type VaultParams = {
 };
 
 export * from "../v1/utils";
+
+export const deployFactory = async (
+  signer: Signer,
+): Promise<ControlledManagedPoolFactory> => {
+  const chainId = getChainId(process.env.HARDHAT_FORK);
+  const config = getConfig(chainId);
+
+  const addRemoveTokenLibContract =
+    await ethers.getContractFactory<ManagedPoolAddRemoveTokenLib__factory>(
+      "ManagedPoolAddRemoveTokenLib",
+    );
+  const circuitBreakerLibContract =
+    await ethers.getContractFactory<CircuitBreakerLib__factory>(
+      "CircuitBreakerLib",
+    );
+  const protocolFeeProviderContract =
+    await ethers.getContractFactory<ProtocolFeePercentagesProvider__factory>(
+      "ProtocolFeePercentagesProvider",
+    );
+  const controlledManagedPoolFactoryContract =
+    await ethers.getContractFactory<ControlledManagedPoolFactory__factory>(
+      "ControlledManagedPoolFactory",
+    );
+
+  const addRemoveTokenLib = await addRemoveTokenLibContract
+    .connect(signer)
+    .deploy();
+  const circuitBreakerLib = await circuitBreakerLibContract
+    .connect(signer)
+    .deploy();
+  const protocolFeeProvider = await protocolFeeProviderContract
+    .connect(signer)
+    .deploy(config.bVault, ONE, ONE);
+
+  const managedPoolFactoryContract =
+    await ethers.getContractFactory<ManagedPoolFactory__factory>(
+      "ManagedPoolFactory",
+      {
+        libraries: {
+          CircuitBreakerLib: circuitBreakerLib.address,
+          ManagedPoolAddRemoveTokenLib: addRemoveTokenLib.address,
+        },
+      },
+    );
+
+  const factory = await managedPoolFactoryContract
+    .connect(signer)
+    .deploy(config.bVault, protocolFeeProvider.address);
+
+  return await controlledManagedPoolFactoryContract
+    .connect(signer)
+    .deploy(factory.address);
+};
 
 export const deployVault = async (
   params: VaultParams,
