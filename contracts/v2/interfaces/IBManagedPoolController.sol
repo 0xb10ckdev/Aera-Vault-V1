@@ -14,11 +14,16 @@
 
 pragma solidity 0.8.11;
 
+import "../dependencies/openzeppelin/IERC20.sol";
+
 interface IBManagedPoolController {
+    function addAllowedAddress(address member) external;
+
     function updateWeightsGradually(
         uint256 startTime,
         uint256 endTime,
-        uint256[] memory endWeights
+        IERC20[] calldata tokens,
+        uint256[] calldata endWeights
     ) external;
 
     function setSwapEnabled(bool swapEnabled) external;
