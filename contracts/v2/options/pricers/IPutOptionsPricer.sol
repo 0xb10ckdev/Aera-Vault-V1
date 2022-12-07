@@ -3,7 +3,7 @@ pragma solidity 0.8.11;
 
 import "../../../v1/dependencies/openzeppelin/IERC165.sol";
 
-interface PutOptionsPricer is IERC165 {
+interface IPutOptionsPricer is IERC165 {
     /// @notice Calculate options premium for 1 options contract
     function getPremium(
         uint256 strikePrice,

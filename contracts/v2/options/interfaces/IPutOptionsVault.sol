@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
-import "../dependencies/openzeppelin/IERC4626.sol";
+import "../../dependencies/openzeppelin/IERC4626.sol";
+import "./IOToken.sol";
 
 interface IPutOptionsVault is IERC4626 {
     /// EVENTS ///
@@ -26,10 +27,10 @@ interface IPutOptionsVault is IERC4626 {
 
     /// @notice Raised when buy order has been cancelled
     event BuyOrderCancelled(
-        uint256 minExpiryTimestamp,
-        uint256 maxExpiryTimestamp,
-        uint256 minStrikePrice,
-        uint256 maxStrikePrice,
+        uint64 minExpiryTimestamp,
+        uint64 maxExpiryTimestamp,
+        uint128 minStrikePrice,
+        uint128 maxStrikePrice,
         uint256 amount
     );
 
@@ -78,12 +79,12 @@ interface IPutOptionsVault is IERC4626 {
 
     /// @notice Container for buy order information
     struct BuyOrder {
-        bool active; // false if no buy order active
-        uint256 minExpiryTimestamp; // min value of expiry
-        uint256 maxExpiryTimestamp; // max value of expiry
-        uint256 minStrikePrice; // min value of strike price with 8 decimals
-        uint256 maxStrikePrice; // max value of strike price with 8 decimals
         uint256 amount;
+        uint128 minStrikePrice; // min value of strike price with 8 decimals
+        uint128 maxStrikePrice; // max value of strike price with 8 decimals
+        uint64 minExpiryTimestamp; // min value of expiry
+        uint64 maxExpiryTimestamp; // max value of expiry
+        bool active; // false if no buy order active
     }
 
     /// @notice Container for sell order information
@@ -91,13 +92,6 @@ interface IPutOptionsVault is IERC4626 {
         uint256 amount;
         address oToken; // address of the specific oToken for sale
         bool active; // false if no sell order active
-    }
-
-    /// @notice Container for option information
-    struct Option {
-        uint256 maturity;
-        uint256 strikePrice;
-        address oToken;
     }
 
     /// @notice Get address of broker (settles options orders).
@@ -135,7 +129,7 @@ interface IPutOptionsVault is IERC4626 {
     function positions()
         external
         view
-        returns (IERC20[] memory oTokenAddresses);
+        returns (IOToken[] memory oTokenAddresses);
 
     /// @notice Reveal the underlying options asset. Please note, this should not be confused
     ///         with the underlying asset of the ERC4626 vault itself.
@@ -154,7 +148,7 @@ interface IPutOptionsVault is IERC4626 {
     /// @notice Allows broker to fill current buy order. Note that order will be filled as long as
     ///         expiry and strike price of the oToken is within the range specified by buy order.
     function fillBuyOrder(
-        address oToken,
+        IOToken oToken,
         uint256 amount
     ) external returns (bool filled);
 

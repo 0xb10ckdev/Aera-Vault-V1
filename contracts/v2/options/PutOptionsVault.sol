@@ -6,11 +6,13 @@ import "../../v1/dependencies/openzeppelin/ERC165Checker.sol";
 import "../../v1/dependencies/openzeppelin/Ownable.sol";
 import "../dependencies/openzeppelin/Multicall.sol";
 import "../dependencies/openzeppelin/ERC4626.sol";
-import "./brokers/PutOptionsBroker.sol";
-import "./pricers/PutOptionsPricer.sol";
-import "./IPutOptionsVault.sol";
+import "./interfaces/IPutOptionsVault.sol";
+import "./interfaces/IOToken.sol";
+import "./pricers/IPutOptionsPricer.sol";
 
 contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
+    using SafeERC20 for IERC20;
+
     uint256 private constant ONE = 10 ** 18;
 
     /// @notice minimum total value in USDC that can be used to purchase options
@@ -22,18 +24,17 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     /// @notice overall time to expiry for each purchased option
     uint256 private constant TIME_TO_EXPIRY = 30 days;
 
-    PutOptionsPricer private immutable _pricer;
+    IPutOptionsPricer private immutable _pricer;
     address private immutable _broker;
     address private immutable _controller;
     address private immutable _liquidator;
-    IERC20 private immutable _underlyingOptionAsset;
+    IERC20 private immutable _underlyingOptionsAsset;
 
     SellOrder private _sellOrder;
     BuyOrder private _buyOrder;
     Range private _expiryDelta;
     Range private _strikeMultiplier;
-    IERC20[] private _oTokens;
-    Option[] private _options;
+    IOToken[] private _oTokens;
 
     /// MODIFIERS ///
 
@@ -82,15 +83,15 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         if (
             !ERC165Checker.supportsInterface(
                 pricer_,
-                type(PutOptionsPricer).interfaceId
+                type(IPutOptionsPricer).interfaceId
             )
         ) revert Aera__PutOptionsPricerIsNotValid(pricer_);
 
-        _pricer = PutOptionsPricer(pricer_);
+        _pricer = IPutOptionsPricer(pricer_);
         _broker = broker_;
         _controller = controller_;
         _liquidator = liquidator_;
-        _underlyingOptionAsset = underlyingOptionsAsset_;
+        _underlyingOptionsAsset = underlyingOptionsAsset_;
     }
 
     /// @inheritdoc IPutOptionsVault
@@ -102,7 +103,19 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     function sell(
         uint256 positionId,
         uint256 amount
-    ) external override onlyLiquidator {}
+    ) external override onlyLiquidator {
+        IOToken oToken = _oTokens[positionId];
+
+        //TODO: check if enough available to sell
+
+        _sellOrder = SellOrder({
+            active: true,
+            oToken: address(oToken),
+            amount: amount
+        });
+
+        emit SellOrderCreated(address(oToken), amount);
+    }
 
     /// @inheritdoc IPutOptionsVault
     function setExpiryDelta(
@@ -152,6 +165,40 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         return super.maxMint(receiver);
     }
 
+    function _afterDeposit(uint256 assets, uint256 shares) internal override {
+        uint256 balance = _underlyingOptionsAsset.balanceOf(address(this));
+
+        if (balance < MIN_CHUNK_VALUE) return;
+
+        uint256 spotPrice = _pricer.getSpot();
+
+        uint64 minExpiryTimestamp = uint64(block.timestamp + _expiryDelta.min);
+        uint64 maxExpiryTimestamp = uint64(block.timestamp + _expiryDelta.max);
+        uint128 minStrikePrice = uint128(
+            (spotPrice * _strikeMultiplier.min) / ONE
+        );
+        uint128 maxStrikePrice = uint128(
+            (spotPrice * _strikeMultiplier.max) / ONE
+        );
+
+        _buyOrder = BuyOrder({
+            active: true,
+            minExpiryTimestamp: minExpiryTimestamp,
+            maxExpiryTimestamp: maxExpiryTimestamp,
+            minStrikePrice: minStrikePrice,
+            maxStrikePrice: maxExpiryTimestamp,
+            amount: balance
+        });
+
+        emit BuyOrderCreated(
+            minExpiryTimestamp,
+            maxExpiryTimestamp,
+            minStrikePrice,
+            maxStrikePrice,
+            balance
+        );
+    }
+
     /// @inheritdoc ERC4626
     function totalAssets()
         public
@@ -190,7 +237,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         external
         view
         override
-        returns (IERC20[] memory oTokenAddresses)
+        returns (IOToken[] memory oTokenAddresses)
     {
         return _oTokens;
     }
@@ -202,7 +249,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         override
         returns (IERC20 underlyingOptionsAssetAddress)
     {
-        return _underlyingOptionAsset;
+        return _underlyingOptionsAsset;
     }
 
     /// @inheritdoc IPutOptionsVault
@@ -217,9 +264,52 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
 
     /// @inheritdoc IPutOptionsVault
     function fillBuyOrder(
-        address oToken,
+        IOToken oToken,
         uint256 amount
-    ) external override onlyBroker whenBuyOrderActive returns (bool filled) {}
+    ) external override onlyBroker whenBuyOrderActive returns (bool filled) {
+        (
+            address collateralAsset,
+            address underlyingAsset,
+            address strikeAsset,
+            uint256 strikePrice,
+            uint256 expiryTimestamp,
+            bool isPut
+        ) = oToken.getOtokenDetails();
+
+        if (!isPut) return false;
+        if (strikeAsset != address(_underlyingOptionsAsset)) return false;
+        if (collateralAsset != address(_underlyingOptionsAsset)) return false;
+        if (underlyingAsset != asset()) return false;
+        if (
+            _buyOrder.minExpiryTimestamp > expiryTimestamp ||
+            _buyOrder.maxExpiryTimestamp < expiryTimestamp
+        ) return false;
+        if (
+            _buyOrder.minStrikePrice > strikePrice ||
+            _buyOrder.maxStrikePrice < strikePrice
+        ) return false;
+
+        uint256 premium = _pricer.getPremium(
+            strikePrice,
+            expiryTimestamp,
+            isPut
+        );
+
+        SafeERC20.safeTransferFrom(
+            oToken,
+            msg.sender,
+            address(this),
+            _buyOrder.amount
+        );
+        SafeERC20.safeTransfer(IERC20(asset()), msg.sender, amount);
+
+        _oTokens.push(oToken);
+        delete _buyOrder;
+
+        emit BuyOrderFilled(address(oToken), amount);
+
+        return true;
+    }
 
     /// @inheritdoc IPutOptionsVault
     function fillSellOrder(
