@@ -5,9 +5,8 @@ import {
   AeraVaultV2Mock,
   AeraVaultV2Mock__factory,
   CircuitBreakerLib__factory,
-  ControlledManagedPoolFactory,
-  ControlledManagedPoolFactory__factory,
   ManagedPoolAddRemoveTokenLib__factory,
+  ManagedPoolFactory,
   ManagedPoolFactory__factory,
   ProtocolFeePercentagesProvider__factory,
 } from "../../typechain";
@@ -48,7 +47,7 @@ export * from "../v1/utils";
 
 export const deployFactory = async (
   signer: Signer,
-): Promise<ControlledManagedPoolFactory> => {
+): Promise<ManagedPoolFactory> => {
   const chainId = getChainId(process.env.HARDHAT_FORK);
   const config = getConfig(chainId);
 
@@ -63,10 +62,6 @@ export const deployFactory = async (
   const protocolFeeProviderContract =
     await ethers.getContractFactory<ProtocolFeePercentagesProvider__factory>(
       "ProtocolFeePercentagesProvider",
-    );
-  const controlledManagedPoolFactoryContract =
-    await ethers.getContractFactory<ControlledManagedPoolFactory__factory>(
-      "ControlledManagedPoolFactory",
     );
 
   const addRemoveTokenLib = await addRemoveTokenLibContract
@@ -90,13 +85,9 @@ export const deployFactory = async (
       },
     );
 
-  const factory = await managedPoolFactoryContract
+  return await managedPoolFactoryContract
     .connect(signer)
     .deploy(config.bVault, protocolFeeProvider.address);
-
-  return await controlledManagedPoolFactoryContract
-    .connect(signer)
-    .deploy(factory.address);
 };
 
 export const deployVault = async (

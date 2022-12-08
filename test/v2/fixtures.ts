@@ -6,12 +6,11 @@ import {
   AeraVaultV2Mock__factory,
   BalancerVaultMock__factory,
   CircuitBreakerLib__factory,
-  ControlledManagedPoolFactory,
-  ControlledManagedPoolFactory__factory,
   ERC4626Mock,
   ERC4626Mock__factory,
   IERC20,
   ManagedPoolAddRemoveTokenLib__factory,
+  ManagedPoolFactory,
   ManagedPoolFactory__factory,
   OracleMock,
   OracleMock__factory,
@@ -50,7 +49,7 @@ export type DeployedData = {
   oracles: OracleMock[];
   oracleAddresses: string[];
   validator: WithdrawalValidatorMock;
-  factory: ControlledManagedPoolFactory;
+  factory: ManagedPoolFactory;
   vault: AeraVaultV2Mock;
 };
 
@@ -70,7 +69,7 @@ export const setupAssetContracts = async (
   oracles: OracleMock[];
   oracleAddresses: string[];
   validator: WithdrawalValidatorMock;
-  factory: ControlledManagedPoolFactory;
+  factory: ManagedPoolFactory;
 }> => {
   const { admin, manager, user } = await ethers.getNamedSigners();
   const {
@@ -132,10 +131,6 @@ export const setupAssetContracts = async (
         },
       },
     );
-  const controlledManagedPoolFactoryContract =
-    await ethers.getContractFactory<ControlledManagedPoolFactory__factory>(
-      "ControlledManagedPoolFactory",
-    );
 
   const config = getConfig(hre.network.config.chainId || 1);
   let bVaultAddress: string = config.bVault;
@@ -160,9 +155,6 @@ export const setupAssetContracts = async (
   const factory = await managedPoolFactoryContract
     .connect(admin)
     .deploy(bVaultAddress, protocolFeeProvider.address);
-  const controlledFactory = await controlledManagedPoolFactoryContract
-    .connect(admin)
-    .deploy(factory.address);
 
   return {
     admin,
@@ -178,7 +170,7 @@ export const setupAssetContracts = async (
     oracles,
     oracleAddresses,
     validator,
-    factory: controlledFactory,
+    factory,
   };
 };
 
