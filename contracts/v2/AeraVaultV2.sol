@@ -770,6 +770,33 @@ contract AeraVaultV2 is
         merkleOrchard.claimDistributions(owner(), claims, tokens);
     }
 
+    /// @notice Disable ownership renounceable
+    function renounceOwnership() public override onlyOwner {
+        revert Aera__VaultIsNotRenounceable();
+    }
+
+    /// @inheritdoc IProtocolAPI
+    function transferOwnership(address newOwner)
+        public
+        override(IProtocolAPI, Ownable)
+        onlyOwner
+    {
+        if (newOwner == address(0)) {
+            revert Aera__OwnerIsZeroAddress();
+        }
+        pendingOwner = newOwner;
+        emit OwnershipTransferOffered(owner(), newOwner);
+    }
+
+    /// @inheritdoc IProtocolAPI
+    function cancelOwnershipTransfer() external override onlyOwner {
+        if (pendingOwner == address(0)) {
+            revert Aera__NoPendingOwnershipTransfer();
+        }
+        emit OwnershipTransferCanceled(owner(), pendingOwner);
+        pendingOwner = address(0);
+    }
+
     /// MANAGER API ///
 
     /// @inheritdoc IManagerAPI
@@ -990,6 +1017,28 @@ contract AeraVaultV2 is
     /// USER API ///
 
     /// @inheritdoc IUserAPI
+    // prettier-ignore
+    function isSwapEnabled()
+        external
+        view
+        override
+        returns (bool)
+    {
+        return pool.getSwapEnabled();
+    }
+
+    /// @inheritdoc IUserAPI
+    // prettier-ignore
+    function getSwapFee()
+        external
+        view
+        override
+        returns (uint256)
+    {
+        return pool.getSwapFeePercentage();
+    }
+
+    /// @inheritdoc IUserAPI
     function getNormalizedWeights()
         public
         view
@@ -1015,28 +1064,6 @@ contract AeraVaultV2 is
             underlyingIndexes,
             underlyingBalances
         );
-    }
-
-    /// @inheritdoc IUserAPI
-    // prettier-ignore
-    function isSwapEnabled()
-        external
-        view
-        override
-        returns (bool)
-    {
-        return pool.getSwapEnabled();
-    }
-
-    /// @inheritdoc IUserAPI
-    // prettier-ignore
-    function getSwapFee()
-        external
-        view
-        override
-        returns (uint256)
-    {
-        return pool.getSwapFeePercentage();
     }
 
     /// @inheritdoc IUserAPI
@@ -1094,33 +1121,6 @@ contract AeraVaultV2 is
             tokens[index] = yieldTokens[i];
             ++index;
         }
-    }
-
-    /// @notice Disable ownership renounceable
-    function renounceOwnership() public override onlyOwner {
-        revert Aera__VaultIsNotRenounceable();
-    }
-
-    /// @inheritdoc IProtocolAPI
-    function transferOwnership(address newOwner)
-        public
-        override(IProtocolAPI, Ownable)
-        onlyOwner
-    {
-        if (newOwner == address(0)) {
-            revert Aera__OwnerIsZeroAddress();
-        }
-        pendingOwner = newOwner;
-        emit OwnershipTransferOffered(owner(), newOwner);
-    }
-
-    /// @inheritdoc IProtocolAPI
-    function cancelOwnershipTransfer() external override onlyOwner {
-        if (pendingOwner == address(0)) {
-            revert Aera__NoPendingOwnershipTransfer();
-        }
-        emit OwnershipTransferCanceled(owner(), pendingOwner);
-        pendingOwner = address(0);
     }
 
     /// @inheritdoc IUserAPI
