@@ -10,7 +10,6 @@ import "./dependencies/openzeppelin/ReentrancyGuard.sol";
 import "./dependencies/openzeppelin/SafeERC20.sol";
 import "./interfaces/IAeraVaultV2.sol";
 import "./interfaces/IBManagedPool.sol";
-import "./interfaces/IBManagedPoolController.sol";
 import "./interfaces/IBManagedPoolFactory.sol";
 import "./interfaces/IBMerkleOrchard.sol";
 import "./interfaces/IBVault.sol";
@@ -74,9 +73,6 @@ contract AeraVaultV2 is
 
     /// @notice Balancer Managed Pool.
     IBManagedPool public immutable pool;
-
-    /// @notice Balancer Managed Pool Controller.
-    IBManagedPoolController public immutable poolController;
 
     /// @notice Balancer Merkle Orchard.
     IBMerkleOrchard public immutable merkleOrchard;
@@ -384,51 +380,32 @@ contract AeraVaultV2 is
         // Deploys a new ManagedPool from ManagedPoolFactory
         // create(
         //     ManagedPool.NewPoolParams memory poolParams,
-        //     BasePoolController.BasePoolRights calldata basePoolRights,
-        //     ManagedPoolController.ManagedPoolRights calldata managedPoolRights,
-        //     uint256 minWeightChangeDuration,
+        //     address owner,
         // )
         //
         // - poolParams.mustAllowlistLPs should be true to prevent other accounts
         //   to use joinPool
-        // - minWeightChangeDuration should be zero so that weights can be updated immediately
-        //   in deposit, withdraw, cancelWeightUpdates and enableTradingWithWeights.
         pool = IBManagedPool(
             IBManagedPoolFactory(vaultParams.factory).create(
                 IBManagedPoolFactory.NewPoolParams({
-                    vault: IBVault(address(0)),
                     name: vaultParams.name,
                     symbol: vaultParams.symbol,
                     tokens: vaultParams.poolTokens,
                     normalizedWeights: vaultParams.weights,
                     assetManagers: assetManagers,
                     swapFeePercentage: vaultParams.swapFeePercentage,
-                    pauseWindowDuration: 0,
-                    bufferPeriodDuration: 0,
-                    owner: address(this),
                     swapEnabledOnStart: false,
                     mustAllowlistLPs: true,
-                    managementSwapFeePercentage: 0
+                    managementAumFeePercentage: 0,
+                    aumFeeId: 0
                 }),
-                IBManagedPoolFactory.BasePoolRights({
-                    canTransferOwnership: false,
-                    canChangeSwapFee: true,
-                    canUpdateMetadata: false
-                }),
-                IBManagedPoolFactory.ManagedPoolRights({
-                    canChangeWeights: true,
-                    canDisableSwaps: true,
-                    canSetMustAllowlistLPs: false,
-                    canSetCircuitBreakers: false,
-                    canChangeTokens: false
-                }),
-                0
+                address(this)
             )
         );
+        pool.addAllowedAddress(address(this));
 
         // slither-disable-next-line reentrancy-benign
         bVault = pool.getVault();
-        poolController = IBManagedPoolController(pool.getOwner());
         merkleOrchard = IBMerkleOrchard(vaultParams.merkleOrchard);
         poolId = pool.getPoolId();
         manager = vaultParams.manager;
@@ -476,12 +453,15 @@ contract AeraVaultV2 is
 
         checkWeights(targetWeights);
 
+        uint256[] memory maxAmountsIn = new uint256[](numPoolTokens + 1);
         uint256[] memory balances = new uint256[](numPoolTokens);
         IERC4626[] memory yieldTokens = getYieldTokens();
 
+        maxAmountsIn[0] = type(uint256).max;
         for (uint256 i = 0; i < numPoolTokens; i++) {
             if (amounts[i] > 0) {
                 balances[i] = depositToken(poolTokens[i], amounts[i]);
+                maxAmountsIn[i + 1] = balances[i];
                 setAllowance(poolTokens[i], address(bVault), balances[i]);
             }
         }
@@ -498,10 +478,12 @@ contract AeraVaultV2 is
             balances
         );
 
+        IERC20[] memory tokens;
+        (tokens, , ) = bVault.getPoolTokens(poolId);
         IBVault.JoinPoolRequest memory joinPoolRequest = IBVault
             .JoinPoolRequest({
-                assets: poolTokens,
-                maxAmountsIn: balances,
+                assets: tokens,
+                maxAmountsIn: maxAmountsIn,
                 userData: initUserData,
                 fromInternalBalance: false
             });
@@ -532,7 +514,7 @@ contract AeraVaultV2 is
         whenInitialized
         whenNotFinalized
     {
-        (, , uint256 lastChangeBlock) = getPoolTokensData();
+        (, , lastChangeBlock) = bVault.getPoolTokens(poolId);
 
         if (lastChangeBlock == block.number) {
             revert Aera__BalanceChangedInCurrentBlock();
@@ -565,7 +547,7 @@ contract AeraVaultV2 is
         whenInitialized
         whenNotFinalized
     {
-        (, , uint256 lastChangeBlock) = getPoolTokensData();
+        (, , lastChangeBlock) = bVault.getPoolTokens(poolId);
 
         if (lastChangeBlock == block.number) {
             revert Aera__BalanceChangedInCurrentBlock();
@@ -596,7 +578,7 @@ contract AeraVaultV2 is
         whenInitialized
         whenNotFinalized
     {
-        (, , uint256 lastChangeBlock) = getPoolTokensData();
+        (, , lastChangeBlock) = bVault.getPoolTokens(poolId);
 
         if (lastChangeBlock == block.number) {
             revert Aera__BalanceChangedInCurrentBlock();
@@ -701,12 +683,13 @@ contract AeraVaultV2 is
 
         targetPoolWeights = normalizeWeights(targetPoolWeights, weightSum);
 
-        poolController.updateWeightsGradually(
+        pool.updateWeightsGradually(
             block.timestamp,
             block.timestamp,
+            poolTokens,
             targetPoolWeights
         );
-        poolController.setSwapEnabled(true);
+        pool.setSwapEnabled(true);
 
         // slither-disable-next-line reentrancy-events
         emit EnabledTradingWithWeights(block.timestamp, targetWeights);
@@ -860,9 +843,10 @@ contract AeraVaultV2 is
             endTime
         );
 
-        poolController.updateWeightsGradually(
+        pool.updateWeightsGradually(
             startTime,
             endTime,
+            poolTokens,
             targetPoolWeights
         );
 
@@ -918,7 +902,12 @@ contract AeraVaultV2 is
             );
         }
 
-        poolController.setSwapFeePercentage(newSwapFee);
+        pool.updateSwapFeeGradually(
+            block.timestamp,
+            block.timestamp,
+            newSwapFee,
+            newSwapFee
+        );
         // slither-disable-next-line reentrancy-events
         emit SetSwapFee(newSwapFee);
     }
@@ -980,8 +969,7 @@ contract AeraVaultV2 is
         override
         returns (uint256[] memory holdings)
     {
-        (, uint256[] memory poolHoldings, ) = getPoolTokensData();
-
+        uint256[] memory poolHoldings = getPoolHoldings();
         IERC4626[] memory yieldTokens = getYieldTokens();
         holdings = new uint256[](numTokens);
 
@@ -998,6 +986,8 @@ contract AeraVaultV2 is
             ++index;
         }
     }
+
+    /// USER API ///
 
     /// @inheritdoc IUserAPI
     function getNormalizedWeights()
@@ -1026,8 +1016,6 @@ contract AeraVaultV2 is
             underlyingBalances
         );
     }
-
-    /// USER API ///
 
     /// @inheritdoc IUserAPI
     // prettier-ignore
@@ -1093,8 +1081,7 @@ contract AeraVaultV2 is
         override
         returns (IERC20[] memory tokens)
     {
-        (IERC20[] memory poolTokens, , ) = getPoolTokensData();
-
+        IERC20[] memory poolTokens = getPoolTokens();
         IERC4626[] memory yieldTokens = getYieldTokens();
         tokens = new IERC20[](numTokens);
 
@@ -1525,14 +1512,18 @@ contract AeraVaultV2 is
     /// @dev Will only be called by depositTokensAndUpdateWeights(),
     ///      withdrawTokens(), enableTradingWithOraclePrice()
     ///      and cancelWeightUpdates().
+    /// @param weights Array of weights.
+    /// @param weightSum Current sum of weights.
     function updatePoolWeights(uint256[] memory weights, uint256 weightSum)
         internal
     {
         uint256[] memory newWeights = normalizeWeights(weights, weightSum);
+        IERC20[] memory poolTokens = getPoolTokens();
 
-        poolController.updateWeightsGradually(
+        pool.updateWeightsGradually(
             block.timestamp,
             block.timestamp,
+            poolTokens,
             newWeights
         );
     }
@@ -1627,18 +1618,27 @@ contract AeraVaultV2 is
 
     /// @notice Get Token Data of Balancer Pool.
     /// @return poolTokens IERC20 tokens of Balancer Pool.
-    /// @return balances Balances of tokens of Balancer Pool.
+    /// @return poolHoldings Balances of tokens of Balancer Pool.
     /// @return lastChangeBlock Last updated Blocknumber.
     function getPoolTokensData()
         internal
         view
         returns (
             IERC20[] memory poolTokens,
-            uint256[] memory balances,
+            uint256[] memory poolHoldings,
             uint256 lastChangeBlock
         )
     {
-        (poolTokens, balances, lastChangeBlock) = bVault.getPoolTokens(poolId);
+        poolTokens = new IERC20[](numPoolTokens);
+        poolHoldings = new uint256[](numPoolTokens);
+
+        IERC20[] memory tokens;
+        uint256[] memory holdings;
+        (tokens, holdings, lastChangeBlock) = bVault.getPoolTokens(poolId);
+        for (uint256 i = 0; i < numPoolTokens; i++) {
+            poolTokens[i] = tokens[i + 1];
+            poolHoldings[i] = holdings[i + 1];
+        }
     }
 
     /// @notice Get IERC20 Tokens of Balancer Pool.
@@ -1648,7 +1648,13 @@ contract AeraVaultV2 is
         view
         returns (IERC20[] memory poolTokens)
     {
-        (poolTokens, , ) = getPoolTokensData();
+        poolTokens = new IERC20[](numPoolTokens);
+
+        IERC20[] memory tokens;
+        (tokens, , ) = bVault.getPoolTokens(poolId);
+        for (uint256 i = 0; i < numPoolTokens; i++) {
+            poolTokens[i] = tokens[i + 1];
+        }
     }
 
     /// @notice Get balances of tokens of Balancer Pool.
@@ -1658,7 +1664,13 @@ contract AeraVaultV2 is
         view
         returns (uint256[] memory poolHoldings)
     {
-        (, poolHoldings, ) = getPoolTokensData();
+        poolHoldings = new uint256[](numPoolTokens);
+
+        uint256[] memory holdings;
+        (, holdings, ) = bVault.getPoolTokens(poolId);
+        for (uint256 i = 0; i < numPoolTokens; i++) {
+            poolHoldings[i] = holdings[i + 1];
+        }
     }
 
     /// @notice Determine best prices for deposits.
@@ -2361,7 +2373,7 @@ contract AeraVaultV2 is
     ///      and disableTrading().
     /// @param swapEnabled Swap status.
     function setSwapEnabled(bool swapEnabled) internal {
-        poolController.setSwapEnabled(swapEnabled);
+        pool.setSwapEnabled(swapEnabled);
         // slither-disable-next-line reentrancy-events
         emit SetSwapEnabled(swapEnabled);
     }
