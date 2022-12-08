@@ -28,7 +28,7 @@ contract BalancerVaultMock is MockVault {
         IAsset[] memory tokens = request.assets;
         uint256[] memory amounts = request.maxAmountsIn;
 
-        for (uint256 i = 0; i < tokens.length; i++) {
+        for (uint256 i = 1; i < tokens.length; i++) {
             IERC20 token = IERC20(address(tokens[i]));
             token.safeTransferFrom(msg.sender, address(this), amounts[i]);
         }
@@ -41,11 +41,11 @@ contract BalancerVaultMock is MockVault {
         (, uint256[] memory amounts) = this.getPoolTokens(poolId);
         for (uint256 i = 0; i < ops.length; i++) {
             if (ops[i].kind == IVault.PoolBalanceOpKind.DEPOSIT) {
-                amounts[i] += ops[i].amount;
+                amounts[i + 1] += ops[i].amount;
             } else if (ops[i].kind == IVault.PoolBalanceOpKind.WITHDRAW) {
-                amounts[i] -= ops[i].amount;
+                amounts[i + 1] -= ops[i].amount;
             } else if (ops[i].kind == IVault.PoolBalanceOpKind.UPDATE) {
-                uint256 totalAmount = ops[i].amount + amounts[i];
+                uint256 totalAmount = ops[i].amount + amounts[i + 1];
                 uint256 balance = ops[i].token.balanceOf(address(this));
                 if (balance < totalAmount) {
                     ops[i].token.safeTransferFrom(
