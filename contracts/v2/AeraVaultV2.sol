@@ -514,7 +514,7 @@ contract AeraVaultV2 is
         whenInitialized
         whenNotFinalized
     {
-        (, , lastChangeBlock) = bVault.getPoolTokens(poolId);
+        (, , uint256 lastChangeBlock) = bVault.getPoolTokens(poolId);
 
         if (lastChangeBlock == block.number) {
             revert Aera__BalanceChangedInCurrentBlock();
@@ -547,7 +547,7 @@ contract AeraVaultV2 is
         whenInitialized
         whenNotFinalized
     {
-        (, , lastChangeBlock) = bVault.getPoolTokens(poolId);
+        (, , uint256 lastChangeBlock) = bVault.getPoolTokens(poolId);
 
         if (lastChangeBlock == block.number) {
             revert Aera__BalanceChangedInCurrentBlock();
@@ -578,7 +578,7 @@ contract AeraVaultV2 is
         whenInitialized
         whenNotFinalized
     {
-        (, , lastChangeBlock) = bVault.getPoolTokens(poolId);
+        (, , uint256 lastChangeBlock) = bVault.getPoolTokens(poolId);
 
         if (lastChangeBlock == block.number) {
             revert Aera__BalanceChangedInCurrentBlock();
