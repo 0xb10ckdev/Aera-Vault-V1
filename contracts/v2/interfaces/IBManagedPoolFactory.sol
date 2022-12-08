@@ -18,26 +18,7 @@ interface IBManagedPoolFactory {
         uint256 aumFeeId;
     }
 
-    struct BasePoolRights {
-        bool canTransferOwnership;
-        bool canChangeSwapFee;
-        bool canUpdateMetadata;
-    }
-
-    struct ManagedPoolRights {
-        bool canChangeWeights;
-        bool canDisableSwaps;
-        bool canSetMustAllowlistLPs;
-        bool canSetCircuitBreakers;
-        bool canChangeTokens;
-        bool canChangeMgmtFees;
-    }
-
-    function create(
-        NewPoolParams memory poolParams,
-        BasePoolRights memory basePoolRights,
-        ManagedPoolRights memory managedPoolRights,
-        uint256 minWeightChangeDuration,
-        address manager
-    ) external returns (address);
+    function create(NewPoolParams memory poolParams, address manager)
+        external
+        returns (address);
 }
