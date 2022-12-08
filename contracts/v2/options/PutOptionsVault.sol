@@ -15,14 +15,18 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
 
     uint256 private constant ONE = 10 ** 18;
 
-    /// @notice minimum total value in USDC that can be used to purchase options
+    /// @notice Minimum total value in USDC that can be used to purchase options
     uint256 private constant MIN_CHUNK_VALUE = 1 * 10 ** 7;
 
-    /// @notice strike price discount measured off of current market price in bps
+    /// @notice Strike price discount measured off of current market price in bps
     uint256 private constant STRIKE_PRICE = 1 * 10 ** 7;
 
-    /// @notice overall time to expiry for each purchased option
+    /// @notice Overall time to expiry for each purchased option
     uint256 private constant TIME_TO_EXPIRY = 30 days;
+
+    /// @notice Time for a broker to fill then buy/sell order.
+    ///         After that period anyone can cancel order.
+    uint256 private constant MIN_ORDER_ACTIVE = 3 days;
 
     IPutOptionsPricer private immutable _pricer;
     address private immutable _broker;
@@ -34,6 +38,9 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     BuyOrder private _buyOrder;
     Range private _expiryDelta;
     Range private _strikeMultiplier;
+
+    /// @notice Discount for option premium
+    uint256 private _optionPremiumDiscount;
     IOToken[] private _oTokens;
 
     /// MODIFIERS ///
@@ -104,13 +111,20 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         uint256 positionId,
         uint256 amount
     ) external override onlyLiquidator {
+        if (positionId >= _oTokens.length) {
+            revert Aera__InvalidPositionId(positionId, _oTokens.length);
+        }
         IOToken oToken = _oTokens[positionId];
 
-        //TODO: check if enough available to sell
+        uint256 balance = oToken.balanceOf(address(this));
+        if (balance < amount) {
+            revert Aera__InsufficientBalanceToSell(amount, balance);
+        }
 
         _sellOrder = SellOrder({
             active: true,
             oToken: address(oToken),
+            created: uint64(block.timestamp),
             amount: amount
         });
 
@@ -187,6 +201,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             maxExpiryTimestamp: maxExpiryTimestamp,
             minStrikePrice: minStrikePrice,
             maxStrikePrice: maxExpiryTimestamp,
+            created: uint64(block.timestamp),
             amount: balance
         });
 
@@ -295,6 +310,13 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             isPut
         );
 
+        uint256 premiumWithDiscount = (premium *
+            (ONE + _optionPremiumDiscount)) / ONE;
+
+        if (premiumWithDiscount < amount) {
+            revert Aera__OrderPremiumTooExpensive(premiumWithDiscount, amount);
+        }
+
         SafeERC20.safeTransferFrom(
             oToken,
             msg.sender,
@@ -314,11 +336,66 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     /// @inheritdoc IPutOptionsVault
     function fillSellOrder(
         uint256 amount
-    ) external override onlyBroker whenSellOrderActive returns (bool filled) {}
+    ) external override onlyBroker whenSellOrderActive returns (bool filled) {
+        SellOrder memory order = _sellOrder;
+        delete _sellOrder;
+
+        IOToken oToken = IOToken(order.oToken);
+        (
+            address collateralAsset,
+            address underlyingAsset,
+            address strikeAsset,
+            uint256 strikePrice,
+            uint256 expiryTimestamp,
+            bool isPut
+        ) = oToken.getOtokenDetails();
+
+        uint256 premium = _pricer.getPremium(
+            strikePrice,
+            expiryTimestamp,
+            isPut
+        );
+
+        uint256 premiumWithDiscount = (premium *
+            (ONE - _optionPremiumDiscount)) / ONE;
+
+        if (amount < premiumWithDiscount) {
+            revert Aera__OrderPremiumTooCheap(premiumWithDiscount, amount);
+        }
+
+        SafeERC20.safeTransferFrom(
+            IERC20(asset()),
+            msg.sender,
+            address(this),
+            amount
+        );
+
+        SafeERC20.safeTransfer(oToken, msg.sender, order.amount);
+
+        if (oToken.balanceOf(address(this)) == 0) {
+            // cleanup oToken
+            uint256 n = _oTokens.length;
+            for (uint256 i = 0; i < n; i++) {
+                if (address(_oTokens[i]) == address(oToken)) {
+                    _oTokens[i] = _oTokens[n - 1];
+                    _oTokens.pop();
+                    break;
+                }
+            }
+        }
+
+        emit SellOrderFilled(address(oToken), amount);
+
+        return true;
+    }
 
     /// @inheritdoc IPutOptionsVault
     function cancelBuyOrder() external override whenBuyOrderActive {
-        //TODO: If a buy order has been active but unfilled for a given period of time MIN_ORDER_ACTIVE, anyone can remove (clean up) the order from the contract.
+        if (
+            block.timestamp - _buyOrder.created < MIN_ORDER_ACTIVE &&
+            msg.sender != _broker
+        ) revert Aera__CallerIsNotBroker();
+
         emit BuyOrderCancelled(
             _buyOrder.minExpiryTimestamp,
             _buyOrder.maxExpiryTimestamp,
@@ -332,7 +409,11 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
 
     /// @inheritdoc IPutOptionsVault
     function cancelSellOrder() external override whenSellOrderActive {
-        //TODO: If a sell order has been active but unfilled for a given period of time MIN_ORDER_ACTIVE, anyone can remove (clean up) the order from the contract.
+        if (
+            block.timestamp - _sellOrder.created < MIN_ORDER_ACTIVE &&
+            msg.sender != _broker
+        ) revert Aera__CallerIsNotBroker();
+
         emit SellOrderCancelled(_sellOrder.oToken, _sellOrder.amount);
 
         delete _sellOrder;
@@ -342,5 +423,23 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         _checkMaturity();
     }
 
-    function _checkMaturity() internal returns (bool) {}
+    function _checkMaturity() internal returns (bool optionsMatured) {
+        uint256 n = _oTokens.length;
+        uint256 i = 0;
+        while (i < n) {
+            (, , , , uint256 expiryTimestamp, ) = _oTokens[i]
+                .getOtokenDetails();
+
+            if (expiryTimestamp < block.timestamp) {
+                optionsMatured = true;
+                if (n > 0) {
+                    n--;
+                    _oTokens[i] = _oTokens[n];
+                }
+                _oTokens.pop();
+            } else {
+                i++;
+            }
+        }
+    }
 }

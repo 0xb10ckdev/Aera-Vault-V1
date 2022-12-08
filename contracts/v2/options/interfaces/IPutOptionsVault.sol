@@ -52,7 +52,6 @@ interface IPutOptionsVault is IERC4626 {
     error Aera__BrokerAddressIsZero();
     error Aera__UnderlyingOptionsAssetAddressIsZero();
     error Aera__PutOptionsPricerIsNotValid(address pricer);
-    error Aera__PutOptionsBrokerIsNotValid(address broker);
     error Aera__CallerIsNotBroker();
     error Aera__CallerIsNotLiquidator();
     error Aera__CallerIsNotController();
@@ -68,6 +67,10 @@ interface IPutOptionsVault is IERC4626 {
     );
     error Aera__BuyOrderIsNotActive();
     error Aera__SellOrderIsNotActive();
+    error Aera__InvalidPositionId(uint256 positionId, uint256 totalItems);
+    error Aera__InsufficientBalanceToSell(uint256 requested, uint256 balance);
+    error Aera__OrderPremiumTooExpensive(uint256 premium, uint256 amount);
+    error Aera__OrderPremiumTooCheap(uint256 premium, uint256 amount);
 
     /// STRUCTS ///
 
@@ -84,6 +87,7 @@ interface IPutOptionsVault is IERC4626 {
         uint128 maxStrikePrice; // max value of strike price with 8 decimals
         uint64 minExpiryTimestamp; // min value of expiry
         uint64 maxExpiryTimestamp; // max value of expiry
+        uint64 created; // when order has been created
         bool active; // false if no buy order active
     }
 
@@ -91,6 +95,7 @@ interface IPutOptionsVault is IERC4626 {
     struct SellOrder {
         uint256 amount;
         address oToken; // address of the specific oToken for sale
+        uint64 created; // when order has been created
         bool active; // false if no sell order active
     }
 
@@ -123,6 +128,10 @@ interface IPutOptionsVault is IERC4626 {
     /// @param min minimum strike price
     /// @param max maximum strike price
     function setStrikeMultiplier(uint256 min, uint256 max) external;
+
+    /// @notice Ratio representing discount over the option premium which
+    ///         the vault is agreed to tolerate over ideal premium returned by the pricer
+    function setOptionPremiumDiscount(uint256 discount) external;
 
     /// @notice See all currently held options
     /// @return oTokenAddresses List of oTokens
@@ -160,4 +169,16 @@ interface IPutOptionsVault is IERC4626 {
 
     /// @notice Removes the current sell order
     function cancelSellOrder() external;
+
+    /// @notice Returns expiry delta range
+    function expiryDelta() external view returns (uint256 min, uint256 max);
+
+    /// @notice Returns strike multiplier range
+    function strikeMultiplier()
+        external
+        view
+        returns (uint256 min, uint256 max);
+
+    /// @notice Returns options premium discount
+    function optionsPremiumDiscount() external view returns (uint256 discount);
 }
