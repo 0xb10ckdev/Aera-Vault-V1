@@ -5,6 +5,24 @@ import "../dependencies/openzeppelin/IERC20.sol";
 import "./IBVault.sol";
 
 interface IBManagedPool {
+    function addAllowedAddress(address member) external;
+
+    function updateWeightsGradually(
+        uint256 startTime,
+        uint256 endTime,
+        IERC20[] calldata tokens,
+        uint256[] calldata endWeights
+    ) external;
+
+    function setSwapEnabled(bool swapEnabled) external;
+
+    function updateSwapFeeGradually(
+        uint256 startTime,
+        uint256 endTime,
+        uint256 startSwapFeePercentage,
+        uint256 endSwapFeePercentage
+    ) external;
+
     function getSwapEnabled() external view returns (bool);
 
     function getSwapFeePercentage() external view returns (uint256);
