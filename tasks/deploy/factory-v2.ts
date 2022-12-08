@@ -47,20 +47,8 @@ task("deploy:factory", "Deploys a Base Managed Pool Factory")
       from: admin.address,
       log: true,
     });
-    const controlledManagedPoolFactory = await deployments.deploy(
-      "ControlledManagedPoolFactory",
-      {
-        contract: "ControlledManagedPoolFactory",
-        args: [managedPoolFactory.address],
-        from: admin.address,
-        log: true,
-      },
-    );
 
     if (!taskArgs.silent) {
-      console.log(
-        "Factory is deployed to:",
-        controlledManagedPoolFactory.address,
-      );
+      console.log("Factory is deployed to:", managedPoolFactory.address);
     }
   });
