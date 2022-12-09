@@ -42,6 +42,7 @@ const config: HardhatUserConfig = {
           settings: {
             optimizer: {
               enabled: true,
+              // ref: https://github.com/balancer-labs/balancer-v2-monorepo/blob/e7918601bad5a72ed13caae0d87179bc601230f7/pvt/common/hardhat-base-config.ts#L20
               runs: 200,
             },
           },
@@ -52,6 +53,7 @@ const config: HardhatUserConfig = {
           settings: {
             optimizer: {
               enabled: true,
+              // ref: https://github.com/balancer-labs/balancer-v2-monorepo/blob/e7918601bad5a72ed13caae0d87179bc601230f7/pvt/common/hardhat-base-config.ts#L24
               runs: 200,
             },
           },
