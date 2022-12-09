@@ -4,11 +4,8 @@ import { getChainId, getConfig } from "../../scripts/config";
 import {
   AeraVaultV2Mock,
   AeraVaultV2Mock__factory,
-  CircuitBreakerLib__factory,
-  ManagedPoolAddRemoveTokenLib__factory,
   ManagedPoolFactory,
   ManagedPoolFactory__factory,
-  ProtocolFeePercentagesProvider__factory,
 } from "../../typechain";
 import { MAX_MANAGEMENT_FEE, ZERO_ADDRESS } from "../v1/constants";
 import {
@@ -43,26 +40,21 @@ export type VaultParams = {
   description?: string;
 };
 
-export * from "../v1/utils";
-
 export const deployFactory = async (
   signer: Signer,
 ): Promise<ManagedPoolFactory> => {
   const chainId = getChainId(process.env.HARDHAT_FORK);
   const config = getConfig(chainId);
 
-  const addRemoveTokenLibContract =
-    await ethers.getContractFactory<ManagedPoolAddRemoveTokenLib__factory>(
-      "ManagedPoolAddRemoveTokenLib",
-    );
-  const circuitBreakerLibContract =
-    await ethers.getContractFactory<CircuitBreakerLib__factory>(
-      "CircuitBreakerLib",
-    );
-  const protocolFeeProviderContract =
-    await ethers.getContractFactory<ProtocolFeePercentagesProvider__factory>(
-      "ProtocolFeePercentagesProvider",
-    );
+  const addRemoveTokenLibContract = await ethers.getContractFactory(
+    "ManagedPoolAddRemoveTokenLib",
+  );
+  const circuitBreakerLibContract = await ethers.getContractFactory(
+    "CircuitBreakerLib",
+  );
+  const protocolFeeProviderContract = await ethers.getContractFactory(
+    "ProtocolFeePercentagesProvider",
+  );
 
   const addRemoveTokenLib = await addRemoveTokenLibContract
     .connect(signer)
@@ -126,6 +118,10 @@ export const deployVault = async (
   });
 };
 
+export const toWei = (value: number | string): BigNumber => {
+  return ethers.utils.parseEther(value.toString());
+};
+
 export const toUnit = (
   value: number | string,
   decimals: number,
@@ -151,4 +147,49 @@ export const normalizeWeights = (weights: BigNumberish[]): BigNumber[] => {
   adjustedWeights[0] = adjustedWeights[0].add(ONE).sub(sum);
 
   return adjustedWeights;
+};
+
+export const tokenValueArray = (
+  tokens: string[],
+  value: number | string | BigNumber,
+  length: number,
+): { token: string; value: string }[] => {
+  return Array.from({ length }, (_, i: number) => ({
+    token: tokens[i] || ZERO_ADDRESS,
+    value: value.toString(),
+  }));
+};
+
+export const tokenWithValues = (
+  tokens: string[],
+  values: (string | BigNumber)[],
+): { token: string; value: string | BigNumber }[] => {
+  return values.map((value: string | BigNumber, i: number) => ({
+    token: tokens[i],
+    value,
+  }));
+};
+
+export const valueArray = (
+  value: number | string | BigNumber,
+  length: number,
+): string[] => {
+  return new Array(length).fill(value.toString());
+};
+
+export const getCurrentTime = async (): Promise<number> => {
+  const block = await ethers.provider.getBlock("latest");
+  return block.timestamp;
+};
+
+export const getTimestamp = async (
+  blockNumber: number | undefined,
+): Promise<number> => {
+  const block = await ethers.provider.getBlock(blockNumber || "latest");
+  return block.timestamp;
+};
+
+export const increaseTime = async (timestamp: number): Promise<void> => {
+  await ethers.provider.send("evm_increaseTime", [Math.floor(timestamp)]);
+  await ethers.provider.send("evm_mine", []);
 };

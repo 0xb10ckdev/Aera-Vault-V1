@@ -5,16 +5,13 @@ import {
   AeraVaultV2Mock,
   AeraVaultV2Mock__factory,
   BalancerVaultMock__factory,
-  CircuitBreakerLib__factory,
   ERC4626Mock,
   ERC4626Mock__factory,
   IERC20,
-  ManagedPoolAddRemoveTokenLib__factory,
   ManagedPoolFactory,
   ManagedPoolFactory__factory,
   OracleMock,
   OracleMock__factory,
-  ProtocolFeePercentagesProvider__factory,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
 } from "../../typechain";
@@ -103,14 +100,12 @@ export const setupAssetContracts = async (
     await ethers.getContractFactory<WithdrawalValidatorMock__factory>(
       "WithdrawalValidatorMock",
     );
-  const addRemoveTokenLibContract =
-    await ethers.getContractFactory<ManagedPoolAddRemoveTokenLib__factory>(
-      "ManagedPoolAddRemoveTokenLib",
-    );
-  const circuitBreakerLibContract =
-    await ethers.getContractFactory<CircuitBreakerLib__factory>(
-      "CircuitBreakerLib",
-    );
+  const addRemoveTokenLibContract = await ethers.getContractFactory(
+    "ManagedPoolAddRemoveTokenLib",
+  );
+  const circuitBreakerLibContract = await ethers.getContractFactory(
+    "CircuitBreakerLib",
+  );
 
   const validator = await validatorMock.connect(admin).deploy(tokens.length);
 
@@ -145,10 +140,10 @@ export const setupAssetContracts = async (
     bVaultAddress = bVault.address;
   }
 
-  const protocolFeeProviderContract =
-    await ethers.getContractFactory<ProtocolFeePercentagesProvider__factory>(
-      "ProtocolFeePercentagesProvider",
-    );
+  const protocolFeeProviderContract = await ethers.getContractFactory(
+    "ProtocolFeePercentagesProvider",
+  );
+
   const protocolFeeProvider = await protocolFeeProviderContract
     .connect(admin)
     .deploy(bVaultAddress, ONE, ONE);
