@@ -79,9 +79,9 @@
     "compile": "hardhat compile",
     "coverage": "hardhat coverage --solcoverjs ./.solcover.js --temp artifacts",
     "coverage-all": "yarn coverage --testfiles \"./test/**/*.ts\"",
-    "coverage-v1": "yarn coverage --testfiles \"./test/v1/**/*.ts\"",
-    "coverage-v2": "yarn coverage --testfiles \"./test/v2/**/*.ts\"",
-    "coverage-v4": "yarn coverage --testfiles \"./test/v4/**/*.ts\"",
+    "coverage-v1": "yarn coverage --config hardhat.config.v1.ts",
+    "coverage-v2": "yarn coverage --config hardhat.config.v2.ts",
+    "coverage-v4": "yarn coverage --config hardhat.config.v4.ts",
     "coverage:local": "cross-env HARDHAT_FORK=mainnet HARDHAT_FORK_NUMBER=13000000 yarn coverage-all",
     "deploy:validator": "hardhat deploy:validator",
     "deploy:factory": "hardhat deploy:factory",
@@ -97,12 +97,18 @@
     "prettier": "prettier --config ./.prettierrc --write \"**/*.{js,json,md,sol,ts}\"",
     "prettier:check": "prettier --check --config ./.prettierrc \"**/*.{js,json,md,sol,ts}\"",
     "slither": "slither . --filter-paths \"dependencies|mocks\" --exclude solc-version,similar-names,timestamp,unused-return,uninitialized-local",
+    "slither-v1": "slither ./contracts/v1/ --filter-paths \"dependencies|mocks\" --exclude solc-version,similar-names,timestamp,unused-return,uninitialized-local",
+    "slither-v2": "slither ./contracts/v2/ --filter-paths \"dependencies|mocks\" --exclude solc-version,similar-names,timestamp,unused-return,uninitialized-local",
+    "slither-v4": "slither ./contracts/v4/ --filter-paths \"dependencies|mocks\" --exclude solc-version,similar-names,timestamp,unused-return,uninitialized-local",
     "test:unit": "cross-env TEST_PATH=./test/v1/unit hardhat test",
     "test:integration": "cross-env TEST_PATH=./test/v1/integration HARDHAT_FORK=mainnet HARDHAT_FORK_NUMBER=13000000 hardhat test",
     "test:kovan": "cross-env TEST_PATH=./test/v1/integration HARDHAT_FORK=kovan HARDHAT_FORK_NUMBER=27000000 hardhat test",
     "test": "yarn test:unit && yarn test:integration",
     "gas": "cross-env REPORT_GAS=true hardhat test",
     "size": "cross-env REPORT_SIZE=true hardhat compile",
-    "typechain": "hardhat typechain"
+    "typechain": "hardhat typechain",
+    "typechain-v1": "hardhat typechain --config hardhat.config.v1.ts",
+    "typechain-v2": "hardhat typechain --config hardhat.config.v2.ts",
+    "typechain-v4": "hardhat typechain --config hardhat.config.v4.ts"
   }
 }

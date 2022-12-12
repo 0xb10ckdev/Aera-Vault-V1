@@ -11,8 +11,6 @@ import {
   ManagedPoolFactory__factory,
   AeraVaultV1Mock,
   AeraVaultV1Mock__factory,
-  ManagerWhitelist,
-  ManagerWhitelist__factory,
 } from "../../typechain";
 import { MAX_MANAGEMENT_FEE, ZERO_ADDRESS } from "./constants";
 
@@ -81,18 +79,6 @@ export const deployFactory = async (
   return await managedPoolFactoryContract
     .connect(signer)
     .deploy(baseManagedPoolFactory.address);
-};
-
-export const deployManagerWhitelist = async (
-  signer: Signer,
-  managers: string[],
-): Promise<ManagerWhitelist> => {
-  const managerWhitelist =
-    await ethers.getContractFactory<ManagerWhitelist__factory>(
-      "ManagerWhitelist",
-    );
-
-  return await managerWhitelist.connect(signer).deploy(managers);
 };
 
 export const toWei = (value: number | string): BigNumber => {

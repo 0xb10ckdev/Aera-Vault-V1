@@ -3,8 +3,8 @@
 
 pragma solidity ^0.8.0;
 
-import "../../../v1/dependencies/openzeppelin/IERC20.sol";
-import "../../../v1/dependencies/openzeppelin/IERC20Metadata.sol";
+import "./IERC20.sol";
+import "./IERC20Metadata.sol";
 
 /**
  * @dev Interface of the ERC4626 "Tokenized Vault Standard", as defined in

@@ -3,10 +3,10 @@
 
 pragma solidity ^0.8.0;
 
-import "../../../v1/dependencies/openzeppelin/ERC20.sol";
-import "../../../v1/dependencies/openzeppelin/SafeERC20.sol";
+import "./ERC20.sol";
+import "./SafeERC20.sol";
 import "./IERC4626.sol";
-import "../../../v1/dependencies/openzeppelin/Math.sol";
+import "./Math.sol";
 
 /**
  * @dev Implementation of the ERC4626 "Tokenized Vault Standard" as defined in
