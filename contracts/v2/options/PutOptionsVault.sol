@@ -188,41 +188,6 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         return super.maxMint(receiver);
     }
 
-    function _afterDeposit(uint256 assets, uint256 shares) internal override {
-        uint256 balance = asset().balanceOf(address(this));
-
-        if (balance < MIN_CHUNK_VALUE) return;
-
-        uint256 spotPrice = _pricer.getSpot();
-
-        uint64 minExpiryTimestamp = uint64(block.timestamp + _expiryDelta.min);
-        uint64 maxExpiryTimestamp = uint64(block.timestamp + _expiryDelta.max);
-        uint128 minStrikePrice = uint128(
-            (spotPrice * _strikeMultiplier.min) / ONE
-        );
-        uint128 maxStrikePrice = uint128(
-            (spotPrice * _strikeMultiplier.max) / ONE
-        );
-
-        _buyOrder = BuyOrder({
-            active: true,
-            minExpiryTimestamp: minExpiryTimestamp,
-            maxExpiryTimestamp: maxExpiryTimestamp,
-            minStrikePrice: minStrikePrice,
-            maxStrikePrice: maxExpiryTimestamp,
-            created: uint64(block.timestamp),
-            amount: balance
-        });
-
-        emit BuyOrderCreated(
-            minExpiryTimestamp,
-            maxExpiryTimestamp,
-            minStrikePrice,
-            maxStrikePrice,
-            balance
-        );
-    }
-
     /// @inheritdoc IPutOptionsVault
     function fillBuyOrder(
         address oToken,
@@ -255,18 +220,20 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         // _buyOrder is deleted to prevent reentrancy
         delete _buyOrder;
 
-        uint256 premium = (_pricer.getPremium(
+        uint256 premiumWithDiscount = ((_pricer.getPremium(
             strikePrice,
             expiryTimestamp,
             isPut
-        ) * order.amount) / O_TOKEN_BASE;
-
-        uint256 premiumWithDiscount = (premium *
-            (ONE + _optionPremiumDiscount)) / ONE;
+        ) * order.amount) * (ONE + _optionPremiumDiscount)) /
+            (ONE * O_TOKEN_BASE);
 
         if (premiumWithDiscount < amount) {
             revert Aera__OrderPremiumTooExpensive(premiumWithDiscount, amount);
         }
+
+        _oTokens.add(oToken);
+
+        emit BuyOrderFilled(oToken, amount);
 
         SafeERC20.safeTransferFrom(
             IOToken(oToken),
@@ -275,10 +242,6 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             order.amount
         );
         SafeERC20.safeTransfer(IERC20(asset()), msg.sender, amount);
-
-        _oTokens.add(oToken);
-
-        emit BuyOrderFilled(oToken, amount);
 
         return true;
     }
@@ -301,18 +264,17 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             bool isPut
         ) = oToken.getOtokenDetails();
 
-        uint256 premium = (_pricer.getPremium(
+        uint256 premiumWithDiscount = ((_pricer.getPremium(
             strikePrice,
             expiryTimestamp,
             isPut
-        ) * order.amount) / O_TOKEN_BASE;
-
-        uint256 premiumWithDiscount = (premium *
-            (ONE - _optionPremiumDiscount)) / ONE;
+        ) * order.amount) * (ONE - _optionPremiumDiscount)) /
+            (ONE * O_TOKEN_BASE);
 
         if (amount < premiumWithDiscount) {
             revert Aera__OrderPremiumTooCheap(premiumWithDiscount, amount);
         }
+        emit SellOrderFilled(address(oToken), amount);
 
         SafeERC20.safeTransferFrom(
             IERC20(asset()),
@@ -322,12 +284,10 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         );
 
         SafeERC20.safeTransfer(oToken, msg.sender, order.amount);
-
+        // slither-disable-next-line incorrect-equality
         if (oToken.balanceOf(address(this)) == 0) {
             _oTokens.remove(address(oToken));
         }
-
-        emit SellOrderFilled(address(oToken), amount);
 
         return true;
     }
@@ -397,7 +357,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             result += _getOptionPrice(IOToken(_oTokens.at(i)));
         }
 
-        return result + asset().balanceOf(address(this));
+        return result + IERC20(asset()).balanceOf(address(this));
     }
 
     /// @inheritdoc IPutOptionsVault
@@ -480,6 +440,41 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         return _itmOptionPriceRatio;
     }
 
+    function _afterDeposit(uint256 assets, uint256 shares) internal override {
+        uint256 balance = IERC20(asset()).balanceOf(address(this));
+
+        if (balance < MIN_CHUNK_VALUE) return;
+
+        uint256 spotPrice = _pricer.getSpot();
+
+        uint64 minExpiryTimestamp = uint64(block.timestamp + _expiryDelta.min);
+        uint64 maxExpiryTimestamp = uint64(block.timestamp + _expiryDelta.max);
+        uint128 minStrikePrice = uint128(
+            (spotPrice * _strikeMultiplier.min) / ONE
+        );
+        uint128 maxStrikePrice = uint128(
+            (spotPrice * _strikeMultiplier.max) / ONE
+        );
+
+        _buyOrder = BuyOrder({
+            active: true,
+            minExpiryTimestamp: minExpiryTimestamp,
+            maxExpiryTimestamp: maxExpiryTimestamp,
+            minStrikePrice: minStrikePrice,
+            maxStrikePrice: maxExpiryTimestamp,
+            created: uint64(block.timestamp),
+            amount: balance
+        });
+
+        emit BuyOrderCreated(
+            minExpiryTimestamp,
+            maxExpiryTimestamp,
+            minStrikePrice,
+            maxStrikePrice,
+            balance
+        );
+    }
+
     function _beforeWithdraw(uint256, uint256) internal override {
         _checkExpired();
     }
@@ -551,8 +546,9 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         );
 
         if (price < strikePrice) {
-            return (((((strikePrice - price) * _itmOptionPriceRatio) / ONE) *
-                oToken.balanceOf(address(this))) / O_TOKEN_BASE);
+            return (((strikePrice - price) *
+                _itmOptionPriceRatio *
+                oToken.balanceOf(address(this))) / (ONE * O_TOKEN_BASE));
         }
 
         return 0;
