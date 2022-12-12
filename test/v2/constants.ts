@@ -2,6 +2,7 @@ import { toWei } from "../v1/constants";
 
 export * from "../v1/constants";
 
+export const MAX_SWAP_FEE = toWei("0.95");
 export const PRICE_DEVIATION = toWei(0.0001); // Deviation percentage of prices.
 export const MIN_FEE_DURATION = 2 * 30 * 24 * 60 * 60; // Minimum period to charge guaranteed management fee.
 export const MIN_RELIABLE_VAULT_VALUE = toWei(1); // Minimum reliable vault TVL in base token
