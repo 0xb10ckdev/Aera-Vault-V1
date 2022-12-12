@@ -13,6 +13,12 @@ interface IPutOptionsVault is IERC4626 {
     /// @notice Raised when strike multiplier is changed
     event StrikeMultiplierChanged(uint256 min, uint256 max);
 
+    /// @notice Raised when option premium discount is changed
+    event OptionPremiumDiscountChanged(uint256 discount);
+
+    /// @notice Raise when ITM option price ratio is changed
+    event ITMOptionPriceRatioChanged(uint256 ratio);
+
     /// @notice Raised when buy order is created
     event BuyOrderCreated(
         uint256 minExpiryTimestamp,
@@ -45,12 +51,12 @@ interface IPutOptionsVault is IERC4626 {
 
     /// ERRORS ///
 
-    error Aera__PricerAddressIsZero();
-    error Aera__OwnerAddressIsZero();
-    error Aera__ControllerAddressIsZero();
-    error Aera__LiquidatorAddressIsZero();
-    error Aera__BrokerAddressIsZero();
-    error Aera__UnderlyingOptionsAssetAddressIsZero();
+    error Aera__PricerIsZeroAddress();
+    error Aera__OwnerIsZeroAddress();
+    error Aera__ControllerIsZeroAddress();
+    error Aera__LiquidatorIsZeroAddress();
+    error Aera__BrokerIsZeroAddress();
+    error Aera__UnderlyingOptionsAssetIsZeroAddress();
     error Aera__PutOptionsPricerIsNotValid(address pricer);
     error Aera__CallerIsNotBroker();
     error Aera__CallerIsNotLiquidator();
@@ -67,10 +73,11 @@ interface IPutOptionsVault is IERC4626 {
     );
     error Aera__BuyOrderIsNotActive();
     error Aera__SellOrderIsNotActive();
-    error Aera__InvalidPositionId(uint256 positionId, uint256 totalItems);
     error Aera__InsufficientBalanceToSell(uint256 requested, uint256 balance);
     error Aera__OrderPremiumTooExpensive(uint256 premium, uint256 amount);
     error Aera__OrderPremiumTooCheap(uint256 premium, uint256 amount);
+    error Aera__UnknownOToken(address oToken);
+    error Aera__DiscountExceedsMaximumValue(uint256 discount, uint256 maximum);
 
     /// STRUCTS ///
 
@@ -110,12 +117,12 @@ interface IPutOptionsVault is IERC4626 {
 
     /// @notice Check maturity for all options positions and clean up positions that are past maturity.
     /// @return true if a position was cleaned up (independent of whether it matured in-the-money or not).
-    function checkMaturity() external returns (bool);
+    function checkExpired() external returns (bool);
 
     /// @notice Initiate a sell order for a given options position.
-    /// @param positionId option position identifier
+    /// @param oToken oToken address
     /// @param amount option amount
-    function sell(uint256 positionId, uint256 amount) external;
+    function sell(address oToken, uint256 amount) external;
 
     /// @notice Set expiry time range
     /// @param min minumum expiry time (in seconds)
@@ -133,12 +140,16 @@ interface IPutOptionsVault is IERC4626 {
     ///         the vault is agreed to tolerate over ideal premium returned by the pricer
     function setOptionPremiumDiscount(uint256 discount) external;
 
+    /// @notice Ratio representing ITM option price change when option is expired,
+    ///         but the oracle price is not finalized yet.
+    function setITMOptionPriceRatio(uint256 ratio) external;
+
     /// @notice See all currently held options
     /// @return oTokenAddresses List of oTokens
     function positions()
         external
         view
-        returns (IOToken[] memory oTokenAddresses);
+        returns (address[] memory oTokenAddresses);
 
     /// @notice Reveal the underlying options asset. Please note, this should not be confused
     ///         with the underlying asset of the ERC4626 vault itself.
@@ -157,7 +168,7 @@ interface IPutOptionsVault is IERC4626 {
     /// @notice Allows broker to fill current buy order. Note that order will be filled as long as
     ///         expiry and strike price of the oToken is within the range specified by buy order.
     function fillBuyOrder(
-        IOToken oToken,
+        address oToken,
         uint256 amount
     ) external returns (bool filled);
 
@@ -181,4 +192,7 @@ interface IPutOptionsVault is IERC4626 {
 
     /// @notice Returns options premium discount
     function optionsPremiumDiscount() external view returns (uint256 discount);
+
+    /// @notice Returns ITM option price ratio
+    function itmOptionPriceRatio() external view returns (uint256 ratio);
 }

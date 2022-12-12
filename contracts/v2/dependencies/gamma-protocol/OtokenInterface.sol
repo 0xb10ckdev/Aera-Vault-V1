@@ -4,6 +4,9 @@ pragma solidity 0.8.11;
 // This is a copy from https://github.com/opynfinance/GammaProtocol/blob/master/contracts/interfaces/OtokenInterface.sol
 
 interface OtokenInterface {
+    // Added by Blockvis/Auditless/Gauntlet
+    function controller() external view returns (address);
+
     function addressBook() external view returns (address);
 
     function underlyingAsset() external view returns (address);
@@ -32,12 +35,12 @@ interface OtokenInterface {
         external
         view
         returns (
-            address,
-            address,
-            address,
-            uint256,
-            uint256,
-            bool
+            address collateralAsset,
+            address underlyingAsset,
+            address strikeAsset,
+            uint256 strikePrice,
+            uint256 expiryTimestamp,
+            bool isPut
         );
 
     function mintOtoken(address account, uint256 amount) external;
