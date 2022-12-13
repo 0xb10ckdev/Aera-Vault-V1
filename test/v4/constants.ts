@@ -1,1 +1,1 @@
-export * from "../v1/constants";
+export * from "../common/constants";
