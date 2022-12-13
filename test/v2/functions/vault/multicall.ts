@@ -6,7 +6,7 @@ import {
   MINIMUM_WEIGHT_CHANGE_DURATION,
   ONE,
   PRICE_DEVIATION,
-} from "../constants";
+} from "../../constants";
 import {
   getCurrentTime,
   increaseTime,
@@ -16,7 +16,7 @@ import {
   toUnit,
   toWei,
   valueArray,
-} from "../utils";
+} from "../../utils";
 
 export function testMulticall(): void {
   const ABI = [
@@ -45,7 +45,7 @@ export function testMulticall(): void {
     it("when multicall ownable functions from non-owner", async function () {
       await expect(
         this.vault
-          .connect(this.user)
+          .connect(this.signers.user)
           .multicall([iface.encodeFunctionData("disableTrading", [])]),
       ).to.be.revertedWith("Aera__CallerIsNotOwnerOrManager()");
     });
@@ -150,7 +150,7 @@ export function testMulticall(): void {
 
       await expect(
         this.vault
-          .connect(this.manager)
+          .connect(this.signers.manager)
           .multicall([
             iface.encodeFunctionData("setSwapFee", [newFee]),
             iface.encodeFunctionData("updateWeightsGradually", [
@@ -168,9 +168,9 @@ export function testMulticall(): void {
         .to.emit(this.vault, "UpdateWeightsGradually")
         .withArgs(startTime, endTime, normalizeWeights(endWeights));
 
-      expect(await this.vault.connect(this.manager).getSwapFee()).to.equal(
-        newFee,
-      );
+      expect(
+        await this.vault.connect(this.signers.manager).getSwapFee(),
+      ).to.equal(newFee);
 
       await increaseTime(endTime - (await getCurrentTime()));
 

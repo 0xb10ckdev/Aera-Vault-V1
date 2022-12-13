@@ -1,8 +1,8 @@
 import { expect } from "chai";
-import { IERC20 } from "../../../typechain";
-import { ONE } from "../constants";
-import { deployToken } from "../fixtures";
-import { toWei } from "../utils";
+import { IERC20 } from "../../../../typechain";
+import { ONE } from "../../constants";
+import { deployToken } from "../../fixtures";
+import { toWei } from "../../utils";
 
 export function testSweep(): void {
   let TOKEN: IERC20;
@@ -17,7 +17,9 @@ export function testSweep(): void {
 
     it("when called from non-owner", async function () {
       await expect(
-        this.vault.connect(this.manager).sweep(TOKEN.address, toWei(1001)),
+        this.vault
+          .connect(this.signers.manager)
+          .sweep(TOKEN.address, toWei(1001)),
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
@@ -36,7 +38,7 @@ export function testSweep(): void {
   });
 
   it("should be possible to withdraw token", async function () {
-    const balance = await TOKEN.balanceOf(this.admin.address);
+    const balance = await TOKEN.balanceOf(this.signers.admin.address);
     await TOKEN.transfer(this.vault.address, toWei(1000));
 
     expect(
@@ -46,6 +48,8 @@ export function testSweep(): void {
 
     expect(await TOKEN.balanceOf(this.vault.address)).to.equal(toWei(0));
 
-    expect(await TOKEN.balanceOf(this.admin.address)).to.equal(balance);
+    expect(await TOKEN.balanceOf(this.signers.admin.address)).to.equal(
+      balance,
+    );
   });
 }

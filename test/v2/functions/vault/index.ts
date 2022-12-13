@@ -1,25 +1,26 @@
-import { testFunctionCallsWhenNotInitialized } from "../functions/callFunctionsWhenNotInitialized";
-import { testFunctionCallsWhenFinalized } from "../functions/callFunctionsWhenFinalized";
-import { testInitialDeposit } from "../functions/initialDeposit";
-import { testDeposit } from "../functions/deposit";
-import { testDepositRiskingArbitrage } from "../functions/depositRiskingArbitrage";
-import { testWithdraw } from "../functions/withdraw";
-import { testDepositAndWithdraw } from "../functions/depositAndWithdraw";
-import { testUpdateWeightsGradually } from "../functions/updateWeightsGradually";
-import { testCancelWeightUpdates } from "./cancelWeightUpdates";
-import { testFinalize } from "../functions/finalize";
-import { testMulticall } from "../functions/multicall";
-import { testGetSpotPrices } from "../functions/getSpotPrices";
-import { testSweep } from "../functions/sweep";
-import { testClaimManagerFees } from "../functions/claimManagerFees";
-import { testSetManager } from "../functions/setManager";
-import { testSetOraclesEnabled } from "../functions/setOraclesEnabled";
-import { testEnableTradingRiskingArbitrage } from "../functions/enableTradingRiskingArbitrage";
-import { testEnableTradingWithWeights } from "../functions/enableTradingWithWeights";
-import { testEnableTradingWithOraclePrice } from "../functions/enableTradingWithOraclePrice";
-import { testDisableTrading } from "../functions/disableTrading";
-import { testSetSwapFee } from "../functions/setSwapFee";
-import { testOwnership } from "../functions/ownership";
+import { IERC20 } from "../../../../typechain";
+import { ONE } from "../../constants";
+import { testFunctionCallsWhenFinalized } from "./callFunctionsWhenFinalized";
+import { testFunctionCallsWhenNotInitialized } from "./callFunctionsWhenNotInitialized";
+import { testClaimManagerFees } from "./claimManagerFees";
+import { testDeposit } from "./deposit";
+import { testDepositAndWithdraw } from "./depositAndWithdraw";
+import { testDepositRiskingArbitrage } from "./depositRiskingArbitrage";
+import { testDisableTrading } from "./disableTrading";
+import { testEnableTradingRiskingArbitrage } from "./enableTradingRiskingArbitrage";
+import { testEnableTradingWithOraclePrice } from "./enableTradingWithOraclePrice";
+import { testEnableTradingWithWeights } from "./enableTradingWithWeights";
+import { testFinalize } from "./finalize";
+import { testGetSpotPrices } from "./getSpotPrices";
+import { testInitialDeposit } from "./initialDeposit";
+import { testMulticall } from "./multicall";
+import { testOwnership } from "./ownership";
+import { testSetManager } from "./setManager";
+import { testSetOraclesEnabled } from "./setOraclesEnabled";
+import { testSetSwapFee } from "./setSwapFee";
+import { testSweep } from "./sweep";
+import { testUpdateWeightsGradually } from "./updateWeightsGradually";
+import { testWithdraw } from "./withdraw";
 import {
   normalizeWeights,
   tokenValueArray,
@@ -27,47 +28,11 @@ import {
   toUnit,
   toWei,
   valueArray,
-} from "../utils";
-import { ONE } from "../constants";
-import { IERC20 } from "../../../typechain";
+} from "../../utils";
+import { testCancelWeightUpdates } from "./cancelWeightUpdates";
 
 export function testAeraVaultV2(): void {
   describe("Aera Vault V2 Mainnet Functionality", function () {
-    beforeEach(async function () {
-      this.getUserBalances = async (address: string) => {
-        const balances = await Promise.all(
-          this.tokens.map((token: IERC20) => token.balanceOf(address)),
-        );
-        return balances;
-      };
-
-      this.getManagersFeeTotal = async function () {
-        const managersFeeTotal = await Promise.all(
-          Array.from(Array(this.tokens.length).keys()).map(index =>
-            this.vault.managersFeeTotal(index),
-          ),
-        );
-        return managersFeeTotal;
-      };
-
-      this.getState = async (
-        managerAddress: string | null = null,
-        adminAddress: string | null = null,
-      ) => {
-        const [holdings, adminBalances, managerBalances] = await Promise.all([
-          this.vault.getHoldings(),
-          this.getUserBalances(adminAddress || this.admin.address),
-          this.getUserBalances(managerAddress || this.manager.address),
-        ]);
-
-        return {
-          holdings,
-          adminBalances,
-          managerBalances,
-        };
-      };
-    });
-
     describe("when Vault not initialized", function () {
       describe("should be reverted to call functions", async function () {
         testFunctionCallsWhenNotInitialized();

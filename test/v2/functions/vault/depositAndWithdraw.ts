@@ -1,6 +1,6 @@
 import { expect } from "chai";
-import { ONE, PRICE_DEVIATION } from "../constants";
-import { toWei, tokenWithValues, valueArray } from "../utils";
+import { ONE, PRICE_DEVIATION } from "../../constants";
+import { toWei, tokenWithValues, valueArray } from "../../utils";
 
 export function testDepositAndWithdraw(): void {
   beforeEach(async function () {

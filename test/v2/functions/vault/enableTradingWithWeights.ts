@@ -1,19 +1,19 @@
 import { expect } from "chai";
-import { DEVIATION, ONE } from "../constants";
+import { DEVIATION, ONE } from "../../constants";
 import {
   getTimestamp,
   normalizeWeights,
   tokenValueArray,
   tokenWithValues,
   toWei,
-} from "../utils";
+} from "../../utils";
 
 export function testEnableTradingWithWeights(): void {
   describe("should be reverted to enable trading", function () {
     it("when called from non-owner", async function () {
       await expect(
         this.vault
-          .connect(this.manager)
+          .connect(this.signers.manager)
           .enableTradingWithWeights(
             tokenValueArray(
               this.tokenAddresses,

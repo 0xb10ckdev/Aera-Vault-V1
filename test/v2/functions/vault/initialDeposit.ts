@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { BigNumber } from "ethers";
-import { BALANCER_ERRORS, DEVIATION, ONE } from "../constants";
+import { BALANCER_ERRORS, DEVIATION, ONE } from "../../constants";
 import {
   normalizeWeights,
   toWei,
@@ -8,7 +8,7 @@ import {
   tokenWithValues,
   toUnit,
   valueArray,
-} from "../utils";
+} from "../../utils";
 
 export function testInitialDeposit(): void {
   beforeEach(async function () {
@@ -147,7 +147,7 @@ export function testInitialDeposit(): void {
       valueArray(ONE, this.tokens.length),
     );
 
-    const balances = await this.getUserBalances(this.admin.address);
+    const balances = await this.getUserBalances(this.signers.admin.address);
 
     await this.vault.initialDeposit(
       tokenWithValues(this.tokenAddresses, amounts),

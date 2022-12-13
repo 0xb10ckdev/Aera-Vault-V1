@@ -1,12 +1,12 @@
 import { expect } from "chai";
-import { ONE } from "../constants";
+import { ONE } from "../../constants";
 import {
   normalizeWeights,
   tokenValueArray,
   tokenWithValues,
   toUnit,
   valueArray,
-} from "../utils";
+} from "../../utils";
 
 export function testDisableTrading(): void {
   beforeEach(async function () {
@@ -29,7 +29,7 @@ export function testDisableTrading(): void {
 
   it("should be reverted to disable trading", async function () {
     await expect(
-      this.vault.connect(this.user).disableTrading(),
+      this.vault.connect(this.signers.user).disableTrading(),
     ).to.be.revertedWith("Aera__CallerIsNotOwnerOrManager");
   });
 
@@ -38,7 +38,7 @@ export function testDisableTrading(): void {
 
     expect(await this.vault.estimateGas.disableTrading()).to.below(52000);
 
-    await expect(this.vault.connect(this.manager).disableTrading())
+    await expect(this.vault.connect(this.signers.manager).disableTrading())
       .to.emit(this.vault, "SetSwapEnabled")
       .withArgs(false);
 
