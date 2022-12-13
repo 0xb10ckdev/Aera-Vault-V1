@@ -1,5 +1,5 @@
 import { BigNumber, BigNumberish, Signer } from "ethers";
-import { deployments, ethers } from "hardhat";
+import { ethers } from "hardhat";
 import { getChainId, getConfig } from "../../scripts/config";
 import {
   AeraVaultV2Mock,
@@ -29,7 +29,6 @@ export type VaultParams = {
   numeraireAssetIndex: number;
   swapFeePercentage: BigNumberish;
   manager: string;
-  validator?: string;
   minReliableVaultValue?: BigNumberish;
   minSignificantDepositValue?: BigNumberish;
   maxOracleSpotDivergence?: BigNumberish;
@@ -89,9 +88,6 @@ export const deployVault = async (
     "AeraVaultV2Mock",
   );
 
-  if (!params.validator) {
-    params.validator = (await deployments.get("Validator")).address;
-  }
   return await vault.connect(params.signer).deploy({
     factory: params.factory,
     name: params.name,
@@ -103,7 +99,6 @@ export const deployVault = async (
     numeraireAssetIndex: params.numeraireAssetIndex,
     swapFeePercentage: params.swapFeePercentage,
     manager: params.manager,
-    validator: params.validator,
     minReliableVaultValue:
       params.minReliableVaultValue || MIN_RELIABLE_VAULT_VALUE,
     minSignificantDepositValue:
