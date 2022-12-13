@@ -1,33 +1,36 @@
 import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
-import {
-  OracleStorage__factory,
-  OracleMock,
-  OracleStorage,
-} from "../../../typechain";
+import { OracleStorage, OracleStorage__factory } from "../../../typechain";
+import { baseContext } from "../../shared/contexts";
 import { ZERO_ADDRESS } from "../constants";
 import { setupOracles } from "../fixtures";
 import { toUnit } from "../utils";
 
-describe("OracleStorage Deployment", function () {
+baseContext("OracleStorage Deployment", function () {
   let oracleStorageFactory: OracleStorage__factory;
-  let oracles: OracleMock[];
   let oracleAddresses: string[];
-  let snapshot: unknown;
+
+  async function setupOraclesFixture(): Promise<{
+    oracleAddresses: string[];
+    oracleStorageFactory: OracleStorage__factory;
+  }> {
+    const oracles = await setupOracles(20);
+    const oracleAddresses = oracles.map(oracle => oracle.address);
+
+    const oracleStorageFactory =
+      await ethers.getContractFactory<OracleStorage__factory>("OracleStorage");
+
+    return {
+      oracleAddresses,
+      oracleStorageFactory,
+    };
+  }
 
   beforeEach(async function () {
-    snapshot = await ethers.provider.send("evm_snapshot", []);
-
-    oracles = await setupOracles(20);
-    oracleAddresses = oracles.map((oracle: OracleMock) => oracle.address);
-
-    oracleStorageFactory =
-      await ethers.getContractFactory<OracleStorage__factory>("OracleStorage");
-  });
-
-  afterEach(async () => {
-    await ethers.provider.send("evm_revert", [snapshot]);
+    ({ oracleAddresses, oracleStorageFactory } = await this.loadFixture(
+      setupOraclesFixture,
+    ));
   });
 
   describe("should be reverted to deploy", () => {

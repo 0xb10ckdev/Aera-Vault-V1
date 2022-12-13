@@ -1,40 +1,42 @@
-import { ethers } from "hardhat";
+import { baseContext } from "../../shared/contexts";
 import { setupVaultWithBalancerVault } from "../fixtures";
-import { testDeployment } from "../functions/deployment";
-import { testAeraVaultV2 } from "../functions";
+import { testAeraVaultV2 } from "../functions/vault";
+import { testDeployment } from "../functions/vault/deployment";
 
 describe("Aera Vault V2 Mainnet Deployment", function () {
   testDeployment();
 });
 
-describe("Integration Test", function () {
-  let snapshot: unknown;
-
+baseContext("Integration Test", function () {
   beforeEach(async function () {
-    snapshot = await ethers.provider.send("evm_snapshot", []);
+    const {
+      vault,
+      validator,
+      factory,
+      poolTokens,
+      tokens,
+      tokenAddresses,
+      yieldTokens,
+      underlyingIndexes,
+      sortedTokens,
+      oracles,
+      oracleAddresses,
+      unsortedTokens,
+    } = await this.loadFixture(setupVaultWithBalancerVault);
 
-    const deployedData = await setupVaultWithBalancerVault();
-
-    this.admin = deployedData.admin;
-    this.manager = deployedData.manager;
-    this.user = deployedData.user;
-    this.vault = deployedData.vault;
-    this.validator = deployedData.validator;
-    this.factory = deployedData.factory;
-    this.poolTokens = deployedData.poolTokens;
-    this.tokens = deployedData.tokens;
-    this.tokenAddresses = deployedData.tokenAddresses;
-    this.yieldTokens = deployedData.yieldTokens;
-    this.underlyingIndexes = deployedData.underlyingIndexes;
-    this.sortedTokens = deployedData.sortedTokens;
-    this.oracles = deployedData.oracles;
-    this.oracleAddresses = deployedData.oracleAddresses;
-    this.unsortedTokens = deployedData.unsortedTokens;
+    this.vault = vault;
+    this.validator = validator;
+    this.factory = factory;
+    this.poolTokens = poolTokens;
+    this.tokens = tokens;
+    this.tokenAddresses = tokenAddresses;
+    this.yieldTokens = yieldTokens;
+    this.underlyingIndexes = underlyingIndexes;
+    this.sortedTokens = sortedTokens;
+    this.oracles = oracles;
+    this.oracleAddresses = oracleAddresses;
+    this.unsortedTokens = unsortedTokens;
     this.isForkTest = true;
-  });
-
-  afterEach(async function () {
-    await ethers.provider.send("evm_revert", [snapshot]);
   });
 
   testAeraVaultV2();

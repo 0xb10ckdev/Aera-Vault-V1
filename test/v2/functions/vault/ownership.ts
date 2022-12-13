@@ -1,12 +1,12 @@
 import { expect } from "chai";
-import { ZERO_ADDRESS } from "../constants";
+import { ZERO_ADDRESS } from "../../constants";
 
 export function testOwnership(): void {
   describe("Renounce Ownership", function () {
     describe("should be reverted", function () {
       it("when called from non-owner", async function () {
         await expect(
-          this.vault.connect(this.user).renounceOwnership(),
+          this.vault.connect(this.signers.user).renounceOwnership(),
         ).to.be.revertedWith("Ownable: caller is not the owner");
       });
 
@@ -22,22 +22,26 @@ export function testOwnership(): void {
     describe("should be reverted", function () {
       it("when called from non-owner", async function () {
         await expect(
-          this.vault.connect(this.user).transferOwnership(this.admin.address),
+          this.vault
+            .connect(this.signers.user)
+            .transferOwnership(this.signers.admin.address),
         ).to.be.revertedWith("Ownable: caller is not the owner");
       });
 
       it("when called from not accepted owner", async function () {
-        await this.vault.transferOwnership(this.user.address);
+        await this.vault.transferOwnership(this.signers.user.address);
         await expect(
-          this.vault.connect(this.user).transferOwnership(this.admin.address),
+          this.vault
+            .connect(this.signers.user)
+            .transferOwnership(this.signers.admin.address),
         ).to.be.revertedWith("Ownable: caller is not the owner");
       });
 
       it("when transferred ownership", async function () {
-        await this.vault.transferOwnership(this.user.address);
-        await this.vault.connect(this.user).acceptOwnership();
+        await this.vault.transferOwnership(this.signers.user.address);
+        await this.vault.connect(this.signers.user).acceptOwnership();
         await expect(
-          this.vault.transferOwnership(this.user.address),
+          this.vault.transferOwnership(this.signers.user.address),
         ).to.be.revertedWith("Ownable: caller is not the owner");
       });
 
@@ -50,8 +54,10 @@ export function testOwnership(): void {
 
     it("should be possible to call", async function () {
       expect(await this.vault.pendingOwner()).to.equal(ZERO_ADDRESS);
-      await this.vault.transferOwnership(this.user.address);
-      expect(await this.vault.pendingOwner()).to.equal(this.user.address);
+      await this.vault.transferOwnership(this.signers.user.address);
+      expect(await this.vault.pendingOwner()).to.equal(
+        this.signers.user.address,
+      );
     });
   });
 
@@ -59,7 +65,7 @@ export function testOwnership(): void {
     describe("should be reverted", function () {
       it("when called from non-owner", async function () {
         await expect(
-          this.vault.connect(this.user).cancelOwnershipTransfer(),
+          this.vault.connect(this.signers.user).cancelOwnershipTransfer(),
         ).to.be.revertedWith("Ownable: caller is not the owner");
       });
 
@@ -71,12 +77,14 @@ export function testOwnership(): void {
     });
 
     it("should be possible to cancel", async function () {
-      await this.vault.transferOwnership(this.user.address);
-      expect(await this.vault.pendingOwner()).to.equal(this.user.address);
+      await this.vault.transferOwnership(this.signers.user.address);
+      expect(await this.vault.pendingOwner()).to.equal(
+        this.signers.user.address,
+      );
       await this.vault.cancelOwnershipTransfer();
       expect(await this.vault.pendingOwner()).to.equal(ZERO_ADDRESS);
       await expect(
-        this.vault.connect(this.user).acceptOwnership(),
+        this.vault.connect(this.signers.user).acceptOwnership(),
       ).to.be.revertedWith("Aera__NotPendingOwner");
     });
   });
@@ -84,7 +92,7 @@ export function testOwnership(): void {
   describe("Accept Ownership", function () {
     describe("should be reverted", function () {
       it("when called from not pending owner", async function () {
-        await this.vault.transferOwnership(this.user.address);
+        await this.vault.transferOwnership(this.signers.user.address);
         await expect(this.vault.acceptOwnership()).to.be.revertedWith(
           "Aera__NotPendingOwner",
         );
@@ -92,14 +100,16 @@ export function testOwnership(): void {
     });
 
     it("should be possible to accept", async function () {
-      await this.vault.transferOwnership(this.user.address);
-      expect(await this.vault.owner()).to.equal(this.admin.address);
-      expect(await this.vault.pendingOwner()).to.equal(this.user.address);
-      await this.vault.connect(this.user).acceptOwnership();
-      expect(await this.vault.owner()).to.equal(this.user.address);
+      await this.vault.transferOwnership(this.signers.user.address);
+      expect(await this.vault.owner()).to.equal(this.signers.admin.address);
+      expect(await this.vault.pendingOwner()).to.equal(
+        this.signers.user.address,
+      );
+      await this.vault.connect(this.signers.user).acceptOwnership();
+      expect(await this.vault.owner()).to.equal(this.signers.user.address);
       await this.vault
-        .connect(this.user)
-        .transferOwnership(this.admin.address);
+        .connect(this.signers.user)
+        .transferOwnership(this.signers.admin.address);
     });
   });
 }

@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { BigNumber } from "ethers";
-import { MAX_MANAGEMENT_FEE, ONE } from "../constants";
+import { MAX_MANAGEMENT_FEE, ONE } from "../../constants";
 import {
   getTimestamp,
   normalizeWeights,
@@ -9,7 +9,7 @@ import {
   toUnit,
   toWei,
   valueArray,
-} from "../utils";
+} from "../../utils";
 
 export function testClaimManagerFees(): void {
   beforeEach(async function () {
@@ -53,7 +53,9 @@ export function testClaimManagerFees(): void {
         await this.vault.lastFeeCheckpoint()
       ).toNumber();
       let holdings = await this.vault.getHoldings();
-      const managerBalances = await this.getUserBalances(this.manager.address);
+      const managerBalances = await this.getUserBalances(
+        this.signers.manager.address,
+      );
       const depositTrx = await this.vault.depositRiskingArbitrage(
         tokenValueArray(this.tokenAddresses, toWei(10000), this.tokens.length),
       );
@@ -69,10 +71,12 @@ export function testClaimManagerFees(): void {
 
       holdings = await this.vault.getHoldings();
 
-      const trx = await this.vault.connect(this.manager).claimManagerFees();
+      const trx = await this.vault
+        .connect(this.signers.manager)
+        .claimManagerFees();
 
       const newManagerBalances = await this.getUserBalances(
-        this.manager.address,
+        this.signers.manager.address,
       );
 
       currentTime = await getTimestamp(trx.blockNumber);
@@ -90,7 +94,7 @@ export function testClaimManagerFees(): void {
 
       await expect(trx)
         .to.emit(this.vault, "DistributeManagerFees")
-        .withArgs(this.manager.address, managerFee);
+        .withArgs(this.signers.manager.address, managerFee);
     });
 
     it("when called from old manager", async function () {
@@ -102,7 +106,9 @@ export function testClaimManagerFees(): void {
         await this.vault.lastFeeCheckpoint()
       ).toNumber();
       let holdings = await this.vault.getHoldings();
-      const managerBalances = await this.getUserBalances(this.manager.address);
+      const managerBalances = await this.getUserBalances(
+        this.signers.manager.address,
+      );
       const depositTrx = await this.vault.depositRiskingArbitrage(
         tokenValueArray(this.tokenAddresses, toWei(10000), this.tokens.length),
       );
@@ -117,7 +123,9 @@ export function testClaimManagerFees(): void {
       lastFeeCheckpoint = currentTime;
 
       holdings = (await this.getState()).holdings;
-      const setManagerTrx = await this.vault.setManager(this.user.address);
+      const setManagerTrx = await this.vault.setManager(
+        this.signers.user.address,
+      );
 
       currentTime = await getTimestamp(setManagerTrx.blockNumber);
       holdings.forEach((holding: BigNumber, index: number) => {
@@ -129,12 +137,12 @@ export function testClaimManagerFees(): void {
         );
       });
 
-      await expect(this.vault.connect(this.manager).claimManagerFees())
+      await expect(this.vault.connect(this.signers.manager).claimManagerFees())
         .to.emit(this.vault, "DistributeManagerFees")
-        .withArgs(this.manager.address, managerFee);
+        .withArgs(this.signers.manager.address, managerFee);
 
       const newManagerBalances = await this.getUserBalances(
-        this.manager.address,
+        this.signers.manager.address,
       );
 
       newManagerBalances.forEach(

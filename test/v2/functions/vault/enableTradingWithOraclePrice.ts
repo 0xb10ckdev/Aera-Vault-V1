@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { BigNumber } from "ethers";
-import { ONE, PRICE_DEVIATION } from "../constants";
-import { toUnit } from "../utils";
+import { ONE, PRICE_DEVIATION } from "../../constants";
+import { toUnit } from "../../utils";
 
 export function testEnableTradingWithOraclePrice(): void {
   describe("should be reverted to enable trading", async function () {
@@ -14,7 +14,9 @@ export function testEnableTradingWithOraclePrice(): void {
     it("when oracle price is not greater than zero", async function () {
       await this.oracles[1].setLatestAnswer(0);
       await expect(
-        this.vault.connect(this.manager).enableTradingWithOraclePrice(),
+        this.vault
+          .connect(this.signers.manager)
+          .enableTradingWithOraclePrice(),
       ).to.be.revertedWith("Aera__OraclePriceIsInvalid");
     });
   });
@@ -27,7 +29,7 @@ export function testEnableTradingWithOraclePrice(): void {
     }
 
     await expect(
-      this.vault.connect(this.manager).enableTradingWithOraclePrice(),
+      this.vault.connect(this.signers.manager).enableTradingWithOraclePrice(),
     )
       .to.emit(this.vault, "SetSwapEnabled")
       .withArgs(true)

@@ -1,14 +1,14 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { ONE, PRICE_DEVIATION } from "../constants";
-import { toWei, tokenValueArray, tokenWithValues } from "../utils";
+import { ONE, PRICE_DEVIATION } from "../../constants";
+import { toWei, tokenValueArray, tokenWithValues } from "../../utils";
 
 export function testDepositRiskingArbitrage(): void {
   describe("should be reverted to deposit tokens", async function () {
     it("when called from non-owner", async function () {
       await expect(
         this.vault
-          .connect(this.user)
+          .connect(this.signers.user)
           .depositRiskingArbitrage(
             tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
           ),

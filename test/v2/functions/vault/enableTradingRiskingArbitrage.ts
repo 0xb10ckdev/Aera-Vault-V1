@@ -3,7 +3,7 @@ import { expect } from "chai";
 export function testEnableTradingRiskingArbitrage(): void {
   it("should be reverted to enable trading when called from non-owner", async function () {
     await expect(
-      this.vault.connect(this.manager).enableTradingRiskingArbitrage(),
+      this.vault.connect(this.signers.manager).enableTradingRiskingArbitrage(),
     ).to.be.revertedWith("Ownable: caller is not the owner");
   });
 

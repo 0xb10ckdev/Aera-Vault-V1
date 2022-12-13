@@ -6,7 +6,7 @@ import {
   MAX_ORACLE_SPOT_DIVERGENCE,
   ONE,
   PRICE_DEVIATION,
-} from "../constants";
+} from "../../constants";
 import {
   getCurrentTime,
   toWei,
@@ -14,14 +14,14 @@ import {
   tokenWithValues,
   toUnit,
   valueArray,
-} from "../utils";
+} from "../../utils";
 
 export function testDeposit(): void {
   describe("should be reverted to deposit tokens", async function () {
     it("when called from non-owner", async function () {
       await expect(
         this.vault
-          .connect(this.user)
+          .connect(this.signers.user)
           .deposit(
             tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
           ),

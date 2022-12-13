@@ -1,19 +1,16 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { ONE } from "../constants";
+import { MIN_WEIGHT, ONE } from "../../constants";
 import {
   normalizeWeights,
-  toWei,
   tokenValueArray,
   tokenWithValues,
   valueArray,
-} from "../utils";
+} from "../../utils";
 
-export function testFunctionCallsWhenNotInitialized(): void {
+export function testFunctionCallsWhenFinalized(): void {
   beforeEach(async function () {
-    for (let i = 0; i < this.tokens.length; i++) {
-      await this.tokens[i].approve(this.vault.address, toWei(2));
-    }
+    await this.vault.finalize();
   });
 
   it("when call deposit", async function () {
@@ -21,7 +18,7 @@ export function testFunctionCallsWhenNotInitialized(): void {
       this.vault.deposit(
         tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
       ),
-    ).to.be.revertedWith("Aera__VaultNotInitialized");
+    ).to.be.revertedWith("Aera__VaultIsFinalized");
   });
 
   it("when call depositIfBalanceUnchanged", async function () {
@@ -29,7 +26,7 @@ export function testFunctionCallsWhenNotInitialized(): void {
       this.vault.depositIfBalanceUnchanged(
         tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
       ),
-    ).to.be.revertedWith("Aera__VaultNotInitialized");
+    ).to.be.revertedWith("Aera__VaultIsFinalized");
   });
 
   it("when call depositRiskingArbitrage", async function () {
@@ -37,7 +34,7 @@ export function testFunctionCallsWhenNotInitialized(): void {
       this.vault.depositRiskingArbitrage(
         tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
       ),
-    ).to.be.revertedWith("Aera__VaultNotInitialized");
+    ).to.be.revertedWith("Aera__VaultIsFinalized");
   });
 
   it("when call depositRiskingArbitrageIfBalanceUnchanged", async function () {
@@ -45,7 +42,7 @@ export function testFunctionCallsWhenNotInitialized(): void {
       this.vault.depositRiskingArbitrageIfBalanceUnchanged(
         tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
       ),
-    ).to.be.revertedWith("Aera__VaultNotInitialized");
+    ).to.be.revertedWith("Aera__VaultIsFinalized");
   });
 
   it("when call withdraw", async function () {
@@ -53,7 +50,7 @@ export function testFunctionCallsWhenNotInitialized(): void {
       this.vault.withdraw(
         tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
       ),
-    ).to.be.revertedWith("Aera__VaultNotInitialized");
+    ).to.be.revertedWith("Aera__VaultIsFinalized");
   });
 
   it("when call withdrawIfBalanceUnchanged", async function () {
@@ -61,40 +58,34 @@ export function testFunctionCallsWhenNotInitialized(): void {
       this.vault.withdrawIfBalanceUnchanged(
         tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
       ),
-    ).to.be.revertedWith("Aera__VaultNotInitialized");
+    ).to.be.revertedWith("Aera__VaultIsFinalized");
   });
 
   it("when call updateWeightsGradually", async function () {
     const blocknumber = await ethers.provider.getBlockNumber();
     await expect(
       this.vault
-        .connect(this.manager)
+        .connect(this.signers.manager)
         .updateWeightsGradually(
           tokenWithValues(
             this.tokenAddresses,
-            normalizeWeights(valueArray(ONE, this.tokens.length)),
+            normalizeWeights(valueArray(MIN_WEIGHT, this.tokens.length)),
           ),
           blocknumber + 1,
           blocknumber + 1000,
         ),
-    ).to.be.revertedWith("Aera__VaultNotInitialized");
+    ).to.be.revertedWith("Aera__VaultIsFinalized");
   });
 
   it("when call cancelWeightUpdates", async function () {
     await expect(
-      this.vault.connect(this.manager).cancelWeightUpdates(),
-    ).to.be.revertedWith("Aera__VaultNotInitialized");
+      this.vault.connect(this.signers.manager).cancelWeightUpdates(),
+    ).to.be.revertedWith("Aera__VaultIsFinalized");
   });
 
   it("when call claimManagerFees", async function () {
     await expect(
-      this.vault.connect(this.manager).claimManagerFees(),
-    ).to.be.revertedWith("Aera__VaultNotInitialized");
-  });
-
-  it("when call finalize", async function () {
-    await expect(this.vault.finalize()).to.be.revertedWith(
-      "Aera__VaultNotInitialized",
-    );
+      this.vault.connect(this.signers.manager).claimManagerFees(),
+    ).to.be.revertedWith("Aera__VaultIsFinalized");
   });
 }
