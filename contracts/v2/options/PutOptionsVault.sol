@@ -52,7 +52,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
 
     /// @notice ITM option price ratio which is applied after option is expired, but before
     ///         price is finalized
-    uint256 private _itmOptionPriceRatio = 0.8 * 10 ** 18;
+    uint256 private _itmOptionPriceRatio = 0.99 * 10 ** 18;
     EnumerableSet.AddressSet private _oTokens;
 
     /// MODIFIERS ///
@@ -481,13 +481,13 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
 
     function _checkExpired() internal returns (bool optionsMatured) {
         // Copy the tokens array and iterate over it
-        // so not to handle unexpected reorderings in _oTokens
+        // so not deal with unexpected reorderings in _oTokens
         // when oToken is removed
         address[] memory tokens = _oTokens.values();
         for (uint256 i = 0; i < tokens.length; i++) {
             IOToken oToken = IOToken(tokens[i]);
 
-            // controller will check for expiration and finalized
+            // controller will check for option expiration and finalized
             // oracle price and revert when option is not redeemable
             try
                 IOTokenController(oToken.controller()).operate(
@@ -504,7 +504,8 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         // 3 possible ways
         // 1. oToken is not expired => pricer is used to estimate option price
         // 2. oToken is expired, but oracle price is not finalized => apply _itmOptionPriceRatio to option price
-        // 3. oToken is expired and oracle price is finalized => option value is known
+        // 3. oToken is expired and oracle price is finalized => option value is finalized
+        // slither-disable-next-line calls-loop
         (
             address collateralAsset,
             address underlyingAsset,
@@ -516,15 +517,17 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
 
         if (block.timestamp < expiryTimestamp) {
             // 1
+            // slither-disable-next-line calls-loop
             return
                 (_pricer.getPremium(strikePrice, expiryTimestamp, isPut) *
                     oToken.balanceOf(address(this))) / O_TOKEN_BASE;
         }
-
+        // slither-disable-next-line calls-loop
         IOTokenController oTokenController = IOTokenController(
             oToken.controller()
         );
         if (
+            // slither-disable-next-line calls-loop
             oTokenController.canSettleAssets(
                 underlyingAsset,
                 strikeAsset,
@@ -533,25 +536,27 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             )
         ) {
             // 3
+            // slither-disable-next-line calls-loop
             return
                 oTokenController.getPayout(
                     address(oToken),
                     oToken.balanceOf(address(this))
                 );
         }
+
         // 2
+        // slither-disable-next-line calls-loop
         (uint256 price, ) = oTokenController.oracle().getExpiryPrice(
             underlyingAsset,
             expiryTimestamp
         );
 
-        if (price < strikePrice) {
-            return (((strikePrice - price) *
-                _itmOptionPriceRatio *
-                oToken.balanceOf(address(this))) / (ONE * O_TOKEN_BASE));
-        }
+        if (price >= strikePrice) return 0;
 
-        return 0;
+        // slither-disable-next-line calls-loop
+        return (((strikePrice - price) *
+            _itmOptionPriceRatio *
+            oToken.balanceOf(address(this))) / (ONE * O_TOKEN_BASE));
     }
 
     // Reference: https://opyn.gitbook.io/opyn/get-started/actions#redeem
