@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
-import "./dependencies/openzeppelin/ERC165Checker.sol";
 import "./dependencies/openzeppelin/IERC20.sol";
 import "./dependencies/openzeppelin/Math.sol";
 import "./dependencies/openzeppelin/Multicall.sol";
@@ -13,7 +12,6 @@ import "./interfaces/IBManagedPool.sol";
 import "./interfaces/IBManagedPoolFactory.sol";
 import "./interfaces/IBMerkleOrchard.sol";
 import "./interfaces/IBVault.sol";
-import "./interfaces/IWithdrawalValidator.sol";
 import "./dependencies/chainlink/interfaces/AggregatorV2V3Interface.sol";
 import "./OracleStorage.sol";
 import "./YieldTokenStorage.sol";
@@ -104,9 +102,6 @@ contract AeraVaultV2 is
     /// @notice Maximum update delay of oracles.
     uint256 public immutable maxOracleDelay;
 
-    /// @notice Verifies withdraw limits.
-    IWithdrawalValidator public immutable validator;
-
     /// @notice Management fee earned proportion per second.
     /// @dev 10**18 is 100%
     uint256 public immutable managementFee;
@@ -163,12 +158,10 @@ contract AeraVaultV2 is
     /// @notice Emitted when tokens are withdrawn.
     /// @param requestedAmounts Requested amounts to withdraw.
     /// @param amounts Withdrawn amounts.
-    /// @param allowances Token withdrawal allowances.
     /// @param weights Token weights following withdrawal.
     event Withdraw(
         uint256[] requestedAmounts,
         uint256[] amounts,
-        uint256[] allowances,
         uint256[] weights
     );
 
@@ -256,11 +249,6 @@ contract AeraVaultV2 is
         address underlyingAsset,
         address actual
     );
-    error Aera__ValidatorIsNotMatched(
-        uint256 numTokens,
-        uint256 numAllowances
-    );
-    error Aera__ValidatorIsNotValid(address validator);
     error Aera__ManagementFeeIsAboveMax(uint256 actual, uint256 max);
     error Aera__MinFeeDurationIsZero();
     error Aera__MinReliableVaultValueIsZero();
@@ -353,7 +341,7 @@ contract AeraVaultV2 is
     /// FUNCTIONS ///
 
     /// @notice Initialize the contract by deploying a new Balancer Pool using the provided factory.
-    /// @dev Tokens should be unique. The Validator should conform to the interface.
+    /// @dev Tokens should be unique.
     ///      The following pre-conditions are checked by Balancer in internal transactions:
     ///       If tokens are sorted in ascending order.
     ///       If swapFeePercentage is greater than the minimum and less than the maximum.
@@ -409,7 +397,6 @@ contract AeraVaultV2 is
         merkleOrchard = IBMerkleOrchard(vaultParams.merkleOrchard);
         poolId = pool.getPoolId();
         manager = vaultParams.manager;
-        validator = IWithdrawalValidator(vaultParams.validator);
         createdAt = block.timestamp;
         minFeeDuration = vaultParams.minFeeDuration;
         minReliableVaultValue = vaultParams.minReliableVaultValue;
@@ -1257,7 +1244,6 @@ contract AeraVaultV2 is
         uint256[] memory holdings;
         (tokens, holdings, ) = getTokensData();
 
-        uint256[] memory allowances = validator.allowance();
         uint256[] memory weights = pool.getNormalizedWeights();
         uint256[] memory balances = new uint256[](numTokens);
         uint256[] memory amounts = getValuesFromTokenWithValues(
@@ -1266,11 +1252,11 @@ contract AeraVaultV2 is
         );
 
         for (uint256 i = 0; i < numTokens; i++) {
-            if (amounts[i] > holdings[i] || amounts[i] > allowances[i]) {
+            if (amounts[i] > holdings[i]) {
                 revert Aera__AmountExceedAvailable(
                     address(tokens[i]),
                     amounts[i],
-                    Math.min(holdings[i], allowances[i])
+                    holdings[i]
                 );
             }
 
@@ -1307,7 +1293,7 @@ contract AeraVaultV2 is
         updatePoolWeights(weights, weightSum);
 
         // slither-disable-next-line reentrancy-events
-        emit Withdraw(amounts, balances, allowances, getNormalizedWeights());
+        emit Withdraw(amounts, balances, getNormalizedWeights());
     }
 
     /// @notice Withdraw tokens from Balancer Pool to Aera Vault.
@@ -2441,8 +2427,6 @@ contract AeraVaultV2 is
             }
         }
 
-        checkValidator(vaultParams);
-
         if (vaultParams.minFeeDuration == 0) {
             revert Aera__MinFeeDurationIsZero();
         }
@@ -2474,27 +2458,6 @@ contract AeraVaultV2 is
 
         if (weightSum != ONE) {
             revert Aera__SumOfWeightIsNotOne();
-        }
-    }
-
-    /// @notice Check if the validator is valid.
-    /// @dev Will only be called by checkVaultParams().
-    /// @param vaultParams Struct vault parameter to check
-    function checkValidator(NewVaultParams memory vaultParams) internal {
-        if (
-            !ERC165Checker.supportsInterface(
-                vaultParams.validator,
-                type(IWithdrawalValidator).interfaceId
-            )
-        ) {
-            revert Aera__ValidatorIsNotValid(vaultParams.validator);
-        }
-
-        uint256 numAllowances = IWithdrawalValidator(vaultParams.validator)
-            .allowance()
-            .length;
-        if (numTokens != numAllowances) {
-            revert Aera__ValidatorIsNotMatched(numTokens, numAllowances);
         }
     }
 
