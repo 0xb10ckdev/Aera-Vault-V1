@@ -4,11 +4,11 @@ import { BigNumber } from "ethers";
 import hre, { deployments, ethers } from "hardhat";
 import { DEFAULT_NOTICE_PERIOD, getConfig } from "../../../scripts/config";
 import {
-  IERC20,
+  AeraVaultV1Mock,
   BaseManagedPoolFactory__factory,
+  IERC20,
   ManagedPoolFactory,
   ManagedPoolFactory__factory,
-  AeraVaultV1Mock,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
 } from "../../../typechain";
@@ -16,7 +16,6 @@ import {
   BALANCER_ERRORS,
   DEVIATION,
   MAXIMUM_SWAP_FEE_PERCENT_CHANGE,
-  SWAP_FEE_COOLDOWN_PERIOD,
   MAX_MANAGEMENT_FEE,
   MAX_NOTICE_PERIOD,
   MAX_SWAP_FEE,
@@ -26,6 +25,7 @@ import {
   MIN_WEIGHT,
   NOTICE_PERIOD,
   ONE,
+  SWAP_FEE_COOLDOWN_PERIOD,
   ZERO_ADDRESS,
 } from "../constants";
 import { deployToken, setupTokens } from "../fixtures";
@@ -35,9 +35,9 @@ import {
   getCurrentTime,
   getTimestamp,
   increaseTime,
-  toWei,
   tokenValueArray,
   tokenWithValues,
+  toWei,
   valueArray,
   VaultParams,
 } from "../utils";

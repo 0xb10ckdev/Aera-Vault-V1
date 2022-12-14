@@ -4,25 +4,25 @@ import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { DEFAULT_NOTICE_PERIOD } from "../../../scripts/config";
 import {
-  BalancerVaultMock__factory,
-  IERC20,
-  BaseManagedPoolFactory__factory,
-  ManagedPoolFactory,
-  ManagedPoolFactory__factory,
   AeraVaultV1Mock,
   AeraVaultV1Mock__factory,
+  BalancerVaultMock__factory,
+  BaseManagedPoolFactory__factory,
+  IERC20,
+  ManagedPoolFactory,
+  ManagedPoolFactory__factory,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
 } from "../../../typechain";
 import {
-  MAX_MANAGEMENT_FEE,
   MAXIMUM_SWAP_FEE_PERCENT_CHANGE,
-  SWAP_FEE_COOLDOWN_PERIOD,
+  MAX_MANAGEMENT_FEE,
   MINIMUM_WEIGHT_CHANGE_DURATION,
   MIN_SWAP_FEE,
   MIN_WEIGHT,
   NOTICE_PERIOD,
   ONE,
+  SWAP_FEE_COOLDOWN_PERIOD,
   ZERO_ADDRESS,
 } from "../constants";
 import { deployToken, setupTokens } from "../fixtures";
@@ -30,9 +30,9 @@ import {
   getCurrentTime,
   getTimestamp,
   increaseTime,
-  toWei,
   tokenValueArray,
   tokenWithValues,
+  toWei,
   valueArray,
 } from "../utils";
 
@@ -72,20 +72,16 @@ describe("Aera Vault V1 Mainnet Functionality", function () {
 
     ({ admin, manager, user } = await ethers.getNamedSigners());
     ({ tokens, sortedTokens, unsortedTokens } = await setupTokens());
-
     const validatorMock =
       await ethers.getContractFactory<WithdrawalValidatorMock__factory>(
         "WithdrawalValidatorMock",
       );
-
     validator = await validatorMock.connect(admin).deploy(tokens.length);
-
     const bVaultContract =
       await ethers.getContractFactory<BalancerVaultMock__factory>(
         "BalancerVaultMock",
       );
     const bVault = await bVaultContract.connect(admin).deploy(ZERO_ADDRESS);
-
     const baseManagedPoolFactoryContract =
       await ethers.getContractFactory<BaseManagedPoolFactory__factory>(
         "BaseManagedPoolFactory",
@@ -93,7 +89,6 @@ describe("Aera Vault V1 Mainnet Functionality", function () {
     const baseManagedPoolFactory = await baseManagedPoolFactoryContract
       .connect(admin)
       .deploy(bVault.address);
-
     const managedPoolFactoryContract =
       await ethers.getContractFactory<ManagedPoolFactory__factory>(
         "ManagedPoolFactory",
@@ -101,7 +96,6 @@ describe("Aera Vault V1 Mainnet Functionality", function () {
     factory = await managedPoolFactoryContract
       .connect(admin)
       .deploy(baseManagedPoolFactory.address);
-
     const validWeights = valueArray(ONE.div(tokens.length), tokens.length);
 
     const vaultFactory =
