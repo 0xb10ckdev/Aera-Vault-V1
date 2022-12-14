@@ -1,7 +1,15 @@
-import { IERC20 } from "../../../../typechain";
 import { ONE } from "../../constants";
+import {
+  normalizeWeights,
+  tokenValueArray,
+  tokenWithValues,
+  toUnit,
+  toWei,
+  valueArray,
+} from "../../utils";
 import { testFunctionCallsWhenFinalized } from "./callFunctionsWhenFinalized";
 import { testFunctionCallsWhenNotInitialized } from "./callFunctionsWhenNotInitialized";
+import { testCancelWeightUpdates } from "./cancelWeightUpdates";
 import { testClaimManagerFees } from "./claimManagerFees";
 import { testDeposit } from "./deposit";
 import { testDepositAndWithdraw } from "./depositAndWithdraw";
@@ -21,15 +29,6 @@ import { testSetSwapFee } from "./setSwapFee";
 import { testSweep } from "./sweep";
 import { testUpdateWeightsGradually } from "./updateWeightsGradually";
 import { testWithdraw } from "./withdraw";
-import {
-  normalizeWeights,
-  tokenValueArray,
-  tokenWithValues,
-  toUnit,
-  toWei,
-  valueArray,
-} from "../../utils";
-import { testCancelWeightUpdates } from "./cancelWeightUpdates";
 
 export function testAeraVaultV2(): void {
   describe("Aera Vault V2 Mainnet Functionality", function () {
