@@ -33,7 +33,6 @@ interface IAeraVaultV2 is
     // numeraireAssetIndex: Index of base token for oracles.
     // swapFeePercentage: Pool swap fee.
     // manager: Vault manager address.
-    // validator: Withdrawal validator contract address.
     // minReliableVaultValue: Minimum reliable vault TVL.
     //                        It will be measured in base token terms.
     // minSignificantDepositValue: Minimum significant deposit value.
@@ -55,7 +54,6 @@ interface IAeraVaultV2 is
         uint256 numeraireAssetIndex;
         uint256 swapFeePercentage;
         address manager;
-        address validator;
         uint256 minReliableVaultValue;
         uint256 minSignificantDepositValue;
         uint256 maxOracleSpotDivergence;

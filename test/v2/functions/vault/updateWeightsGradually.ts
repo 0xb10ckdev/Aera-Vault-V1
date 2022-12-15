@@ -879,9 +879,6 @@ export function testUpdateWeightsGradually(): void {
     });
 
     it("when withdraw tokens", async function () {
-      await this.validator.setAllowances(
-        valueArray(toWei(100000), this.tokens.length),
-      );
       await this.vault.depositRiskingArbitrage(
         tokenValueArray(this.tokenAddresses, toWei(50), this.tokens.length),
       );

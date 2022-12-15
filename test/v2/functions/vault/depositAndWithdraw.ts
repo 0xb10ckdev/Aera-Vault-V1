@@ -1,14 +1,8 @@
 import { expect } from "chai";
 import { ONE, PRICE_DEVIATION } from "../../constants";
-import { toWei, tokenWithValues, valueArray } from "../../utils";
+import { toWei, tokenWithValues } from "../../utils";
 
 export function testDepositAndWithdraw(): void {
-  beforeEach(async function () {
-    await this.validator.setAllowances(
-      valueArray(toWei(100000), this.tokens.length),
-    );
-  });
-
   it("should be possible to deposit and withdraw one token", async function () {
     let { holdings, adminBalances } = await this.getState();
     let managersFeeTotal = await this.getManagersFeeTotal();

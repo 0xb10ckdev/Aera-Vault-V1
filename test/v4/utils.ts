@@ -1,6 +1,8 @@
-import { BigNumber, Signer } from "ethers";
+import { Signer } from "ethers";
 import { ethers } from "hardhat";
 import { ManagerWhitelist, ManagerWhitelist__factory } from "../../typechain";
+
+export * from "../common/utils";
 
 export const deployManagerWhitelist = async (
   signer: Signer,
@@ -12,8 +14,4 @@ export const deployManagerWhitelist = async (
     );
 
   return await managerWhitelist.connect(signer).deploy(managers);
-};
-
-export const toWei = (value: number | string): BigNumber => {
-  return ethers.utils.parseEther(value.toString());
 };

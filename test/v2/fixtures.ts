@@ -12,8 +12,6 @@ import {
   ManagedPoolFactory__factory,
   OracleMock,
   OracleMock__factory,
-  WithdrawalValidatorMock,
-  WithdrawalValidatorMock__factory,
 } from "../../typechain";
 import { setupTokens } from "../v1/fixtures";
 import {
@@ -41,7 +39,6 @@ export type DeployedData = {
   underlyingIndexes: number[];
   oracles: OracleMock[];
   oracleAddresses: string[];
-  validator: WithdrawalValidatorMock;
   factory: ManagedPoolFactory;
   vault: AeraVaultV2Mock;
 };
@@ -58,7 +55,6 @@ export const setupAssetContracts = async (
   underlyingIndexes: number[];
   oracles: OracleMock[];
   oracleAddresses: string[];
-  validator: WithdrawalValidatorMock;
   factory: ManagedPoolFactory;
 }> => {
   const { admin } = await ethers.getNamedSigners();
@@ -89,18 +85,12 @@ export const setupAssetContracts = async (
     yieldTokens.map(token => token.deposit(toWei("100000"), admin.address)),
   );
 
-  const validatorMock =
-    await ethers.getContractFactory<WithdrawalValidatorMock__factory>(
-      "WithdrawalValidatorMock",
-    );
   const addRemoveTokenLibContract = await ethers.getContractFactory(
     "ManagedPoolAddRemoveTokenLib",
   );
   const circuitBreakerLibContract = await ethers.getContractFactory(
     "CircuitBreakerLib",
   );
-
-  const validator = await validatorMock.connect(admin).deploy(tokens.length);
 
   const addRemoveTokenLib = await addRemoveTokenLibContract
     .connect(admin)
@@ -154,7 +144,6 @@ export const setupAssetContracts = async (
     underlyingIndexes,
     oracles,
     oracleAddresses,
-    validator,
     factory,
   };
 };
@@ -171,7 +160,6 @@ export const setupVaultWithBalancerVaultMock =
       underlyingIndexes,
       oracles,
       oracleAddresses,
-      validator,
       factory,
     } = await setupAssetContracts(true);
 
@@ -200,7 +188,6 @@ export const setupVaultWithBalancerVaultMock =
       numeraireAssetIndex: 0,
       swapFeePercentage: MIN_SWAP_FEE,
       manager: manager.address,
-      validator: validator.address,
       minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
       minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE,
       maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE,
@@ -213,7 +200,6 @@ export const setupVaultWithBalancerVaultMock =
 
     return {
       vault,
-      validator,
       factory,
       poolTokens,
       tokens,
@@ -238,7 +224,6 @@ export const setupVaultWithBalancerVault = async (): Promise<DeployedData> => {
     underlyingIndexes,
     oracles,
     oracleAddresses,
-    validator,
     factory,
   } = await setupAssetContracts(false);
 
@@ -262,7 +247,6 @@ export const setupVaultWithBalancerVault = async (): Promise<DeployedData> => {
       numeraireAssetIndex: 0,
       swapFeePercentage: MIN_SWAP_FEE,
       manager: manager.address,
-      validator: validator.address,
       minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
       minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE,
       maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE,
@@ -283,7 +267,6 @@ export const setupVaultWithBalancerVault = async (): Promise<DeployedData> => {
 
   return {
     vault,
-    validator,
     factory,
     poolTokens,
     tokens,

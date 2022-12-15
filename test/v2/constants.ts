@@ -1,6 +1,6 @@
-import { toWei } from "../v1/constants";
+import { toWei } from "../common/constants";
 
-export * from "../v1/constants";
+export * from "../common/constants";
 
 export const MAX_SWAP_FEE = toWei("0.95");
 export const PRICE_DEVIATION = toWei(0.0001); // Deviation percentage of prices.
