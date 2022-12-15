@@ -1,14 +1,12 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
-import hre, { deployments, ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 import { getConfig } from "../../../../scripts/config";
 import {
   ERC4626Mock,
   IERC20,
   ManagedPoolFactory,
   OracleMock,
-  WithdrawalValidatorMock,
-  WithdrawalValidatorMock__factory,
 } from "../../../../typechain";
 import {
   BALANCER_ERRORS,
@@ -40,10 +38,8 @@ import {
 export function testDeployment(): void {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
-  let validator: WithdrawalValidatorMock;
   let factory: ManagedPoolFactory;
   let poolTokens: IERC20[];
-  let tokens: IERC20[];
   let yieldTokens: ERC4626Mock[];
   let sortedTokens: string[];
   let unsortedTokens: string[];
@@ -66,25 +62,10 @@ export function testDeployment(): void {
       yieldTokens = await setupYieldBearingAssets(sortedTokens.slice(0, 2));
       oracles = await setupOracles();
 
-      tokens = [...poolTokens, ...yieldTokens];
       oracleAddress = oracles.map((oracle: OracleMock) => oracle.address);
       oracleAddress[0] = ZERO_ADDRESS;
       validWeights = valueArray(ONE.div(poolTokens.length), poolTokens.length);
-      await deployments.deploy("Validator", {
-        contract: "WithdrawalValidatorMock",
-        args: [tokens.length],
-        from: admin.address,
-        log: true,
-      });
-      validator = WithdrawalValidatorMock__factory.connect(
-        (await deployments.get("Validator")).address,
-        admin,
-      );
-      await deployments.deploy("InvalidValidator", {
-        contract: "InvalidValidatorMock",
-        from: admin.address,
-        log: true,
-      });
+
       factory = await deployFactory(admin);
     });
 
@@ -106,7 +87,6 @@ export function testDeployment(): void {
         numeraireAssetIndex: 0,
         swapFeePercentage: MIN_SWAP_FEE,
         manager: manager.address,
-        validator: validator.address,
         minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
         minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE,
         maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE,
@@ -196,35 +176,6 @@ export function testDeployment(): void {
       validParams.maxOracleDelay = toWei(0);
       await expect(deployVault(validParams)).to.be.revertedWith(
         "Aera__MaxOracleDelayIsZero",
-      );
-    });
-
-    it("when validator is not valid", async function () {
-      validParams.validator = manager.address;
-      await expect(deployVault(validParams)).to.be.revertedWith(
-        "Aera__ValidatorIsNotValid",
-      );
-
-      validParams.validator = (
-        await deployments.get("InvalidValidator")
-      ).address;
-      await expect(deployVault(validParams)).to.be.revertedWith(
-        "Aera__ValidatorIsNotValid",
-      );
-    });
-
-    it("when validator is not matched", async function () {
-      const validatorMock =
-        await ethers.getContractFactory<WithdrawalValidatorMock__factory>(
-          "WithdrawalValidatorMock",
-        );
-      const mismatchedValidator = await validatorMock
-        .connect(admin)
-        .deploy(poolTokens.length - 1);
-      validParams.validator = mismatchedValidator.address;
-
-      await expect(deployVault(validParams)).to.be.revertedWith(
-        "Aera__ValidatorIsNotMatched",
       );
     });
 

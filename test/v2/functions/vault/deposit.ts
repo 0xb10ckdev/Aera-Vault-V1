@@ -180,7 +180,6 @@ export function testDeposit(): void {
 
   describe("should be possible to deposit tokens", async function () {
     it("when vault value is less than minimum", async function () {
-      await this.validator.setAllowances(valueArray(ONE, this.tokens.length));
       await this.vault.withdraw(
         tokenValueArray(this.tokenAddresses, toWei(0.3), this.tokens.length),
       );
