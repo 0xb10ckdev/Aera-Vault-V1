@@ -185,9 +185,6 @@ export function testMulticall(): void {
       await this.vault.depositRiskingArbitrage(
         tokenValueArray(this.tokenAddresses, toWei(10000), this.tokens.length),
       );
-      await this.validator.setAllowances(
-        valueArray(toWei(100000), this.tokens.length),
-      );
 
       const { holdings, adminBalances } = await this.getState();
       const managersFeeTotal = await this.getManagersFeeTotal();
@@ -215,12 +212,7 @@ export function testMulticall(): void {
         .to.emit(this.vault, "SetSwapEnabled")
         .withArgs(false)
         .to.emit(this.vault, "Withdraw")
-        .withArgs(
-          amounts,
-          amounts,
-          valueArray(toWei(100000), this.tokens.length),
-          weights,
-        )
+        .withArgs(amounts, amounts, weights)
         .to.emit(this.vault, "SetSwapEnabled")
         .withArgs(true);
 
