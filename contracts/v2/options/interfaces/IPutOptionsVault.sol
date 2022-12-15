@@ -2,7 +2,6 @@
 pragma solidity 0.8.11;
 
 import "../../dependencies/openzeppelin/IERC4626.sol";
-import "./IOToken.sol";
 
 interface IPutOptionsVault is IERC4626 {
     /// EVENTS ///
@@ -56,6 +55,7 @@ interface IPutOptionsVault is IERC4626 {
     error Aera__ControllerIsZeroAddress();
     error Aera__LiquidatorIsZeroAddress();
     error Aera__BrokerIsZeroAddress();
+    error Aera__UnderlyingAssetIsZeroAddress();
     error Aera__UnderlyingOptionsAssetIsZeroAddress();
     error Aera__PutOptionsPricerIsNotValid(address pricer);
     error Aera__CallerIsNotBroker();
@@ -114,6 +114,9 @@ interface IPutOptionsVault is IERC4626 {
 
     /// @notice Get address of the liquidator (initiates sell auctions).
     function liquidator() external view returns (address);
+
+    /// @notice Get pricer address
+    function pricer() external view returns (address);
 
     /// @notice Check maturity for all options positions and clean up positions that are past maturity.
     /// @return true if a position was cleaned up (independent of whether it matured in-the-money or not).

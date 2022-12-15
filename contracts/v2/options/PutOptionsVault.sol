@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
-import "../../v1/dependencies/openzeppelin/IERC20.sol";
-import "../../v1/dependencies/openzeppelin/ERC165Checker.sol";
-import "../../v1/dependencies/openzeppelin/Ownable.sol";
-import "../../v1/dependencies/openzeppelin/EnumerableSet.sol";
+import "../dependencies/openzeppelin/EnumerableSet.sol";
 import "../dependencies/openzeppelin/Multicall.sol";
+import "../dependencies/openzeppelin/ERC165Checker.sol";
+import "../dependencies/openzeppelin/IERC20.sol";
 import "../dependencies/openzeppelin/ERC4626.sol";
+import "../dependencies/openzeppelin/Ownable.sol";
 import "../dependencies/gamma-protocol/IOTokenController.sol";
 import "../dependencies/gamma-protocol/Actions.sol";
 import "./interfaces/IPutOptionsVault.sol";
@@ -17,23 +17,23 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
 
-    uint256 private constant ONE = 10 ** 18;
+    uint256 private constant _ONE = 10 ** 18;
 
     /// @notice Minimum total value in USDC that can be used to purchase options
-    uint256 private constant MIN_CHUNK_VALUE = 1 * 10 ** 7;
+    uint256 private constant _MIN_CHUNK_VALUE = 1 * 10 ** 7;
 
     /// @notice Strike price discount measured off of current market price in bps
-    uint256 private constant STRIKE_PRICE = 1 * 10 ** 7;
+    uint256 private constant _STRIKE_PRICE = 1 * 10 ** 7;
 
     /// @notice Overall time to expiry for each purchased option
-    uint256 private constant TIME_TO_EXPIRY = 30 days;
+    uint256 private constant _TIME_TO_EXPIRY = 30 days;
 
     /// @notice Time for a broker to fill buy/sell order.
     ///         After that period anyone can cancel order.
-    uint256 private constant MIN_ORDER_ACTIVE = 3 days;
+    uint256 private constant _MIN_ORDER_ACTIVE = 3 days;
 
     /// @notice oToken base (8 decimals)
-    uint256 private constant O_TOKEN_BASE = 10 ** 8;
+    uint256 private constant _O_TOKEN_BASE = 10 ** 8;
 
     IPutOptionsPricer private immutable _pricer;
     address private immutable _broker;
@@ -42,17 +42,16 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     /// @notice Underlying asset for Opyn option (namely WETH)
     IERC20 private immutable _underlyingOptionsAsset;
 
-    SellOrder private _sellOrder;
-    BuyOrder private _buyOrder;
-    Range private _expiryDelta;
-    Range private _strikeMultiplier;
-
     /// @notice Discount for option premium, when buying/selling option from/to the broker
     uint256 private _optionPremiumDiscount = 0.05 * 10 ** 18;
 
     /// @notice ITM option price ratio which is applied after option is expired, but before
     ///         price is finalized
     uint256 private _itmOptionPriceRatio = 0.99 * 10 ** 18;
+    SellOrder private _sellOrder;
+    BuyOrder private _buyOrder;
+    Range private _expiryDelta;
+    Range private _strikeMultiplier;
     EnumerableSet.AddressSet private _oTokens;
 
     /// MODIFIERS ///
@@ -89,13 +88,17 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         address pricer_,
         IERC20 underlyingAsset_,
         IERC20 underlyingOptionsAsset_,
+        Range memory expiryDelta_,
+        Range memory strikeMultiplier_,
         string memory name_,
         string memory symbol_
     ) ERC4626(underlyingAsset_) ERC20(name_, symbol_) {
-        if (pricer_ == address(0)) revert Aera__PricerIsZeroAddress();
         if (controller_ == address(0)) revert Aera__ControllerIsZeroAddress();
         if (liquidator_ == address(0)) revert Aera__LiquidatorIsZeroAddress();
         if (broker_ == address(0)) revert Aera__BrokerIsZeroAddress();
+        if (address(underlyingAsset_) == address(0)) {
+            revert Aera__UnderlyingAssetIsZeroAddress();
+        }
         if (address(underlyingOptionsAsset_) == address(0)) {
             revert Aera__UnderlyingOptionsAssetIsZeroAddress();
         }
@@ -104,13 +107,17 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
                 pricer_,
                 type(IPutOptionsPricer).interfaceId
             )
-        ) revert Aera__PutOptionsPricerIsNotValid(pricer_);
+        ) {
+            revert Aera__PutOptionsPricerIsNotValid(pricer_);
+        }
 
         _pricer = IPutOptionsPricer(pricer_);
         _broker = broker_;
         _controller = controller_;
         _liquidator = liquidator_;
         _underlyingOptionsAsset = underlyingOptionsAsset_;
+        _setExpiryDelta(expiryDelta_.min, expiryDelta_.max);
+        _setStrikeMultiplier(strikeMultiplier_.min, strikeMultiplier_.max);
     }
 
     /// @inheritdoc IPutOptionsVault
@@ -145,11 +152,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         uint256 min,
         uint256 max
     ) external override onlyController {
-        if (min > max) revert Aera__ExpiryDeltaRangeNotValid(min, max);
-
-        _expiryDelta = Range(min, max);
-
-        emit ExpiryDeltaChanged(min, max);
+        _setExpiryDelta(min, max);
     }
 
     /// @inheritdoc IPutOptionsVault
@@ -157,17 +160,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         uint256 min,
         uint256 max
     ) external override onlyController {
-        if (min > max) revert Aera__StrikeMultiplierRangeNotValid(min, max);
-        if (min == 0) {
-            revert Aera__StrikeMultiplierMinValueBelowExpected(min, 1);
-        }
-        if (max >= ONE) {
-            revert Aera__StrikeMultiplierMaxValueExceedsExpected(max, ONE - 1);
-        }
-
-        _strikeMultiplier = Range(min, max);
-
-        emit StrikeMultiplierChanged(min, max);
+        _setStrikeMultiplier(min, max);
     }
 
     /// @inheritdoc ERC4626
@@ -224,8 +217,8 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             strikePrice,
             expiryTimestamp,
             isPut
-        ) * order.amount) * (ONE + _optionPremiumDiscount)) /
-            (ONE * O_TOKEN_BASE);
+        ) * order.amount) * (_ONE + _optionPremiumDiscount)) /
+            (_ONE * _O_TOKEN_BASE);
 
         if (premiumWithDiscount < amount) {
             revert Aera__OrderPremiumTooExpensive(premiumWithDiscount, amount);
@@ -268,8 +261,8 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             strikePrice,
             expiryTimestamp,
             isPut
-        ) * order.amount) * (ONE - _optionPremiumDiscount)) /
-            (ONE * O_TOKEN_BASE);
+        ) * order.amount) * (_ONE - _optionPremiumDiscount)) /
+            (_ONE * _O_TOKEN_BASE);
 
         if (amount < premiumWithDiscount) {
             revert Aera__OrderPremiumTooCheap(premiumWithDiscount, amount);
@@ -295,7 +288,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     /// @inheritdoc IPutOptionsVault
     function cancelBuyOrder() external override whenBuyOrderActive {
         if (
-            block.timestamp - _buyOrder.created < MIN_ORDER_ACTIVE &&
+            block.timestamp - _buyOrder.created < _MIN_ORDER_ACTIVE &&
             msg.sender != _broker
         ) revert Aera__CallerIsNotBroker();
 
@@ -313,7 +306,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     /// @inheritdoc IPutOptionsVault
     function cancelSellOrder() external override whenSellOrderActive {
         if (
-            block.timestamp - _sellOrder.created < MIN_ORDER_ACTIVE &&
+            block.timestamp - _sellOrder.created < _MIN_ORDER_ACTIVE &&
             msg.sender != _broker
         ) revert Aera__CallerIsNotBroker();
 
@@ -326,8 +319,8 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     function setOptionPremiumDiscount(
         uint256 discount
     ) external override onlyController {
-        if (discount > ONE) {
-            revert Aera__DiscountExceedsMaximumValue(discount, ONE);
+        if (discount > _ONE) {
+            revert Aera__DiscountExceedsMaximumValue(discount, _ONE);
         }
 
         _optionPremiumDiscount = discount;
@@ -373,6 +366,11 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     /// @inheritdoc IPutOptionsVault
     function liquidator() external view override returns (address) {
         return _liquidator;
+    }
+
+    /// @inheritdoc IPutOptionsVault
+    function pricer() external view override returns (address) {
+        return address(_pricer);
     }
 
     /// @inheritdoc IPutOptionsVault
@@ -440,20 +438,20 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         return _itmOptionPriceRatio;
     }
 
-    function _afterDeposit(uint256 assets, uint256 shares) internal override {
+    function _afterDeposit(uint256, uint256) internal override {
         uint256 balance = IERC20(asset()).balanceOf(address(this));
 
-        if (balance < MIN_CHUNK_VALUE) return;
+        if (balance < _MIN_CHUNK_VALUE) return;
 
         uint256 spotPrice = _pricer.getSpot();
 
         uint64 minExpiryTimestamp = uint64(block.timestamp + _expiryDelta.min);
         uint64 maxExpiryTimestamp = uint64(block.timestamp + _expiryDelta.max);
         uint128 minStrikePrice = uint128(
-            (spotPrice * _strikeMultiplier.min) / ONE
+            (spotPrice * _strikeMultiplier.min) / _ONE
         );
         uint128 maxStrikePrice = uint128(
-            (spotPrice * _strikeMultiplier.max) / ONE
+            (spotPrice * _strikeMultiplier.max) / _ONE
         );
 
         _buyOrder = BuyOrder({
@@ -461,7 +459,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             minExpiryTimestamp: minExpiryTimestamp,
             maxExpiryTimestamp: maxExpiryTimestamp,
             minStrikePrice: minStrikePrice,
-            maxStrikePrice: maxExpiryTimestamp,
+            maxStrikePrice: maxStrikePrice,
             created: uint64(block.timestamp),
             amount: balance
         });
@@ -520,7 +518,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             // slither-disable-next-line calls-loop
             return
                 (_pricer.getPremium(strikePrice, expiryTimestamp, isPut) *
-                    oToken.balanceOf(address(this))) / O_TOKEN_BASE;
+                    oToken.balanceOf(address(this))) / _O_TOKEN_BASE;
         }
         // slither-disable-next-line calls-loop
         IOTokenController oTokenController = IOTokenController(
@@ -556,7 +554,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         // slither-disable-next-line calls-loop
         return (((strikePrice - price) *
             _itmOptionPriceRatio *
-            oToken.balanceOf(address(this))) / (ONE * O_TOKEN_BASE));
+            oToken.balanceOf(address(this))) / (_ONE * _O_TOKEN_BASE));
     }
 
     // Reference: https://opyn.gitbook.io/opyn/get-started/actions#redeem
@@ -576,5 +574,30 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             data: ""
         });
         return actions;
+    }
+
+    function _setStrikeMultiplier(uint256 min, uint256 max) internal {
+        if (min > max) revert Aera__StrikeMultiplierRangeNotValid(min, max);
+        if (min == 0) {
+            revert Aera__StrikeMultiplierMinValueBelowExpected(min, 1);
+        }
+        if (max >= _ONE) {
+            revert Aera__StrikeMultiplierMaxValueExceedsExpected(
+                max,
+                _ONE - 1
+            );
+        }
+
+        _strikeMultiplier = Range(min, max);
+
+        emit StrikeMultiplierChanged(min, max);
+    }
+
+    function _setExpiryDelta(uint256 min, uint256 max) internal {
+        if (min > max) revert Aera__ExpiryDeltaRangeNotValid(min, max);
+
+        _expiryDelta = Range(min, max);
+
+        emit ExpiryDeltaChanged(min, max);
     }
 }

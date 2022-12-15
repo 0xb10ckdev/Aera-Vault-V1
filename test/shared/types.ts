@@ -1,3 +1,4 @@
+import { PutOptionsPricerMock } from "./../../typechain/PutOptionsPricerMock.d";
 // eslint-disable @typescript-eslint/no-explicit-any
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { Fixture } from "ethereum-waffle";
@@ -6,9 +7,11 @@ import {
   AeraVaultV2Mock,
   ERC4626Mock,
   IERC20,
+  IPutOptionsPricer,
   ManagedPoolFactory,
   OracleMock,
   PermissiveWithdrawalValidator,
+  PutOptionsVault,
   WithdrawalValidatorMock,
 } from "../../typechain";
 
@@ -27,13 +30,18 @@ declare module "mocha" {
     }>;
 
     signers: Signers;
+    mocks: Mocks;
     tokenAddresses: string[];
     sortedTokens: string[];
     oracleAddresses: string[];
     unsortedTokens: string[];
     underlyingIndexes: number[];
+    putOptionsVault: PutOptionsVault;
+    pricer: IPutOptionsPricer;
     vault: AeraVaultV2Mock;
     validator: WithdrawalValidatorMock;
+    usdc: IERC20;
+    weth: IERC20;
     permissiveValidator: PermissiveWithdrawalValidator;
     factory: ManagedPoolFactory;
     poolTokens: IERC20[];
@@ -48,4 +56,8 @@ export interface Signers {
   admin: SignerWithAddress;
   guardian: SignerWithAddress;
   user: SignerWithAddress;
+}
+
+export interface Mocks {
+  pricer: PutOptionsPricerMock;
 }

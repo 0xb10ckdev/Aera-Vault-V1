@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
-import "../../../v1/dependencies/openzeppelin/ERC165.sol";
+import "../../dependencies/openzeppelin/ERC165.sol";
 import "./IPutOptionsPricer.sol";
 
 contract PremiaOptionsPricer is ERC165, IPutOptionsPricer {

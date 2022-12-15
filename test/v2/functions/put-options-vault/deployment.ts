@@ -1,0 +1,209 @@
+import { expect } from "chai";
+import { ZERO_ADDRESS } from "../../constants";
+import { toWei } from "../../utils";
+import { DeployPutOptionsVault } from "./../../../../tasks/deploy/put-options-vault";
+import { PutOptionsVault__factory } from "./../../../../typechain/factories/PutOptionsVault__factory";
+import {
+  EXPIRY_DELTA_MAX,
+  EXPIRY_DELTA_MIN,
+  STRIKE_MULTIPLIER_MAX,
+  STRIKE_MULTIPLIER_MIN,
+} from "./constants";
+
+type DeployPutOptionsVaultRaw = Omit<DeployPutOptionsVault, "silent">;
+
+export function shouldBehaveLikePutOptionsVaultDeployment(): void {
+  let validArgs: DeployPutOptionsVaultRaw;
+
+  describe("when PutOptionVault is deployed", function () {
+    let factory: PutOptionsVault__factory;
+
+    beforeEach(async function () {
+      validArgs = {
+        controller: this.signers.admin.address,
+        liquidator: this.signers.admin.address,
+        broker: this.signers.admin.address,
+        pricer: this.mocks.pricer.address,
+        underlyingAsset: this.usdc.address,
+        underlyingOptionsAsset: this.weth.address,
+        expiryDeltaMin: EXPIRY_DELTA_MIN,
+        expiryDeltaMax: EXPIRY_DELTA_MAX,
+        strikeMultiplierMin: toWei(STRIKE_MULTIPLIER_MIN),
+        strikeMultiplierMax: toWei(STRIKE_MULTIPLIER_MAX),
+        name: "USDC Put Option Vault",
+        symbol: "oUSDCpVault",
+      };
+
+      factory = new PutOptionsVault__factory(this.signers.admin);
+    });
+
+    function deployVault(args: DeployPutOptionsVaultRaw) {
+      return factory.deploy(
+        args.controller,
+        args.liquidator,
+        args.broker,
+        args.pricer,
+        args.underlyingAsset,
+        args.underlyingOptionsAsset,
+        { min: args.expiryDeltaMin, max: args.expiryDeltaMax },
+        { min: args.strikeMultiplierMin, max: args.strikeMultiplierMax },
+        args.name,
+        args.symbol,
+      );
+    }
+
+    it("deploys", async () => {
+      await expect(deployVault(validArgs)).not.reverted;
+    });
+
+    describe("when controller is zero address", () => {
+      it("reverts", async () => {
+        await expect(
+          deployVault({ ...validArgs, controller: ZERO_ADDRESS }),
+        ).to.be.revertedWith("Aera__ControllerIsZeroAddress");
+      });
+    });
+
+    describe("when liquidator is zero address", () => {
+      it("reverts", async () => {
+        await expect(
+          deployVault({ ...validArgs, liquidator: ZERO_ADDRESS }),
+        ).to.be.revertedWith("Aera__LiquidatorIsZeroAddress");
+      });
+    });
+
+    describe("when broker is zero address", () => {
+      it("reverts", async () => {
+        await expect(
+          deployVault({ ...validArgs, broker: ZERO_ADDRESS }),
+        ).to.be.revertedWith("Aera__BrokerIsZeroAddress");
+      });
+    });
+
+    describe("when underlyingAsset is zero address", () => {
+      it("reverts", async () => {
+        await expect(
+          deployVault({ ...validArgs, underlyingAsset: ZERO_ADDRESS }),
+        ).to.be.revertedWith("Aera__UnderlyingAssetIsZeroAddress");
+      });
+    });
+
+    describe("when underlyingOptionsAsset is zero address", () => {
+      it("reverts", async () => {
+        await expect(
+          deployVault({ ...validArgs, underlyingOptionsAsset: ZERO_ADDRESS }),
+        ).to.be.revertedWith("Aera__UnderlyingOptionsAssetIsZeroAddress");
+      });
+    });
+
+    describe("when expiry delta", function () {
+      describe("when min > max", function () {
+        it("reverts", async function () {
+          await expect(
+            deployVault({
+              ...validArgs,
+              expiryDeltaMin: 100,
+              expiryDeltaMax: 0,
+            }),
+          ).to.be.revertedWith(`Aera__ExpiryDeltaRangeNotValid(100, 0)`);
+        });
+      });
+
+      describe("when values are valid", function () {
+        it("emits", async function () {
+          const vault = await deployVault(validArgs);
+
+          await expect(vault.deployTransaction)
+            .to.emit(vault, "ExpiryDeltaChanged")
+            .withArgs(EXPIRY_DELTA_MIN, EXPIRY_DELTA_MAX);
+        });
+      });
+    });
+
+    describe("when strike multiplier", function () {
+      describe("when min > max", function () {
+        it("reverts", async function () {
+          await expect(
+            deployVault({
+              ...validArgs,
+              strikeMultiplierMin: 100,
+              strikeMultiplierMax: 10,
+            }),
+          ).to.be.revertedWith(`Aera__StrikeMultiplierRangeNotValid(100, 10)`);
+        });
+      });
+
+      describe("when min = 0", function () {
+        it("reverts", async function () {
+          await expect(
+            deployVault({
+              ...validArgs,
+              strikeMultiplierMin: 0,
+              strikeMultiplierMax: 100,
+            }),
+          ).to.be.revertedWith(
+            `Aera__StrikeMultiplierMinValueBelowExpected(0, 1)`,
+          );
+        });
+      });
+
+      describe("when max >= 1", function () {
+        it("reverts", async function () {
+          const max = toWei(1);
+          await expect(
+            deployVault({
+              ...validArgs,
+              strikeMultiplierMin: 10,
+              strikeMultiplierMax: max,
+            }),
+          ).to.be.revertedWith(
+            `Aera__StrikeMultiplierMaxValueExceedsExpected(${max}, ${max.sub(
+              1,
+            )})`,
+          );
+        });
+      });
+
+      describe("when values are valid", function () {
+        it("emits", async function () {
+          const vault = await deployVault(validArgs);
+
+          await expect(vault.deployTransaction)
+            .to.emit(vault, "StrikeMultiplierChanged")
+            .withArgs(
+              toWei(STRIKE_MULTIPLIER_MIN),
+              toWei(STRIKE_MULTIPLIER_MAX),
+            );
+        });
+      });
+    });
+
+    describe("when pricer", function () {
+      describe("is zero address", () => {
+        it("reverts", async () => {
+          await expect(
+            deployVault({
+              ...validArgs,
+              pricer: ZERO_ADDRESS,
+            }),
+          ).to.be.revertedWith(
+            `Aera__PutOptionsPricerIsNotValid("${ZERO_ADDRESS}")`,
+          );
+        });
+      });
+
+      describe("is wrong contract", function () {
+        it("reverts", async function () {
+          await expect(
+            deployVault({
+              ...validArgs,
+              pricer: this.weth.address,
+            }),
+          ).to.be.revertedWith(
+            `Aera__PutOptionsPricerIsNotValid("${this.weth.address}")`,
+          );
+        });
+      });
+    });
+  });
+}

@@ -1,13 +1,14 @@
 import { Signer, Wallet } from "ethers";
 import { ethers, waffle } from "hardhat";
 import { IERC20 } from "../../typechain";
-import { Signers } from "./types";
+import { Mocks, Signers } from "./types";
 
 // eslint-disable-next-line func-style
 export function baseContext(description: string, testSuite: () => void): void {
   describe(description, function () {
     before(async function () {
       this.signers = {} as Signers;
+      this.mocks = {} as Mocks;
 
       const { admin, guardian, user } = await ethers.getNamedSigners();
       this.signers.admin = admin;
