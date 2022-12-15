@@ -19,7 +19,7 @@ baseContext("Put Options Vault: Unit Tests", function () {
 });
 
 function unitTestPutOptionsVault() {
-  describe.only("PutOptionsVault Setup", function () {
+  describe("PutOptionsVault Setup", function () {
     async function putOptionsVaultFixture() {
       const admin = await ethers.getNamedSigner("admin");
 
