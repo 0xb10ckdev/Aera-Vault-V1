@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { expect } from "chai";
 import hre, { deployments, ethers } from "hardhat";
-import { getConfig } from "../../../scripts/config";
+import { getConfig } from "../../../../scripts/config";
 import {
   ERC4626Mock,
   IERC20,
@@ -9,7 +9,7 @@ import {
   OracleMock,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
-} from "../../../typechain";
+} from "../../../../typechain";
 import {
   BALANCER_ERRORS,
   MAX_MANAGEMENT_FEE,
@@ -23,19 +23,19 @@ import {
   MIN_WEIGHT,
   ONE,
   ZERO_ADDRESS,
-} from "../constants";
+} from "../../constants";
 import {
   setupOracles,
   setupTokens,
   setupYieldBearingAssets,
-} from "../fixtures";
+} from "../../fixtures";
 import {
   deployFactory,
   deployVault,
   toWei,
   valueArray,
   VaultParams,
-} from "../utils";
+} from "../../utils";
 
 export function testDeployment(): void {
   let admin: SignerWithAddress;
@@ -70,7 +70,6 @@ export function testDeployment(): void {
       oracleAddress = oracles.map((oracle: OracleMock) => oracle.address);
       oracleAddress[0] = ZERO_ADDRESS;
       validWeights = valueArray(ONE.div(poolTokens.length), poolTokens.length);
-
       await deployments.deploy("Validator", {
         contract: "WithdrawalValidatorMock",
         args: [tokens.length],
@@ -81,13 +80,11 @@ export function testDeployment(): void {
         (await deployments.get("Validator")).address,
         admin,
       );
-
       await deployments.deploy("InvalidValidator", {
         contract: "InvalidValidatorMock",
         from: admin.address,
         log: true,
       });
-
       factory = await deployFactory(admin);
     });
 
@@ -174,21 +171,21 @@ export function testDeployment(): void {
       );
     });
 
-    it("when mininum reliable vault value is zero", async function () {
+    it("when minimum reliable vault value is zero", async function () {
       validParams.minReliableVaultValue = toWei(0);
       await expect(deployVault(validParams)).to.be.revertedWith(
         "Aera__MinReliableVaultValueIsZero",
       );
     });
 
-    it("when mininum significant vault value is zero", async function () {
+    it("when minimum significant vault value is zero", async function () {
       validParams.minSignificantDepositValue = toWei(0);
       await expect(deployVault(validParams)).to.be.revertedWith(
         "Aera__MinSignificantDepositValueIsZero",
       );
     });
 
-    it("when maximum oraclespot divergence is zero", async function () {
+    it("when maximum oracle spot divergence is zero", async function () {
       validParams.maxOracleSpotDivergence = toWei(0);
       await expect(deployVault(validParams)).to.be.revertedWith(
         "Aera__MaxOracleSpotDivergenceIsZero",

@@ -7,7 +7,7 @@ import {
   MIN_WEIGHT,
   MINIMUM_WEIGHT_CHANGE_DURATION,
   ONE,
-} from "../constants";
+} from "../../constants";
 import {
   getCurrentTime,
   increaseTime,
@@ -16,7 +16,7 @@ import {
   tokenValueArray,
   tokenWithValues,
   valueArray,
-} from "../utils";
+} from "../../utils";
 
 export function testUpdateWeightsGradually(): void {
   describe("should be reverted to call updateWeightsGradually", async function () {
@@ -37,7 +37,7 @@ export function testUpdateWeightsGradually(): void {
       const timestamp = await getCurrentTime();
       await expect(
         this.vault
-          .connect(this.manager)
+          .connect(this.signers.manager)
           .updateWeightsGradually(
             tokenWithValues(
               this.tokenAddresses,
@@ -53,7 +53,7 @@ export function testUpdateWeightsGradually(): void {
       const timestamp = await getCurrentTime();
       await expect(
         this.vault
-          .connect(this.manager)
+          .connect(this.signers.manager)
           .updateWeightsGradually(
             tokenWithValues(
               this.unsortedTokens,
@@ -69,7 +69,7 @@ export function testUpdateWeightsGradually(): void {
       const timestamp = await getCurrentTime();
       await expect(
         this.vault
-          .connect(this.manager)
+          .connect(this.signers.manager)
           .updateWeightsGradually(
             tokenValueArray(
               this.tokenAddresses,
@@ -86,7 +86,7 @@ export function testUpdateWeightsGradually(): void {
       const timestamp = await getCurrentTime();
       await expect(
         this.vault
-          .connect(this.manager)
+          .connect(this.signers.manager)
           .updateWeightsGradually(
             tokenWithValues(
               this.tokenAddresses,
@@ -102,7 +102,7 @@ export function testUpdateWeightsGradually(): void {
       const timestamp = await getCurrentTime();
       await expect(
         this.vault
-          .connect(this.manager)
+          .connect(this.signers.manager)
           .updateWeightsGradually(
             tokenWithValues(
               this.tokenAddresses,
@@ -118,7 +118,7 @@ export function testUpdateWeightsGradually(): void {
       const timestamp = await getCurrentTime();
       await expect(
         this.vault
-          .connect(this.manager)
+          .connect(this.signers.manager)
           .updateWeightsGradually(
             tokenWithValues(
               this.tokenAddresses,
@@ -134,7 +134,7 @@ export function testUpdateWeightsGradually(): void {
       const timestamp = await getCurrentTime();
       await expect(
         this.vault
-          .connect(this.manager)
+          .connect(this.signers.manager)
           .updateWeightsGradually(
             tokenWithValues(
               this.tokenAddresses,
@@ -150,7 +150,7 @@ export function testUpdateWeightsGradually(): void {
       const timestamp = await getCurrentTime();
       await expect(
         this.vault
-          .connect(this.manager)
+          .connect(this.signers.manager)
           .updateWeightsGradually(
             tokenWithValues(
               this.tokenAddresses,
@@ -166,7 +166,7 @@ export function testUpdateWeightsGradually(): void {
       const timestamp = await getCurrentTime();
       await expect(
         this.vault
-          .connect(this.manager)
+          .connect(this.signers.manager)
           .updateWeightsGradually(
             tokenValueArray(
               this.tokenAddresses,
@@ -199,7 +199,7 @@ export function testUpdateWeightsGradually(): void {
 
       await expect(
         this.vault
-          .connect(this.manager)
+          .connect(this.signers.manager)
           .updateWeightsGradually(
             tokenWithValues(this.tokenAddresses, targetWeights),
             timestamp,
@@ -252,7 +252,7 @@ export function testUpdateWeightsGradually(): void {
 
       await expect(
         this.vault
-          .connect(this.manager)
+          .connect(this.signers.manager)
           .updateWeightsGradually(
             tokenWithValues(this.tokenAddresses, targetWeights),
             timestamp,
@@ -291,7 +291,7 @@ export function testUpdateWeightsGradually(): void {
 
       await expect(
         this.vault
-          .connect(this.manager)
+          .connect(this.signers.manager)
           .updateWeightsGradually(
             tokenWithValues(this.tokenAddresses, normalizeWeights(endWeights)),
             startTime,
@@ -350,7 +350,7 @@ export function testUpdateWeightsGradually(): void {
 
           await expect(
             this.vault
-              .connect(this.manager)
+              .connect(this.signers.manager)
               .updateWeightsGradually(
                 tokenWithValues(this.tokenAddresses, targetWeights),
                 startTime,
@@ -400,7 +400,7 @@ export function testUpdateWeightsGradually(): void {
 
           await expect(
             this.vault
-              .connect(this.manager)
+              .connect(this.signers.manager)
               .updateWeightsGradually(
                 tokenWithValues(this.tokenAddresses, targetWeights),
                 startTime,
@@ -476,7 +476,7 @@ export function testUpdateWeightsGradually(): void {
 
             await expect(
               this.vault
-                .connect(this.manager)
+                .connect(this.signers.manager)
                 .updateWeightsGradually(
                   tokenWithValues(this.tokenAddresses, targetWeights),
                   startTime,
@@ -504,7 +504,7 @@ export function testUpdateWeightsGradually(): void {
 
             await expect(
               this.vault
-                .connect(this.manager)
+                .connect(this.signers.manager)
                 .updateWeightsGradually(
                   tokenWithValues(this.tokenAddresses, targetWeights),
                   startTime,
@@ -532,7 +532,7 @@ export function testUpdateWeightsGradually(): void {
 
             await expect(
               this.vault
-                .connect(this.manager)
+                .connect(this.signers.manager)
                 .updateWeightsGradually(
                   tokenWithValues(this.tokenAddresses, targetWeights),
                   startTime,
@@ -570,7 +570,7 @@ export function testUpdateWeightsGradually(): void {
 
         await expect(
           this.vault
-            .connect(this.manager)
+            .connect(this.signers.manager)
             .updateWeightsGradually(
               tokenWithValues(this.tokenAddresses, targetWeights),
               startTime,
@@ -634,7 +634,7 @@ export function testUpdateWeightsGradually(): void {
 
           await expect(
             this.vault
-              .connect(this.manager)
+              .connect(this.signers.manager)
               .updateWeightsGradually(
                 tokenWithValues(this.tokenAddresses, targetWeights),
                 startTime,
@@ -684,7 +684,7 @@ export function testUpdateWeightsGradually(): void {
 
           await expect(
             this.vault
-              .connect(this.manager)
+              .connect(this.signers.manager)
               .updateWeightsGradually(
                 tokenWithValues(this.tokenAddresses, targetWeights),
                 startTime,
@@ -760,7 +760,7 @@ export function testUpdateWeightsGradually(): void {
 
             await expect(
               this.vault
-                .connect(this.manager)
+                .connect(this.signers.manager)
                 .updateWeightsGradually(
                   tokenWithValues(this.tokenAddresses, targetWeights),
                   startTime,
@@ -788,7 +788,7 @@ export function testUpdateWeightsGradually(): void {
 
             await expect(
               this.vault
-                .connect(this.manager)
+                .connect(this.signers.manager)
                 .updateWeightsGradually(
                   tokenWithValues(this.tokenAddresses, targetWeights),
                   startTime,
@@ -816,7 +816,7 @@ export function testUpdateWeightsGradually(): void {
 
             await expect(
               this.vault
-                .connect(this.manager)
+                .connect(this.signers.manager)
                 .updateWeightsGradually(
                   tokenWithValues(this.tokenAddresses, targetWeights),
                   startTime,
@@ -856,7 +856,7 @@ export function testUpdateWeightsGradually(): void {
       }
 
       await this.vault
-        .connect(this.manager)
+        .connect(this.signers.manager)
         .updateWeightsGradually(
           tokenWithValues(this.tokenAddresses, normalizeWeights(endWeights)),
           startTime,
@@ -901,7 +901,7 @@ export function testUpdateWeightsGradually(): void {
       }
 
       await this.vault
-        .connect(this.manager)
+        .connect(this.signers.manager)
         .updateWeightsGradually(
           tokenWithValues(this.tokenAddresses, normalizeWeights(endWeights)),
           startTime,

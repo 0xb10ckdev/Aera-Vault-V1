@@ -4,19 +4,19 @@ import { BigNumber } from "ethers";
 import hre, { deployments, ethers } from "hardhat";
 import { DEFAULT_NOTICE_PERIOD, getConfig } from "../../../scripts/config";
 import {
-  IERC20,
+  AeraVaultV1Mock,
   BaseManagedPoolFactory__factory,
+  IERC20,
   ManagedPoolFactory,
   ManagedPoolFactory__factory,
-  AeraVaultV1Mock,
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
 } from "../../../typechain";
+import { baseContext } from "../../shared/contexts";
 import {
   BALANCER_ERRORS,
   DEVIATION,
   MAXIMUM_SWAP_FEE_PERCENT_CHANGE,
-  SWAP_FEE_COOLDOWN_PERIOD,
   MAX_MANAGEMENT_FEE,
   MAX_NOTICE_PERIOD,
   MAX_SWAP_FEE,
@@ -26,6 +26,7 @@ import {
   MIN_WEIGHT,
   NOTICE_PERIOD,
   ONE,
+  SWAP_FEE_COOLDOWN_PERIOD,
   ZERO_ADDRESS,
 } from "../constants";
 import { deployToken, setupTokens } from "../fixtures";
@@ -35,9 +36,9 @@ import {
   getCurrentTime,
   getTimestamp,
   increaseTime,
-  toWei,
   tokenValueArray,
   tokenWithValues,
+  toWei,
   valueArray,
   VaultParams,
 } from "../utils";
@@ -213,17 +214,15 @@ describe("Aera Vault V1 Mainnet Deployment", function () {
   });
 });
 
-describe("Aera Vault V1 Mainnet Functionality", function () {
+baseContext("Aera Vault V1 Mainnet Functionality", function () {
   let admin: SignerWithAddress;
   let manager: SignerWithAddress;
   let user: SignerWithAddress;
   let vault: AeraVaultV1Mock;
   let validator: WithdrawalValidatorMock;
-  let factory: ManagedPoolFactory;
   let tokens: IERC20[];
   let sortedTokens: string[];
   let unsortedTokens: string[];
-  let snapshot: unknown;
 
   const getUserBalances = async (address: string) => {
     const balances = await Promise.all(
@@ -258,20 +257,16 @@ describe("Aera Vault V1 Mainnet Functionality", function () {
     };
   };
 
-  beforeEach(async function () {
-    snapshot = await ethers.provider.send("evm_snapshot", []);
-
+  async function forkTestFixture() {
     const config = getConfig(hre.network.config.chainId || 1);
-
-    ({ admin, manager, user } = await ethers.getNamedSigners());
-    ({ tokens, sortedTokens, unsortedTokens } = await setupTokens());
+    const { tokens, sortedTokens, unsortedTokens } = await setupTokens();
 
     const validatorMock =
       await ethers.getContractFactory<WithdrawalValidatorMock__factory>(
         "WithdrawalValidatorMock",
       );
 
-    validator = await validatorMock.connect(admin).deploy(tokens.length);
+    const validator = await validatorMock.connect(admin).deploy(tokens.length);
 
     const baseManagedPoolFactoryContract =
       await ethers.getContractFactory<BaseManagedPoolFactory__factory>(
@@ -285,13 +280,13 @@ describe("Aera Vault V1 Mainnet Functionality", function () {
       await ethers.getContractFactory<ManagedPoolFactory__factory>(
         "ManagedPoolFactory",
       );
-    factory = await managedPoolFactoryContract
+    const factory = await managedPoolFactoryContract
       .connect(admin)
       .deploy(baseManagedPoolFactory.address);
 
     const validWeights = valueArray(ONE.div(tokens.length), tokens.length);
 
-    vault = await hre.run("deploy:vault", {
+    const vault = await hre.run("deploy:vault", {
       factory: factory.address,
       name: "Test",
       symbol: "TEST",
@@ -306,10 +301,14 @@ describe("Aera Vault V1 Mainnet Functionality", function () {
       silent: true,
       test: true,
     });
-  });
+    return { tokens, sortedTokens, vault, validator, unsortedTokens };
+  }
 
-  afterEach(async () => {
-    await ethers.provider.send("evm_revert", [snapshot]);
+  beforeEach(async function () {
+    ({ admin, manager, user } = this.signers);
+
+    ({ vault, validator, tokens, sortedTokens, unsortedTokens } =
+      await this.loadFixture(forkTestFixture));
   });
 
   describe("when Vault not initialized", () => {

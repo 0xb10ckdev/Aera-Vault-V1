@@ -1,7 +1,7 @@
 import { expect } from "chai";
-import { IERC20 } from "../../../typechain";
-import { ONE } from "../constants";
-import { deployToken } from "../fixtures";
+import { IERC20 } from "../../../../typechain";
+import { ONE } from "../../constants";
+import { deployToken } from "../../fixtures";
 import {
   normalizeWeights,
   toWei,
@@ -9,7 +9,7 @@ import {
   tokenWithValues,
   toUnit,
   valueArray,
-} from "../utils";
+} from "../../utils";
 
 export function testGetSpotPrices(): void {
   let TOKEN: IERC20;

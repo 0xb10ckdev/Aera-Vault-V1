@@ -1,13 +1,13 @@
 import { expect } from "chai";
 import { BigNumber } from "ethers";
-import { MAX_MANAGEMENT_FEE, MIN_FEE_DURATION, ONE } from "../constants";
-import { getTimestamp } from "../utils";
+import { MAX_MANAGEMENT_FEE, MIN_FEE_DURATION, ONE } from "../../constants";
+import { getTimestamp } from "../../utils";
 
 export function testFinalize(): void {
   describe("should be reverted to call finalize", async function () {
     it("when called from non-owner", async function () {
       await expect(
-        this.vault.connect(this.user).finalize(),
+        this.vault.connect(this.signers.user).finalize(),
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
@@ -43,9 +43,11 @@ export function testFinalize(): void {
 
     await expect(trx)
       .to.emit(this.vault, "Finalized")
-      .withArgs(this.admin.address, newHoldings);
+      .withArgs(this.signers.admin.address, newHoldings);
 
-    const newAdminBalances = await this.getUserBalances(this.admin.address);
+    const newAdminBalances = await this.getUserBalances(
+      this.signers.admin.address,
+    );
 
     for (let i = 0; i < this.tokens.length; i++) {
       expect(newAdminBalances[i]).to.equal(

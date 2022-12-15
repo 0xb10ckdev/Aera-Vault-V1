@@ -1,12 +1,12 @@
 import { expect } from "chai";
-import { MINIMUM_WEIGHT_CHANGE_DURATION, ONE } from "../constants";
+import { MINIMUM_WEIGHT_CHANGE_DURATION, ONE } from "../../constants";
 import {
   getCurrentTime,
   increaseTime,
   normalizeWeights,
   toWei,
   tokenWithValues,
-} from "../utils";
+} from "../../utils";
 
 export function testCancelWeightUpdates(): void {
   it("should be reverted when called from non-manager", async function () {
@@ -31,7 +31,7 @@ export function testCancelWeightUpdates(): void {
     }
 
     await this.vault
-      .connect(this.manager)
+      .connect(this.signers.manager)
       .updateWeightsGradually(
         tokenWithValues(this.tokenAddresses, normalizeWeights(endWeights)),
         startTime,
@@ -40,7 +40,9 @@ export function testCancelWeightUpdates(): void {
 
     await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION / 2);
 
-    const trx = await this.vault.connect(this.manager).cancelWeightUpdates();
+    const trx = await this.vault
+      .connect(this.signers.manager)
+      .cancelWeightUpdates();
     const newWeights = await this.vault.getNormalizedWeights();
 
     await expect(trx)
