@@ -1,6 +1,6 @@
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
+import { rm, writeFile } from "fs/promises";
 import hre, { ethers } from "hardhat";
-import { writeFile, rm } from "fs/promises";
+import { getConfig } from "../../scripts/config";
 import {
   AeraVaultV2Mock,
   AeraVaultV2Mock__factory,
@@ -15,6 +15,7 @@ import {
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
 } from "../../typechain";
+import { setupTokens } from "../v1/fixtures";
 import {
   MAX_MANAGEMENT_FEE,
   MAX_ORACLE_DELAY,
@@ -27,15 +28,10 @@ import {
   ZERO_ADDRESS,
 } from "./constants";
 import { toWei, valueArray } from "./utils";
-import { getConfig } from "../../scripts/config";
-import { setupTokens } from "../v1/fixtures";
 
 export * from "../v1/fixtures";
 
 export type DeployedData = {
-  admin: SignerWithAddress;
-  manager: SignerWithAddress;
-  user: SignerWithAddress;
   tokens: IERC20[];
   tokenAddresses: string[];
   poolTokens: IERC20[];
@@ -53,9 +49,6 @@ export type DeployedData = {
 export const setupAssetContracts = async (
   withBalancerVaultMock: boolean,
 ): Promise<{
-  admin: SignerWithAddress;
-  manager: SignerWithAddress;
-  user: SignerWithAddress;
   tokens: IERC20[];
   poolTokens: IERC20[];
   yieldTokens: ERC4626Mock[];
@@ -68,7 +61,7 @@ export const setupAssetContracts = async (
   validator: WithdrawalValidatorMock;
   factory: ManagedPoolFactory;
 }> => {
-  const { admin, manager, user } = await ethers.getNamedSigners();
+  const { admin } = await ethers.getNamedSigners();
   const {
     tokens: poolTokens,
     sortedTokens,
@@ -152,9 +145,6 @@ export const setupAssetContracts = async (
     .deploy(bVaultAddress, protocolFeeProvider.address);
 
   return {
-    admin,
-    manager,
-    user,
     tokens,
     poolTokens,
     yieldTokens,
@@ -172,9 +162,6 @@ export const setupAssetContracts = async (
 export const setupVaultWithBalancerVaultMock =
   async (): Promise<DeployedData> => {
     const {
-      admin,
-      manager,
-      user,
       tokens,
       poolTokens,
       yieldTokens,
@@ -187,6 +174,8 @@ export const setupVaultWithBalancerVaultMock =
       validator,
       factory,
     } = await setupAssetContracts(true);
+
+    const { admin, manager } = await ethers.getNamedSigners();
 
     const validWeights = valueArray(
       ONE.div(poolTokens.length),
@@ -223,9 +212,6 @@ export const setupVaultWithBalancerVaultMock =
     });
 
     return {
-      admin,
-      manager,
-      user,
       vault,
       validator,
       factory,
@@ -243,9 +229,6 @@ export const setupVaultWithBalancerVaultMock =
 
 export const setupVaultWithBalancerVault = async (): Promise<DeployedData> => {
   const {
-    admin,
-    manager,
-    user,
     tokens,
     poolTokens,
     yieldTokens,
@@ -258,6 +241,8 @@ export const setupVaultWithBalancerVault = async (): Promise<DeployedData> => {
     validator,
     factory,
   } = await setupAssetContracts(false);
+
+  const { manager } = await ethers.getNamedSigners();
 
   const validWeights = valueArray(
     ONE.div(poolTokens.length),
@@ -297,9 +282,6 @@ export const setupVaultWithBalancerVault = async (): Promise<DeployedData> => {
   await rm(".testConfig.json");
 
   return {
-    admin,
-    manager,
-    user,
     vault,
     validator,
     factory,

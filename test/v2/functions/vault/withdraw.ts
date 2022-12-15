@@ -1,7 +1,12 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { ONE, PRICE_DEVIATION } from "../constants";
-import { toWei, tokenValueArray, tokenWithValues, valueArray } from "../utils";
+import { ONE, PRICE_DEVIATION } from "../../constants";
+import {
+  toWei,
+  tokenValueArray,
+  tokenWithValues,
+  valueArray,
+} from "../../utils";
 
 export function testWithdraw(): void {
   describe("when allowance on validator is invalid", function () {
@@ -25,7 +30,7 @@ export function testWithdraw(): void {
       it("when called from non-owner", async function () {
         await expect(
           this.vault
-            .connect(this.user)
+            .connect(this.signers.user)
             .withdraw(
               tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
             ),
