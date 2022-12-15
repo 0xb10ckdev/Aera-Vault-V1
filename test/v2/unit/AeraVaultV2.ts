@@ -6,7 +6,6 @@ baseContext("Unit Test", function () {
   beforeEach(async function () {
     const {
       vault,
-      validator,
       factory,
       poolTokens,
       tokens,
@@ -20,7 +19,6 @@ baseContext("Unit Test", function () {
     } = await this.loadFixture(setupVaultWithBalancerVaultMock);
 
     this.vault = vault;
-    this.validator = validator;
     this.factory = factory;
     this.poolTokens = poolTokens;
     this.tokens = tokens;

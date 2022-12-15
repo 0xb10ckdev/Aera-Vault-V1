@@ -11,7 +11,6 @@ baseContext("Integration Test", function () {
   beforeEach(async function () {
     const {
       vault,
-      validator,
       factory,
       poolTokens,
       tokens,
@@ -25,7 +24,6 @@ baseContext("Integration Test", function () {
     } = await this.loadFixture(setupVaultWithBalancerVault);
 
     this.vault = vault;
-    this.validator = validator;
     this.factory = factory;
     this.poolTokens = poolTokens;
     this.tokens = tokens;
