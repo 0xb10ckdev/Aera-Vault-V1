@@ -2354,7 +2354,7 @@ contract AeraVaultV2 is
     }
 
     /// @notice Enable or disable swap.
-    /// @dev Will only be called by initialDeposit(), initiateFinalization(),
+    /// @dev Will only be called by initialDeposit(),
     ///      enableTradingRiskingArbitrage(), enableTradingWithOraclePrice()
     ///      and disableTrading().
     /// @param swapEnabled Swap status.
