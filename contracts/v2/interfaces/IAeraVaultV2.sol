@@ -19,6 +19,7 @@ interface IAeraVaultV2 is
     struct YieldToken {
         IERC4626 token;
         uint256 underlyingIndex;
+        bool isWithdrawable;
     }
 
     // Use struct parameter to avoid stack too deep error.
