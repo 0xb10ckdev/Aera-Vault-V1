@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import { BigNumber } from "ethers";
 import { ONE, PRICE_DEVIATION } from "../../constants";
 import { toWei, tokenWithValues } from "../../utils";
 
@@ -40,7 +41,25 @@ export function testDepositAndWithdraw(): void {
         expect(newHoldings[j]).to.equal(
           holdings[j].sub(newManagersFeeTotal[j]).add(managersFeeTotal[j]),
         );
-        expect(newAdminBalances[j]).to.equal(adminBalances[j]);
+
+        if (
+          i < this.poolTokens.length ||
+          this.isWithdrawable[i - this.poolTokens.length]
+        ) {
+          expect(newAdminBalances[j]).to.equal(adminBalances[j]);
+        } else {
+          if (j == i) {
+            expect(newAdminBalances[j]).to.equal(
+              adminBalances[j].sub(amounts[j]),
+            );
+          } else if (j == this.underlyingIndexes[i - this.poolTokens.length]) {
+            expect(newAdminBalances[j]).to.equal(
+              adminBalances[j].add(amounts[i]),
+            );
+          } else {
+            expect(newAdminBalances[j]).to.equal(adminBalances[j]);
+          }
+        }
       }
 
       holdings = newHoldings;
@@ -92,7 +111,23 @@ export function testDepositAndWithdraw(): void {
     for (let i = 0; i < this.tokens.length; i++) {
       expect(await this.vault.holding(i)).to.equal(newHoldings[i]);
       expect(newHoldings[i]).to.equal(holdings[i].sub(managersFeeTotal[i]));
-      expect(newAdminBalances[i]).to.equal(adminBalances[i]);
+      if (i < this.poolTokens.length) {
+        let poolTokenWithdrawnAmount = BigNumber.from(0);
+        for (let j = 0; j < this.yieldTokens.length; j++) {
+          if (this.underlyingIndexes[j] == i && !this.isWithdrawable[j]) {
+            poolTokenWithdrawnAmount = poolTokenWithdrawnAmount.add(
+              amounts[j + this.poolTokens.length],
+            );
+          }
+        }
+        expect(newAdminBalances[i]).to.equal(
+          adminBalances[i].add(poolTokenWithdrawnAmount),
+        );
+      } else if (this.isWithdrawable[i - this.poolTokens.length]) {
+        expect(newAdminBalances[i]).to.equal(adminBalances[i]);
+      } else {
+        expect(newAdminBalances[i]).to.equal(adminBalances[i].sub(amounts[i]));
+      }
     }
   });
 }
