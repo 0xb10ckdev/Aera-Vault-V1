@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import {
   DEVIATION,
@@ -250,7 +251,25 @@ export function testMulticall(): void {
             .sub(newManagersFeeTotal[i])
             .add(managersFeeTotal[i]),
         );
-        expect(newAdminBalances[i]).to.equal(adminBalances[i].add(amounts[i]));
+        if (i < this.poolTokens.length) {
+          let poolTokenWithdrawnAmount = BigNumber.from(0);
+          for (let j = 0; j < this.yieldTokens.length; j++) {
+            if (this.underlyingIndexes[j] == i && !this.isWithdrawable[j]) {
+              poolTokenWithdrawnAmount = poolTokenWithdrawnAmount.add(
+                amounts[j + this.poolTokens.length],
+              );
+            }
+          }
+          expect(newAdminBalances[i]).to.equal(
+            adminBalances[i].add(amounts[i]).add(poolTokenWithdrawnAmount),
+          );
+        } else if (this.isWithdrawable[i - this.poolTokens.length]) {
+          expect(newAdminBalances[i]).to.equal(
+            adminBalances[i].add(amounts[i]),
+          );
+        } else {
+          expect(newAdminBalances[i]).to.equal(adminBalances[i]);
+        }
       }
     });
   });

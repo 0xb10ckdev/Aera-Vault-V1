@@ -16,6 +16,7 @@ baseContext("Integration Test", function () {
       tokens,
       tokenAddresses,
       yieldTokens,
+      isWithdrawable,
       underlyingIndexes,
       sortedTokens,
       oracles,
@@ -29,6 +30,7 @@ baseContext("Integration Test", function () {
     this.tokens = tokens;
     this.tokenAddresses = tokenAddresses;
     this.yieldTokens = yieldTokens;
+    this.isWithdrawable = isWithdrawable;
     this.underlyingIndexes = underlyingIndexes;
     this.sortedTokens = sortedTokens;
     this.oracles = oracles;

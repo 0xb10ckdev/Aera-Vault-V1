@@ -83,6 +83,7 @@ export function testDeployment(): void {
         yieldTokens: yieldTokens.map((token, index) => ({
           token: token.address,
           underlyingIndex: index,
+          isWithdrawable: true,
         })),
         numeraireAssetIndex: 0,
         swapFeePercentage: MIN_SWAP_FEE,
@@ -188,6 +189,7 @@ export function testDeployment(): void {
         (token, index) => ({
           token: token.address,
           underlyingIndex: index,
+          isWithdrawable: true,
         }),
       );
 
@@ -205,6 +207,7 @@ export function testDeployment(): void {
         (token, index) => ({
           token: token.address,
           underlyingIndex: index,
+          isWithdrawable: true,
         }),
       );
 

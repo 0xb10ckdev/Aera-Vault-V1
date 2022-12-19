@@ -34,6 +34,7 @@ export type DeployedData = {
   tokenAddresses: string[];
   poolTokens: IERC20[];
   yieldTokens: ERC4626Mock[];
+  isWithdrawable: boolean[];
   sortedTokens: string[];
   unsortedTokens: string[];
   underlyingIndexes: number[];
@@ -169,6 +170,9 @@ export const setupVaultWithBalancerVaultMock =
       ONE.div(poolTokens.length),
       poolTokens.length,
     );
+    const isWithdrawable = yieldTokens.map(
+      (_, index) => index < yieldTokens.length / 2,
+    );
 
     const vaultFactory =
       await ethers.getContractFactory<AeraVaultV2Mock__factory>(
@@ -184,6 +188,7 @@ export const setupVaultWithBalancerVaultMock =
       yieldTokens: yieldTokens.map((token, index) => ({
         token: token.address,
         underlyingIndex: index,
+        isWithdrawable: isWithdrawable[index],
       })),
       numeraireAssetIndex: 0,
       swapFeePercentage: MIN_SWAP_FEE,
@@ -205,6 +210,7 @@ export const setupVaultWithBalancerVaultMock =
       tokens,
       tokenAddresses,
       yieldTokens,
+      isWithdrawable,
       underlyingIndexes,
       sortedTokens,
       oracles,
@@ -233,6 +239,9 @@ export const setupVaultWithBalancerVault = async (): Promise<DeployedData> => {
     ONE.div(poolTokens.length),
     poolTokens.length,
   );
+  const isWithdrawable = yieldTokens.map(
+    (_, index) => index < yieldTokens.length / 2,
+  );
 
   await writeFile(
     ".testConfig.json",
@@ -243,7 +252,10 @@ export const setupVaultWithBalancerVault = async (): Promise<DeployedData> => {
       poolTokens: sortedTokens,
       weights: validWeights,
       oracles: oracleAddresses,
-      yieldTokens: yieldTokens.map(token => token.address),
+      yieldTokens: yieldTokens.map((token, index) => ({
+        token: token.address,
+        isWithdrawable: isWithdrawable[index],
+      })),
       numeraireAssetIndex: 0,
       swapFeePercentage: MIN_SWAP_FEE,
       manager: manager.address,
@@ -272,6 +284,7 @@ export const setupVaultWithBalancerVault = async (): Promise<DeployedData> => {
     tokens,
     tokenAddresses,
     yieldTokens,
+    isWithdrawable,
     underlyingIndexes,
     sortedTokens,
     oracles,
