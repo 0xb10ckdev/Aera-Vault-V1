@@ -1240,28 +1240,21 @@ contract AeraVaultV2 is
     function withdrawTokens(TokenValue[] calldata tokenWithAmount) internal {
         lockManagerFees(false);
 
-        IERC20[] memory tokens;
-        uint256[] memory holdings;
-        (tokens, holdings, ) = getTokensData();
-
+        IERC20[] memory poolTokens = getPoolTokens();
+        IERC4626[] memory yieldTokens = getYieldTokens();
+        uint256[] memory holdings = getHoldings();
         uint256[] memory weights = pool.getNormalizedWeights();
-        uint256[] memory balances = new uint256[](numTokens);
         uint256[] memory amounts = getValuesFromTokenWithValues(
             tokenWithAmount,
-            getPoolTokens()
+            poolTokens
         );
 
-        for (uint256 i = 0; i < numTokens; i++) {
-            if (amounts[i] > holdings[i]) {
-                revert Aera__AmountExceedAvailable(
-                    address(tokens[i]),
-                    amounts[i],
-                    holdings[i]
-                );
-            }
+        checkWithdrawAmount(poolTokens, yieldTokens, holdings, amounts);
 
-            if (i < numPoolTokens && amounts[i] > 0) {
-                balances[i] = tokens[i].balanceOf(address(this));
+        uint256[] memory balances = new uint256[](numTokens);
+        for (uint256 i = 0; i < numPoolTokens; i++) {
+            if (amounts[i] > 0) {
+                balances[i] = poolTokens[i].balanceOf(address(this));
             }
         }
 
@@ -1270,8 +1263,10 @@ contract AeraVaultV2 is
         uint256 weightSum = 0;
         for (uint256 i = 0; i < numPoolTokens; i++) {
             if (amounts[i] > 0) {
-                balances[i] = tokens[i].balanceOf(address(this)) - balances[i];
-                tokens[i].safeTransfer(owner(), balances[i]);
+                balances[i] =
+                    poolTokens[i].balanceOf(address(this)) -
+                    balances[i];
+                poolTokens[i].safeTransfer(owner(), balances[i]);
 
                 weights[i] =
                     (weights[i] * (holdings[i] - amounts[i])) /
@@ -1281,11 +1276,27 @@ contract AeraVaultV2 is
             weightSum += weights[i];
         }
 
-        for (uint256 i = numPoolTokens; i < numTokens; i++) {
-            if (amounts[i] > 0) {
-                balances[i] = amounts[i];
-                tokens[i].safeTransfer(owner(), balances[i]);
+        bool[] memory isWithdrawable = getWithdrawables();
+        uint256[] memory underlyingIndexes = getUnderlyingIndexes();
+        IERC20 underlyingAsset;
+        uint256 index = numPoolTokens;
+
+        for (uint256 i = 0; i < numYieldTokens; i++) {
+            if (amounts[index] > 0) {
+                if (isWithdrawable[i]) {
+                    balances[index] = amounts[index];
+                    yieldTokens[i].safeTransfer(owner(), balances[index]);
+                } else {
+                    underlyingAsset = poolTokens[underlyingIndexes[i]];
+                    balances[index] = withdrawUnderlyingAsset(
+                        yieldTokens[i],
+                        underlyingAsset,
+                        amounts[index]
+                    );
+                    underlyingAsset.safeTransfer(owner(), balances[index]);
+                }
             }
+            ++index;
         }
 
         /// It cancels the current active weights change schedule
@@ -2395,6 +2406,41 @@ contract AeraVaultV2 is
                     maximumRatio
                 );
             }
+        }
+    }
+
+    /// @notice Check withdraw amounts with holdings.
+    /// @dev Will only be called by withdrawTokens().
+    /// @param poolTokens Array of pool tokens.
+    /// @param yieldTokens Array of yield tokens.
+    /// @param holdings Current token balance in Balancer Pool and Aera Vault.
+    /// @param amounts Array of amounts to check.
+    function checkWithdrawAmount(
+        IERC20[] memory poolTokens,
+        IERC4626[] memory yieldTokens,
+        uint256[] memory holdings,
+        uint256[] memory amounts
+    ) internal view {
+        for (uint256 i = 0; i < numPoolTokens; i++) {
+            if (amounts[i] > holdings[i]) {
+                revert Aera__AmountExceedAvailable(
+                    address(poolTokens[i]),
+                    amounts[i],
+                    holdings[i]
+                );
+            }
+        }
+
+        uint256 index = numPoolTokens;
+        for (uint256 i = 0; i < numYieldTokens; i++) {
+            if (amounts[index] > holdings[index]) {
+                revert Aera__AmountExceedAvailable(
+                    address(yieldTokens[i]),
+                    amounts[index],
+                    holdings[index]
+                );
+            }
+            ++index;
         }
     }
 

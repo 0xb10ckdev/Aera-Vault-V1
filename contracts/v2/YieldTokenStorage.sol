@@ -32,6 +32,28 @@ contract YieldTokenStorage is IYieldTokenStorage {
     IERC4626 internal immutable yieldToken18;
     IERC4626 internal immutable yieldToken19;
 
+    /// @dev Whether each yield token is withdrawable.
+    bool internal immutable isWithdrawable0;
+    bool internal immutable isWithdrawable1;
+    bool internal immutable isWithdrawable2;
+    bool internal immutable isWithdrawable3;
+    bool internal immutable isWithdrawable4;
+    bool internal immutable isWithdrawable5;
+    bool internal immutable isWithdrawable6;
+    bool internal immutable isWithdrawable7;
+    bool internal immutable isWithdrawable8;
+    bool internal immutable isWithdrawable9;
+    bool internal immutable isWithdrawable10;
+    bool internal immutable isWithdrawable11;
+    bool internal immutable isWithdrawable12;
+    bool internal immutable isWithdrawable13;
+    bool internal immutable isWithdrawable14;
+    bool internal immutable isWithdrawable15;
+    bool internal immutable isWithdrawable16;
+    bool internal immutable isWithdrawable17;
+    bool internal immutable isWithdrawable18;
+    bool internal immutable isWithdrawable19;
+
     /// @dev Index of underlying assets.
     uint256 internal immutable underlyingIndex0;
     uint256 internal immutable underlyingIndex1;
@@ -92,6 +114,27 @@ contract YieldTokenStorage is IYieldTokenStorage {
         yieldToken18 = numYieldTokens > 18 ? yieldTokens[18].token : invalidToken;
         yieldToken19 = numYieldTokens > 19 ? yieldTokens[19].token : invalidToken;
 
+        isWithdrawable0 = numYieldTokens > 0 ? yieldTokens[0].isWithdrawable : false;
+        isWithdrawable1 = numYieldTokens > 1 ? yieldTokens[1].isWithdrawable : false;
+        isWithdrawable2 = numYieldTokens > 2 ? yieldTokens[2].isWithdrawable : false;
+        isWithdrawable3 = numYieldTokens > 3 ? yieldTokens[3].isWithdrawable : false;
+        isWithdrawable4 = numYieldTokens > 4 ? yieldTokens[4].isWithdrawable : false;
+        isWithdrawable5 = numYieldTokens > 5 ? yieldTokens[5].isWithdrawable : false;
+        isWithdrawable6 = numYieldTokens > 6 ? yieldTokens[6].isWithdrawable : false;
+        isWithdrawable7 = numYieldTokens > 7 ? yieldTokens[7].isWithdrawable : false;
+        isWithdrawable8 = numYieldTokens > 8 ? yieldTokens[8].isWithdrawable : false;
+        isWithdrawable9 = numYieldTokens > 9 ? yieldTokens[9].isWithdrawable : false;
+        isWithdrawable10 = numYieldTokens > 10 ? yieldTokens[10].isWithdrawable : false;
+        isWithdrawable11 = numYieldTokens > 11 ? yieldTokens[11].isWithdrawable : false;
+        isWithdrawable12 = numYieldTokens > 12 ? yieldTokens[12].isWithdrawable : false;
+        isWithdrawable13 = numYieldTokens > 13 ? yieldTokens[13].isWithdrawable : false;
+        isWithdrawable14 = numYieldTokens > 14 ? yieldTokens[14].isWithdrawable : false;
+        isWithdrawable15 = numYieldTokens > 15 ? yieldTokens[15].isWithdrawable : false;
+        isWithdrawable16 = numYieldTokens > 16 ? yieldTokens[16].isWithdrawable : false;
+        isWithdrawable17 = numYieldTokens > 17 ? yieldTokens[17].isWithdrawable : false;
+        isWithdrawable18 = numYieldTokens > 18 ? yieldTokens[18].isWithdrawable : false;
+        isWithdrawable19 = numYieldTokens > 19 ? yieldTokens[19].isWithdrawable : false;
+
         underlyingIndex0 = numYieldTokens > 0 ? yieldTokens[0].underlyingIndex : 0;
         underlyingIndex1 = numYieldTokens > 1 ? yieldTokens[1].underlyingIndex : 0;
         underlyingIndex2 = numYieldTokens > 2 ? yieldTokens[2].underlyingIndex : 0;
@@ -146,6 +189,40 @@ contract YieldTokenStorage is IYieldTokenStorage {
         if (numYieldTokens > 19) { yieldTokens[19] = yieldToken19; } else { return yieldTokens; }
 
         return yieldTokens;
+    }
+
+    /// @inheritdoc IYieldTokenStorage
+    // prettier-ignore
+    // solhint-disable-next-line code-complexity
+    function getWithdrawables()
+        public
+        view
+        returns (bool[] memory)
+    {
+        bool[] memory withdrawables = new bool[](numYieldTokens);
+
+        if (numYieldTokens > 0) { withdrawables[0] = isWithdrawable0; } else { return withdrawables; }
+        if (numYieldTokens > 1) { withdrawables[1] = isWithdrawable1; } else { return withdrawables; }
+        if (numYieldTokens > 2) { withdrawables[2] = isWithdrawable2; } else { return withdrawables; }
+        if (numYieldTokens > 3) { withdrawables[3] = isWithdrawable3; } else { return withdrawables; }
+        if (numYieldTokens > 4) { withdrawables[4] = isWithdrawable4; } else { return withdrawables; }
+        if (numYieldTokens > 5) { withdrawables[5] = isWithdrawable5; } else { return withdrawables; }
+        if (numYieldTokens > 6) { withdrawables[6] = isWithdrawable6; } else { return withdrawables; }
+        if (numYieldTokens > 7) { withdrawables[7] = isWithdrawable7; } else { return withdrawables; }
+        if (numYieldTokens > 8) { withdrawables[8] = isWithdrawable8; } else { return withdrawables; }
+        if (numYieldTokens > 9) { withdrawables[9] = isWithdrawable9; } else { return withdrawables; }
+        if (numYieldTokens > 10) { withdrawables[10] = isWithdrawable10; } else { return withdrawables; }
+        if (numYieldTokens > 11) { withdrawables[11] = isWithdrawable11; } else { return withdrawables; }
+        if (numYieldTokens > 12) { withdrawables[12] = isWithdrawable12; } else { return withdrawables; }
+        if (numYieldTokens > 13) { withdrawables[13] = isWithdrawable13; } else { return withdrawables; }
+        if (numYieldTokens > 14) { withdrawables[14] = isWithdrawable14; } else { return withdrawables; }
+        if (numYieldTokens > 15) { withdrawables[15] = isWithdrawable15; } else { return withdrawables; }
+        if (numYieldTokens > 16) { withdrawables[16] = isWithdrawable16; } else { return withdrawables; }
+        if (numYieldTokens > 17) { withdrawables[17] = isWithdrawable17; } else { return withdrawables; }
+        if (numYieldTokens > 18) { withdrawables[18] = isWithdrawable18; } else { return withdrawables; }
+        if (numYieldTokens > 19) { withdrawables[19] = isWithdrawable19; } else { return withdrawables; }
+
+        return withdrawables;
     }
 
     /// @inheritdoc IYieldTokenStorage
