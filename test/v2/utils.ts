@@ -28,7 +28,11 @@ export type VaultParams = {
   poolTokens: string[];
   weights: string[];
   oracles: string[];
-  yieldTokens: { token: string; underlyingIndex: BigNumberish }[];
+  yieldTokens: {
+    token: string;
+    underlyingIndex: BigNumberish;
+    isWithdrawable: boolean;
+  }[];
   numeraireAssetIndex: number;
   swapFeePercentage: BigNumberish;
   manager: string;

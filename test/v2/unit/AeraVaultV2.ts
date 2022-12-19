@@ -11,6 +11,7 @@ baseContext("Unit Test", function () {
       tokens,
       tokenAddresses,
       yieldTokens,
+      isWithdrawable,
       underlyingIndexes,
       sortedTokens,
       oracles,
@@ -24,6 +25,7 @@ baseContext("Unit Test", function () {
     this.tokens = tokens;
     this.tokenAddresses = tokenAddresses;
     this.yieldTokens = yieldTokens;
+    this.isWithdrawable = isWithdrawable;
     this.underlyingIndexes = underlyingIndexes;
     this.sortedTokens = sortedTokens;
     this.oracles = oracles;

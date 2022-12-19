@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { ONE, PRICE_DEVIATION } from "../../constants";
 import { toWei, tokenValueArray, tokenWithValues } from "../../utils";
@@ -146,9 +147,29 @@ export function testWithdraw(): void {
               .sub(newManagersFeeTotal[j])
               .add(managersFeeTotal[j]),
           );
-          expect(newAdminBalances[j]).to.equal(
-            adminBalances[j].add(amounts[j]),
-          );
+
+          if (
+            i < this.poolTokens.length ||
+            this.isWithdrawable[i - this.poolTokens.length]
+          ) {
+            expect(newAdminBalances[j]).to.equal(
+              adminBalances[j].add(amounts[j]),
+            );
+          } else {
+            if (j == i) {
+              expect(newAdminBalances[j]).to.equal(adminBalances[j]);
+            } else if (
+              j == this.underlyingIndexes[i - this.poolTokens.length]
+            ) {
+              expect(newAdminBalances[j]).to.equal(
+                adminBalances[j].add(amounts[j]).add(amounts[i]),
+              );
+            } else {
+              expect(newAdminBalances[j]).to.equal(
+                adminBalances[j].add(amounts[j]),
+              );
+            }
+          }
         }
 
         holdings = newHoldings;
@@ -219,7 +240,25 @@ export function testWithdraw(): void {
             .sub(newManagersFeeTotal[i])
             .add(managersFeeTotal[i]),
         );
-        expect(newAdminBalances[i]).to.equal(adminBalances[i].add(amounts[i]));
+        if (i < this.poolTokens.length) {
+          let poolTokenWithdrawnAmount = BigNumber.from(0);
+          for (let j = 0; j < this.yieldTokens.length; j++) {
+            if (this.underlyingIndexes[j] == i && !this.isWithdrawable[j]) {
+              poolTokenWithdrawnAmount = poolTokenWithdrawnAmount.add(
+                amounts[j + this.poolTokens.length],
+              );
+            }
+          }
+          expect(newAdminBalances[i]).to.equal(
+            adminBalances[i].add(amounts[i]).add(poolTokenWithdrawnAmount),
+          );
+        } else if (this.isWithdrawable[i - this.poolTokens.length]) {
+          expect(newAdminBalances[i]).to.equal(
+            adminBalances[i].add(amounts[i]),
+          );
+        } else {
+          expect(newAdminBalances[i]).to.equal(adminBalances[i]);
+        }
       }
     });
 
@@ -285,7 +324,25 @@ export function testWithdraw(): void {
             .sub(newManagersFeeTotal[i])
             .add(managersFeeTotal[i]),
         );
-        expect(newAdminBalances[i]).to.equal(adminBalances[i].add(amounts[i]));
+        if (i < this.poolTokens.length) {
+          let poolTokenWithdrawnAmount = BigNumber.from(0);
+          for (let j = 0; j < this.yieldTokens.length; j++) {
+            if (this.underlyingIndexes[j] == i && !this.isWithdrawable[j]) {
+              poolTokenWithdrawnAmount = poolTokenWithdrawnAmount.add(
+                amounts[j + this.poolTokens.length],
+              );
+            }
+          }
+          expect(newAdminBalances[i]).to.equal(
+            adminBalances[i].add(amounts[i]).add(poolTokenWithdrawnAmount),
+          );
+        } else if (this.isWithdrawable[i - this.poolTokens.length]) {
+          expect(newAdminBalances[i]).to.equal(
+            adminBalances[i].add(amounts[i]),
+          );
+        } else {
+          expect(newAdminBalances[i]).to.equal(adminBalances[i]);
+        }
       }
     });
   });
