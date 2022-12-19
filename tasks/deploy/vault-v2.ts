@@ -60,13 +60,14 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
 
     // Generate temporary weights for pool creation
     // Token weights will be adjusted at initialization
-    const avgWeight = toWei(1).div(vaultConfig.poolTokens.length);
-    const weights = Array.from({ length: vaultConfig.poolTokens.length }, _ =>
+    const numPoolTokens = vaultConfig.poolTokens.length;
+    const avgWeight = toWei(1).div(numPoolTokens);
+    const weights = Array.from({ length: numPoolTokens }, _ =>
       avgWeight.toString(),
     );
     // Make the sum of weights be one
     weights[0] = toWei(1)
-      .sub(avgWeight.mul(vaultConfig.poolTokens.length))
+      .sub(avgWeight.mul(numPoolTokens))
       .add(weights[0])
       .toString();
     vaultConfig.weights = weights;
@@ -84,18 +85,18 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
         );
     }
 
-    if (vaultConfig.poolTokens.length < 2) {
+    if (numPoolTokens < 2) {
       console.error("Number of tokens should be at least two");
       return;
     }
 
-    if (vaultConfig.poolTokens.length != vaultConfig.oracles.length) {
+    if (numPoolTokens != vaultConfig.oracles.length) {
       console.error("Number of tokens and oracles should be same");
       return;
     }
 
     const [sortedTokens] = assetHelpers.sortTokens(vaultConfig.poolTokens);
-    for (let i = 0; i < vaultConfig.poolTokens.length; i++) {
+    for (let i = 0; i < numPoolTokens; i++) {
       if (vaultConfig.poolTokens[i] !== sortedTokens[i]) {
         console.error("Tokens should be sorted by address in ascending order");
         return;

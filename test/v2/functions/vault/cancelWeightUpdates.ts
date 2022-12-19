@@ -18,11 +18,11 @@ export function testCancelWeightUpdates(): void {
   it("should be possible to call cancelWeightUpdates", async function () {
     const timestamp = await getCurrentTime();
     const endWeights = [];
-    const avgWeights = ONE.div(this.tokens.length);
+    const avgWeights = ONE.div(this.numTokens);
     const startTime = timestamp + 10;
     const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
-    for (let i = 0; i < this.tokens.length; i += 2) {
-      if (i < this.tokens.length - 1) {
+    for (let i = 0; i < this.numTokens; i += 2) {
+      if (i < this.numTokens - 1) {
         endWeights.push(avgWeights.add(toWei((i + 1) / 100)));
         endWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
       } else {
@@ -53,7 +53,7 @@ export function testCancelWeightUpdates(): void {
 
     const currentWeights = await this.vault.getNormalizedWeights();
 
-    for (let i = 0; i < this.tokens.length; i++) {
+    for (let i = 0; i < this.numTokens; i++) {
       expect(newWeights[i]).to.equal(currentWeights[i]);
     }
   });

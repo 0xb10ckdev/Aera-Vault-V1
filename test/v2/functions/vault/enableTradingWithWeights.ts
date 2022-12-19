@@ -17,8 +17,8 @@ export function testEnableTradingWithWeights(): void {
           .enableTradingWithWeights(
             tokenValueArray(
               this.tokenAddresses,
-              ONE.div(this.tokens.length),
-              this.tokens.length,
+              ONE.div(this.numTokens),
+              this.numTokens,
             ),
           ),
       ).to.be.revertedWith("Ownable: caller is not the owner");
@@ -31,8 +31,8 @@ export function testEnableTradingWithWeights(): void {
         this.vault.enableTradingWithWeights(
           tokenValueArray(
             this.unsortedTokens,
-            ONE.div(this.tokens.length),
-            this.tokens.length,
+            ONE.div(this.numTokens),
+            this.numTokens,
           ),
         ),
       ).to.be.revertedWith("Aera__DifferentTokensInPosition");
@@ -45,8 +45,8 @@ export function testEnableTradingWithWeights(): void {
         this.vault.enableTradingWithWeights(
           tokenValueArray(
             this.tokenAddresses,
-            ONE.div(this.tokens.length).sub(1),
-            this.tokens.length,
+            ONE.div(this.numTokens).sub(1),
+            this.numTokens,
           ),
         ),
       ).to.be.revertedWith("Aera__SumOfWeightIsNotOne");
@@ -57,8 +57,8 @@ export function testEnableTradingWithWeights(): void {
         this.vault.enableTradingWithWeights(
           tokenValueArray(
             this.tokenAddresses,
-            ONE.div(this.tokens.length),
-            this.tokens.length,
+            ONE.div(this.numTokens),
+            this.numTokens,
           ),
         ),
       ).to.be.revertedWith("Aera__PoolSwapIsAlreadyEnabled");
@@ -69,9 +69,9 @@ export function testEnableTradingWithWeights(): void {
     await this.vault.disableTrading();
 
     const endWeights = [];
-    const avgWeights = ONE.div(this.tokens.length);
-    for (let i = 0; i < this.tokens.length; i += 2) {
-      if (i < this.tokens.length - 1) {
+    const avgWeights = ONE.div(this.numTokens);
+    for (let i = 0; i < this.numTokens; i += 2) {
+      if (i < this.numTokens - 1) {
         endWeights.push(avgWeights.add(toWei((i + 1) / 100)));
         endWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
       } else {
@@ -90,15 +90,15 @@ export function testEnableTradingWithWeights(): void {
       .withArgs(currentTime, normalizeWeights(endWeights));
 
     const endPoolWeights = normalizeWeights(
-      normalizeWeights(endWeights).slice(0, this.poolTokens.length),
+      normalizeWeights(endWeights).slice(0, this.numPoolTokens),
     );
     const currentWeights = await this.vault.getNormalizedWeights();
     const currentPoolWeights = normalizeWeights(
-      currentWeights.slice(0, this.poolTokens.length),
+      currentWeights.slice(0, this.numPoolTokens),
     );
 
     expect(await this.vault.isSwapEnabled()).to.equal(true);
-    for (let i = 0; i < this.poolTokens.length; i++) {
+    for (let i = 0; i < this.numPoolTokens; i++) {
       expect(endPoolWeights[i]).to.be.closeTo(
         currentPoolWeights[i],
         DEVIATION,

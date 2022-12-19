@@ -25,7 +25,7 @@ export function testUpdateWeightsGradually(): void {
         this.vault.updateWeightsGradually(
           tokenWithValues(
             this.tokenAddresses,
-            normalizeWeights(valueArray(ONE, this.tokens.length)),
+            normalizeWeights(valueArray(ONE, this.numTokens)),
           ),
           0,
           1,
@@ -41,7 +41,7 @@ export function testUpdateWeightsGradually(): void {
           .updateWeightsGradually(
             tokenWithValues(
               this.tokenAddresses,
-              normalizeWeights(valueArray(ONE, this.tokens.length - 1)),
+              normalizeWeights(valueArray(ONE, this.numTokens - 1)),
             ),
             timestamp + 10,
             timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 10,
@@ -57,7 +57,7 @@ export function testUpdateWeightsGradually(): void {
           .updateWeightsGradually(
             tokenWithValues(
               this.unsortedTokens,
-              normalizeWeights(valueArray(ONE, this.tokens.length)),
+              normalizeWeights(valueArray(ONE, this.numTokens)),
             ),
             timestamp + 10,
             timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 10,
@@ -73,8 +73,8 @@ export function testUpdateWeightsGradually(): void {
           .updateWeightsGradually(
             tokenValueArray(
               this.tokenAddresses,
-              ONE.div(this.tokens.length).sub(1),
-              this.tokens.length,
+              ONE.div(this.numTokens).sub(1),
+              this.numTokens,
             ),
             timestamp + 10,
             timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 10,
@@ -90,7 +90,7 @@ export function testUpdateWeightsGradually(): void {
           .updateWeightsGradually(
             tokenWithValues(
               this.tokenAddresses,
-              normalizeWeights(valueArray(ONE, this.tokens.length)),
+              normalizeWeights(valueArray(ONE, this.numTokens)),
             ),
             2 ** 32,
             timestamp,
@@ -106,7 +106,7 @@ export function testUpdateWeightsGradually(): void {
           .updateWeightsGradually(
             tokenWithValues(
               this.tokenAddresses,
-              normalizeWeights(valueArray(ONE, this.tokens.length)),
+              normalizeWeights(valueArray(ONE, this.numTokens)),
             ),
             timestamp,
             2 ** 32,
@@ -122,7 +122,7 @@ export function testUpdateWeightsGradually(): void {
           .updateWeightsGradually(
             tokenWithValues(
               this.tokenAddresses,
-              normalizeWeights(valueArray(ONE, this.tokens.length)),
+              normalizeWeights(valueArray(ONE, this.numTokens)),
             ),
             timestamp - 2,
             timestamp - 1,
@@ -138,7 +138,7 @@ export function testUpdateWeightsGradually(): void {
           .updateWeightsGradually(
             tokenWithValues(
               this.tokenAddresses,
-              normalizeWeights(valueArray(ONE, this.tokens.length)),
+              normalizeWeights(valueArray(ONE, this.numTokens)),
             ),
             timestamp,
             timestamp + 1,
@@ -154,7 +154,7 @@ export function testUpdateWeightsGradually(): void {
           .updateWeightsGradually(
             tokenWithValues(
               this.tokenAddresses,
-              normalizeWeights(valueArray(ONE, this.tokens.length)),
+              normalizeWeights(valueArray(ONE, this.numTokens)),
             ),
             timestamp - 2,
             timestamp + MINIMUM_WEIGHT_CHANGE_DURATION - 1,
@@ -170,8 +170,8 @@ export function testUpdateWeightsGradually(): void {
           .updateWeightsGradually(
             tokenValueArray(
               this.tokenAddresses,
-              ONE.div(this.tokens.length).sub(1),
-              this.tokens.length,
+              ONE.div(this.numTokens).sub(1),
+              this.numTokens,
             ),
             timestamp,
             timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1,
@@ -183,7 +183,7 @@ export function testUpdateWeightsGradually(): void {
       const timestamp = await getCurrentTime();
       const startWeights = await this.vault.getNormalizedWeights();
       const targetWeight0 = normalizeWeights(
-        startWeights.slice(0, this.poolTokens.length),
+        startWeights.slice(0, this.numPoolTokens),
       )[0]
         .mul(ONE)
         .div(MAX_WEIGHT_CHANGE_RATIO + 10)
@@ -191,10 +191,10 @@ export function testUpdateWeightsGradually(): void {
       const targetWeights = normalizeWeights([
         targetWeight0,
         ...valueArray(
-          ONE.sub(targetWeight0).div(this.poolTokens.length - 1),
-          this.poolTokens.length - 1,
+          ONE.sub(targetWeight0).div(this.numPoolTokens - 1),
+          this.numPoolTokens - 1,
         ),
-        ...startWeights.slice(this.poolTokens.length, this.tokens.length),
+        ...startWeights.slice(this.numPoolTokens, this.numTokens),
       ]);
 
       await expect(
@@ -211,9 +211,9 @@ export function testUpdateWeightsGradually(): void {
     it("when weight is less than minimum", async function () {
       const token0TargetWeight = toWei(0.009);
       const weights = await this.vault.getNormalizedWeights();
-      const poolWeights = weights.slice(0, this.poolTokens.length);
+      const poolWeights = weights.slice(0, this.numPoolTokens);
       const normalizedPoolWeights = normalizeWeights(
-        weights.slice(0, this.poolTokens.length),
+        weights.slice(0, this.numPoolTokens),
       );
       let poolWeightSum = toWei(0);
       let normalizedPoolWeightSum = toWei(0);
@@ -235,8 +235,8 @@ export function testUpdateWeightsGradually(): void {
         ...valueArray(
           normalizedPoolWeightSum
             .sub(token0TargetWeight)
-            .div(this.poolTokens.length - 1),
-          this.poolTokens.length - 1,
+            .div(this.numPoolTokens - 1),
+          this.numPoolTokens - 1,
         ),
       ];
       const targetWeights = normalizeWeights([
@@ -245,7 +245,7 @@ export function testUpdateWeightsGradually(): void {
             .mul(poolWeightSum)
             .div(normalizedPoolWeightSum),
         ),
-        ...weights.slice(this.poolTokens.length, this.tokens.length),
+        ...weights.slice(this.numPoolTokens, this.numTokens),
       ]);
 
       const timestamp = await getCurrentTime();
@@ -266,27 +266,27 @@ export function testUpdateWeightsGradually(): void {
     it("when no yield tokens should be adjusted", async function () {
       const startWeights = await this.vault.getNormalizedWeights();
       const startPoolWeights = normalizeWeights(
-        startWeights.slice(0, this.poolTokens.length),
+        startWeights.slice(0, this.numPoolTokens),
       );
       const timestamp = await getCurrentTime();
       const endWeights = [];
       const startTime = timestamp + 10;
       const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
 
-      for (let i = 0; i < this.poolTokens.length; i += 2) {
-        if (i < this.poolTokens.length - 1) {
+      for (let i = 0; i < this.numPoolTokens; i += 2) {
+        if (i < this.numPoolTokens - 1) {
           endWeights.push(startWeights[i].add(toWei((i + 1) / 100)));
           endWeights.push(startWeights[i + 1].sub(toWei((i + 1) / 100)));
         } else {
           endWeights.push(startWeights[i]);
         }
       }
-      for (let i = this.poolTokens.length; i < this.tokens.length; i++) {
+      for (let i = this.numPoolTokens; i < this.numTokens; i++) {
         endWeights.push(startWeights[i]);
       }
 
       const endPoolWeights = normalizeWeights(
-        normalizeWeights(endWeights).slice(0, this.poolTokens.length),
+        normalizeWeights(endWeights).slice(0, this.numPoolTokens),
       );
 
       await expect(
@@ -305,7 +305,7 @@ export function testUpdateWeightsGradually(): void {
 
       const currentWeights = await this.vault.getNormalizedWeights();
       const currentPoolWeights = normalizeWeights(
-        currentWeights.slice(0, this.poolTokens.length),
+        currentWeights.slice(0, this.numPoolTokens),
       );
 
       const currentTime = await getCurrentTime();
@@ -313,7 +313,7 @@ export function testUpdateWeightsGradually(): void {
         endTime - startTime,
       );
 
-      for (let i = 0; i < this.poolTokens.length; i++) {
+      for (let i = 0; i < this.numPoolTokens; i++) {
         const weightDelta = endPoolWeights[i]
           .sub(startPoolWeights[i])
           .mul(ptcProgress)
@@ -339,12 +339,12 @@ export function testUpdateWeightsGradually(): void {
         it("update weights of only underlying tokens and yield tokens", async function () {
           const weights = await this.vault.getNormalizedWeights();
           const targetWeights = [...weights];
-          for (let i = 0; i < this.yieldTokens.length; i++) {
+          for (let i = 0; i < this.numYieldTokens; i++) {
             targetWeights[this.underlyingIndexes[i]] = targetWeights[
               this.underlyingIndexes[i]
             ].sub(toWei(0.01));
-            targetWeights[i + this.poolTokens.length] = targetWeights[
-              i + this.poolTokens.length
+            targetWeights[i + this.numPoolTokens] = targetWeights[
+              i + this.numPoolTokens
             ].add(toWei(0.01));
           }
 
@@ -362,7 +362,7 @@ export function testUpdateWeightsGradually(): void {
 
           const newWeights = await this.vault.getNormalizedWeights();
 
-          for (let i = 0; i < this.tokens.length; i++) {
+          for (let i = 0; i < this.numTokens; i++) {
             expect(newWeights[i]).to.be.closeTo(targetWeights[i], DEVIATION);
           }
         });
@@ -370,27 +370,24 @@ export function testUpdateWeightsGradually(): void {
         it("update weights of all tokens", async function () {
           const weights = await this.vault.getNormalizedWeights();
           let targetWeights = [...weights];
-          for (let i = 0; i < this.yieldTokens.length; i++) {
+          for (let i = 0; i < this.numYieldTokens; i++) {
             targetWeights[this.underlyingIndexes[i]] = targetWeights[
               this.underlyingIndexes[i]
             ].sub(toWei(0.01));
-            targetWeights[i + this.poolTokens.length] = targetWeights[
-              i + this.poolTokens.length
+            targetWeights[i + this.numPoolTokens] = targetWeights[
+              i + this.numPoolTokens
             ].add(toWei(0.01));
           }
 
           let weightSum = ONE;
           let numAdjustedWeight = 0;
-          for (let i = 0; i < this.tokens.length; i++) {
-            if (
-              i > this.poolTokens.length ||
-              this.underlyingIndexes.includes(i)
-            ) {
+          for (let i = 0; i < this.numTokens; i++) {
+            if (i > this.numPoolTokens || this.underlyingIndexes.includes(i)) {
               weightSum = weightSum.sub(targetWeights[i]);
               numAdjustedWeight++;
             }
           }
-          for (let i = 0; i < this.poolTokens.length; i++) {
+          for (let i = 0; i < this.numPoolTokens; i++) {
             if (!this.underlyingIndexes.includes(i)) {
               targetWeights[i] = weightSum.div(numAdjustedWeight);
             }
@@ -412,8 +409,8 @@ export function testUpdateWeightsGradually(): void {
 
           let newWeights = await this.vault.getNormalizedWeights();
 
-          for (let i = 0; i < this.tokens.length; i++) {
-            if (i >= this.poolTokens.length) {
+          for (let i = 0; i < this.numTokens; i++) {
+            if (i >= this.numPoolTokens) {
               expect(newWeights[i]).to.be.closeTo(targetWeights[i], DEVIATION);
             } else if (!this.underlyingIndexes.includes(i)) {
               expect(newWeights[i]).to.be.closeTo(weights[i], DEVIATION);
@@ -424,7 +421,7 @@ export function testUpdateWeightsGradually(): void {
 
           newWeights = await this.vault.getNormalizedWeights();
 
-          for (let i = 0; i < this.tokens.length; i++) {
+          for (let i = 0; i < this.numTokens; i++) {
             expect(newWeights[i]).to.be.closeTo(targetWeights[i], DEVIATION);
           }
         });
@@ -435,27 +432,27 @@ export function testUpdateWeightsGradually(): void {
           beforeEach(async function () {
             const weights = await this.vault.getNormalizedWeights();
             targetWeights = [...weights];
-            for (let i = 0; i < this.yieldTokens.length; i++) {
+            for (let i = 0; i < this.numYieldTokens; i++) {
               targetWeights[this.underlyingIndexes[i]] = targetWeights[
                 this.underlyingIndexes[i]
               ].sub(toWei(0.02));
-              targetWeights[i + this.poolTokens.length] = targetWeights[
-                i + this.poolTokens.length
+              targetWeights[i + this.numPoolTokens] = targetWeights[
+                i + this.numPoolTokens
               ].add(toWei(0.02));
             }
 
             let weightSum = ONE;
             let numAdjustedWeight = 0;
-            for (let i = 0; i < this.tokens.length; i++) {
+            for (let i = 0; i < this.numTokens; i++) {
               if (
-                i > this.poolTokens.length ||
+                i > this.numPoolTokens ||
                 this.underlyingIndexes.includes(i)
               ) {
                 weightSum = weightSum.sub(targetWeights[i]);
                 numAdjustedWeight++;
               }
             }
-            for (let i = 0; i < this.poolTokens.length; i++) {
+            for (let i = 0; i < this.numPoolTokens; i++) {
               if (!this.underlyingIndexes.includes(i)) {
                 targetWeights[i] = weightSum.div(numAdjustedWeight);
               }
@@ -465,7 +462,7 @@ export function testUpdateWeightsGradually(): void {
           });
 
           it("deposit only maximum deposit amount", async function () {
-            for (let i = 0; i < this.yieldTokens.length; i++) {
+            for (let i = 0; i < this.numYieldTokens; i++) {
               await this.yieldTokens[i].setMaxDepositAmount(
                 toWei(0.001),
                 true,
@@ -488,7 +485,7 @@ export function testUpdateWeightsGradually(): void {
 
             const newHoldings = await this.vault.getHoldings();
 
-            for (let i = 0; i < this.tokens.length; i++) {
+            for (let i = 0; i < this.numTokens; i++) {
               if (this.underlyingIndexes.includes(i)) {
                 expect(newHoldings[i]).to.equal(holdings[i].sub(toWei(0.001)));
               }
@@ -496,7 +493,7 @@ export function testUpdateWeightsGradually(): void {
           });
 
           it("deposit no assets when maximum deposit amount is zero", async function () {
-            for (let i = 0; i < this.yieldTokens.length; i++) {
+            for (let i = 0; i < this.numYieldTokens; i++) {
               await this.yieldTokens[i].setMaxDepositAmount(toWei(0), true);
             }
 
@@ -516,7 +513,7 @@ export function testUpdateWeightsGradually(): void {
 
             const newHoldings = await this.vault.getHoldings();
 
-            for (let i = 0; i < this.tokens.length; i++) {
+            for (let i = 0; i < this.numTokens; i++) {
               if (this.underlyingIndexes.includes(i)) {
                 expect(newHoldings[i]).to.equal(holdings[i]);
               }
@@ -524,7 +521,7 @@ export function testUpdateWeightsGradually(): void {
           });
 
           it("deposit no assets when maxDeposit reverts", async function () {
-            for (let i = 0; i < this.yieldTokens.length; i++) {
+            for (let i = 0; i < this.numYieldTokens; i++) {
               await this.yieldTokens[i].pause();
             }
 
@@ -544,7 +541,7 @@ export function testUpdateWeightsGradually(): void {
 
             const newHoldings = await this.vault.getHoldings();
 
-            for (let i = 0; i < this.tokens.length; i++) {
+            for (let i = 0; i < this.numTokens; i++) {
               if (this.underlyingIndexes.includes(i)) {
                 expect(newHoldings[i]).to.equal(holdings[i]);
               }
@@ -556,12 +553,12 @@ export function testUpdateWeightsGradually(): void {
       it("when underlying tokens are not enough to mint yield tokens", async function () {
         const weights = await this.vault.getNormalizedWeights();
         let poolWeights = normalizeWeights(
-          weights.slice(0, this.poolTokens.length),
+          weights.slice(0, this.numPoolTokens),
         );
         let targetWeights = [...weights];
-        for (let i = 0; i < this.yieldTokens.length; i++) {
+        for (let i = 0; i < this.numYieldTokens; i++) {
           targetWeights[this.underlyingIndexes[i]] = toWei(0.1);
-          targetWeights[i + this.poolTokens.length] = toWei(0.9);
+          targetWeights[i + this.numPoolTokens] = toWei(0.9);
           poolWeights[this.underlyingIndexes[i]] = MIN_WEIGHT;
         }
 
@@ -582,19 +579,19 @@ export function testUpdateWeightsGradually(): void {
 
         let newWeights = await this.vault.getNormalizedWeights();
         const newPoolWeights = normalizeWeights(
-          newWeights.slice(0, this.poolTokens.length),
+          newWeights.slice(0, this.numPoolTokens),
         );
 
-        for (let i = 0; i < this.poolTokens.length; i++) {
+        for (let i = 0; i < this.numPoolTokens; i++) {
           expect(newPoolWeights[i]).to.be.closeTo(poolWeights[i], DEVIATION);
         }
-        for (let i = 0; i < this.yieldTokens.length; i++) {
+        for (let i = 0; i < this.numYieldTokens; i++) {
           expect(
-            newWeights[i + this.poolTokens.length].add(
+            newWeights[i + this.numPoolTokens].add(
               newWeights[this.underlyingIndexes[i]],
             ),
           ).to.be.closeTo(
-            weights[i + this.poolTokens.length].add(
+            weights[i + this.numPoolTokens].add(
               weights[this.underlyingIndexes[i]],
             ),
             DEVIATION,
@@ -605,13 +602,13 @@ export function testUpdateWeightsGradually(): void {
 
         newWeights = await this.vault.getNormalizedWeights();
 
-        for (let i = 0; i < this.yieldTokens.length; i++) {
+        for (let i = 0; i < this.numYieldTokens; i++) {
           expect(
-            newWeights[i + this.poolTokens.length].add(
+            newWeights[i + this.numPoolTokens].add(
               newWeights[this.underlyingIndexes[i]],
             ),
           ).to.be.closeTo(
-            targetWeights[i + this.poolTokens.length].add(
+            targetWeights[i + this.numPoolTokens].add(
               targetWeights[this.underlyingIndexes[i]],
             ),
             DEVIATION,
@@ -623,12 +620,12 @@ export function testUpdateWeightsGradually(): void {
         it("update weights of only underlying tokens and yield tokens", async function () {
           const weights = await this.vault.getNormalizedWeights();
           const targetWeights = [...weights];
-          for (let i = 0; i < this.yieldTokens.length; i++) {
+          for (let i = 0; i < this.numYieldTokens; i++) {
             targetWeights[this.underlyingIndexes[i]] = targetWeights[
               this.underlyingIndexes[i]
             ].add(toWei(0.01));
-            targetWeights[i + this.poolTokens.length] = targetWeights[
-              i + this.poolTokens.length
+            targetWeights[i + this.numPoolTokens] = targetWeights[
+              i + this.numPoolTokens
             ].sub(toWei(0.01));
           }
 
@@ -646,7 +643,7 @@ export function testUpdateWeightsGradually(): void {
 
           const newWeights = await this.vault.getNormalizedWeights();
 
-          for (let i = 0; i < this.tokens.length; i++) {
+          for (let i = 0; i < this.numTokens; i++) {
             expect(newWeights[i]).to.be.closeTo(targetWeights[i], DEVIATION);
           }
         });
@@ -654,27 +651,24 @@ export function testUpdateWeightsGradually(): void {
         it("update weights of all tokens", async function () {
           const weights = await this.vault.getNormalizedWeights();
           let targetWeights = [...weights];
-          for (let i = 0; i < this.yieldTokens.length; i++) {
+          for (let i = 0; i < this.numYieldTokens; i++) {
             targetWeights[this.underlyingIndexes[i]] = targetWeights[
               this.underlyingIndexes[i]
             ].add(toWei(0.01));
-            targetWeights[i + this.poolTokens.length] = targetWeights[
-              i + this.poolTokens.length
+            targetWeights[i + this.numPoolTokens] = targetWeights[
+              i + this.numPoolTokens
             ].sub(toWei(0.01));
           }
 
           let weightSum = ONE;
           let numAdjustedWeight = 0;
-          for (let i = 0; i < this.tokens.length; i++) {
-            if (
-              i > this.poolTokens.length ||
-              this.underlyingIndexes.includes(i)
-            ) {
+          for (let i = 0; i < this.numTokens; i++) {
+            if (i > this.numPoolTokens || this.underlyingIndexes.includes(i)) {
               weightSum = weightSum.sub(targetWeights[i]);
               numAdjustedWeight++;
             }
           }
-          for (let i = 0; i < this.poolTokens.length; i++) {
+          for (let i = 0; i < this.numPoolTokens; i++) {
             if (!this.underlyingIndexes.includes(i)) {
               targetWeights[i] = weightSum.div(numAdjustedWeight);
             }
@@ -696,8 +690,8 @@ export function testUpdateWeightsGradually(): void {
 
           let newWeights = await this.vault.getNormalizedWeights();
 
-          for (let i = 0; i < this.tokens.length; i++) {
-            if (i >= this.poolTokens.length) {
+          for (let i = 0; i < this.numTokens; i++) {
+            if (i >= this.numPoolTokens) {
               expect(newWeights[i]).to.be.closeTo(targetWeights[i], DEVIATION);
             } else if (!this.underlyingIndexes.includes(i)) {
               expect(newWeights[i]).to.be.closeTo(weights[i], DEVIATION);
@@ -708,7 +702,7 @@ export function testUpdateWeightsGradually(): void {
 
           newWeights = await this.vault.getNormalizedWeights();
 
-          for (let i = 0; i < this.tokens.length; i++) {
+          for (let i = 0; i < this.numTokens; i++) {
             expect(newWeights[i]).to.be.closeTo(targetWeights[i], DEVIATION);
           }
         });
@@ -719,27 +713,27 @@ export function testUpdateWeightsGradually(): void {
           beforeEach(async function () {
             const weights = await this.vault.getNormalizedWeights();
             targetWeights = [...weights];
-            for (let i = 0; i < this.yieldTokens.length; i++) {
+            for (let i = 0; i < this.numYieldTokens; i++) {
               targetWeights[this.underlyingIndexes[i]] = targetWeights[
                 this.underlyingIndexes[i]
               ].add(toWei(0.02));
-              targetWeights[i + this.poolTokens.length] = targetWeights[
-                i + this.poolTokens.length
+              targetWeights[i + this.numPoolTokens] = targetWeights[
+                i + this.numPoolTokens
               ].sub(toWei(0.02));
             }
 
             let weightSum = ONE;
             let numAdjustedWeight = 0;
-            for (let i = 0; i < this.tokens.length; i++) {
+            for (let i = 0; i < this.numTokens; i++) {
               if (
-                i > this.poolTokens.length ||
+                i > this.numPoolTokens ||
                 this.underlyingIndexes.includes(i)
               ) {
                 weightSum = weightSum.sub(targetWeights[i]);
                 numAdjustedWeight++;
               }
             }
-            for (let i = 0; i < this.poolTokens.length; i++) {
+            for (let i = 0; i < this.numPoolTokens; i++) {
               if (!this.underlyingIndexes.includes(i)) {
                 targetWeights[i] = weightSum.div(numAdjustedWeight);
               }
@@ -749,7 +743,7 @@ export function testUpdateWeightsGradually(): void {
           });
 
           it("withdraw only maximum withdrawal amount", async function () {
-            for (let i = 0; i < this.yieldTokens.length; i++) {
+            for (let i = 0; i < this.numYieldTokens; i++) {
               await this.yieldTokens[i].setMaxWithdrawalAmount(
                 toWei(0.001),
                 true,
@@ -772,7 +766,7 @@ export function testUpdateWeightsGradually(): void {
 
             const newHoldings = await this.vault.getHoldings();
 
-            for (let i = 0; i < this.tokens.length; i++) {
+            for (let i = 0; i < this.numTokens; i++) {
               if (this.underlyingIndexes.includes(i)) {
                 expect(newHoldings[i]).to.equal(holdings[i].add(toWei(0.001)));
               }
@@ -780,7 +774,7 @@ export function testUpdateWeightsGradually(): void {
           });
 
           it("withdraw no assets when maximum withdrawal amount is zero", async function () {
-            for (let i = 0; i < this.yieldTokens.length; i++) {
+            for (let i = 0; i < this.numYieldTokens; i++) {
               await this.yieldTokens[i].setMaxWithdrawalAmount(toWei(0), true);
             }
 
@@ -800,7 +794,7 @@ export function testUpdateWeightsGradually(): void {
 
             const newHoldings = await this.vault.getHoldings();
 
-            for (let i = 0; i < this.tokens.length; i++) {
+            for (let i = 0; i < this.numTokens; i++) {
               if (this.underlyingIndexes.includes(i)) {
                 expect(newHoldings[i]).to.equal(holdings[i]);
               }
@@ -808,7 +802,7 @@ export function testUpdateWeightsGradually(): void {
           });
 
           it("withdraw no assets when maxWithdraw reverts", async function () {
-            for (let i = 0; i < this.yieldTokens.length; i++) {
+            for (let i = 0; i < this.numYieldTokens; i++) {
               await this.yieldTokens[i].pause();
             }
 
@@ -828,7 +822,7 @@ export function testUpdateWeightsGradually(): void {
 
             const newHoldings = await this.vault.getHoldings();
 
-            for (let i = 0; i < this.tokens.length; i++) {
+            for (let i = 0; i < this.numTokens; i++) {
               if (this.underlyingIndexes.includes(i)) {
                 expect(newHoldings[i]).to.equal(holdings[i]);
               }
@@ -843,11 +837,11 @@ export function testUpdateWeightsGradually(): void {
     it("when deposit tokens", async function () {
       const timestamp = await getCurrentTime();
       const endWeights = [];
-      const avgWeights = ONE.div(this.tokens.length);
+      const avgWeights = ONE.div(this.numTokens);
       const startTime = timestamp + 10;
       const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
-      for (let i = 0; i < this.tokens.length; i += 2) {
-        if (i < this.tokens.length - 1) {
+      for (let i = 0; i < this.numTokens; i += 2) {
+        if (i < this.numTokens - 1) {
           endWeights.push(avgWeights.add(toWei((i + 1) / 100)));
           endWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
         } else {
@@ -864,7 +858,7 @@ export function testUpdateWeightsGradually(): void {
         );
 
       await this.vault.depositRiskingArbitrage(
-        tokenValueArray(this.tokenAddresses, toWei(50), this.tokens.length),
+        tokenValueArray(this.tokenAddresses, toWei(50), this.numTokens),
       );
 
       const newWeights = await this.vault.getNormalizedWeights();
@@ -873,23 +867,23 @@ export function testUpdateWeightsGradually(): void {
 
       const currentWeights = await this.vault.getNormalizedWeights();
 
-      for (let i = 0; i < this.tokens.length; i++) {
+      for (let i = 0; i < this.numTokens; i++) {
         expect(newWeights[i]).to.equal(currentWeights[i]);
       }
     });
 
     it("when withdraw tokens", async function () {
       await this.vault.depositRiskingArbitrage(
-        tokenValueArray(this.tokenAddresses, toWei(50), this.tokens.length),
+        tokenValueArray(this.tokenAddresses, toWei(50), this.numTokens),
       );
 
       const timestamp = await getCurrentTime();
       const endWeights = [];
-      const avgWeights = ONE.div(this.tokens.length);
+      const avgWeights = ONE.div(this.numTokens);
       const startTime = timestamp + 10;
       const endTime = timestamp + MINIMUM_WEIGHT_CHANGE_DURATION + 1000;
-      for (let i = 0; i < this.tokens.length; i += 2) {
-        if (i < this.tokens.length - 1) {
+      for (let i = 0; i < this.numTokens; i += 2) {
+        if (i < this.numTokens - 1) {
           endWeights.push(avgWeights.add(toWei((i + 1) / 100)));
           endWeights.push(avgWeights.sub(toWei((i + 1) / 100)));
         } else {
@@ -906,7 +900,7 @@ export function testUpdateWeightsGradually(): void {
         );
 
       await this.vault.withdraw(
-        tokenValueArray(this.tokenAddresses, toWei(10), this.tokens.length),
+        tokenValueArray(this.tokenAddresses, toWei(10), this.numTokens),
       );
 
       const newWeights = await this.vault.getNormalizedWeights();
@@ -915,7 +909,7 @@ export function testUpdateWeightsGradually(): void {
 
       const currentWeights = await this.vault.getNormalizedWeights();
 
-      for (let i = 0; i < this.tokens.length; i++) {
+      for (let i = 0; i < this.numTokens; i++) {
         expect(newWeights[i]).to.equal(currentWeights[i]);
       }
     });
