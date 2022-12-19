@@ -13,4 +13,7 @@ interface IPutOptionsPricer is IERC165 {
 
     /// @notice Returns the spot price of assets (options underlying vs. options strike asset)
     function getSpot() external view returns (uint256 spotPrice);
+
+    /// @notice Returns decimals for returned values
+    function decimals() external view returns (uint8);
 }

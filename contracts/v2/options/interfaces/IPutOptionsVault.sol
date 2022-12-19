@@ -74,10 +74,24 @@ interface IPutOptionsVault is IERC4626 {
     error Aera__BuyOrderIsNotActive();
     error Aera__SellOrderIsNotActive();
     error Aera__InsufficientBalanceToSell(uint256 requested, uint256 balance);
-    error Aera__OrderPremiumTooExpensive(uint256 premium, uint256 amount);
-    error Aera__OrderPremiumTooCheap(uint256 premium, uint256 amount);
+    error Aera__NotEnoughOTokens(uint256 expected, uint256 actual);
+    error Aera__OptionPremiumTooCheap(uint256 premium, uint256 amount);
     error Aera__UnknownOToken(address oToken);
     error Aera__DiscountExceedsMaximumValue(uint256 discount, uint256 maximum);
+    error Aera__ExpectedPutOption();
+    error Aera__InvalidUnderlyingAsset(address expected, address actual);
+    error Aera__InvalidCollateralAsset(address expected, address actual);
+    error Aera__InvalidStrikeAsset(address expected, address actual);
+    error Aera__ExpiryTimestampIsNotInRange(
+        uint256 min,
+        uint256 max,
+        uint256 actual
+    );
+    error Aera__StrikePriceIsNotInRange(
+        uint256 min,
+        uint256 max,
+        uint256 actual
+    );
 
     /// STRUCTS ///
 
@@ -170,13 +184,10 @@ interface IPutOptionsVault is IERC4626 {
 
     /// @notice Allows broker to fill current buy order. Note that order will be filled as long as
     ///         expiry and strike price of the oToken is within the range specified by buy order.
-    function fillBuyOrder(
-        address oToken,
-        uint256 amount
-    ) external returns (bool filled);
+    function fillBuyOrder(address oToken, uint256 amount) external;
 
     /// @notice Allows broker to fill current sell order
-    function fillSellOrder(uint256 amount) external returns (bool filled);
+    function fillSellOrder(uint256 amount) external;
 
     /// @notice Removes the current buy order
     function cancelBuyOrder() external;

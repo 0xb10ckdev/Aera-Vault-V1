@@ -1,4 +1,3 @@
-import { PutOptionsPricerMock } from "./../../typechain/PutOptionsPricerMock.d";
 // eslint-disable @typescript-eslint/no-explicit-any
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { Fixture } from "ethereum-waffle";
@@ -9,8 +8,11 @@ import {
   IERC20,
   IPutOptionsPricer,
   ManagedPoolFactory,
+  MockGammaOracle,
+  MockOTokenController,
   OracleMock,
   PermissiveWithdrawalValidator,
+  PutOptionsPricerMock,
   PutOptionsVault,
   WithdrawalValidatorMock,
 } from "../../typechain";
@@ -60,4 +62,6 @@ export interface Signers {
 
 export interface Mocks {
   pricer: PutOptionsPricerMock;
+  oTokenController: MockOTokenController;
+  gammaOracle: MockGammaOracle;
 }

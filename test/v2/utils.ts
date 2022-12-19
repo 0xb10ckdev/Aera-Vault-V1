@@ -200,3 +200,23 @@ export const setNextBlockTimestamp = async (
 ): Promise<void> => {
   await ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
 };
+
+export const adjustValue = (
+  value: BigNumber,
+  valueDecimals: number,
+  targetDecimals: number,
+): BigNumber => {
+  if (valueDecimals === targetDecimals) return value;
+  if (valueDecimals < targetDecimals)
+    return value.mul(
+      BigNumber.from(10).pow(
+        BigNumber.from(targetDecimals).sub(BigNumber.from(valueDecimals)),
+      ),
+    );
+
+  return value.div(
+    BigNumber.from(10).pow(
+      BigNumber.from(valueDecimals).sub(BigNumber.from(targetDecimals)),
+    ),
+  );
+};

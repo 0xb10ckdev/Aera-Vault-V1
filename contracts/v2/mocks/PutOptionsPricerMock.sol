@@ -11,6 +11,7 @@ import "../options/pricers/IPutOptionsPricer.sol";
 contract PutOptionsPricerMock is ERC165, IPutOptionsPricer {
     uint256 private _premium;
     uint256 private _spot;
+    uint8 private _decimals = 8;
 
     function supportsInterface(
         bytes4 interfaceId
@@ -34,11 +35,20 @@ contract PutOptionsPricerMock is ERC165, IPutOptionsPricer {
         return _spot;
     }
 
+    /// @inheritdoc IPutOptionsPricer
+    function decimals() external view override returns (uint8) {
+        return _decimals;
+    }
+
     function setPremium(uint256 premium) external {
         _premium = premium;
     }
 
     function setSpot(uint256 spot) external {
         _spot = spot;
+    }
+
+    function setDecimals(uint8 decimals_) external {
+        _decimals = decimals_;
     }
 }

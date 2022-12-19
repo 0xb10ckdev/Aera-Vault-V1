@@ -22,4 +22,9 @@ contract PremiaOptionsPricer is ERC165, IPutOptionsPricer {
 
     /// @inheritdoc IPutOptionsPricer
     function getSpot() external view override returns (uint256 spotPrice) {}
+
+    /// @inheritdoc IPutOptionsPricer
+    function decimals() external pure override returns (uint8) {
+        return 8;
+    }
 }

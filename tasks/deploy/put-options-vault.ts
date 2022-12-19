@@ -1,9 +1,5 @@
 import { BigNumberish } from "ethers";
 import { task, types } from "hardhat/config";
-import {
-  IERC20Metadata__factory,
-  PutOptionsVault__factory,
-} from "../../typechain";
 
 export type DeployPutOptionsVault = {
   controller: string;
@@ -90,17 +86,19 @@ task(
       const { admin } = await ethers.getNamedSigners();
 
       if (
-        (await IERC20Metadata__factory.connect(
-          underlyingAsset,
-          admin,
+        (await (
+          await ethers.getContractAt("IERC20Metadata", underlyingAsset, admin)
         ).symbol()) !== "USDC"
       ) {
         throw new Error("Expected 'underlyingAsset' to be USDC token");
       }
       if (
-        (await IERC20Metadata__factory.connect(
-          underlyingOptionsAsset,
-          admin,
+        (await (
+          await ethers.getContractAt(
+            "IERC20Metadata",
+            underlyingOptionsAsset,
+            admin,
+          )
         ).symbol()) !== "WETH"
       ) {
         throw new Error("Expected 'underlyingOptionsAsset' to be WETH token");
@@ -134,6 +132,6 @@ task(
         );
       }
 
-      return PutOptionsVault__factory.connect(vault.address, admin);
+      return vault.address;
     },
   );

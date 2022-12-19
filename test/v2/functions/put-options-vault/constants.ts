@@ -6,7 +6,7 @@ export const DEFAULT_ITM_OPTION_PRICE_RATIO = toWei(0.99); // ITM option price r
 export const EXPIRY_DELTA_MIN = 3600;
 export const EXPIRY_DELTA_MAX = 7200;
 
-export const STRIKE_MULTIPLIER_MIN = 0.95;
+export const STRIKE_MULTIPLIER_MIN = 0.7;
 export const STRIKE_MULTIPLIER_MAX = 0.99;
 
 export const MIN_ORDER_ACTIVE = 60 * 60 * 24 * 3; // 3 days

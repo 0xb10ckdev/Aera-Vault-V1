@@ -14,13 +14,6 @@ interface IOTokenController {
     function getPayout(address _otoken, uint256 _amount) external view returns (uint256);
 
     /**
-     * @dev return if an expired oToken is ready to be settled, only true when price for underlying,
-     * strike and collateral assets at this specific expiry is available in our Oracle module
-     * @param _otoken oToken
-     */
-    function isSettlementAllowed(address _otoken) external view returns (bool);
-
-    /**
      * @dev return if underlying, strike, collateral are all allowed to be settled
      * @param _underlying oToken underlying asset
      * @param _strike oToken strike asset
@@ -34,13 +27,6 @@ interface IOTokenController {
         address _collateral,
         uint256 _expiry
     ) external view returns (bool);
-
-    /**
-     * @notice check if an oToken has expired
-     * @param _otoken oToken address
-     * @return True if the otoken has expired, False if not
-     */
-    function hasExpired(address _otoken) external view returns (bool);
 
     /**
      * @notice execute a number of actions on specific vaults
