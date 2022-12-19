@@ -17,7 +17,7 @@ export function testEnableTradingRiskingArbitrage(): void {
     const currentWeights = await this.vault.getNormalizedWeights();
 
     expect(await this.vault.isSwapEnabled()).to.equal(true);
-    for (let i = 0; i < this.tokens.length; i++) {
+    for (let i = 0; i < this.numTokens; i++) {
       expect(weights[i]).to.equal(currentWeights[i]);
     }
   });

@@ -13,29 +13,29 @@ import {
 
 export function testClaimManagerFees(): void {
   beforeEach(async function () {
-    for (let i = 0; i < this.tokens.length; i++) {
+    for (let i = 0; i < this.numTokens; i++) {
       await this.tokens[i].approve(this.vault.address, ONE);
     }
 
-    for (let i = 1; i < this.poolTokens.length; i++) {
+    for (let i = 1; i < this.numPoolTokens; i++) {
       await this.oracles[i].setLatestAnswer(toUnit(1, 8));
     }
 
     await this.vault.initialDeposit(
-      tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
+      tokenValueArray(this.tokenAddresses, ONE, this.numTokens),
       tokenWithValues(
         this.tokenAddresses,
-        normalizeWeights(valueArray(ONE, this.tokens.length)),
+        normalizeWeights(valueArray(ONE, this.numTokens)),
       ),
     );
   });
 
   it("should be reverted to claim manager fees when no available fee", async function () {
-    for (let i = 0; i < this.tokens.length; i++) {
+    for (let i = 0; i < this.numTokens; i++) {
       await this.tokens[i].approve(this.vault.address, toWei(100000));
     }
     await this.vault.depositRiskingArbitrage(
-      tokenValueArray(this.tokenAddresses, toWei(10000), this.tokens.length),
+      tokenValueArray(this.tokenAddresses, toWei(10000), this.numTokens),
     );
 
     await expect(this.vault.claimManagerFees()).to.be.revertedWith(
@@ -45,7 +45,7 @@ export function testClaimManagerFees(): void {
 
   describe("should be possible to claim manager fees", async function () {
     it("when called from current manager", async function () {
-      for (let i = 0; i < this.tokens.length; i++) {
+      for (let i = 0; i < this.numTokens; i++) {
         await this.tokens[i].approve(this.vault.address, toWei(100000));
       }
 
@@ -57,7 +57,7 @@ export function testClaimManagerFees(): void {
         this.signers.manager.address,
       );
       const depositTrx = await this.vault.depositRiskingArbitrage(
-        tokenValueArray(this.tokenAddresses, toWei(10000), this.tokens.length),
+        tokenValueArray(this.tokenAddresses, toWei(10000), this.numTokens),
       );
 
       let currentTime = await getTimestamp(depositTrx.blockNumber);
@@ -98,7 +98,7 @@ export function testClaimManagerFees(): void {
     });
 
     it("when called from old manager", async function () {
-      for (let i = 0; i < this.tokens.length; i++) {
+      for (let i = 0; i < this.numTokens; i++) {
         await this.tokens[i].approve(this.vault.address, toWei(100000));
       }
 
@@ -110,7 +110,7 @@ export function testClaimManagerFees(): void {
         this.signers.manager.address,
       );
       const depositTrx = await this.vault.depositRiskingArbitrage(
-        tokenValueArray(this.tokenAddresses, toWei(10000), this.tokens.length),
+        tokenValueArray(this.tokenAddresses, toWei(10000), this.numTokens),
       );
 
       let currentTime = await getTimestamp(depositTrx.blockNumber);
