@@ -27,9 +27,12 @@ baseContext("Integration Test", function () {
     this.vault = vault;
     this.factory = factory;
     this.poolTokens = poolTokens;
+    this.numPoolTokens = poolTokens.length;
     this.tokens = tokens;
+    this.numTokens = tokens.length;
     this.tokenAddresses = tokenAddresses;
     this.yieldTokens = yieldTokens;
+    this.numYieldTokens = yieldTokens.length;
     this.isWithdrawable = isWithdrawable;
     this.underlyingIndexes = underlyingIndexes;
     this.sortedTokens = sortedTokens;

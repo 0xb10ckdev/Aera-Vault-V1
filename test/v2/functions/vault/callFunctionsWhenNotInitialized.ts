@@ -11,7 +11,7 @@ import {
 
 export function testFunctionCallsWhenNotInitialized(): void {
   beforeEach(async function () {
-    for (let i = 0; i < this.tokens.length; i++) {
+    for (let i = 0; i < this.numTokens; i++) {
       await this.tokens[i].approve(this.vault.address, toWei(2));
     }
   });
@@ -19,7 +19,7 @@ export function testFunctionCallsWhenNotInitialized(): void {
   it("when call deposit", async function () {
     await expect(
       this.vault.deposit(
-        tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
+        tokenValueArray(this.tokenAddresses, ONE, this.numTokens),
       ),
     ).to.be.revertedWith("Aera__VaultNotInitialized");
   });
@@ -27,7 +27,7 @@ export function testFunctionCallsWhenNotInitialized(): void {
   it("when call depositIfBalanceUnchanged", async function () {
     await expect(
       this.vault.depositIfBalanceUnchanged(
-        tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
+        tokenValueArray(this.tokenAddresses, ONE, this.numTokens),
       ),
     ).to.be.revertedWith("Aera__VaultNotInitialized");
   });
@@ -35,7 +35,7 @@ export function testFunctionCallsWhenNotInitialized(): void {
   it("when call depositRiskingArbitrage", async function () {
     await expect(
       this.vault.depositRiskingArbitrage(
-        tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
+        tokenValueArray(this.tokenAddresses, ONE, this.numTokens),
       ),
     ).to.be.revertedWith("Aera__VaultNotInitialized");
   });
@@ -43,7 +43,7 @@ export function testFunctionCallsWhenNotInitialized(): void {
   it("when call depositRiskingArbitrageIfBalanceUnchanged", async function () {
     await expect(
       this.vault.depositRiskingArbitrageIfBalanceUnchanged(
-        tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
+        tokenValueArray(this.tokenAddresses, ONE, this.numTokens),
       ),
     ).to.be.revertedWith("Aera__VaultNotInitialized");
   });
@@ -51,7 +51,7 @@ export function testFunctionCallsWhenNotInitialized(): void {
   it("when call withdraw", async function () {
     await expect(
       this.vault.withdraw(
-        tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
+        tokenValueArray(this.tokenAddresses, ONE, this.numTokens),
       ),
     ).to.be.revertedWith("Aera__VaultNotInitialized");
   });
@@ -59,7 +59,7 @@ export function testFunctionCallsWhenNotInitialized(): void {
   it("when call withdrawIfBalanceUnchanged", async function () {
     await expect(
       this.vault.withdrawIfBalanceUnchanged(
-        tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
+        tokenValueArray(this.tokenAddresses, ONE, this.numTokens),
       ),
     ).to.be.revertedWith("Aera__VaultNotInitialized");
   });
@@ -72,7 +72,7 @@ export function testFunctionCallsWhenNotInitialized(): void {
         .updateWeightsGradually(
           tokenWithValues(
             this.tokenAddresses,
-            normalizeWeights(valueArray(ONE, this.tokens.length)),
+            normalizeWeights(valueArray(ONE, this.numTokens)),
           ),
           blocknumber + 1,
           blocknumber + 1000,

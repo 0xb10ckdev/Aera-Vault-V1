@@ -16,7 +16,7 @@ export function testFunctionCallsWhenFinalized(): void {
   it("when call deposit", async function () {
     await expect(
       this.vault.deposit(
-        tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
+        tokenValueArray(this.tokenAddresses, ONE, this.numTokens),
       ),
     ).to.be.revertedWith("Aera__VaultIsFinalized");
   });
@@ -24,7 +24,7 @@ export function testFunctionCallsWhenFinalized(): void {
   it("when call depositIfBalanceUnchanged", async function () {
     await expect(
       this.vault.depositIfBalanceUnchanged(
-        tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
+        tokenValueArray(this.tokenAddresses, ONE, this.numTokens),
       ),
     ).to.be.revertedWith("Aera__VaultIsFinalized");
   });
@@ -32,7 +32,7 @@ export function testFunctionCallsWhenFinalized(): void {
   it("when call depositRiskingArbitrage", async function () {
     await expect(
       this.vault.depositRiskingArbitrage(
-        tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
+        tokenValueArray(this.tokenAddresses, ONE, this.numTokens),
       ),
     ).to.be.revertedWith("Aera__VaultIsFinalized");
   });
@@ -40,7 +40,7 @@ export function testFunctionCallsWhenFinalized(): void {
   it("when call depositRiskingArbitrageIfBalanceUnchanged", async function () {
     await expect(
       this.vault.depositRiskingArbitrageIfBalanceUnchanged(
-        tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
+        tokenValueArray(this.tokenAddresses, ONE, this.numTokens),
       ),
     ).to.be.revertedWith("Aera__VaultIsFinalized");
   });
@@ -48,7 +48,7 @@ export function testFunctionCallsWhenFinalized(): void {
   it("when call withdraw", async function () {
     await expect(
       this.vault.withdraw(
-        tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
+        tokenValueArray(this.tokenAddresses, ONE, this.numTokens),
       ),
     ).to.be.revertedWith("Aera__VaultIsFinalized");
   });
@@ -56,7 +56,7 @@ export function testFunctionCallsWhenFinalized(): void {
   it("when call withdrawIfBalanceUnchanged", async function () {
     await expect(
       this.vault.withdrawIfBalanceUnchanged(
-        tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
+        tokenValueArray(this.tokenAddresses, ONE, this.numTokens),
       ),
     ).to.be.revertedWith("Aera__VaultIsFinalized");
   });
@@ -69,7 +69,7 @@ export function testFunctionCallsWhenFinalized(): void {
         .updateWeightsGradually(
           tokenWithValues(
             this.tokenAddresses,
-            normalizeWeights(valueArray(MIN_WEIGHT, this.tokens.length)),
+            normalizeWeights(valueArray(MIN_WEIGHT, this.numTokens)),
           ),
           blocknumber + 1,
           blocknumber + 1000,

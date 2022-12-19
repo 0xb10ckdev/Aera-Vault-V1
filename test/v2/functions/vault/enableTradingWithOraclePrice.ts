@@ -23,7 +23,7 @@ export function testEnableTradingWithOraclePrice(): void {
 
   it("should be possible to enable trading", async function () {
     const oraclePrices: BigNumber[] = [toUnit(1, 8)];
-    for (let i = 1; i < this.poolTokens.length; i++) {
+    for (let i = 1; i < this.numPoolTokens; i++) {
       oraclePrices.push(toUnit(Math.floor((0.1 + Math.random()) * 50), 8));
       await this.oracles[i].setLatestAnswer(oraclePrices[i]);
     }
@@ -35,7 +35,7 @@ export function testEnableTradingWithOraclePrice(): void {
       .withArgs(true)
       .to.emit(this.vault, "UpdateWeightsWithOraclePrice");
 
-    for (let i = 0; i < this.poolTokens.length; i++) {
+    for (let i = 0; i < this.numPoolTokens; i++) {
       expect(
         await this.vault.getSpotPrice(
           this.sortedTokens[i],

@@ -10,19 +10,19 @@ import {
 
 export function testDisableTrading(): void {
   beforeEach(async function () {
-    for (let i = 0; i < this.tokens.length; i++) {
+    for (let i = 0; i < this.numTokens; i++) {
       await this.tokens[i].approve(this.vault.address, ONE);
     }
 
-    for (let i = 1; i < this.poolTokens.length; i++) {
+    for (let i = 1; i < this.numPoolTokens; i++) {
       await this.oracles[i].setLatestAnswer(toUnit(1, 8));
     }
 
     await this.vault.initialDeposit(
-      tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
+      tokenValueArray(this.tokenAddresses, ONE, this.numTokens),
       tokenWithValues(
         this.tokenAddresses,
-        normalizeWeights(valueArray(ONE, this.tokens.length)),
+        normalizeWeights(valueArray(ONE, this.numTokens)),
       ),
     );
   });

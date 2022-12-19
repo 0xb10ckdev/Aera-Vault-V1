@@ -10,47 +10,42 @@ import { toUnit } from "../utils";
 baseContext("OracleStorage Deployment", function () {
   let oracleStorageFactory: OracleStorage__factory;
   let oracleAddresses: string[];
+  let numOracles: number;
 
   async function setupOraclesFixture(): Promise<{
     oracleAddresses: string[];
+    numOracles: number;
     oracleStorageFactory: OracleStorage__factory;
   }> {
     const oracles = await setupOracles(20);
     const oracleAddresses = oracles.map(oracle => oracle.address);
+    const numOracles = oracleAddresses.length;
 
     const oracleStorageFactory =
       await ethers.getContractFactory<OracleStorage__factory>("OracleStorage");
 
     return {
       oracleAddresses,
+      numOracles,
       oracleStorageFactory,
     };
   }
 
   beforeEach(async function () {
-    ({ oracleAddresses, oracleStorageFactory } = await this.loadFixture(
-      setupOraclesFixture,
-    ));
+    ({ oracleAddresses, numOracles, oracleStorageFactory } =
+      await this.loadFixture(setupOraclesFixture));
   });
 
   describe("should be reverted to deploy", () => {
     it("when number of tokens and oracles are not same", async () => {
       await expect(
-        oracleStorageFactory.deploy(
-          oracleAddresses,
-          0,
-          oracleAddresses.length - 1,
-        ),
+        oracleStorageFactory.deploy(oracleAddresses, 0, numOracles - 1),
       ).to.be.revertedWith("Aera__OracleLengthIsNotSame");
     });
 
     it("when numeraire asset index exceeds token length", async () => {
       await expect(
-        oracleStorageFactory.deploy(
-          oracleAddresses,
-          oracleAddresses.length,
-          oracleAddresses.length,
-        ),
+        oracleStorageFactory.deploy(oracleAddresses, numOracles, numOracles),
       ).to.be.revertedWith("Aera__NumeraireAssetIndexExceedsTokenLength");
     });
 
@@ -64,7 +59,7 @@ baseContext("OracleStorage Deployment", function () {
           oracleStorageFactory.deploy(
             invalidAddresses,
             i == 0 ? 1 : 0,
-            oracleAddresses.length,
+            numOracles,
           ),
         ).to.be.revertedWith(`Aera__OracleIsZeroAddress(${i})`);
       }
@@ -75,11 +70,7 @@ baseContext("OracleStorage Deployment", function () {
         const invalidAddresses = [...oracleAddresses];
 
         await expect(
-          oracleStorageFactory.deploy(
-            invalidAddresses,
-            i,
-            oracleAddresses.length,
-          ),
+          oracleStorageFactory.deploy(invalidAddresses, i, numOracles),
         ).to.be.revertedWith(`Aera__NumeraireOracleIsNotZeroAddress(${i})`);
       }
     });
@@ -95,7 +86,7 @@ baseContext("OracleStorage Deployment", function () {
       const oracle: OracleStorage = await oracleStorageFactory.deploy(
         validAddresses,
         i,
-        oracleAddresses.length,
+        numOracles,
       );
 
       expect((await oracle.numeraireAssetIndex()).toNumber()).to.equal(i);

@@ -22,16 +22,14 @@ export function testDeposit(): void {
       await expect(
         this.vault
           .connect(this.signers.user)
-          .deposit(
-            tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
-          ),
+          .deposit(tokenValueArray(this.tokenAddresses, ONE, this.numTokens)),
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("when token and amount length is not same", async function () {
       await expect(
         this.vault.deposit(
-          tokenValueArray(this.tokenAddresses, ONE, this.tokens.length + 1),
+          tokenValueArray(this.tokenAddresses, ONE, this.numTokens + 1),
         ),
       ).to.be.revertedWith("Aera__ValueLengthIsNotSame");
     });
@@ -39,26 +37,26 @@ export function testDeposit(): void {
     it("when token is not sorted", async function () {
       await expect(
         this.vault.deposit(
-          tokenValueArray(this.unsortedTokens, ONE, this.tokens.length),
+          tokenValueArray(this.unsortedTokens, ONE, this.numTokens),
         ),
       ).to.be.revertedWith("Aera__DifferentTokensInPosition");
     });
 
     it("when amount exceeds allowance", async function () {
       const spotPrices = await this.vault.getSpotPrices(this.sortedTokens[0]);
-      for (let i = 1; i < this.poolTokens.length; i++) {
+      for (let i = 1; i < this.numPoolTokens; i++) {
         await this.oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
       }
       await expect(
         this.vault.deposit(
-          tokenValueArray(this.tokenAddresses, toWei(100), this.tokens.length),
+          tokenValueArray(this.tokenAddresses, toWei(100), this.numTokens),
         ),
       ).to.be.revertedWith("ERC20: insufficient allowance");
     });
 
     it("when oracle is disabled", async function () {
       const spotPrices = await this.vault.getSpotPrices(this.sortedTokens[0]);
-      for (let i = 1; i < this.poolTokens.length; i++) {
+      for (let i = 1; i < this.numPoolTokens; i++) {
         await this.oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
       }
 
@@ -66,7 +64,7 @@ export function testDeposit(): void {
         toWei(Math.floor(10 + Math.random() * 10)),
       );
 
-      for (let i = 0; i < this.tokens.length; i++) {
+      for (let i = 0; i < this.numTokens; i++) {
         await this.tokens[i].approve(this.vault.address, amounts[i]);
       }
 
@@ -79,7 +77,7 @@ export function testDeposit(): void {
     it("when oracle is delayed beyond maximum", async function () {
       const timestamp = await getCurrentTime();
       const spotPrices = await this.vault.getSpotPrices(this.sortedTokens[0]);
-      for (let i = 1; i < this.poolTokens.length; i++) {
+      for (let i = 1; i < this.numPoolTokens; i++) {
         await this.oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
         await this.oracles[i].setUpdatedAt(timestamp - MAX_ORACLE_DELAY);
       }
@@ -88,7 +86,7 @@ export function testDeposit(): void {
         toWei(Math.floor(10 + Math.random() * 10)),
       );
 
-      for (let i = 0; i < this.tokens.length; i++) {
+      for (let i = 0; i < this.numTokens; i++) {
         await this.tokens[i].approve(this.vault.address, amounts[i]);
       }
 
@@ -99,7 +97,7 @@ export function testDeposit(): void {
 
     it("when oracle and spot price divergence exceeds maximum", async function () {
       const spotPrices = await this.vault.getSpotPrices(this.sortedTokens[0]);
-      for (let i = 1; i < this.poolTokens.length; i++) {
+      for (let i = 1; i < this.numPoolTokens; i++) {
         await this.oracles[i].setLatestAnswer(
           spotPrices[i]
             .mul(ONE)
@@ -112,7 +110,7 @@ export function testDeposit(): void {
         toWei(Math.floor(10 + Math.random() * 10)),
       );
 
-      for (let i = 0; i < this.tokens.length; i++) {
+      for (let i = 0; i < this.numTokens; i++) {
         await this.tokens[i].approve(this.vault.address, amounts[i]);
       }
 
@@ -128,7 +126,7 @@ export function testDeposit(): void {
         toWei(Math.floor(10 + Math.random() * 10)),
       );
 
-      for (let i = 0; i < this.tokens.length; i++) {
+      for (let i = 0; i < this.numTokens; i++) {
         await this.tokens[i].approve(this.vault.address, amounts[i]);
       }
 
@@ -142,11 +140,11 @@ export function testDeposit(): void {
         const spotPrices = await this.vault.getSpotPrices(
           this.sortedTokens[0],
         );
-        for (let i = 1; i < this.poolTokens.length; i++) {
+        for (let i = 1; i < this.numPoolTokens; i++) {
           await this.oracles[i].setLatestAnswer(spotPrices[i].div(1e10));
         }
 
-        const amounts = valueArray(toWei(0.1), this.tokens.length);
+        const amounts = valueArray(toWei(0.1), this.numTokens);
 
         await ethers.provider.send("evm_setAutomine", [false]);
 
@@ -181,12 +179,12 @@ export function testDeposit(): void {
   describe("should be possible to deposit tokens", async function () {
     it("when vault value is less than minimum", async function () {
       await this.vault.withdraw(
-        tokenValueArray(this.tokenAddresses, toWei(0.3), this.tokens.length),
+        tokenValueArray(this.tokenAddresses, toWei(0.3), this.numTokens),
       );
 
       const spotPrices = await this.vault.getSpotPrices(this.sortedTokens[0]);
       const oraclePrices: BigNumber[] = [toUnit(1, 8)];
-      for (let i = 1; i < this.poolTokens.length; i++) {
+      for (let i = 1; i < this.numPoolTokens; i++) {
         oraclePrices.push(
           spotPrices[i]
             .mul(ONE)
@@ -200,7 +198,7 @@ export function testDeposit(): void {
         toWei(Math.floor(10 + Math.random())),
       );
 
-      for (let i = 0; i < this.tokens.length; i++) {
+      for (let i = 0; i < this.numTokens; i++) {
         await this.tokens[i].approve(this.vault.address, amounts[i]);
       }
 
@@ -218,7 +216,7 @@ export function testDeposit(): void {
         this.sortedTokens[0],
       );
 
-      for (let i = 1; i < this.poolTokens.length; i++) {
+      for (let i = 1; i < this.numPoolTokens; i++) {
         expect(newSpotPrices[i]).to.be.closeTo(
           oraclePrices[i].mul(1e10),
           oraclePrices[i].mul(1e10).mul(PRICE_DEVIATION).div(ONE).toNumber(),
@@ -229,7 +227,7 @@ export function testDeposit(): void {
     it("when deposit value is less than minimum", async function () {
       const spotPrices = await this.vault.getSpotPrices(this.sortedTokens[0]);
       const oraclePrices: BigNumber[] = [toUnit(1, 8)];
-      for (let i = 1; i < this.poolTokens.length; i++) {
+      for (let i = 1; i < this.numPoolTokens; i++) {
         oraclePrices.push(
           spotPrices[i]
             .mul(ONE)
@@ -243,7 +241,7 @@ export function testDeposit(): void {
         toWei(Math.floor(1 + Math.random())),
       );
 
-      for (let i = 0; i < this.tokens.length; i++) {
+      for (let i = 0; i < this.numTokens; i++) {
         await this.tokens[i].approve(this.vault.address, amounts[i]);
       }
 
@@ -261,7 +259,7 @@ export function testDeposit(): void {
         this.sortedTokens[0],
       );
 
-      for (let i = 1; i < this.poolTokens.length; i++) {
+      for (let i = 1; i < this.numPoolTokens; i++) {
         expect(newSpotPrices[i]).to.be.closeTo(
           spotPrices[i],
           spotPrices[i].mul(PRICE_DEVIATION).div(ONE).toNumber(),
@@ -272,7 +270,7 @@ export function testDeposit(): void {
     it("when vault value and deposit value are greater than minimum", async function () {
       const spotPrices = await this.vault.getSpotPrices(this.sortedTokens[0]);
       const oraclePrices: BigNumber[] = [toUnit(1, 8)];
-      for (let i = 1; i < this.poolTokens.length; i++) {
+      for (let i = 1; i < this.numPoolTokens; i++) {
         oraclePrices.push(
           spotPrices[i]
             .mul(ONE)
@@ -286,7 +284,7 @@ export function testDeposit(): void {
         toWei(Math.floor(5 + Math.random() * 10)),
       );
 
-      for (let i = 0; i < this.tokens.length; i++) {
+      for (let i = 0; i < this.numTokens; i++) {
         await this.tokens[i].approve(this.vault.address, amounts[i]);
       }
 
@@ -304,7 +302,7 @@ export function testDeposit(): void {
         this.sortedTokens[0],
       );
 
-      for (let i = 1; i < this.poolTokens.length; i++) {
+      for (let i = 1; i < this.numPoolTokens; i++) {
         expect(newSpotPrices[i]).to.be.closeTo(
           oraclePrices[i].mul(1e10),
           oraclePrices[i].mul(1e10).mul(PRICE_DEVIATION).div(ONE).toNumber(),

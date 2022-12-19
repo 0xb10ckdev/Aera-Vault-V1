@@ -15,19 +15,19 @@ export function testGetSpotPrices(): void {
   let TOKEN: IERC20;
   beforeEach(async function () {
     ({ TOKEN } = await deployToken());
-    for (let i = 0; i < this.tokens.length; i++) {
+    for (let i = 0; i < this.numTokens; i++) {
       await this.tokens[i].approve(this.vault.address, ONE);
     }
 
-    for (let i = 1; i < this.poolTokens.length; i++) {
+    for (let i = 1; i < this.numPoolTokens; i++) {
       await this.oracles[i].setLatestAnswer(toUnit(1, 8));
     }
 
     await this.vault.initialDeposit(
-      tokenValueArray(this.tokenAddresses, ONE, this.tokens.length),
+      tokenValueArray(this.tokenAddresses, ONE, this.numTokens),
       tokenWithValues(
         this.tokenAddresses,
-        normalizeWeights(valueArray(ONE, this.tokens.length)),
+        normalizeWeights(valueArray(ONE, this.numTokens)),
       ),
     );
   });
@@ -35,7 +35,7 @@ export function testGetSpotPrices(): void {
   it("should return zero for invalid token", async function () {
     const spotPrices = await this.vault.getSpotPrices(TOKEN.address);
 
-    for (let i = 0; i < this.poolTokens.length; i++) {
+    for (let i = 0; i < this.numPoolTokens; i++) {
       expect(spotPrices[i]).to.equal(toWei(0));
       expect(
         await this.vault.getSpotPrice(TOKEN.address, this.sortedTokens[i]),

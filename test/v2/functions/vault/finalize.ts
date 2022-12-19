@@ -49,7 +49,7 @@ export function testFinalize(): void {
       this.signers.admin.address,
     );
 
-    for (let i = 0; i < this.tokens.length; i++) {
+    for (let i = 0; i < this.numTokens; i++) {
       expect(newAdminBalances[i]).to.equal(
         adminBalances[i].add(newHoldings[i]),
       );
