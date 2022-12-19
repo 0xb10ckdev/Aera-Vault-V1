@@ -71,17 +71,17 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       .toString();
     vaultConfig.weights = weights;
 
-    const yieldTokens = vaultConfig.yieldTokens;
-    vaultConfig.yieldTokens = [];
+    const yieldTokens = vaultConfig.yieldTokens.map(
+      (yieldToken: { token: string; isWithdrawable: boolean }) =>
+        yieldToken.token,
+    );
     for (let i = 0; i < yieldTokens.length; i++) {
       const asset = await ethers.getContractAt("ERC4626", yieldTokens[i]);
       const underlyingAsset = await asset.asset();
-      vaultConfig.yieldTokens.push({
-        token: yieldTokens[i],
-        underlyingIndex: vaultConfig.poolTokens.findIndex(
+      vaultConfig.yieldTokens[i].underlyingIndex =
+        vaultConfig.poolTokens.findIndex(
           (poolToken: string) => poolToken == underlyingAsset,
-        ),
-      });
+        );
     }
 
     if (vaultConfig.poolTokens.length < 2) {
