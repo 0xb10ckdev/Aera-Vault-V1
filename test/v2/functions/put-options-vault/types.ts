@@ -7,5 +7,12 @@ declare module "mocha" {
       strikePrice: BigNumberish,
       expireTimestamp: number,
     ) => Promise<MockOToken>;
+
+    createAndFillBuyOrder: (
+      strikePrice: BigNumberish,
+      expiryTimestamp: number,
+      usdcAmount: BigNumberish,
+      spotPrice: BigNumberish,
+    ) => Promise<{ oToken: MockOToken }>;
   }
 }

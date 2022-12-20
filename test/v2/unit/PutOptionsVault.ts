@@ -14,7 +14,10 @@ import {
   STRIKE_MULTIPLIER_MAX,
   STRIKE_MULTIPLIER_MIN,
 } from "../functions/put-options-vault/constants";
-import { createOToken } from "../functions/put-options-vault/options-utils";
+import {
+  createAndFillBuyOrder,
+  createOToken,
+} from "../functions/put-options-vault/options-utils";
 import { toUnit, toWei } from "../utils";
 
 baseContext("Put Options Vault: Unit Tests", function () {
@@ -68,6 +71,7 @@ baseContext("Put Options Vault: Unit Tests", function () {
       await this.loadFixture(putOptionsVaultFixture);
 
     this.createOToken = createOToken.bind(this);
+    this.createAndFillBuyOrder = createAndFillBuyOrder.bind(this);
 
     this.mocks.pricer = pricer;
     this.mocks.gammaOracle = oracle;

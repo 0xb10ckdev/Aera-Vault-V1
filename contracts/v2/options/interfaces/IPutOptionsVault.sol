@@ -48,6 +48,9 @@ interface IPutOptionsVault is IERC4626 {
     /// @notice Raised when sell order has been cancelled
     event SellOrderCancelled(address indexed oToken, uint256 amount);
 
+    /// @notice Raised when option has been redeemed
+    event OptionRedeemed(address indexed oToken);
+
     /// ERRORS ///
 
     error Aera__PricerIsZeroAddress();

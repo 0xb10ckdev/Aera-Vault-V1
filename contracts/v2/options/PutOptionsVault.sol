@@ -468,6 +468,8 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             {
                 optionsMatured = true;
                 _oTokens.remove(address(oToken));
+
+                emit OptionRedeemed(address(oToken));
             } catch {}
         }
     }

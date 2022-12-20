@@ -15,6 +15,9 @@ contract MockOTokenController is IOTokenController {
     uint256 private _payout;
     bool private _canSettleAssets;
     OracleInterface private _oracle;
+    bool private _revertOnOperate;
+
+    error RevertRequested();
 
     constructor(OracleInterface oracle_) {
         _oracle = oracle_;
@@ -45,7 +48,9 @@ contract MockOTokenController is IOTokenController {
     function getPayout(
         address _otoken,
         uint256 _amount
-    ) external view override returns (uint256) {}
+    ) external view override returns (uint256) {
+        return _payout;
+    }
 
     function canSettleAssets(
         address _underlying,
@@ -54,7 +59,24 @@ contract MockOTokenController is IOTokenController {
         uint256 _expiry
     ) external view override returns (bool) {}
 
-    function operate(Actions.ActionArgs[] memory _actions) external override {}
+    function setPayout(uint256 payout) external {
+        _payout = payout;
+    }
 
-    function oracle() external view override returns (OracleInterface) {}
+    function setCanSettleAssets(bool canSettleAssets_) external {
+        _canSettleAssets = canSettleAssets_;
+    }
+
+    function setRevertOnOperate(bool revertOnOperate) external {
+        _revertOnOperate = revertOnOperate;
+    }
+
+    function operate(Actions.ActionArgs[] memory) external override {
+        if (_revertOnOperate) revert RevertRequested();
+        _revertOnOperate = _revertOnOperate; // make compiler happy about "view"
+    }
+
+    function oracle() external view override returns (OracleInterface) {
+        return _oracle;
+    }
 }

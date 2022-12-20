@@ -2,13 +2,14 @@ import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { MockOToken } from "../../../../../typechain";
 import { getCurrentTime, toUnit } from "../../../utils";
-import { EXPIRY_DELTA_MIN } from "../constants";
+import {
+  EXPIRY_DELTA_MIN,
+  O_TOKEN_DECIMALS,
+  PRICER_DECIMALS,
+  USDC_DECIMALS,
+} from "../constants";
 
 export function shouldBehaveLikeFillBuyOrder(): void {
-  const USDC_DECIMALS = 6;
-  const O_TOKEN_DECIMALS = 8;
-  const PRICER_DECIMALS = 8;
-
   const O_TOKEN_AMOUNT = toUnit(1, O_TOKEN_DECIMALS);
   const USDC_AMOUNT = toUnit(560, USDC_DECIMALS);
   const SPOT_PRICE = toUnit(1_000, USDC_DECIMALS);
@@ -230,7 +231,7 @@ export function shouldBehaveLikeFillBuyOrder(): void {
         await oToken.approve(this.putOptionsVault.address, OFFERED_O_TOKENS);
       });
 
-      it("user transfers oTokens to vault", async function () {
+      it("user oTokens are transferred to vault", async function () {
         await expect(() =>
           this.putOptionsVault.fillBuyOrder(oToken.address, OFFERED_O_TOKENS),
         ).to.changeTokenBalances(

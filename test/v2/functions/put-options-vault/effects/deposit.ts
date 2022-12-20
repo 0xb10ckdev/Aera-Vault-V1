@@ -11,6 +11,7 @@ import {
 
 export function shouldBehaveLikeDeposit(): void {
   const AMOUNT = toUnit(1_000, 6);
+
   describe("access", function () {
     describe("when owner deposits", function () {
       beforeEach(async function () {
