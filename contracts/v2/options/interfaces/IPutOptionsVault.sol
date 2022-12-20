@@ -78,7 +78,7 @@ interface IPutOptionsVault is IERC4626 {
     error Aera__SellOrderIsNotActive();
     error Aera__InsufficientBalanceToSell(uint256 requested, uint256 balance);
     error Aera__NotEnoughOTokens(uint256 expected, uint256 actual);
-    error Aera__OptionPremiumTooCheap(uint256 premium, uint256 amount);
+    error Aera__NotEnoughAssets(uint256 actual);
     error Aera__UnknownOToken(address oToken);
     error Aera__DiscountExceedsMaximumValue(uint256 discount, uint256 maximum);
     error Aera__ExpectedPutOption();
@@ -141,7 +141,7 @@ interface IPutOptionsVault is IERC4626 {
 
     /// @notice Initiate a sell order for a given options position.
     /// @param oToken oToken address
-    /// @param amount option amount
+    /// @param amount oTokens amount to sell
     function sell(address oToken, uint256 amount) external;
 
     /// @notice Set expiry time range
@@ -187,9 +187,12 @@ interface IPutOptionsVault is IERC4626 {
 
     /// @notice Allows broker to fill current buy order. Note that order will be filled as long as
     ///         expiry and strike price of the oToken is within the range specified by buy order.
+    /// @param oToken oToken to be offered
+    /// @param amount Amount of oTokens broker is offering to vault
     function fillBuyOrder(address oToken, uint256 amount) external;
 
     /// @notice Allows broker to fill current sell order
+    /// @param amount Amount of USDC broker is offering to vault
     function fillSellOrder(uint256 amount) external;
 
     /// @notice Removes the current buy order

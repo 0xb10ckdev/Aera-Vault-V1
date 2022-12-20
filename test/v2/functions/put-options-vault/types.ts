@@ -12,7 +12,8 @@ declare module "mocha" {
       strikePrice: BigNumberish,
       expiryTimestamp: number,
       usdcAmount: BigNumberish,
-      spotPrice: BigNumberish,
+      spotPrice?: BigNumberish,
+      oTokenAmount?: BigNumberish,
     ) => Promise<{ oToken: MockOToken }>;
   }
 }

@@ -27,6 +27,7 @@ export async function createAndFillBuyOrder(
   expiryTimestamp: number,
   usdcAmount: BigNumberish,
   spotPrice: BigNumberish = toUnit(1000, USDC_DECIMALS),
+  oTokenAmount: BigNumberish = toUnit(10, O_TOKEN_DECIMALS),
 ): Promise<{ oToken: MockOToken }> {
   const oToken = await this.createOToken(strikePrice, expiryTimestamp);
   await oToken.mintOtoken(
@@ -40,15 +41,9 @@ export async function createAndFillBuyOrder(
 
   await this.mocks.pricer.setPremium(toUnit(140, PRICER_DECIMALS));
 
-  await oToken.approve(
-    this.putOptionsVault.address,
-    toUnit(10, O_TOKEN_DECIMALS),
-  );
+  await oToken.approve(this.putOptionsVault.address, oTokenAmount);
 
-  await this.putOptionsVault.fillBuyOrder(
-    oToken.address,
-    toUnit(10, O_TOKEN_DECIMALS),
-  );
+  await this.putOptionsVault.fillBuyOrder(oToken.address, oTokenAmount);
 
   return { oToken };
 }

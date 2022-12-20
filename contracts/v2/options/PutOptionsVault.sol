@@ -20,7 +20,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     uint256 private constant _ONE = 10 ** 18;
 
     /// @notice Minimum total value in USDC that can be used to purchase options
-    uint256 private constant _MIN_CHUNK_VALUE = 1 * 10 ** 7;
+    uint256 private constant _MIN_CHUNK_VALUE = 1 * 10 ** 6;
 
     /// @notice Strike price discount measured off of current market price in bps
     uint256 private constant _STRIKE_PRICE = 1 * 10 ** 7;
@@ -163,24 +163,6 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         _setStrikeMultiplier(min, max);
     }
 
-    /// @inheritdoc ERC4626
-    function maxDeposit(
-        address receiver
-    ) public view override(IERC4626, ERC4626) returns (uint256 maxAssets) {
-        if (msg.sender != owner()) return 0;
-
-        return super.maxDeposit(receiver);
-    }
-
-    /// @inheritdoc ERC4626
-    function maxMint(
-        address receiver
-    ) public view override(ERC4626, IERC4626) returns (uint256 maxShares) {
-        if (msg.sender != owner()) return 0;
-
-        return super.maxMint(receiver);
-    }
-
     /// @inheritdoc IPutOptionsVault
     function fillBuyOrder(
         address oToken,
@@ -190,7 +172,30 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         // _buyOrder is deleted first to prevent reentrancy
         delete _buyOrder;
 
-        uint256 required = _estimateOTokenAmount(IOToken(oToken), order);
+        (
+            address collateralAsset,
+            address underlyingAsset,
+            address strikeAsset,
+            uint256 strikePrice,
+            uint256 expiryTimestamp,
+            bool isPut
+        ) = IOToken(oToken).getOtokenDetails();
+
+        _checkOToken(
+            order,
+            collateralAsset,
+            underlyingAsset,
+            strikeAsset,
+            strikePrice,
+            expiryTimestamp,
+            isPut
+        );
+
+        uint256 required = _estimateOTokenAmount(
+            strikePrice,
+            expiryTimestamp,
+            order.amount
+        );
 
         if (required > amount) {
             revert Aera__NotEnoughOTokens(required, amount);
@@ -214,28 +219,21 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         uint256 amount
     ) external override onlyBroker whenSellOrderActive {
         SellOrder memory order = _sellOrder;
-        // _sellOrder is deleted to prevent reentrancy
+        // _sellOrder is deleted first to prevent reentrancy
         delete _sellOrder;
 
         IOToken oToken = IOToken(order.oToken);
-        (
-            address collateralAsset,
-            address underlyingAsset,
-            address strikeAsset,
-            uint256 strikePrice,
-            uint256 expiryTimestamp,
-            bool isPut
-        ) = oToken.getOtokenDetails();
+        (, , , uint256 strikePrice, uint256 expiryTimestamp, ) = oToken
+            .getOtokenDetails();
 
-        uint256 premiumWithDiscount = ((_pricer.getPremium(
+        uint256 oTokenAmount = _estimateOTokenAmount(
             strikePrice,
             expiryTimestamp,
-            isPut
-        ) * order.amount) * (_ONE - _optionPremiumDiscount)) /
-            (_ONE * 10 ** _O_TOKEN_DECIMALS);
+            amount
+        );
 
-        if (amount < premiumWithDiscount) {
-            revert Aera__OptionPremiumTooCheap(premiumWithDiscount, amount);
+        if (oTokenAmount < order.amount) {
+            revert Aera__NotEnoughAssets(amount);
         }
         emit SellOrderFilled(address(oToken), amount);
 
@@ -303,6 +301,24 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         _itmOptionPriceRatio = ratio;
 
         emit ITMOptionPriceRatioChanged(ratio);
+    }
+
+    /// @inheritdoc ERC4626
+    function maxDeposit(
+        address receiver
+    ) public view override(IERC4626, ERC4626) returns (uint256 maxAssets) {
+        if (msg.sender != owner()) return 0;
+
+        return super.maxDeposit(receiver);
+    }
+
+    /// @inheritdoc ERC4626
+    function maxMint(
+        address receiver
+    ) public view override(ERC4626, IERC4626) returns (uint256 maxShares) {
+        if (msg.sender != owner()) return 0;
+
+        return super.maxMint(receiver);
     }
 
     /// @inheritdoc ERC4626
@@ -404,12 +420,6 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     /// @inheritdoc IPutOptionsVault
     function itmOptionPriceRatio() external view returns (uint256 ratio) {
         return _itmOptionPriceRatio;
-    }
-
-    function estimateOTokenAmountForBuyOrder(
-        IOToken oToken
-    ) external view whenBuyOrderActive returns (uint256) {
-        return _estimateOTokenAmount(oToken, _buyOrder);
     }
 
     function _afterDeposit(uint256 assets, uint256 shares) internal override {
@@ -627,47 +637,29 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     }
 
     function _estimateOTokenAmount(
-        IOToken oToken,
-        BuyOrder memory order
+        uint256 strikePrice,
+        uint256 expiryTimestamp,
+        uint256 amount
     ) internal view returns (uint256) {
-        (
-            address collateralAsset,
-            address underlyingAsset,
-            address strikeAsset,
-            uint256 strikePrice,
-            uint256 expiryTimestamp,
-            bool isPut
-        ) = oToken.getOtokenDetails();
-
-        _checkOToken(
-            order,
-            collateralAsset,
-            underlyingAsset,
-            strikeAsset,
-            strikePrice,
-            expiryTimestamp,
-            isPut
-        );
-
         uint256 oneOptionPremium = _pricer.getPremium(
             strikePrice,
             expiryTimestamp,
             true
         );
 
-        uint256 optionPlusDiscount = (oneOptionPremium *
-            (_ONE + _optionPremiumDiscount)) / _ONE;
-
         uint256 adjustedAmount = _adjustValue(
-            order.amount,
+            amount,
             decimals(),
             _pricer.decimals()
         );
 
+        uint256 optionWithDiscount = (oneOptionPremium *
+            (_ONE + _optionPremiumDiscount)) / _ONE;
+
         return
             _adjustValue(
                 (adjustedAmount * 10 ** _O_TOKEN_DECIMALS) /
-                    optionPlusDiscount,
+                    optionWithDiscount,
                 _pricer.decimals(),
                 _O_TOKEN_DECIMALS
             );

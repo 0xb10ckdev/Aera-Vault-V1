@@ -37,6 +37,16 @@ export function shouldBehaveLikeFillBuyOrder(): void {
     });
   });
 
+  describe("when called by stranger", function () {
+    it("reverts", async function () {
+      await expect(
+        this.putOptionsVault
+          .connect(this.signers.manager)
+          .fillBuyOrder(oToken.address, O_TOKEN_AMOUNT),
+      ).to.be.revertedWith("Aera__CallerIsNotBroker");
+    });
+  });
+
   describe("when buy order is active", function () {
     beforeEach(async function () {
       await this.mocks.pricer.setSpot(SPOT_PRICE);
@@ -46,16 +56,6 @@ export function shouldBehaveLikeFillBuyOrder(): void {
         USDC_AMOUNT,
         this.signers.admin.address,
       );
-    });
-
-    describe("when called by stranger", function () {
-      it("reverts", async function () {
-        await expect(
-          this.putOptionsVault
-            .connect(this.signers.manager)
-            .fillBuyOrder(oToken.address, O_TOKEN_AMOUNT),
-        ).to.be.revertedWith("Aera__CallerIsNotBroker");
-      });
     });
 
     describe("when oToken parameters are invalid", function () {
