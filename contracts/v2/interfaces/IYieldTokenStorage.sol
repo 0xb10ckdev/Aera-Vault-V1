@@ -8,7 +8,7 @@ interface IYieldTokenStorage {
     /// @notice Returns an array of yield tokens.
     function getYieldTokens() external view returns (IERC4626[] memory);
 
-    /// @notice Returns an array of withdrawal abilities of yield tokens.
+    /// @notice Returns an array indicating which yield tokens are withdrawable by index.
     function getWithdrawables() external view returns (bool[] memory);
 
     /// @notice Returns an array of underlying indexes.
