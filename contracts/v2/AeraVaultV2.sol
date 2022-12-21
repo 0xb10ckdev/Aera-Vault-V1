@@ -1242,6 +1242,7 @@ contract AeraVaultV2 is
 
         IERC20[] memory poolTokens = getPoolTokens();
         IERC4626[] memory yieldTokens = getYieldTokens();
+        bool[] memory isWithdrawable = getWithdrawables();
         uint256[] memory holdings = getHoldings();
         uint256[] memory weights = pool.getNormalizedWeights();
         uint256[] memory amounts = getValuesFromTokenWithValues(
@@ -1249,7 +1250,13 @@ contract AeraVaultV2 is
             poolTokens
         );
 
-        checkWithdrawAmount(poolTokens, yieldTokens, holdings, amounts);
+        checkWithdrawAmount(
+            poolTokens,
+            yieldTokens,
+            isWithdrawable,
+            holdings,
+            amounts
+        );
 
         uint256[] memory balances = new uint256[](numTokens);
         for (uint256 i = 0; i < numPoolTokens; i++) {
@@ -1276,7 +1283,6 @@ contract AeraVaultV2 is
             weightSum += weights[i];
         }
 
-        bool[] memory isWithdrawable = getWithdrawables();
         uint256[] memory underlyingIndexes = getUnderlyingIndexes();
         IERC20 underlyingAsset;
         uint256 index = numPoolTokens;
@@ -2413,11 +2419,13 @@ contract AeraVaultV2 is
     /// @dev Will only be called by withdrawTokens().
     /// @param poolTokens Array of pool tokens.
     /// @param yieldTokens Array of yield tokens.
+    /// @param isWithdrawable Array indicating which yield tokens are withdrawable by index
     /// @param holdings Current token balance in Balancer Pool and Aera Vault.
     /// @param amounts Array of amounts to check.
     function checkWithdrawAmount(
         IERC20[] memory poolTokens,
         IERC4626[] memory yieldTokens,
+        bool[] memory isWithdrawable,
         uint256[] memory holdings,
         uint256[] memory amounts
     ) internal view {
@@ -2431,13 +2439,25 @@ contract AeraVaultV2 is
             }
         }
 
+        uint256 availableAmount;
         uint256 index = numPoolTokens;
         for (uint256 i = 0; i < numYieldTokens; i++) {
-            if (amounts[index] > holdings[index]) {
+            if (isWithdrawable[i]) {
+                availableAmount = holdings[index];
+            } else {
+                availableAmount = yieldTokens[i].convertToAssets(
+                    holdings[index]
+                );
+                availableAmount = Math.min(
+                    availableAmount,
+                    yieldTokens[i].maxWithdraw(address(this))
+                );
+            }
+            if (amounts[index] > availableAmount) {
                 revert Aera__AmountExceedAvailable(
                     address(yieldTokens[i]),
                     amounts[index],
-                    holdings[index]
+                    availableAmount
                 );
             }
             ++index;
