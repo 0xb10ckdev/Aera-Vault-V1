@@ -9,3 +9,4 @@ export * from "./cancelSellOrder";
 export * from "./setOptionPremiumDiscount";
 export * from "./setITMOptionPriceRatio";
 export * from "./deposit";
+export * from "./withdraw";

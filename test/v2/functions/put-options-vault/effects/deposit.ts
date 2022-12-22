@@ -7,10 +7,11 @@ import {
   EXPIRY_DELTA_MIN,
   STRIKE_MULTIPLIER_MAX,
   STRIKE_MULTIPLIER_MIN,
+  USDC_DECIMALS,
 } from "./../constants";
 
 export function shouldBehaveLikeDeposit(): void {
-  const AMOUNT = toUnit(1_000, 6);
+  const AMOUNT = toUnit(1_000, USDC_DECIMALS);
 
   describe("access", function () {
     describe("when owner deposits", function () {

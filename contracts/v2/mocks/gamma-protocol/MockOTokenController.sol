@@ -46,18 +46,20 @@ contract MockOTokenController is IOTokenController {
     }
 
     function getPayout(
-        address _otoken,
-        uint256 _amount
+        address,
+        uint256
     ) external view override returns (uint256) {
         return _payout;
     }
 
     function canSettleAssets(
-        address _underlying,
-        address _strike,
-        address _collateral,
-        uint256 _expiry
-    ) external view override returns (bool) {}
+        address,
+        address,
+        address,
+        uint256
+    ) external view override returns (bool) {
+        return _canSettleAssets;
+    }
 
     function setPayout(uint256 payout) external {
         _payout = payout;

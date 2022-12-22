@@ -11,6 +11,7 @@ import {
   shouldBehaveLikeSetITMOptionPriceRatio,
   shouldBehaveLikeSetOptionPremiumDiscount,
   shouldBehaveLikeSetStrikeMultiplier,
+  shouldBehaveLikeWithdraw,
 } from "./effects";
 import {
   shouldBehaveLikeAssetGetter,
@@ -146,6 +147,10 @@ export function shouldBehaveLikePutOptionsVault(): void {
 
       describe("deposit", function () {
         shouldBehaveLikeDeposit();
+      });
+
+      describe("withdraw", function () {
+        shouldBehaveLikeWithdraw();
       });
     });
   });

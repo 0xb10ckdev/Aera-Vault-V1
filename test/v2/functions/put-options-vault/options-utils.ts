@@ -3,7 +3,13 @@ import { Context } from "mocha";
 import { MockOToken } from "../../../../typechain";
 import { toUnit } from "../../utils";
 import { MockOToken__factory } from "./../../../../typechain/factories/MockOToken__factory";
-import { O_TOKEN_DECIMALS, PRICER_DECIMALS, USDC_DECIMALS } from "./constants";
+import {
+  DEFAULT_PREMIUM,
+  DEFAULT_SPOT_PRICE,
+  O_TOKEN_DECIMALS,
+  PRICER_DECIMALS,
+  USDC_DECIMALS,
+} from "./constants";
 
 export async function createOToken(
   this: Context,
@@ -26,8 +32,30 @@ export async function createAndFillBuyOrder(
   strikePrice: BigNumberish,
   expiryTimestamp: number,
   usdcAmount: BigNumberish,
-  spotPrice: BigNumberish = toUnit(1000, USDC_DECIMALS),
+  spotPrice: BigNumberish = DEFAULT_SPOT_PRICE,
   oTokenAmount: BigNumberish = toUnit(10, O_TOKEN_DECIMALS),
+  premium: BigNumberish = DEFAULT_PREMIUM,
+): Promise<{ oToken: MockOToken }> {
+  const { oToken } = await this.createBuyOrder(
+    strikePrice,
+    expiryTimestamp,
+    usdcAmount,
+    spotPrice,
+  );
+
+  await this.mocks.pricer.setPremium(premium);
+  await oToken.approve(this.putOptionsVault.address, oTokenAmount);
+  await this.putOptionsVault.fillBuyOrder(oToken.address, oTokenAmount);
+
+  return { oToken };
+}
+
+export async function createBuyOrder(
+  this: Context,
+  strikePrice: BigNumberish,
+  expiryTimestamp: number,
+  usdcAmount: BigNumberish,
+  spotPrice: BigNumberish = DEFAULT_SPOT_PRICE,
 ): Promise<{ oToken: MockOToken }> {
   const oToken = await this.createOToken(strikePrice, expiryTimestamp);
   await oToken.mintOtoken(
@@ -39,11 +67,7 @@ export async function createAndFillBuyOrder(
   await this.usdc.approve(this.putOptionsVault.address, usdcAmount);
   await this.putOptionsVault.deposit(usdcAmount, this.signers.admin.address);
 
-  await this.mocks.pricer.setPremium(toUnit(140, PRICER_DECIMALS));
-
-  await oToken.approve(this.putOptionsVault.address, oTokenAmount);
-
-  await this.putOptionsVault.fillBuyOrder(oToken.address, oTokenAmount);
-
-  return { oToken };
+  return {
+    oToken,
+  };
 }

@@ -14,6 +14,15 @@ declare module "mocha" {
       usdcAmount: BigNumberish,
       spotPrice?: BigNumberish,
       oTokenAmount?: BigNumberish,
+      premium?: BigNumberish,
     ) => Promise<{ oToken: MockOToken }>;
+
+    createBuyOrder(
+      this: Context,
+      strikePrice: BigNumberish,
+      expiryTimestamp: number,
+      usdcAmount: BigNumberish,
+      spotPrice?: BigNumberish,
+    ): Promise<{ oToken: MockOToken }>;
   }
 }

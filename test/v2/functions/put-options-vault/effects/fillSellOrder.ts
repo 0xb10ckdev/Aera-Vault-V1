@@ -111,13 +111,15 @@ export function shouldBehaveLikeFillSellOrder(): void {
       const ONE_THOUSAND_USDC = toUnit(1000, USDC_DECIMALS);
 
       beforeEach(async function () {
-        oTokenAmount = toUnit(1, O_TOKEN_DECIMALS);
-        await this.putOptionsVault.sell(oToken.address, oTokenAmount);
+        await this.putOptionsVault.sell(
+          oToken.address,
+          toUnit(1, O_TOKEN_DECIMALS),
+        );
         await this.usdc.approve(
           this.putOptionsVault.address,
           ONE_THOUSAND_USDC,
         );
-        await this.putOptionsVault.fillSellOrder(toUnit(1000, USDC_DECIMALS));
+        await this.putOptionsVault.fillSellOrder(ONE_THOUSAND_USDC);
       });
 
       it("does not remove oToken from positions", async function () {

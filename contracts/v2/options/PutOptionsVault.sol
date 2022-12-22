@@ -12,6 +12,7 @@ import "../dependencies/gamma-protocol/Actions.sol";
 import "./interfaces/IPutOptionsVault.sol";
 import "./interfaces/IOToken.sol";
 import "./pricers/IPutOptionsPricer.sol";
+import "hardhat/console.sol";
 
 contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -326,15 +327,16 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         public
         view
         override(ERC4626, IERC4626)
-        returns (uint256 result)
+        returns (uint256)
     {
-        uint256 n = _oTokens.length();
-
+        uint256 optionsValue = 0;
+        address[] memory tokens = _oTokens.values();
+        uint256 n = tokens.length;
         for (uint256 i = 0; i < n; i++) {
-            result += _getOptionPrice(IOToken(_oTokens.at(i)));
+            optionsValue += _getOptionValue(IOToken(tokens[i]));
         }
 
-        return result + IERC20(asset()).balanceOf(address(this));
+        return optionsValue + IERC20(asset()).balanceOf(address(this));
     }
 
     /// @inheritdoc IPutOptionsVault
@@ -484,11 +486,13 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         }
     }
 
-    function _getOptionPrice(IOToken oToken) internal view returns (uint256) {
-        // 3 possible ways
-        // 1. oToken is not expired => pricer is used to estimate option price
-        // 2. oToken is expired, but oracle price is not finalized => apply _itmOptionPriceRatio to option price
-        // 3. oToken is expired and oracle price is finalized => option value is finalized
+    /**
+     * @dev 3 possible ways
+     *      1. oToken is not expired => pricer is used to estimate option price
+     *      2. oToken is expired, but oracle price is not finalized => apply _itmOptionPriceRatio to option price
+     *      3. oToken is expired and oracle price is finalized => option value is finalized
+     */
+    function _getOptionValue(IOToken oToken) internal view returns (uint256) {
         // slither-disable-next-line calls-loop
         (
             address collateralAsset,
@@ -496,15 +500,16 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             address strikeAsset,
             uint256 strikePrice,
             uint256 expiryTimestamp,
-            bool isPut
+
         ) = oToken.getOtokenDetails();
 
         if (block.timestamp < expiryTimestamp) {
-            // 1
-            // slither-disable-next-line calls-loop
             return
-                (_pricer.getPremium(strikePrice, expiryTimestamp, isPut) *
-                    oToken.balanceOf(address(this))) / 10 ** _O_TOKEN_DECIMALS;
+                _getNonExpiredOptionValue(
+                    oToken,
+                    strikePrice,
+                    expiryTimestamp
+                );
         }
         // slither-disable-next-line calls-loop
         IOTokenController oTokenController = IOTokenController(
@@ -512,23 +517,61 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         );
         if (
             // slither-disable-next-line calls-loop
-            oTokenController.canSettleAssets(
+            !oTokenController.canSettleAssets(
                 underlyingAsset,
                 strikeAsset,
                 collateralAsset,
                 expiryTimestamp
             )
         ) {
-            // 3
-            // slither-disable-next-line calls-loop
             return
-                oTokenController.getPayout(
-                    address(oToken),
-                    oToken.balanceOf(address(this))
+                _getExpiredNonFinalizedOptionValue(
+                    oToken,
+                    oTokenController,
+                    underlyingAsset,
+                    strikePrice,
+                    expiryTimestamp
                 );
         }
 
-        // 2
+        return _getExpiredOptionPayout(oToken, oTokenController);
+    }
+
+    function _getNonExpiredOptionValue(
+        IOToken oToken,
+        uint256 strikePrice,
+        uint256 expiryTimestamp
+    ) internal view returns (uint256) {
+        // slither-disable-next-line calls-loop
+        return
+            _adjustValue(
+                (_pricer.getPremium(strikePrice, expiryTimestamp, true) *
+                    oToken.balanceOf(address(this))) /
+                    (10 ** _pricer.decimals()),
+                _O_TOKEN_DECIMALS,
+                decimals()
+            );
+    }
+
+    function _getExpiredOptionPayout(
+        IOToken oToken,
+        IOTokenController oTokenController
+    ) internal view returns (uint256) {
+        // slither-disable-next-line calls-loop
+        return
+            oTokenController.getPayout(
+                address(oToken),
+                oToken.balanceOf(address(this))
+            );
+    }
+
+    function _getExpiredNonFinalizedOptionValue(
+        IOToken oToken,
+        IOTokenController oTokenController,
+        address underlyingAsset,
+        uint256 strikePrice,
+        uint256 expiryTimestamp
+    ) internal view returns (uint256) {
         // slither-disable-next-line calls-loop
         (uint256 price, ) = oTokenController.oracle().getExpiryPrice(
             underlyingAsset,

@@ -16,6 +16,7 @@ import {
 } from "../functions/put-options-vault/constants";
 import {
   createAndFillBuyOrder,
+  createBuyOrder,
   createOToken,
 } from "../functions/put-options-vault/options-utils";
 import { toUnit, toWei } from "../utils";
@@ -72,6 +73,7 @@ baseContext("Put Options Vault: Unit Tests", function () {
 
     this.createOToken = createOToken.bind(this);
     this.createAndFillBuyOrder = createAndFillBuyOrder.bind(this);
+    this.createBuyOrder = createBuyOrder.bind(this);
 
     this.mocks.pricer = pricer;
     this.mocks.gammaOracle = oracle;
