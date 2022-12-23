@@ -116,7 +116,7 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       console.log("YieldTokens:\n", yieldTokens.join("\n"));
       console.log("Numeraire Asset Index:\n", vaultConfig.numeraireAssetIndex);
       console.log(`Swap Fee: ${vaultConfig.swapFeePercentage}`);
-      console.log(`Manager: ${vaultConfig.manager}`);
+      console.log(`Guardian: ${vaultConfig.guardian}`);
       console.log(
         `Minimum Reliable Vault Value: ${vaultConfig.minReliableVaultValue}`,
       );
