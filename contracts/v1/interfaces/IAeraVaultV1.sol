@@ -2,7 +2,7 @@
 pragma solidity 0.8.11;
 
 import "./IUserAPI.sol";
-import "./IManagerAPI.sol";
+import "./IGuardianAPI.sol";
 import "./IProtocolAPI.sol";
 import "./IMultiAssetVault.sol";
 
@@ -10,7 +10,7 @@ import "./IMultiAssetVault.sol";
 // solhint-disable-next-line no-empty-blocks
 interface IAeraVaultV1 is
     IUserAPI,
-    IManagerAPI,
+    IGuardianAPI,
     IProtocolAPI,
     IMultiAssetVault
 {
@@ -21,7 +21,7 @@ interface IAeraVaultV1 is
     // tokens: Token addresses.
     // weights: Token weights.
     // swapFeePercentage: Pool swap fee.
-    // manager: Vault manager address.
+    // guardian: Vault guardian address.
     // validator: Withdrawal validator contract address.
     // noticePeriod: Notice period (in seconds).
     // managementFee: Management fee earned proportion per second.
@@ -34,7 +34,7 @@ interface IAeraVaultV1 is
         IERC20[] tokens;
         uint256[] weights;
         uint256 swapFeePercentage;
-        address manager;
+        address guardian;
         address validator;
         uint32 noticePeriod;
         uint256 managementFee;
