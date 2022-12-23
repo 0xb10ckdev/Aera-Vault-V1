@@ -3,7 +3,7 @@ pragma solidity 0.8.11;
 
 import "../dependencies/chainlink/interfaces/AggregatorV2V3Interface.sol";
 import "../dependencies/openzeppelin/IERC4626.sol";
-import "./IManagerAPI.sol";
+import "./IGuardianAPI.sol";
 import "./IMultiAssetVault.sol";
 import "./IProtocolAPI.sol";
 import "./IUserAPI.sol";
@@ -11,7 +11,7 @@ import "./IUserAPI.sol";
 /// @title Interface for v2 vault.
 interface IAeraVaultV2 is
     IUserAPI,
-    IManagerAPI,
+    IGuardianAPI,
     IMultiAssetVault,
     IProtocolAPI
 {
@@ -33,7 +33,7 @@ interface IAeraVaultV2 is
     // yieldTokens: Yield bearing asset addresses.
     // numeraireAssetIndex: Index of base token for oracles.
     // swapFeePercentage: Pool swap fee.
-    // manager: Vault manager address.
+    // guardian: Vault guardian address.
     // minReliableVaultValue: Minimum reliable vault TVL.
     //                        It will be measured in base token terms.
     // minSignificantDepositValue: Minimum significant deposit value.
@@ -54,7 +54,7 @@ interface IAeraVaultV2 is
         YieldToken[] yieldTokens;
         uint256 numeraireAssetIndex;
         uint256 swapFeePercentage;
-        address manager;
+        address guardian;
         uint256 minReliableVaultValue;
         uint256 minSignificantDepositValue;
         uint256 maxOracleSpotDivergence;

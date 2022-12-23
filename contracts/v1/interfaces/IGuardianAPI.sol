@@ -4,9 +4,9 @@ pragma solidity 0.8.11;
 import "../dependencies/openzeppelin/IERC20.sol";
 import "./IProtocolAPI.sol";
 
-/// @title Interface for vault manager.
+/// @title Interface for vault guardian.
 /// @notice Supports parameter submission.
-interface IManagerAPI {
+interface IGuardianAPI {
     /// @notice Initiate weight move to target in given update window.
     /// @dev These are checked by Balancer in internal transactions:
     ///       If target weight length and token length match.
@@ -31,9 +31,9 @@ interface IManagerAPI {
     ///       If new swap fee is greater than minimum.
     function setSwapFee(uint256 newSwapFee) external;
 
-    /// @notice Claim manager fee.
+    /// @notice Claim guardian fee.
     /// @dev This function shouldn't be called too frequently.
-    function claimManagerFees() external;
+    function claimGuardianFees() external;
 
     /* This function is defined in IProtocolAPI.sol
     /// @notice Disable swap.
