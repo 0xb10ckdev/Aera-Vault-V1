@@ -164,7 +164,7 @@ export const setupVaultWithBalancerVaultMock =
       factory,
     } = await setupAssetContracts(true);
 
-    const { admin, manager } = await ethers.getNamedSigners();
+    const { admin, guardian } = await ethers.getNamedSigners();
 
     const validWeights = valueArray(
       ONE.div(poolTokens.length),
@@ -192,7 +192,7 @@ export const setupVaultWithBalancerVaultMock =
       })),
       numeraireAssetIndex: 0,
       swapFeePercentage: MIN_SWAP_FEE,
-      manager: manager.address,
+      guardian: guardian.address,
       minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
       minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE,
       maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE,
@@ -233,7 +233,7 @@ export const setupVaultWithBalancerVault = async (): Promise<DeployedData> => {
     factory,
   } = await setupAssetContracts(false);
 
-  const { manager } = await ethers.getNamedSigners();
+  const { guardian } = await ethers.getNamedSigners();
 
   const validWeights = valueArray(
     ONE.div(poolTokens.length),
@@ -258,7 +258,7 @@ export const setupVaultWithBalancerVault = async (): Promise<DeployedData> => {
       })),
       numeraireAssetIndex: 0,
       swapFeePercentage: MIN_SWAP_FEE,
-      manager: manager.address,
+      guardian: guardian.address,
       minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
       minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE,
       maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE,

@@ -11,7 +11,7 @@ import {
   valueArray,
 } from "../../utils";
 
-export function testClaimManagerFees(): void {
+export function testClaimGuardianFees(): void {
   beforeEach(async function () {
     for (let i = 0; i < this.numTokens; i++) {
       await this.tokens[i].approve(this.vault.address, ONE);
@@ -30,7 +30,7 @@ export function testClaimManagerFees(): void {
     );
   });
 
-  it("should be reverted to claim manager fees when no available fee", async function () {
+  it("should be reverted to claim guardian fees when no available fee", async function () {
     for (let i = 0; i < this.numTokens; i++) {
       await this.tokens[i].approve(this.vault.address, toWei(100000));
     }
@@ -38,13 +38,13 @@ export function testClaimManagerFees(): void {
       tokenValueArray(this.tokenAddresses, toWei(10000), this.numTokens),
     );
 
-    await expect(this.vault.claimManagerFees()).to.be.revertedWith(
+    await expect(this.vault.claimGuardianFees()).to.be.revertedWith(
       "Aera__NoAvailableFeeForCaller",
     );
   });
 
-  describe("should be possible to claim manager fees", async function () {
-    it("when called from current manager", async function () {
+  describe("should be possible to claim guardian fees", async function () {
+    it("when called from current guardian", async function () {
       for (let i = 0; i < this.numTokens; i++) {
         await this.tokens[i].approve(this.vault.address, toWei(100000));
       }
@@ -53,15 +53,15 @@ export function testClaimManagerFees(): void {
         await this.vault.lastFeeCheckpoint()
       ).toNumber();
       let holdings = await this.vault.getHoldings();
-      const managerBalances = await this.getUserBalances(
-        this.signers.manager.address,
+      const guardianBalances = await this.getUserBalances(
+        this.signers.guardian.address,
       );
       const depositTrx = await this.vault.depositRiskingArbitrage(
         tokenValueArray(this.tokenAddresses, toWei(10000), this.numTokens),
       );
 
       let currentTime = await getTimestamp(depositTrx.blockNumber);
-      const managerFee = holdings.map((holding: BigNumber) =>
+      const guardianFee = holdings.map((holding: BigNumber) =>
         holding
           .mul(currentTime - lastFeeCheckpoint)
           .mul(MAX_MANAGEMENT_FEE)
@@ -72,32 +72,32 @@ export function testClaimManagerFees(): void {
       holdings = await this.vault.getHoldings();
 
       const trx = await this.vault
-        .connect(this.signers.manager)
-        .claimManagerFees();
+        .connect(this.signers.guardian)
+        .claimGuardianFees();
 
-      const newManagerBalances = await this.getUserBalances(
-        this.signers.manager.address,
+      const newGuardianBalances = await this.getUserBalances(
+        this.signers.guardian.address,
       );
 
       currentTime = await getTimestamp(trx.blockNumber);
       holdings.forEach((holding: BigNumber, index: number) => {
-        managerFee[index] = managerFee[index].add(
+        guardianFee[index] = guardianFee[index].add(
           holding
             .mul(currentTime - lastFeeCheckpoint)
             .mul(MAX_MANAGEMENT_FEE)
             .div(ONE),
         );
-        expect(newManagerBalances[index]).to.equal(
-          managerBalances[index].add(managerFee[index]),
+        expect(newGuardianBalances[index]).to.equal(
+          guardianBalances[index].add(guardianFee[index]),
         );
       });
 
       await expect(trx)
-        .to.emit(this.vault, "DistributeManagerFees")
-        .withArgs(this.signers.manager.address, managerFee);
+        .to.emit(this.vault, "DistributeGuardianFees")
+        .withArgs(this.signers.guardian.address, guardianFee);
     });
 
-    it("when called from old manager", async function () {
+    it("when called from old guardian", async function () {
       for (let i = 0; i < this.numTokens; i++) {
         await this.tokens[i].approve(this.vault.address, toWei(100000));
       }
@@ -106,15 +106,15 @@ export function testClaimManagerFees(): void {
         await this.vault.lastFeeCheckpoint()
       ).toNumber();
       let holdings = await this.vault.getHoldings();
-      const managerBalances = await this.getUserBalances(
-        this.signers.manager.address,
+      const guardianBalances = await this.getUserBalances(
+        this.signers.guardian.address,
       );
       const depositTrx = await this.vault.depositRiskingArbitrage(
         tokenValueArray(this.tokenAddresses, toWei(10000), this.numTokens),
       );
 
       let currentTime = await getTimestamp(depositTrx.blockNumber);
-      const managerFee = holdings.map((holding: BigNumber) =>
+      const guardianFee = holdings.map((holding: BigNumber) =>
         holding
           .mul(currentTime - lastFeeCheckpoint)
           .mul(MAX_MANAGEMENT_FEE)
@@ -123,13 +123,13 @@ export function testClaimManagerFees(): void {
       lastFeeCheckpoint = currentTime;
 
       holdings = (await this.getState()).holdings;
-      const setManagerTrx = await this.vault.setManager(
+      const setGuardianTrx = await this.vault.setGuardian(
         this.signers.user.address,
       );
 
-      currentTime = await getTimestamp(setManagerTrx.blockNumber);
+      currentTime = await getTimestamp(setGuardianTrx.blockNumber);
       holdings.forEach((holding: BigNumber, index: number) => {
-        managerFee[index] = managerFee[index].add(
+        guardianFee[index] = guardianFee[index].add(
           holding
             .mul(currentTime - lastFeeCheckpoint)
             .mul(MAX_MANAGEMENT_FEE)
@@ -137,18 +137,20 @@ export function testClaimManagerFees(): void {
         );
       });
 
-      await expect(this.vault.connect(this.signers.manager).claimManagerFees())
-        .to.emit(this.vault, "DistributeManagerFees")
-        .withArgs(this.signers.manager.address, managerFee);
+      await expect(
+        this.vault.connect(this.signers.guardian).claimGuardianFees(),
+      )
+        .to.emit(this.vault, "DistributeGuardianFees")
+        .withArgs(this.signers.guardian.address, guardianFee);
 
-      const newManagerBalances = await this.getUserBalances(
-        this.signers.manager.address,
+      const newGuardianBalances = await this.getUserBalances(
+        this.signers.guardian.address,
       );
 
-      newManagerBalances.forEach(
-        (managerBalance: BigNumber, index: number) => {
-          expect(managerBalance).to.equal(
-            managerBalances[index].add(managerFee[index]),
+      newGuardianBalances.forEach(
+        (guardianBalance: BigNumber, index: number) => {
+          expect(guardianBalance).to.equal(
+            guardianBalances[index].add(guardianFee[index]),
           );
         },
       );

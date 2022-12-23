@@ -96,7 +96,7 @@ export function testWithdraw(): void {
         tokenValueArray(this.tokenAddresses, toWei(5), this.numTokens),
       );
       let { holdings, adminBalances } = await this.getState();
-      let managersFeeTotal = await this.getManagersFeeTotal();
+      let guardiansFeeTotal = await this.getGuardiansFeeTotal();
 
       for (let i = 0; i < this.numTokens; i++) {
         const amounts = new Array(this.numTokens).fill(0);
@@ -117,7 +117,7 @@ export function testWithdraw(): void {
           .to.emit(this.vault, "Withdraw")
           .withArgs(amounts, amounts, weights);
 
-        const newManagersFeeTotal = await this.getManagersFeeTotal();
+        const newGuardiansFeeTotal = await this.getGuardiansFeeTotal();
 
         if (i < this.numPoolTokens) {
           const newSpotPrices = await this.vault.getSpotPrices(
@@ -138,8 +138,8 @@ export function testWithdraw(): void {
           expect(newHoldings[j]).to.equal(
             holdings[j]
               .sub(amounts[j])
-              .sub(newManagersFeeTotal[j])
-              .add(managersFeeTotal[j]),
+              .sub(newGuardiansFeeTotal[j])
+              .add(guardiansFeeTotal[j]),
           );
 
           if (
@@ -166,7 +166,7 @@ export function testWithdraw(): void {
 
         holdings = newHoldings;
         adminBalances = newAdminBalances;
-        managersFeeTotal = newManagersFeeTotal;
+        guardiansFeeTotal = newGuardiansFeeTotal;
       }
     });
 
@@ -179,7 +179,7 @@ export function testWithdraw(): void {
       );
 
       const { holdings, adminBalances } = await this.getState();
-      const managersFeeTotal = await this.getManagersFeeTotal();
+      const guardiansFeeTotal = await this.getGuardiansFeeTotal();
 
       const amounts = this.tokens.map(() =>
         toWei(Math.floor(10 + Math.random() * 10)),
@@ -200,7 +200,7 @@ export function testWithdraw(): void {
         .to.emit(this.vault, "Withdraw")
         .withArgs(amounts, amounts, weights);
 
-      const newManagersFeeTotal = await this.getManagersFeeTotal();
+      const newGuardiansFeeTotal = await this.getGuardiansFeeTotal();
 
       const { holdings: newHoldings, adminBalances: newAdminBalances } =
         await this.getState();
@@ -229,8 +229,8 @@ export function testWithdraw(): void {
         expect(newHoldings[i]).to.equal(
           holdings[i]
             .sub(amounts[i])
-            .sub(newManagersFeeTotal[i])
-            .add(managersFeeTotal[i]),
+            .sub(newGuardiansFeeTotal[i])
+            .add(guardiansFeeTotal[i]),
         );
         if (i < this.numPoolTokens) {
           let poolTokenWithdrawnAmount = BigNumber.from(0);
@@ -263,7 +263,7 @@ export function testWithdraw(): void {
       );
 
       const { holdings, adminBalances } = await this.getState();
-      const managersFeeTotal = await this.getManagersFeeTotal();
+      const guardiansFeeTotal = await this.getGuardiansFeeTotal();
 
       const amounts = this.tokens.map(() =>
         toWei(Math.floor(10 + Math.random() * 10)),
@@ -284,7 +284,7 @@ export function testWithdraw(): void {
         .to.emit(this.vault, "Withdraw")
         .withArgs(amounts, amounts, weights);
 
-      const newManagersFeeTotal = await this.getManagersFeeTotal();
+      const newGuardiansFeeTotal = await this.getGuardiansFeeTotal();
 
       const { holdings: newHoldings, adminBalances: newAdminBalances } =
         await this.getState();
@@ -313,8 +313,8 @@ export function testWithdraw(): void {
         expect(newHoldings[i]).to.equal(
           holdings[i]
             .sub(amounts[i])
-            .sub(newManagersFeeTotal[i])
-            .add(managersFeeTotal[i]),
+            .sub(newGuardiansFeeTotal[i])
+            .add(guardiansFeeTotal[i]),
         );
         if (i < this.numPoolTokens) {
           let poolTokenWithdrawnAmount = BigNumber.from(0);

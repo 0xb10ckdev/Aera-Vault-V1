@@ -48,7 +48,7 @@ export function testMulticall(): void {
         this.vault
           .connect(this.signers.user)
           .multicall([iface.encodeFunctionData("disableTrading", [])]),
-      ).to.be.revertedWith("Aera__CallerIsNotOwnerOrManager()");
+      ).to.be.revertedWith("Aera__CallerIsNotOwnerOrGuardian()");
     });
   });
 
@@ -103,7 +103,7 @@ export function testMulticall(): void {
 
       expect(await this.vault.isSwapEnabled()).to.equal(true);
 
-      const managersFeeTotal = await this.getManagersFeeTotal();
+      const guardiansFeeTotal = await this.getGuardiansFeeTotal();
 
       const { holdings: newHoldings, adminBalances: newAdminBalances } =
         await this.getState();
@@ -127,7 +127,7 @@ export function testMulticall(): void {
       for (let i = 0; i < this.numTokens; i++) {
         expect(await this.vault.holding(i)).to.equal(newHoldings[i]);
         expect(newHoldings[i]).to.equal(
-          holdings[i].add(amounts[i]).sub(managersFeeTotal[i]),
+          holdings[i].add(amounts[i]).sub(guardiansFeeTotal[i]),
         );
         expect(newAdminBalances[i]).to.equal(adminBalances[i].sub(amounts[i]));
       }
@@ -151,7 +151,7 @@ export function testMulticall(): void {
 
       await expect(
         this.vault
-          .connect(this.signers.manager)
+          .connect(this.signers.guardian)
           .multicall([
             iface.encodeFunctionData("setSwapFee", [newFee]),
             iface.encodeFunctionData("updateWeightsGradually", [
@@ -170,7 +170,7 @@ export function testMulticall(): void {
         .withArgs(startTime, endTime, normalizeWeights(endWeights));
 
       expect(
-        await this.vault.connect(this.signers.manager).getSwapFee(),
+        await this.vault.connect(this.signers.guardian).getSwapFee(),
       ).to.equal(newFee);
 
       await increaseTime(endTime - (await getCurrentTime()));
@@ -188,7 +188,7 @@ export function testMulticall(): void {
       );
 
       const { holdings, adminBalances } = await this.getState();
-      const managersFeeTotal = await this.getManagersFeeTotal();
+      const guardiansFeeTotal = await this.getGuardiansFeeTotal();
 
       const amounts = this.tokens.map(() =>
         toWei(Math.floor(10 + Math.random() * 10)),
@@ -219,7 +219,7 @@ export function testMulticall(): void {
 
       expect(await this.vault.isSwapEnabled()).to.equal(true);
 
-      const newManagersFeeTotal = await this.getManagersFeeTotal();
+      const newGuardiansFeeTotal = await this.getGuardiansFeeTotal();
 
       const { holdings: newHoldings, adminBalances: newAdminBalances } =
         await this.getState();
@@ -248,8 +248,8 @@ export function testMulticall(): void {
         expect(newHoldings[i]).to.equal(
           holdings[i]
             .sub(amounts[i])
-            .sub(newManagersFeeTotal[i])
-            .add(managersFeeTotal[i]),
+            .sub(newGuardiansFeeTotal[i])
+            .add(guardiansFeeTotal[i]),
         );
         if (i < this.numPoolTokens) {
           let poolTokenWithdrawnAmount = BigNumber.from(0);

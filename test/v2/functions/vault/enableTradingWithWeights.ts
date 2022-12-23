@@ -13,7 +13,7 @@ export function testEnableTradingWithWeights(): void {
     it("when called from non-owner", async function () {
       await expect(
         this.vault
-          .connect(this.signers.manager)
+          .connect(this.signers.guardian)
           .enableTradingWithWeights(
             tokenValueArray(
               this.tokenAddresses,

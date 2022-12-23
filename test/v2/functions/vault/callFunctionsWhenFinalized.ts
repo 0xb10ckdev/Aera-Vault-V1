@@ -65,7 +65,7 @@ export function testFunctionCallsWhenFinalized(): void {
     const blocknumber = await ethers.provider.getBlockNumber();
     await expect(
       this.vault
-        .connect(this.signers.manager)
+        .connect(this.signers.guardian)
         .updateWeightsGradually(
           tokenWithValues(
             this.tokenAddresses,
@@ -79,13 +79,13 @@ export function testFunctionCallsWhenFinalized(): void {
 
   it("when call cancelWeightUpdates", async function () {
     await expect(
-      this.vault.connect(this.signers.manager).cancelWeightUpdates(),
+      this.vault.connect(this.signers.guardian).cancelWeightUpdates(),
     ).to.be.revertedWith("Aera__VaultIsFinalized");
   });
 
-  it("when call claimManagerFees", async function () {
+  it("when call claimGuardianFees", async function () {
     await expect(
-      this.vault.connect(this.signers.manager).claimManagerFees(),
+      this.vault.connect(this.signers.guardian).claimGuardianFees(),
     ).to.be.revertedWith("Aera__VaultIsFinalized");
   });
 }

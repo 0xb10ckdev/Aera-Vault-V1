@@ -37,7 +37,7 @@ import {
 
 export function testDeployment(): void {
   let admin: SignerWithAddress;
-  let manager: SignerWithAddress;
+  let guardian: SignerWithAddress;
   let factory: ManagedPoolFactory;
   let poolTokens: IERC20[];
   let yieldTokens: ERC4626Mock[];
@@ -52,7 +52,7 @@ export function testDeployment(): void {
   describe("should be reverted to deploy vault", async function () {
     before(async function () {
       snapshot = await ethers.provider.send("evm_snapshot", []);
-      ({ admin, manager } = await ethers.getNamedSigners());
+      ({ admin, guardian } = await ethers.getNamedSigners());
 
       ({
         tokens: poolTokens,
@@ -87,7 +87,7 @@ export function testDeployment(): void {
         })),
         numeraireAssetIndex: 0,
         swapFeePercentage: MIN_SWAP_FEE,
-        manager: manager.address,
+        guardian: guardian.address,
         minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
         minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE,
         maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE,
@@ -237,17 +237,17 @@ export function testDeployment(): void {
       );
     });
 
-    it("when manager is zero address", async function () {
-      validParams.manager = ZERO_ADDRESS;
+    it("when guardian is zero address", async function () {
+      validParams.guardian = ZERO_ADDRESS;
       await expect(deployVault(validParams)).to.be.revertedWith(
-        "Aera__ManagerIsZeroAddress",
+        "Aera__GuardianIsZeroAddress",
       );
     });
 
-    it("when manager is deployer", async function () {
-      validParams.manager = admin.address;
+    it("when guardian is deployer", async function () {
+      validParams.guardian = admin.address;
       await expect(deployVault(validParams)).to.be.revertedWith(
-        "Aera__ManagerIsOwner",
+        "Aera__GuardianIsOwner",
       );
     });
 

@@ -35,7 +35,7 @@ export type VaultParams = {
   }[];
   numeraireAssetIndex: number;
   swapFeePercentage: BigNumberish;
-  manager: string;
+  guardian: string;
   minReliableVaultValue?: BigNumberish;
   minSignificantDepositValue?: BigNumberish;
   maxOracleSpotDivergence?: BigNumberish;
@@ -105,7 +105,7 @@ export const deployVault = async (
     yieldTokens: params.yieldTokens,
     numeraireAssetIndex: params.numeraireAssetIndex,
     swapFeePercentage: params.swapFeePercentage,
-    manager: params.manager,
+    guardian: params.guardian,
     minReliableVaultValue:
       params.minReliableVaultValue || MIN_RELIABLE_VAULT_VALUE,
     minSignificantDepositValue:
