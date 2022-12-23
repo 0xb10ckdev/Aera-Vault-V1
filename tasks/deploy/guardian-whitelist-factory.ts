@@ -1,10 +1,10 @@
 import { task, types } from "hardhat/config";
 import { getConfig } from "../../scripts/config";
-import { ManagerWhitelistFactoryDeployment } from "../manager-whitelist-factory-address";
+import { GuardianWhitelistFactoryDeployment } from "../guardian-whitelist-factory-address";
 
 task(
-  "deploy:managerWhitelistFactory",
-  "Deploys a ManagerWhitelistFactory with the given parameters",
+  "deploy:guardianWhitelistFactory",
+  "Deploys a GuardianWhitelistFactory with the given parameters",
 )
   .addOptionalParam(
     "silent",
@@ -17,13 +17,13 @@ task(
 
     const { admin } = await ethers.getNamedSigners();
 
-    const deployment = (await run("get:managerWhitelistFactory", {
+    const deployment = (await run("get:guardianWhitelistFactory", {
       owner: admin.address,
-    })) as ManagerWhitelistFactoryDeployment;
+    })) as GuardianWhitelistFactoryDeployment;
 
     if (!taskArgs.silent) {
       console.log(
-        `Deploying ManagerWhitelistFactory\n\tSender: ${deployment.sender}\n\tContract address: ${deployment.contractAddr}`,
+        `Deploying GuardianWhitelistFactory\n\tSender: ${deployment.sender}\n\tContract address: ${deployment.contractAddr}`,
       );
     }
 
@@ -40,12 +40,12 @@ task(
     await tx.wait();
 
     const factory = await ethers.getContractAt(
-      "ManagerWhitelistFactory",
+      "GuardianWhitelistFactory",
       deployment.contractAddr,
     );
 
     if (!taskArgs.silent) {
-      console.log("ManagerWhitelistFactory is deployed to:", factory.address);
+      console.log("GuardianWhitelistFactory is deployed to:", factory.address);
     }
 
     return factory;

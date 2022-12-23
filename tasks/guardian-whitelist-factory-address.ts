@@ -5,22 +5,22 @@ import { getConfig } from "../scripts/config";
 // Referred to https://github.com/0xjac/ERC1820/tree/master/js
 // `r` and `s` are random numbers.
 
-export type ManagerWhitelistFactoryDeployment = {
+export type GuardianWhitelistFactoryDeployment = {
   sender: string;
   rawTx: string;
   contractAddr: string;
 };
 
 task(
-  "get:managerWhitelistFactory",
-  "Calculates ManagerWhitelistFactory address",
+  "get:guardianWhitelistFactory",
+  "Calculates GuardianWhitelistFactory address",
 )
   .addParam("owner", "Initial owner", undefined, types.string)
   .setAction(async ({ owner }: { owner: string }, { ethers, network }) => {
     const config = getConfig(network.config.chainId || 1);
 
     const contractFactory = await ethers.getContractFactory(
-      "ManagerWhitelistFactory",
+      "GuardianWhitelistFactory",
     );
 
     const rawTransaction = {
