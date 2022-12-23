@@ -13,7 +13,7 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
   .addParam("tokens", "Tokens' addresses")
   .addParam("weights", "Tokens' weights")
   .addParam("swapFee", "Swap Fee Percentage")
-  .addParam("manager", "Manager's address")
+  .addParam("guardian", "Guardian's address")
   .addParam("validator", "Validator's address")
   .addParam("noticePeriod", "Notice period in seconds")
   .addParam(
@@ -46,7 +46,7 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
     const tokens = taskArgs.tokens.split(",");
     const weights = taskArgs.weights.split(",");
     const swapFeePercentage = taskArgs.swapFee;
-    const manager = taskArgs.manager;
+    const guardian = taskArgs.guardian;
     const validator = taskArgs.validator;
     const noticePeriod = taskArgs.noticePeriod;
     const managementFee = taskArgs.managementFee;
@@ -76,7 +76,7 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
       console.log("Tokens:\n", tokens.join("\n"));
       console.log("Weights:\n", weights.join("\n"));
       console.log(`Swap Fee: ${swapFeePercentage}`);
-      console.log(`Manager: ${manager}`);
+      console.log(`Guardian: ${guardian}`);
       console.log(`Validator: ${validator}`);
       console.log(`Notice Period: ${noticePeriod}`);
       console.log(`Management Fee: ${managementFee}`);
@@ -96,7 +96,7 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
         tokens,
         weights,
         swapFeePercentage,
-        manager,
+        guardian,
         validator,
         noticePeriod,
         managementFee,
@@ -114,7 +114,7 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
       tokens,
       weights,
       swapFeePercentage,
-      manager,
+      guardian,
       validator,
       noticePeriod,
       managementFee,
