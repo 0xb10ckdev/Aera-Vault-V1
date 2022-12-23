@@ -12,7 +12,7 @@ import { resolve } from "path";
 import "solidity-coverage";
 import "./tasks/clean";
 import "./tasks/deploy";
-import "./tasks/manager-whitelist-factory-address";
+import "./tasks/guardian-whitelist-factory-address";
 
 dotenvConfig({ path: resolve(__dirname, "./.env") });
 
@@ -129,7 +129,7 @@ const config: HardhatUserConfig = {
   },
   namedAccounts: {
     admin: 0,
-    manager: 1,
+    guardian: 1,
     user: 2,
     stranger: 3,
   },
