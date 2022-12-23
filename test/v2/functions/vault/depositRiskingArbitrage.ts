@@ -79,7 +79,7 @@ export function testDepositRiskingArbitrage(): void {
   describe("should be possible to deposit tokens", async function () {
     it("when depositing one token", async function () {
       let { holdings, adminBalances } = await this.getState();
-      let managersFeeTotal = await this.getManagersFeeTotal();
+      let guardiansFeeTotal = await this.getGuardiansFeeTotal();
 
       for (let i = 0; i < this.numTokens; i++) {
         const amounts = new Array(this.numTokens).fill(0);
@@ -100,7 +100,7 @@ export function testDepositRiskingArbitrage(): void {
           .to.emit(this.vault, "Deposit")
           .withArgs(amounts, amounts, weights);
 
-        const newManagersFeeTotal = await this.getManagersFeeTotal();
+        const newGuardiansFeeTotal = await this.getGuardiansFeeTotal();
 
         const { holdings: newHoldings, adminBalances: newAdminBalances } =
           await this.getState();
@@ -120,8 +120,8 @@ export function testDepositRiskingArbitrage(): void {
           expect(newHoldings[j]).to.equal(
             holdings[j]
               .add(amounts[j])
-              .sub(newManagersFeeTotal[j])
-              .add(managersFeeTotal[j]),
+              .sub(newGuardiansFeeTotal[j])
+              .add(guardiansFeeTotal[j]),
           );
           expect(newAdminBalances[j]).to.equal(
             adminBalances[j].sub(amounts[j]),
@@ -130,7 +130,7 @@ export function testDepositRiskingArbitrage(): void {
 
         holdings = newHoldings;
         adminBalances = newAdminBalances;
-        managersFeeTotal = newManagersFeeTotal;
+        guardiansFeeTotal = newGuardiansFeeTotal;
       }
     });
 
@@ -159,7 +159,7 @@ export function testDepositRiskingArbitrage(): void {
         .to.emit(this.vault, "Deposit")
         .withArgs(amounts, amounts, weights);
 
-      const managersFeeTotal = await this.getManagersFeeTotal();
+      const guardiansFeeTotal = await this.getGuardiansFeeTotal();
 
       const { holdings: newHoldings, adminBalances: newAdminBalances } =
         await this.getState();
@@ -186,7 +186,7 @@ export function testDepositRiskingArbitrage(): void {
       for (let i = 0; i < this.numTokens; i++) {
         expect(await this.vault.holding(i)).to.equal(newHoldings[i]);
         expect(newHoldings[i]).to.equal(
-          holdings[i].add(amounts[i]).sub(managersFeeTotal[i]),
+          holdings[i].add(amounts[i]).sub(guardiansFeeTotal[i]),
         );
         expect(newAdminBalances[i]).to.equal(adminBalances[i].sub(amounts[i]));
       }
@@ -217,7 +217,7 @@ export function testDepositRiskingArbitrage(): void {
         .to.emit(this.vault, "Deposit")
         .withArgs(amounts, amounts, weights);
 
-      const managersFeeTotal = await this.getManagersFeeTotal();
+      const guardiansFeeTotal = await this.getGuardiansFeeTotal();
 
       const { holdings: newHoldings, adminBalances: newAdminBalances } =
         await this.getState();
@@ -244,7 +244,7 @@ export function testDepositRiskingArbitrage(): void {
       for (let i = 0; i < this.numTokens; i++) {
         expect(await this.vault.holding(i)).to.equal(newHoldings[i]);
         expect(newHoldings[i]).to.equal(
-          holdings[i].add(amounts[i]).sub(managersFeeTotal[i]),
+          holdings[i].add(amounts[i]).sub(guardiansFeeTotal[i]),
         );
         expect(newAdminBalances[i]).to.equal(adminBalances[i].sub(amounts[i]));
       }

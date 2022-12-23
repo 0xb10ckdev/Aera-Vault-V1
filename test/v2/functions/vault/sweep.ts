@@ -18,7 +18,7 @@ export function testSweep(): void {
     it("when called from non-owner", async function () {
       await expect(
         this.vault
-          .connect(this.signers.manager)
+          .connect(this.signers.guardian)
           .sweep(TOKEN.address, toWei(1001)),
       ).to.be.revertedWith("Ownable: caller is not the owner");
     });

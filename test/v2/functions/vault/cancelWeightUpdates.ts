@@ -9,9 +9,9 @@ import {
 } from "../../utils";
 
 export function testCancelWeightUpdates(): void {
-  it("should be reverted when called from non-manager", async function () {
+  it("should be reverted when called from non-guardian", async function () {
     await expect(this.vault.cancelWeightUpdates()).to.be.revertedWith(
-      "Aera__CallerIsNotManager",
+      "Aera__CallerIsNotGuardian",
     );
   });
 
@@ -31,7 +31,7 @@ export function testCancelWeightUpdates(): void {
     }
 
     await this.vault
-      .connect(this.signers.manager)
+      .connect(this.signers.guardian)
       .updateWeightsGradually(
         tokenWithValues(this.tokenAddresses, normalizeWeights(endWeights)),
         startTime,
@@ -41,7 +41,7 @@ export function testCancelWeightUpdates(): void {
     await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION / 2);
 
     const trx = await this.vault
-      .connect(this.signers.manager)
+      .connect(this.signers.guardian)
       .cancelWeightUpdates();
     const newWeights = await this.vault.getNormalizedWeights();
 

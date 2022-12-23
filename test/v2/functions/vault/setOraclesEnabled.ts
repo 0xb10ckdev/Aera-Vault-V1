@@ -2,10 +2,10 @@ import { expect } from "chai";
 
 export function testSetOraclesEnabled(): void {
   describe("should be reverted to enable/disable oracle", async function () {
-    it("when called from non-owner or non-manager", async function () {
+    it("when called from non-owner or non-guardian", async function () {
       await expect(
         this.vault.connect(this.signers.user).setOraclesEnabled(true),
-      ).to.be.revertedWith("Aera__CallerIsNotOwnerOrManager");
+      ).to.be.revertedWith("Aera__CallerIsNotOwnerOrGuardian");
     });
   });
 

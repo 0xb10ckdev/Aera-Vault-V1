@@ -30,7 +30,7 @@ export function testDisableTrading(): void {
   it("should be reverted to disable trading", async function () {
     await expect(
       this.vault.connect(this.signers.user).disableTrading(),
-    ).to.be.revertedWith("Aera__CallerIsNotOwnerOrManager");
+    ).to.be.revertedWith("Aera__CallerIsNotOwnerOrGuardian");
   });
 
   it("should be possible to disable trading", async function () {
@@ -38,7 +38,7 @@ export function testDisableTrading(): void {
 
     expect(await this.vault.estimateGas.disableTrading()).to.below(52000);
 
-    await expect(this.vault.connect(this.signers.manager).disableTrading())
+    await expect(this.vault.connect(this.signers.guardian).disableTrading())
       .to.emit(this.vault, "SetSwapEnabled")
       .withArgs(false);
 

@@ -16,14 +16,14 @@ declare module "mocha" {
   interface Context {
     loadFixture: <T>(fixture: Fixture<T>) => Promise<T>;
     getUserBalances: (address: string) => Promise<BigNumber[]>;
-    getManagersFeeTotal: () => Promise<BigNumber[]>;
+    getGuardiansFeeTotal: () => Promise<BigNumber[]>;
     getState: (
-      managerAddress?: string,
+      guardianAddress?: string,
       adminAddress?: string,
     ) => Promise<{
       holdings: BigNumber[];
       adminBalances: BigNumber[];
-      managerBalances: BigNumber[];
+      guardianBalances: BigNumber[];
     }>;
 
     signers: Signers;
@@ -46,6 +46,6 @@ declare module "mocha" {
 
 export interface Signers {
   admin: SignerWithAddress;
-  manager: SignerWithAddress;
+  guardian: SignerWithAddress;
   user: SignerWithAddress;
 }
