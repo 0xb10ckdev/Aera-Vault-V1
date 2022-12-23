@@ -45,7 +45,7 @@ import {
 
 describe("Aera Vault V1 Mainnet Deployment", function () {
   let admin: SignerWithAddress;
-  let manager: SignerWithAddress;
+  let guardian: SignerWithAddress;
   let validator: WithdrawalValidatorMock;
   let factory: ManagedPoolFactory;
   let tokens: IERC20[];
@@ -58,7 +58,7 @@ describe("Aera Vault V1 Mainnet Deployment", function () {
   describe("should be reverted to deploy vault", async () => {
     before(async function () {
       snapshot = await ethers.provider.send("evm_snapshot", []);
-      ({ admin, manager } = await ethers.getNamedSigners());
+      ({ admin, guardian } = await ethers.getNamedSigners());
 
       ({ tokens, sortedTokens, unsortedTokens } = await setupTokens());
       validWeights = valueArray(ONE.div(tokens.length), tokens.length);
@@ -94,7 +94,7 @@ describe("Aera Vault V1 Mainnet Deployment", function () {
         tokens: sortedTokens,
         weights: validWeights,
         swapFeePercentage: MIN_SWAP_FEE,
-        manager: manager.address,
+        guardian: guardian.address,
         validator: validator.address,
         noticePeriod: MAX_NOTICE_PERIOD,
         managementFee: MAX_MANAGEMENT_FEE,
@@ -129,7 +129,7 @@ describe("Aera Vault V1 Mainnet Deployment", function () {
     });
 
     it("when validator is not valid", async () => {
-      validParams.validator = manager.address;
+      validParams.validator = guardian.address;
       await expect(deployVault(validParams)).to.be.revertedWith(
         "Aera__ValidatorIsNotValid",
       );
@@ -191,17 +191,17 @@ describe("Aera Vault V1 Mainnet Deployment", function () {
       );
     });
 
-    it("when manager is zero address", async () => {
-      validParams.manager = ZERO_ADDRESS;
+    it("when guardian is zero address", async () => {
+      validParams.guardian = ZERO_ADDRESS;
       await expect(deployVault(validParams)).to.be.revertedWith(
-        "Aera__ManagerIsZeroAddress",
+        "Aera__GuardianIsZeroAddress",
       );
     });
 
-    it("when manager is deployer", async () => {
-      validParams.manager = admin.address;
+    it("when guardian is deployer", async () => {
+      validParams.guardian = admin.address;
       await expect(deployVault(validParams)).to.be.revertedWith(
-        "Aera__ManagerIsOwner",
+        "Aera__GuardianIsOwner",
       );
     });
 
@@ -216,7 +216,7 @@ describe("Aera Vault V1 Mainnet Deployment", function () {
 
 baseContext("Aera Vault V1 Mainnet Functionality", function () {
   let admin: SignerWithAddress;
-  let manager: SignerWithAddress;
+  let guardian: SignerWithAddress;
   let user: SignerWithAddress;
   let vault: AeraVaultV1Mock;
   let validator: WithdrawalValidatorMock;
@@ -231,29 +231,29 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
     return balances;
   };
 
-  const getManagersFeeTotal = async () => {
-    const managersFeeTotal = await Promise.all(
+  const getGuardiansFeeTotal = async () => {
+    const guardiansFeeTotal = await Promise.all(
       Array.from(Array(tokens.length).keys()).map(index =>
-        vault.managersFeeTotal(index),
+        vault.guardiansFeeTotal(index),
       ),
     );
-    return managersFeeTotal;
+    return guardiansFeeTotal;
   };
 
   const getState = async (
-    managerAddress: string | null = null,
+    guardianAddress: string | null = null,
     adminAddress: string | null = null,
   ) => {
-    const [holdings, adminBalances, managerBalances] = await Promise.all([
+    const [holdings, adminBalances, guardianBalances] = await Promise.all([
       vault.getHoldings(),
       getUserBalances(adminAddress || admin.address),
-      getUserBalances(managerAddress || manager.address),
+      getUserBalances(guardianAddress || guardian.address),
     ]);
 
     return {
       holdings,
       adminBalances,
-      managerBalances,
+      guardianBalances,
     };
   };
 
@@ -293,7 +293,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
       tokens: sortedTokens.join(","),
       weights: validWeights.join(","),
       swapFee: MIN_SWAP_FEE.toString(),
-      manager: manager.address,
+      guardian: guardian.address,
       validator: validator.address,
       noticePeriod: DEFAULT_NOTICE_PERIOD.toString(),
       managementFee: MAX_MANAGEMENT_FEE.toString(),
@@ -305,7 +305,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
   }
 
   beforeEach(async function () {
-    ({ admin, manager, user } = this.signers);
+    ({ admin, guardian, user } = this.signers);
 
     ({ vault, validator, tokens, sortedTokens, unsortedTokens } =
       await this.loadFixture(forkTestFixture));
@@ -351,7 +351,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
         const blocknumber = await ethers.provider.getBlockNumber();
         await expect(
           vault
-            .connect(manager)
+            .connect(guardian)
             .updateWeightsGradually(
               tokenValueArray(
                 sortedTokens,
@@ -366,13 +366,13 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
       it("when call cancelWeightUpdates", async () => {
         await expect(
-          vault.connect(manager).cancelWeightUpdates(),
+          vault.connect(guardian).cancelWeightUpdates(),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
 
-      it("when call claimManagerFees", async () => {
+      it("when call claimGuardianFees", async () => {
         await expect(
-          vault.connect(manager).claimManagerFees(),
+          vault.connect(guardian).claimGuardianFees(),
         ).to.be.revertedWith("Aera__VaultNotInitialized");
       });
 
@@ -566,7 +566,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
       describe("should be possible to deposit tokens", async () => {
         it("when depositing one token", async () => {
           let { holdings, adminBalances } = await getState();
-          let managersFeeTotal = await getManagersFeeTotal();
+          let guardiansFeeTotal = await getGuardiansFeeTotal();
 
           for (let i = 0; i < tokens.length; i++) {
             const amounts = new Array(tokens.length).fill(0);
@@ -575,7 +575,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
             const spotPrices = await vault.getSpotPrices(tokens[i].address);
 
             await vault.deposit(tokenWithValues(sortedTokens, amounts));
-            const newManagersFeeTotal = await getManagersFeeTotal();
+            const newGuardiansFeeTotal = await getGuardiansFeeTotal();
 
             const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
             const { holdings: newHoldings, adminBalances: newAdminBalances } =
@@ -586,8 +586,8 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
               expect(newHoldings[j]).to.equal(
                 holdings[j]
                   .add(amounts[j])
-                  .sub(newManagersFeeTotal[j])
-                  .add(managersFeeTotal[j]),
+                  .sub(newGuardiansFeeTotal[j])
+                  .add(guardiansFeeTotal[j]),
               );
               expect(newAdminBalances[j]).to.equal(
                 adminBalances[j].sub(amounts[j]),
@@ -596,7 +596,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
             holdings = newHoldings;
             adminBalances = newAdminBalances;
-            managersFeeTotal = newManagersFeeTotal;
+            guardiansFeeTotal = newGuardiansFeeTotal;
           }
         });
 
@@ -614,7 +614,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
           }
 
           await vault.deposit(tokenWithValues(sortedTokens, amounts));
-          const managersFeeTotal = await getManagersFeeTotal();
+          const guardiansFeeTotal = await getGuardiansFeeTotal();
 
           const { holdings: newHoldings, adminBalances: newAdminBalances } =
             await getState();
@@ -638,7 +638,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
             expect(await vault.holding(i)).to.equal(newHoldings[i]);
             expect(newHoldings[i]).to.equal(
-              holdings[i].add(amounts[i]).sub(managersFeeTotal[i]),
+              holdings[i].add(amounts[i]).sub(guardiansFeeTotal[i]),
             );
             expect(newAdminBalances[i]).to.equal(
               adminBalances[i].sub(amounts[i]),
@@ -760,7 +760,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
               tokenValueArray(sortedTokens, toWei(5), tokens.length),
             );
             let { holdings, adminBalances } = await getState();
-            let managersFeeTotal = await getManagersFeeTotal();
+            let guardiansFeeTotal = await getGuardiansFeeTotal();
 
             for (let i = 0; i < tokens.length; i++) {
               const amounts = new Array(tokens.length).fill(0);
@@ -769,7 +769,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
               const spotPrices = await vault.getSpotPrices(tokens[i].address);
 
               await vault.withdraw(tokenWithValues(sortedTokens, amounts));
-              const newManagersFeeTotal = await getManagersFeeTotal();
+              const newGuardiansFeeTotal = await getGuardiansFeeTotal();
 
               const newSpotPrices = await vault.getSpotPrices(
                 tokens[i].address,
@@ -784,8 +784,8 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
                 expect(newHoldings[j]).to.equal(
                   holdings[j]
                     .sub(amounts[j])
-                    .sub(newManagersFeeTotal[j])
-                    .add(managersFeeTotal[j]),
+                    .sub(newGuardiansFeeTotal[j])
+                    .add(guardiansFeeTotal[j]),
                 );
                 expect(newAdminBalances[j]).to.equal(
                   adminBalances[j].add(amounts[j]),
@@ -794,7 +794,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
               holdings = newHoldings;
               adminBalances = newAdminBalances;
-              managersFeeTotal = newManagersFeeTotal;
+              guardiansFeeTotal = newGuardiansFeeTotal;
             }
           });
 
@@ -807,7 +807,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
             );
 
             const { holdings, adminBalances } = await getState();
-            const managersFeeTotal = await getManagersFeeTotal();
+            const guardiansFeeTotal = await getGuardiansFeeTotal();
 
             const amounts = tokens.map(_ =>
               toWei(Math.floor(Math.random() * 100)),
@@ -819,7 +819,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
             }
 
             await vault.withdraw(tokenWithValues(sortedTokens, amounts));
-            const newManagersFeeTotal = await getManagersFeeTotal();
+            const newGuardiansFeeTotal = await getGuardiansFeeTotal();
 
             const { holdings: newHoldings, adminBalances: newAdminBalances } =
               await getState();
@@ -847,8 +847,8 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
               expect(newHoldings[i]).to.equal(
                 holdings[i]
                   .sub(amounts[i])
-                  .sub(newManagersFeeTotal[i])
-                  .add(managersFeeTotal[i]),
+                  .sub(newGuardiansFeeTotal[i])
+                  .add(guardiansFeeTotal[i]),
               );
               expect(newAdminBalances[i]).to.equal(
                 adminBalances[i].add(amounts[i]),
@@ -868,7 +868,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
       it("should be possible to deposit and withdraw one token", async () => {
         let { holdings, adminBalances } = await getState();
-        let managersFeeTotal = await getManagersFeeTotal();
+        let guardiansFeeTotal = await getGuardiansFeeTotal();
 
         for (let i = 0; i < tokens.length; i++) {
           const amounts = new Array(tokens.length).fill(0);
@@ -878,7 +878,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
           await vault.deposit(tokenWithValues(sortedTokens, amounts));
           await vault.withdraw(tokenWithValues(sortedTokens, amounts));
-          const newManagersFeeTotal = await getManagersFeeTotal();
+          const newGuardiansFeeTotal = await getGuardiansFeeTotal();
 
           const newSpotPrices = await vault.getSpotPrices(tokens[i].address);
           const { holdings: newHoldings, adminBalances: newAdminBalances } =
@@ -887,14 +887,16 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
           for (let j = 0; j < tokens.length; j++) {
             expect(newSpotPrices[j]).to.closeTo(spotPrices[j], DEVIATION);
             expect(newHoldings[j]).to.equal(
-              holdings[j].sub(newManagersFeeTotal[j]).add(managersFeeTotal[j]),
+              holdings[j]
+                .sub(newGuardiansFeeTotal[j])
+                .add(guardiansFeeTotal[j]),
             );
             expect(newAdminBalances[j]).to.equal(adminBalances[j]);
           }
 
           holdings = newHoldings;
           adminBalances = newAdminBalances;
-          managersFeeTotal = newManagersFeeTotal;
+          guardiansFeeTotal = newGuardiansFeeTotal;
         }
       });
 
@@ -913,7 +915,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
         await vault.deposit(tokenWithValues(sortedTokens, amounts));
         await vault.withdraw(tokenWithValues(sortedTokens, amounts));
-        const managersFeeTotal = await getManagersFeeTotal();
+        const guardiansFeeTotal = await getGuardiansFeeTotal();
 
         const { holdings: newHoldings, adminBalances: newAdminBalances } =
           await getState();
@@ -937,7 +939,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
           expect(await vault.holding(i)).to.equal(newHoldings[i]);
           expect(newHoldings[i]).to.equal(
-            holdings[i].sub(managersFeeTotal[i]),
+            holdings[i].sub(guardiansFeeTotal[i]),
           );
           expect(newAdminBalances[i]).to.equal(adminBalances[i]);
         }
@@ -946,7 +948,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
     describe("when calling updateWeightsGradually()", () => {
       describe("should be reverted to call updateWeightsGradually", async () => {
-        it("when called from non-manager", async () => {
+        it("when called from non-guardian", async () => {
           await expect(
             vault.updateWeightsGradually(
               tokenValueArray(
@@ -957,14 +959,14 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
               0,
               1,
             ),
-          ).to.be.revertedWith("Aera__CallerIsNotManager");
+          ).to.be.revertedWith("Aera__CallerIsNotGuardian");
         });
 
         it("when token is not sorted", async () => {
           const timestamp = await getCurrentTime();
           await expect(
             vault
-              .connect(manager)
+              .connect(guardian)
               .updateWeightsGradually(
                 tokenValueArray(
                   unsortedTokens,
@@ -981,7 +983,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
           const timestamp = await getCurrentTime();
           await expect(
             vault
-              .connect(manager)
+              .connect(guardian)
               .updateWeightsGradually(
                 tokenValueArray(
                   sortedTokens,
@@ -998,7 +1000,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
           const timestamp = await getCurrentTime();
           await expect(
             vault
-              .connect(manager)
+              .connect(guardian)
               .updateWeightsGradually(
                 tokenValueArray(
                   sortedTokens,
@@ -1015,7 +1017,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
           const timestamp = await getCurrentTime();
           await expect(
             vault
-              .connect(manager)
+              .connect(guardian)
               .updateWeightsGradually(
                 tokenValueArray(
                   sortedTokens,
@@ -1032,7 +1034,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
           const timestamp = await getCurrentTime();
           await expect(
             vault
-              .connect(manager)
+              .connect(guardian)
               .updateWeightsGradually(
                 tokenValueArray(
                   sortedTokens,
@@ -1049,7 +1051,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
           const timestamp = await getCurrentTime();
           await expect(
             vault
-              .connect(manager)
+              .connect(guardian)
               .updateWeightsGradually(
                 tokenValueArray(
                   sortedTokens,
@@ -1066,7 +1068,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
           const timestamp = await getCurrentTime();
           await expect(
             vault
-              .connect(manager)
+              .connect(guardian)
               .updateWeightsGradually(
                 tokenValueArray(
                   sortedTokens,
@@ -1105,7 +1107,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
           await expect(
             vault
-              .connect(manager)
+              .connect(guardian)
               .updateWeightsGradually(
                 tokenWithValues(sortedTokens, targetWeights),
                 timestamp,
@@ -1123,7 +1125,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
             .div(MAX_WEIGHT_CHANGE_RATIO)
             .add(1);
           await expect(
-            vault.connect(manager).updateWeightsGradually(
+            vault.connect(guardian).updateWeightsGradually(
               [
                 {
                   token: sortedTokens[0],
@@ -1159,7 +1161,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
         }
 
         await vault
-          .connect(manager)
+          .connect(guardian)
           .updateWeightsGradually(
             tokenWithValues(sortedTokens, endWeights),
             startTime,
@@ -1204,7 +1206,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
           }
 
           await vault
-            .connect(manager)
+            .connect(guardian)
             .updateWeightsGradually(
               tokenWithValues(sortedTokens, endWeights),
               startTime,
@@ -1251,7 +1253,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
           }
 
           await vault
-            .connect(manager)
+            .connect(guardian)
             .updateWeightsGradually(
               tokenWithValues(sortedTokens, endWeights),
               startTime,
@@ -1278,9 +1280,9 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
     });
 
     describe("when calling cancelWeightUpdates()", () => {
-      it("should be reverted when called from non-manager", async () => {
+      it("should be reverted when called from non-guardian", async () => {
         await expect(vault.cancelWeightUpdates()).to.be.revertedWith(
-          "Aera__CallerIsNotManager",
+          "Aera__CallerIsNotGuardian",
         );
       });
 
@@ -1300,7 +1302,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
         }
 
         await vault
-          .connect(manager)
+          .connect(guardian)
           .updateWeightsGradually(
             tokenWithValues(sortedTokens, endWeights),
             startTime,
@@ -1309,7 +1311,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
         await increaseTime(MINIMUM_WEIGHT_CHANGE_DURATION / 2);
 
-        await vault.connect(manager).cancelWeightUpdates();
+        await vault.connect(guardian).cancelWeightUpdates();
 
         const newWeights = await vault.getNormalizedWeights();
 
@@ -1327,7 +1329,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
       describe("should be reverted to call initiateFinalization", async () => {
         it("when called from non-owner", async () => {
           await expect(
-            vault.connect(manager).initiateFinalization(),
+            vault.connect(guardian).initiateFinalization(),
           ).to.be.revertedWith("Ownable: caller is not the owner");
         });
       });
@@ -1386,7 +1388,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
           const blocknumber = await ethers.provider.getBlockNumber();
           await expect(
             vault
-              .connect(manager)
+              .connect(guardian)
               .updateWeightsGradually(
                 tokenValueArray(sortedTokens, MIN_WEIGHT, tokens.length),
                 blocknumber + 1,
@@ -1397,13 +1399,13 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
         it("when call cancelWeightUpdates", async () => {
           await expect(
-            vault.connect(manager).cancelWeightUpdates(),
+            vault.connect(guardian).cancelWeightUpdates(),
           ).to.be.revertedWith("Aera__VaultIsFinalizing");
         });
 
-        it("when call claimManagerFees", async () => {
+        it("when call claimGuardianFees", async () => {
           await expect(
-            vault.connect(manager).claimManagerFees(),
+            vault.connect(guardian).claimGuardianFees(),
           ).to.be.revertedWith("Aera__VaultIsFinalizing");
         });
 
@@ -1477,7 +1479,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
       it("when called from non-owner", async () => {
         await expect(
-          vault.connect(manager).sweep(TOKEN.address, toWei(1001)),
+          vault.connect(guardian).sweep(TOKEN.address, toWei(1001)),
         ).to.be.revertedWith("Ownable: caller is not the owner");
       });
 
@@ -1510,7 +1512,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
     });
   });
 
-  describe("Claim Manager Fees", () => {
+  describe("Claim Guardian Fees", () => {
     beforeEach(async () => {
       for (let i = 0; i < tokens.length; i++) {
         await tokens[i].approve(vault.address, ONE);
@@ -1520,7 +1522,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
       );
     });
 
-    it("should be reverted to claim manager fees when no available fee", async () => {
+    it("should be reverted to claim guardian fees when no available fee", async () => {
       for (let i = 0; i < tokens.length; i++) {
         await tokens[i].approve(vault.address, toWei(100000));
       }
@@ -1528,26 +1530,26 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
         tokenValueArray(sortedTokens, toWei(10000), tokens.length),
       );
 
-      await expect(vault.claimManagerFees()).to.be.revertedWith(
+      await expect(vault.claimGuardianFees()).to.be.revertedWith(
         "Aera__NoAvailableFeeForCaller",
       );
     });
 
-    describe("should be possible to claim manager fees", async () => {
-      it("when called from current manager", async () => {
+    describe("should be possible to claim guardian fees", async () => {
+      it("when called from current guardian", async () => {
         for (let i = 0; i < tokens.length; i++) {
           await tokens[i].approve(vault.address, toWei(100000));
         }
 
         let lastFeeCheckpoint = (await vault.lastFeeCheckpoint()).toNumber();
         let holdings = await vault.getHoldings();
-        const managerBalances = await getUserBalances(manager.address);
+        const guardianBalances = await getUserBalances(guardian.address);
         const depositTrx = await vault.deposit(
           tokenValueArray(sortedTokens, toWei(10000), tokens.length),
         );
 
         let currentTime = await getTimestamp(depositTrx.blockNumber);
-        const managerFee = holdings.map((holding: BigNumber) =>
+        const guardianFee = holdings.map((holding: BigNumber) =>
           holding
             .mul(currentTime - lastFeeCheckpoint)
             .mul(MAX_MANAGEMENT_FEE)
@@ -1557,38 +1559,38 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
         holdings = await vault.getHoldings();
 
-        const trx = await vault.connect(manager).claimManagerFees();
+        const trx = await vault.connect(guardian).claimGuardianFees();
 
-        const newManagerBalances = await getUserBalances(manager.address);
+        const newGuardianBalances = await getUserBalances(guardian.address);
 
         currentTime = await getTimestamp(trx.blockNumber);
         holdings.forEach((holding: BigNumber, index: number) => {
-          managerFee[index] = managerFee[index].add(
+          guardianFee[index] = guardianFee[index].add(
             holding
               .mul(currentTime - lastFeeCheckpoint)
               .mul(MAX_MANAGEMENT_FEE)
               .div(ONE),
           );
-          expect(newManagerBalances[index]).to.equal(
-            managerBalances[index].add(managerFee[index]),
+          expect(newGuardianBalances[index]).to.equal(
+            guardianBalances[index].add(guardianFee[index]),
           );
         });
       });
 
-      it("when called from old manager", async () => {
+      it("when called from old guardian", async () => {
         for (let i = 0; i < tokens.length; i++) {
           await tokens[i].approve(vault.address, toWei(100000));
         }
 
         let lastFeeCheckpoint = (await vault.lastFeeCheckpoint()).toNumber();
         let holdings = await vault.getHoldings();
-        const managerBalances = await getUserBalances(manager.address);
+        const guardianBalances = await getUserBalances(guardian.address);
         const depositTrx = await vault.deposit(
           tokenValueArray(sortedTokens, toWei(10000), tokens.length),
         );
 
         let currentTime = await getTimestamp(depositTrx.blockNumber);
-        const managerFee = holdings.map((holding: BigNumber) =>
+        const guardianFee = holdings.map((holding: BigNumber) =>
           holding
             .mul(currentTime - lastFeeCheckpoint)
             .mul(MAX_MANAGEMENT_FEE)
@@ -1597,11 +1599,11 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
         lastFeeCheckpoint = currentTime;
 
         holdings = (await getState()).holdings;
-        const setManagerTrx = await vault.setManager(user.address);
+        const setGuardianTrx = await vault.setGuardian(user.address);
 
-        currentTime = await getTimestamp(setManagerTrx.blockNumber);
+        currentTime = await getTimestamp(setGuardianTrx.blockNumber);
         holdings.forEach((holding: BigNumber, index: number) => {
-          managerFee[index] = managerFee[index].add(
+          guardianFee[index] = guardianFee[index].add(
             holding
               .mul(currentTime - lastFeeCheckpoint)
               .mul(MAX_MANAGEMENT_FEE)
@@ -1609,14 +1611,14 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
           );
         });
 
-        await vault.connect(manager).claimManagerFees();
+        await vault.connect(guardian).claimGuardianFees();
 
-        const newManagerBalances = await getUserBalances(manager.address);
+        const newGuardianBalances = await getUserBalances(guardian.address);
 
-        newManagerBalances.forEach(
-          (managerBalance: BigNumber, index: number) => {
-            expect(managerBalance).to.equal(
-              managerBalances[index].add(managerFee[index]),
+        newGuardianBalances.forEach(
+          (guardianBalance: BigNumber, index: number) => {
+            expect(guardianBalance).to.equal(
+              guardianBalances[index].add(guardianFee[index]),
             );
           },
         );
@@ -1625,31 +1627,31 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
   });
 
   describe("Update Elements", () => {
-    describe("Update Manager", () => {
-      describe("should be reverted to change manager", async () => {
+    describe("Update Guardian", () => {
+      describe("should be reverted to change guardian", async () => {
         it("when called from non-owner", async () => {
           await expect(
-            vault.connect(manager).setManager(ZERO_ADDRESS),
+            vault.connect(guardian).setGuardian(ZERO_ADDRESS),
           ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
-        it("when parameter(new manager) is zero address", async () => {
-          await expect(vault.setManager(ZERO_ADDRESS)).to.be.revertedWith(
-            "Aera__ManagerIsZeroAddress",
+        it("when parameter(new guardian) is zero address", async () => {
+          await expect(vault.setGuardian(ZERO_ADDRESS)).to.be.revertedWith(
+            "Aera__GuardianIsZeroAddress",
           );
         });
 
-        it("when parameter(new manager) is owner", async () => {
-          await expect(vault.setManager(admin.address)).to.be.revertedWith(
-            "Aera__ManagerIsOwner",
+        it("when parameter(new guardian) is owner", async () => {
+          await expect(vault.setGuardian(admin.address)).to.be.revertedWith(
+            "Aera__GuardianIsOwner",
           );
         });
       });
 
-      it("should be possible to change manager", async () => {
-        expect(await vault.manager()).to.equal(manager.address);
-        await vault.setManager(user.address);
-        expect(await vault.manager()).to.equal(user.address);
+      it("should be possible to change guardian", async () => {
+        expect(await vault.guardian()).to.equal(guardian.address);
+        await vault.setGuardian(user.address);
+        expect(await vault.guardian()).to.equal(user.address);
       });
     });
 
@@ -1666,7 +1668,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
       describe("with enableTradingRiskingArbitrage function", () => {
         it("should be reverted to enable trading when called from non-owner", async () => {
           await expect(
-            vault.connect(manager).enableTradingRiskingArbitrage(),
+            vault.connect(guardian).enableTradingRiskingArbitrage(),
           ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
@@ -1689,7 +1691,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
           it("when called from non-owner", async () => {
             await expect(
               vault
-                .connect(manager)
+                .connect(guardian)
                 .enableTradingWithWeights(
                   tokenValueArray(
                     sortedTokens,
@@ -1781,7 +1783,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
       it("should be reverted to disable trading", async () => {
         await expect(vault.connect(user).disableTrading()).to.be.revertedWith(
-          "Aera__CallerIsNotOwnerOrManager",
+          "Aera__CallerIsNotOwnerOrGuardian",
         );
       });
 
@@ -1789,7 +1791,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
         expect(await vault.isSwapEnabled()).to.equal(true);
 
         expect(await vault.estimateGas.disableTrading()).to.below(52000);
-        await vault.connect(manager).disableTrading();
+        await vault.connect(guardian).disableTrading();
 
         expect(await vault.isSwapEnabled()).to.equal(false);
       });
@@ -1797,33 +1799,33 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
     describe("Set Swap Fee", () => {
       describe("should be reverted to set swap fee", async () => {
-        it("when called from non-manager", async () => {
+        it("when called from non-guardian", async () => {
           await expect(vault.setSwapFee(toWei(3))).to.be.revertedWith(
-            "Aera__CallerIsNotManager()",
+            "Aera__CallerIsNotGuardian()",
           );
         });
 
         it("when swap fee is greater than balancer maximum", async () => {
           let newFee = await vault.getSwapFee();
           while (newFee.lte(MAX_SWAP_FEE)) {
-            await vault.connect(manager).setSwapFee(newFee);
+            await vault.connect(guardian).setSwapFee(newFee);
             await increaseTime(SWAP_FEE_COOLDOWN_PERIOD);
             newFee = newFee.add(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
           }
           await expect(
-            vault.connect(manager).setSwapFee(MAX_SWAP_FEE.add(1)),
+            vault.connect(guardian).setSwapFee(MAX_SWAP_FEE.add(1)),
           ).to.be.revertedWith(BALANCER_ERRORS.MAX_SWAP_FEE_PERCENTAGE);
         });
 
         it("when swap fee is less than balancer minimum", async () => {
           let newFee = await vault.getSwapFee();
           while (newFee.gte(MIN_SWAP_FEE)) {
-            await vault.connect(manager).setSwapFee(newFee);
+            await vault.connect(guardian).setSwapFee(newFee);
             await increaseTime(SWAP_FEE_COOLDOWN_PERIOD);
             newFee = newFee.sub(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
           }
           await expect(
-            vault.connect(manager).setSwapFee(MIN_SWAP_FEE.sub(1)),
+            vault.connect(guardian).setSwapFee(MIN_SWAP_FEE.sub(1)),
           ).to.be.revertedWith(BALANCER_ERRORS.MIN_SWAP_FEE_PERCENTAGE);
         });
       });
@@ -1832,9 +1834,9 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
         const fee = await vault.getSwapFee();
         const newFee = fee.add(MAXIMUM_SWAP_FEE_PERCENT_CHANGE);
         expect(
-          await vault.connect(manager).estimateGas.setSwapFee(newFee),
+          await vault.connect(guardian).estimateGas.setSwapFee(newFee),
         ).to.below(90000);
-        await vault.connect(manager).setSwapFee(newFee);
+        await vault.connect(guardian).setSwapFee(newFee);
 
         expect(await vault.getSwapFee()).to.equal(newFee);
       });

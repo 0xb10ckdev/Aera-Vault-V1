@@ -10,7 +10,7 @@ import {
 import { testFunctionCallsWhenFinalized } from "./callFunctionsWhenFinalized";
 import { testFunctionCallsWhenNotInitialized } from "./callFunctionsWhenNotInitialized";
 import { testCancelWeightUpdates } from "./cancelWeightUpdates";
-import { testClaimManagerFees } from "./claimManagerFees";
+import { testClaimGuardianFees } from "./claimGuardianFees";
 import { testDeposit } from "./deposit";
 import { testDepositAndWithdraw } from "./depositAndWithdraw";
 import { testDepositRiskingArbitrage } from "./depositRiskingArbitrage";
@@ -23,7 +23,7 @@ import { testGetSpotPrices } from "./getSpotPrices";
 import { testInitialDeposit } from "./initialDeposit";
 import { testMulticall } from "./multicall";
 import { testOwnership } from "./ownership";
-import { testSetManager } from "./setManager";
+import { testSetGuardian } from "./setGuardian";
 import { testSetOraclesEnabled } from "./setOraclesEnabled";
 import { testSetSwapFee } from "./setSwapFee";
 import { testSweep } from "./sweep";
@@ -124,13 +124,13 @@ export function testAeraVaultV2(): void {
       testSweep();
     });
 
-    describe("Claim Manager Fees", function () {
-      testClaimManagerFees();
+    describe("Claim Guardian Fees", function () {
+      testClaimGuardianFees();
     });
 
     describe("Update Elements", function () {
-      describe("Update Manager", function () {
-        testSetManager();
+      describe("Update Guardian", function () {
+        testSetGuardian();
       });
 
       describe("Enable/Disable Oracle", function () {

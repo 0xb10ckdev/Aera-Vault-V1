@@ -6,7 +6,7 @@ import { toWei, tokenWithValues } from "../../utils";
 export function testDepositAndWithdraw(): void {
   it("should be possible to deposit and withdraw one token", async function () {
     let { holdings, adminBalances } = await this.getState();
-    let managersFeeTotal = await this.getManagersFeeTotal();
+    let guardiansFeeTotal = await this.getGuardiansFeeTotal();
 
     for (let i = 0; i < this.numTokens; i++) {
       const amounts = new Array(this.numTokens).fill(0);
@@ -21,7 +21,7 @@ export function testDepositAndWithdraw(): void {
         tokenWithValues(this.tokenAddresses, amounts),
       );
       await this.vault.withdraw(tokenWithValues(this.tokenAddresses, amounts));
-      const newManagersFeeTotal = await this.getManagersFeeTotal();
+      const newGuardiansFeeTotal = await this.getGuardiansFeeTotal();
 
       if (i < this.numPoolTokens) {
         const newSpotPrices = await this.vault.getSpotPrices(
@@ -39,7 +39,7 @@ export function testDepositAndWithdraw(): void {
 
       for (let j = 0; j < this.numTokens; j++) {
         expect(newHoldings[j]).to.equal(
-          holdings[j].sub(newManagersFeeTotal[j]).add(managersFeeTotal[j]),
+          holdings[j].sub(newGuardiansFeeTotal[j]).add(guardiansFeeTotal[j]),
         );
 
         if (
@@ -64,7 +64,7 @@ export function testDepositAndWithdraw(): void {
 
       holdings = newHoldings;
       adminBalances = newAdminBalances;
-      managersFeeTotal = newManagersFeeTotal;
+      guardiansFeeTotal = newGuardiansFeeTotal;
     }
   });
 
@@ -84,7 +84,7 @@ export function testDepositAndWithdraw(): void {
       tokenWithValues(this.tokenAddresses, amounts),
     );
     await this.vault.withdraw(tokenWithValues(this.tokenAddresses, amounts));
-    const managersFeeTotal = await this.getManagersFeeTotal();
+    const guardiansFeeTotal = await this.getGuardiansFeeTotal();
 
     const { holdings: newHoldings, adminBalances: newAdminBalances } =
       await this.getState();
@@ -110,7 +110,7 @@ export function testDepositAndWithdraw(): void {
     }
     for (let i = 0; i < this.numTokens; i++) {
       expect(await this.vault.holding(i)).to.equal(newHoldings[i]);
-      expect(newHoldings[i]).to.equal(holdings[i].sub(managersFeeTotal[i]));
+      expect(newHoldings[i]).to.equal(holdings[i].sub(guardiansFeeTotal[i]));
       if (i < this.numPoolTokens) {
         let poolTokenWithdrawnAmount = BigNumber.from(0);
         for (let j = 0; j < this.numYieldTokens; j++) {

@@ -1,17 +1,20 @@
 import { Signer } from "ethers";
 import { ethers } from "hardhat";
-import { ManagerWhitelist, ManagerWhitelist__factory } from "../../typechain";
+import {
+  GuardianWhitelist,
+  GuardianWhitelist__factory,
+} from "../../typechain";
 
 export * from "../common/utils";
 
-export const deployManagerWhitelist = async (
+export const deployGuardianWhitelist = async (
   signer: Signer,
-  managers: string[],
-): Promise<ManagerWhitelist> => {
-  const managerWhitelist =
-    await ethers.getContractFactory<ManagerWhitelist__factory>(
-      "ManagerWhitelist",
+  guardians: string[],
+): Promise<GuardianWhitelist> => {
+  const guardianWhitelist =
+    await ethers.getContractFactory<GuardianWhitelist__factory>(
+      "GuardianWhitelist",
     );
 
-  return await managerWhitelist.connect(signer).deploy(managers);
+  return await guardianWhitelist.connect(signer).deploy(guardians);
 };

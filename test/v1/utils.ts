@@ -24,7 +24,7 @@ export type VaultParams = {
   tokens: string[];
   weights: string[];
   swapFeePercentage: BigNumber;
-  manager: string;
+  guardian: string;
   validator?: string;
   noticePeriod?: number;
   managementFee?: BigNumber;
@@ -49,7 +49,7 @@ export const deployVault = async (
     tokens: params.tokens,
     weights: params.weights,
     swapFeePercentage: params.swapFeePercentage,
-    manager: params.manager,
+    guardian: params.guardian,
     validator: params.validator,
     noticePeriod: params.noticePeriod || DEFAULT_NOTICE_PERIOD,
     managementFee: params.managementFee || MAX_MANAGEMENT_FEE,

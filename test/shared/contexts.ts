@@ -9,15 +9,15 @@ export function baseContext(description: string, testSuite: () => void): void {
     before(async function () {
       this.signers = {} as Signers;
 
-      const { admin, manager, user } = await ethers.getNamedSigners();
+      const { admin, guardian, user } = await ethers.getNamedSigners();
       this.signers.admin = admin;
-      this.signers.manager = manager;
+      this.signers.guardian = guardian;
       this.signers.user = user;
 
       // Fixture loader setup
       this.loadFixture = waffle.createFixtureLoader([
         admin,
-        manager,
+        guardian,
         user,
       ] as Signer[] as Wallet[]);
 
@@ -27,28 +27,30 @@ export function baseContext(description: string, testSuite: () => void): void {
         );
       };
 
-      this.getManagersFeeTotal = async function () {
+      this.getGuardiansFeeTotal = async function () {
         return await Promise.all(
           Array.from(Array(this.tokens.length).keys()).map(index =>
-            this.vault.managersFeeTotal(index),
+            this.vault.guardiansFeeTotal(index),
           ),
         );
       };
 
       this.getState = async (
-        managerAddress?: string,
+        guardianAddress?: string,
         adminAddress?: string,
       ) => {
-        const [holdings, adminBalances, managerBalances] = await Promise.all([
+        const [holdings, adminBalances, guardianBalances] = await Promise.all([
           this.vault.getHoldings(),
           this.getUserBalances(adminAddress || this.signers.admin.address),
-          this.getUserBalances(managerAddress || this.signers.manager.address),
+          this.getUserBalances(
+            guardianAddress || this.signers.guardian.address,
+          ),
         ]);
 
         return {
           holdings,
           adminBalances,
-          managerBalances,
+          guardianBalances,
         };
       };
     });

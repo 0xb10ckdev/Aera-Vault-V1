@@ -5,17 +5,17 @@ import { toUnit } from "../../utils";
 
 export function testEnableTradingWithOraclePrice(): void {
   describe("should be reverted to enable trading", async function () {
-    it("when called from non-manager", async function () {
+    it("when called from non-guardian", async function () {
       await expect(
         this.vault.enableTradingWithOraclePrice(),
-      ).to.be.revertedWith("Aera__CallerIsNotManager");
+      ).to.be.revertedWith("Aera__CallerIsNotGuardian");
     });
 
     it("when oracle price is not greater than zero", async function () {
       await this.oracles[1].setLatestAnswer(0);
       await expect(
         this.vault
-          .connect(this.signers.manager)
+          .connect(this.signers.guardian)
           .enableTradingWithOraclePrice(),
       ).to.be.revertedWith("Aera__OraclePriceIsInvalid");
     });
@@ -29,7 +29,7 @@ export function testEnableTradingWithOraclePrice(): void {
     }
 
     await expect(
-      this.vault.connect(this.signers.manager).enableTradingWithOraclePrice(),
+      this.vault.connect(this.signers.guardian).enableTradingWithOraclePrice(),
     )
       .to.emit(this.vault, "SetSwapEnabled")
       .withArgs(true)
