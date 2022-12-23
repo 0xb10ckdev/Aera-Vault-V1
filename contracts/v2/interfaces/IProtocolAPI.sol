@@ -76,8 +76,8 @@ interface IProtocolAPI {
     /// @notice Destroy vault and returns all funds to treasury owner.
     function finalize() external;
 
-    /// @notice Change manager.
-    function setManager(address newManager) external;
+    /// @notice Change guardian.
+    function setGuardian(address newGuardian) external;
 
     /// @notice Withdraw any tokens accidentally sent to vault.
     function sweep(address token, uint256 amount) external;

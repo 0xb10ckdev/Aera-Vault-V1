@@ -32,8 +32,8 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
     /// @notice Maximum absolute change in swap fee.
     uint256 private constant MAXIMUM_SWAP_FEE_PERCENT_CHANGE = 0.005e18;
 
-    /// @dev Address to represent unset manager in events.
-    address private constant UNSET_MANAGER_ADDRESS = address(0);
+    /// @dev Address to represent unset guardian in events.
+    address private constant UNSET_GUARDIAN_ADDRESS = address(0);
 
     /// @notice Largest possible notice period for vault termination (2 months).
     uint256 private constant MAX_NOTICE_PERIOD = 60 days;
@@ -92,7 +92,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
     bool public finalized;
 
     /// @notice Controls vault parameters.
-    address public manager;
+    address public guardian;
 
     /// @notice Pending account to accept ownership of vault.
     address public pendingOwner;
@@ -100,14 +100,14 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
     /// @notice Timestamp when notice elapses or 0 if not yet set
     uint256 public noticeTimeoutAt;
 
-    /// @notice Last timestamp where manager fee index was locked.
+    /// @notice Last timestamp where guardian fee index was locked.
     uint256 public lastFeeCheckpoint = type(uint256).max;
 
-    /// @notice Fee earned amount for each manager
-    mapping(address => uint256[]) public managersFee;
+    /// @notice Fee earned amount for each guardian
+    mapping(address => uint256[]) public guardiansFee;
 
-    /// @notice Total manager fee earned amount
-    uint256[] public managersFeeTotal;
+    /// @notice Total guardian fee earned amount
+    uint256[] public guardiansFeeTotal;
 
     /// @notice Last timestamp where swap fee was updated.
     uint256 public lastSwapFeeCheckpoint;
@@ -121,7 +121,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
     /// @param tokens Token addresses.
     /// @param weights Token weights.
     /// @param swapFeePercentage Pool swap fee.
-    /// @param manager Vault manager address.
+    /// @param guardian Vault guardian address.
     /// @param validator Withdrawal validator contract address.
     /// @param noticePeriod Notice period (in seconds).
     /// @param managementFee Management fee earned proportion per second.
@@ -134,7 +134,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         IERC20[] tokens,
         uint256[] weights,
         uint256 swapFeePercentage,
-        address indexed manager,
+        address indexed guardian,
         address indexed validator,
         uint256 noticePeriod,
         uint256 managementFee,
@@ -165,16 +165,16 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
     );
 
     /// @notice Emitted when management fees are withdrawn.
-    /// @param manager Manager address.
+    /// @param guardian Guardian address.
     /// @param amounts Withdrawn amounts.
-    event DistributeManagerFees(address indexed manager, uint256[] amounts);
+    event DistributeGuardianFees(address indexed guardian, uint256[] amounts);
 
-    /// @notice Emitted when manager is changed.
-    /// @param previousManager Previous manager address.
-    /// @param manager New manager address.
-    event ManagerChanged(
-        address indexed previousManager,
-        address indexed manager
+    /// @notice Emitted when guardian is changed.
+    /// @param previousGuardian Previous guardian address.
+    /// @param guardian New guardian address.
+    event GuardianChanged(
+        address indexed previousGuardian,
+        address indexed guardian
     );
 
     /// @notice Emitted when updateWeightsGradually is called.
@@ -245,12 +245,12 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
     error Aera__ManagementFeeIsAboveMax(uint256 actual, uint256 max);
     error Aera__NoticePeriodIsAboveMax(uint256 actual, uint256 max);
     error Aera__NoticeTimeoutNotElapsed(uint256 noticeTimeoutAt);
-    error Aera__ManagerIsZeroAddress();
-    error Aera__ManagerIsOwner(address newManager);
-    error Aera__CallerIsNotManager();
+    error Aera__GuardianIsZeroAddress();
+    error Aera__GuardianIsOwner(address newGuardian);
+    error Aera__CallerIsNotGuardian();
     error Aera__SwapFeePercentageChangeIsAboveMax(uint256 actual, uint256 max);
     error Aera__DescriptionIsEmpty();
-    error Aera__CallerIsNotOwnerOrManager();
+    error Aera__CallerIsNotOwnerOrGuardian();
     error Aera__WeightChangeEndBeforeStart();
     error Aera__WeightChangeStartTimeIsAboveMax(uint256 actual, uint256 max);
     error Aera__WeightChangeEndTimeIsAboveMax(uint256 actual, uint256 max);
@@ -285,18 +285,18 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
 
     /// MODIFIERS ///
 
-    /// @dev Throws if called by any account other than the manager.
-    modifier onlyManager() {
-        if (msg.sender != manager) {
-            revert Aera__CallerIsNotManager();
+    /// @dev Throws if called by any account other than the guardian.
+    modifier onlyGuardian() {
+        if (msg.sender != guardian) {
+            revert Aera__CallerIsNotGuardian();
         }
         _;
     }
 
-    /// @dev Throws if called by any account other than the owner or manager.
-    modifier onlyOwnerOrManager() {
-        if (msg.sender != owner() && msg.sender != manager) {
-            revert Aera__CallerIsNotOwnerOrManager();
+    /// @dev Throws if called by any account other than the owner or guardian.
+    modifier onlyOwnerOrGuardian() {
+        if (msg.sender != owner() && msg.sender != guardian) {
+            revert Aera__CallerIsNotOwnerOrGuardian();
         }
         _;
     }
@@ -368,7 +368,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         if (bytes(vaultParams.description).length == 0) {
             revert Aera__DescriptionIsEmpty();
         }
-        checkManagerAddress(vaultParams.manager);
+        checkGuardianAddress(vaultParams.guardian);
 
         address[] memory assetManagers = new address[](numTokens);
         for (uint256 i = 0; i < numTokens; i++) {
@@ -425,13 +425,13 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         poolController = IBManagedPoolController(pool.getOwner());
         merkleOrchard = IBMerkleOrchard(vaultParams.merkleOrchard);
         poolId = pool.getPoolId();
-        manager = vaultParams.manager;
+        guardian = vaultParams.guardian;
         validator = IWithdrawalValidator(vaultParams.validator);
         noticePeriod = vaultParams.noticePeriod;
         description = vaultParams.description;
         managementFee = vaultParams.managementFee;
-        managersFee[manager] = new uint256[](numTokens);
-        managersFeeTotal = new uint256[](numTokens);
+        guardiansFee[guardian] = new uint256[](numTokens);
+        guardiansFeeTotal = new uint256[](numTokens);
 
         // slither-disable-next-line reentrancy-events
         emit Created(
@@ -441,7 +441,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
             vaultParams.tokens,
             vaultParams.weights,
             vaultParams.swapFeePercentage,
-            vaultParams.manager,
+            vaultParams.guardian,
             vaultParams.validator,
             vaultParams.noticePeriod,
             vaultParams.managementFee,
@@ -449,7 +449,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
             vaultParams.description
         );
         // slither-disable-next-line reentrancy-events
-        emit ManagerChanged(UNSET_MANAGER_ADDRESS, vaultParams.manager);
+        emit GuardianChanged(UNSET_GUARDIAN_ADDRESS, vaultParams.guardian);
     }
 
     /// PROTOCOL API ///
@@ -564,7 +564,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         whenInitialized
         whenNotFinalizing
     {
-        lockManagerFees();
+        lockGuardianFees();
         // slither-disable-next-line reentrancy-no-eth
         noticeTimeoutAt = block.timestamp + noticePeriod;
         setSwapEnabled(false);
@@ -598,28 +598,28 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
 
     /// @inheritdoc IProtocolAPI
     // slither-disable-next-line timestamp
-    function setManager(address newManager)
+    function setGuardian(address newGuardian)
         external
         override
         nonReentrant
         onlyOwner
     {
-        checkManagerAddress(newManager);
+        checkGuardianAddress(newGuardian);
 
         if (initialized && noticeTimeoutAt == 0) {
-            lockManagerFees();
+            lockGuardianFees();
         }
 
-        if (managersFee[newManager].length == 0) {
+        if (guardiansFee[newGuardian].length == 0) {
             // slither-disable-next-line reentrancy-no-eth
-            managersFee[newManager] = new uint256[](getTokens().length);
+            guardiansFee[newGuardian] = new uint256[](getTokens().length);
         }
 
         // slither-disable-next-line reentrancy-events
-        emit ManagerChanged(manager, newManager);
+        emit GuardianChanged(guardian, newGuardian);
 
         // slither-disable-next-line missing-zero-check
-        manager = newManager;
+        guardian = newGuardian;
     }
 
     /// @inheritdoc IProtocolAPI
@@ -677,7 +677,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
     function disableTrading()
         external
         override
-        onlyOwnerOrManager
+        onlyOwnerOrGuardian
         whenInitialized
     {
         setSwapEnabled(false);
@@ -697,9 +697,9 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         merkleOrchard.claimDistributions(owner(), claims, tokens);
     }
 
-    /// MANAGER API ///
+    /// GUARDIAN API ///
 
-    /// @inheritdoc IManagerAPI
+    /// @inheritdoc IGuardianAPI
     // slither-disable-next-line timestamp
     function updateWeightsGradually(
         TokenValue[] calldata tokenWithWeight,
@@ -709,7 +709,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         external
         override
         nonReentrant
-        onlyManager
+        onlyGuardian
         whenInitialized
         whenNotFinalizing
     {
@@ -775,12 +775,12 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         emit UpdateWeightsGradually(startTime, endTime, targetWeights);
     }
 
-    /// @inheritdoc IManagerAPI
+    /// @inheritdoc IGuardianAPI
     function cancelWeightUpdates()
         external
         override
         nonReentrant
-        onlyManager
+        onlyGuardian
         whenInitialized
         whenNotFinalizing
     {
@@ -798,13 +798,13 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         emit CancelWeightUpdates(weights);
     }
 
-    /// @inheritdoc IManagerAPI
+    /// @inheritdoc IGuardianAPI
     // slither-disable-next-line timestamp
     function setSwapFee(uint256 newSwapFee)
         external
         override
         nonReentrant
-        onlyManager
+        onlyGuardian
     {
         if (
             block.timestamp < lastSwapFeeCheckpoint + SWAP_FEE_COOLDOWN_PERIOD
@@ -830,19 +830,19 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         emit SetSwapFee(newSwapFee);
     }
 
-    /// @inheritdoc IManagerAPI
-    function claimManagerFees()
+    /// @inheritdoc IGuardianAPI
+    function claimGuardianFees()
         external
         override
         nonReentrant
         whenInitialized
         whenNotFinalizing
     {
-        if (msg.sender == manager) {
-            lockManagerFees();
+        if (msg.sender == guardian) {
+            lockGuardianFees();
         }
 
-        if (managersFee[msg.sender].length == 0) {
+        if (guardiansFee[msg.sender].length == 0) {
             revert Aera__NoAvailableFeeForCaller(msg.sender);
         }
 
@@ -851,22 +851,22 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         (tokens, holdings, ) = getTokensData();
 
         uint256 numTokens = tokens.length;
-        uint256[] memory fees = managersFee[msg.sender];
+        uint256[] memory fees = guardiansFee[msg.sender];
 
         for (uint256 i = 0; i < numTokens; i++) {
             // slither-disable-next-line reentrancy-no-eth
-            managersFeeTotal[i] -= fees[i];
-            managersFee[msg.sender][i] = 0;
+            guardiansFeeTotal[i] -= fees[i];
+            guardiansFee[msg.sender][i] = 0;
             tokens[i].safeTransfer(msg.sender, fees[i]);
         }
 
         // slither-disable-next-line reentrancy-no-eth
-        if (msg.sender != manager) {
-            delete managersFee[msg.sender];
+        if (msg.sender != guardian) {
+            delete guardiansFee[msg.sender];
         }
 
         // slither-disable-next-line reentrancy-events
-        emit DistributeManagerFees(msg.sender, fees);
+        emit DistributeGuardianFees(msg.sender, fees);
     }
 
     /// MULTI ASSET VAULT INTERFACE ///
@@ -989,7 +989,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
     ///      current active weights change schedule.
     /// @param tokenWithAmount Deposit tokens with amount.
     function depositTokens(TokenValue[] calldata tokenWithAmount) internal {
-        lockManagerFees();
+        lockGuardianFees();
 
         IERC20[] memory tokens;
         uint256[] memory holdings;
@@ -1042,7 +1042,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
     ///      current active weights change schedule.
     /// @param tokenWithAmount Requested tokens with amount.
     function withdrawTokens(TokenValue[] calldata tokenWithAmount) internal {
-        lockManagerFees();
+        lockGuardianFees();
 
         IERC20[] memory tokens;
         uint256[] memory holdings;
@@ -1102,7 +1102,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Withdraw tokens from Balancer Pool to Aera Vault
     /// @dev Will only be called by withdrawTokens(), returnFunds()
-    ///      and lockManagerFees()
+    ///      and lockGuardianFees()
     function withdrawFromPool(uint256[] memory amounts) internal {
         uint256[] memory managed = new uint256[](amounts.length);
 
@@ -1114,11 +1114,11 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         updatePoolBalance(managed, IBVault.PoolBalanceOpKind.UPDATE);
     }
 
-    /// @notice Calculate manager fees and lock the tokens in Vault.
-    /// @dev Will only be called by claimManagerFees(), setManager(),
+    /// @notice Calculate guardian fees and lock the tokens in Vault.
+    /// @dev Will only be called by claimGuardianFees(), setGuardian(),
     ///      initiateFinalization(), deposit() and withdraw().
     // slither-disable-next-line timestamp
-    function lockManagerFees() internal {
+    function lockGuardianFees() internal {
         if (managementFee == 0) {
             return;
         }
@@ -1150,8 +1150,8 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         for (uint256 i = 0; i < numTokens; i++) {
             newFees[i] = tokens[i].balanceOf(address(this)) - balances[i];
             // slither-disable-next-line reentrancy-benign
-            managersFee[manager][i] += newFees[i];
-            managersFeeTotal[i] += newFees[i];
+            guardiansFee[guardian][i] += newFees[i];
+            guardiansFeeTotal[i] += newFees[i];
         }
     }
 
@@ -1301,7 +1301,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         IERC20 token;
         for (uint256 i = 0; i < numTokens; i++) {
             token = tokens[i];
-            amount = token.balanceOf(address(this)) - managersFeeTotal[i];
+            amount = token.balanceOf(address(this)) - guardiansFeeTotal[i];
             token.safeTransfer(owner(), amount);
             amounts[i] = amount;
         }
@@ -1317,15 +1317,15 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
         emit SetSwapEnabled(swapEnabled);
     }
 
-    /// @notice Check if the address can be a manager.
-    /// @dev Will only be called by constructor and setManager()
-    /// @param newManager Address to check.
-    function checkManagerAddress(address newManager) internal {
-        if (newManager == address(0)) {
-            revert Aera__ManagerIsZeroAddress();
+    /// @notice Check if the address can be a guardian.
+    /// @dev Will only be called by constructor and setGuardian()
+    /// @param newGuardian Address to check.
+    function checkGuardianAddress(address newGuardian) internal {
+        if (newGuardian == address(0)) {
+            revert Aera__GuardianIsZeroAddress();
         }
-        if (newManager == owner()) {
-            revert Aera__ManagerIsOwner(newManager);
+        if (newGuardian == owner()) {
+            revert Aera__GuardianIsOwner(newGuardian);
         }
     }
 }
