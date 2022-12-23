@@ -127,34 +127,34 @@ Deploy the ManagedPoolFactory to a specific network:
 $ yarn deploy:factory --network <NETWORK>
 ```
 
-Deploy the ManagerWhitelistFactory to a specific network:
+Deploy the GuardianWhitelistFactory to a specific network:
 
 ```sh
-$ yarn deploy:managerWhitelistFactory --network <NETWORK>
+$ yarn deploy:guardianWhitelistFactory --network <NETWORK>
 ```
 
-Deploy the ManagerWhitelist to a specific network:
+Deploy the GuardianWhitelist to a specific network:
 
 ```sh
-$ yarn deploy:managerWhitelist --network <NETWORK> --factory <MANAGER_WHITELIST_FACTORY> --managers <MANAGERS> --salt <SALT>
+$ yarn deploy:guardianWhitelist --network <NETWORK> --factory <GUARDIAN_WHITELIST_FACTORY> --guardians <GUARDIANS> --salt <SALT>
 ```
 
 Deploy the Vault to a specific network:
 
 ```sh
-$ yarn deploy:vault --network <NETWORK> --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION>
+$ yarn deploy:vault --network <NETWORK> --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --guardian <GUARDIAN> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION>
 ```
 
 Deploy the Vault to Kovan Network:
 
 ```sh
-$ yarn deploy:kovan --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION>
+$ yarn deploy:kovan --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --guardian <GUARDIAN> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION>
 ```
 
 Deploy the Vault to Mainnet Network:
 
 ```sh
-$ yarn deploy:mainnet --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION>
+$ yarn deploy:mainnet --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --guardian <GUARDIAN> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION>
 ```
 
 Deploy the Validator, ManagedPoolFactory and Vault to Hardhat Network:
@@ -162,14 +162,14 @@ Deploy the Validator, ManagedPoolFactory and Vault to Hardhat Network:
 ```sh
 $ yarn deploy:validator --count <TOKEN_COUNT>
 $ yarn deploy:factory
-$ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --manager <MANAGER> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION> --print-transaction-data
+$ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swapFEE <FEE> --guardian <GUARDIAN> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION> --print-transaction-data
 ```
 
 **Legend**:
 
-- MANAGER_WHITELIST_FACTORY: ManagerWhitelistFactory address
-- MANAGERS: Initial Managers addresses
-- SALT: Salt value for ManagerWhitelist deployment
+- GUARDIAN_WHITELIST_FACTORY: GuardianWhitelistFactory address
+- GUARDIANS: Initial Guardians addresses
+- SALT: Salt value for GuardianWhitelist deployment
 - FACTORY: Balancer's Managed Pool Factory address
 - TOKEN_COUNT: Token Count
 - NAME: Pool token name
@@ -177,7 +177,7 @@ $ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKE
 - TOKENS: Tokens' addresses
 - Weights: Tokens' weights
 - FEE: Swap fee percentage
-- MANAGER: Manager's address
+- GUARDIAN: Guardian's address
 - VALIDATOR: Address of withdrawal validator contract
 - NOTICE_PERIOD: Finalization notice period in seconds
 - MANAGEMENT_FEE: Management fee earned proportion per second
@@ -186,10 +186,10 @@ $ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKE
 
 **Important**:
 
-The deployment address of `ManagerWhitelistFactory` will be changed when:
+The deployment address of `GuardianWhitelistFactory` will be changed when:
 
-- `ManagerWhitelistFactory` or `ManagerWhitelist` contracts are updated
-- `ManagerWhitelistFactory` initial owner is changed
+- `GuardianWhitelistFactory` or `GuardianWhitelist` contracts are updated
+- `GuardianWhitelistFactory` initial owner is changed
 
 Also, mainnet address may be different from Hardhat deployed address (because of different gas price/gas limit).
 
