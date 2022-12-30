@@ -2270,7 +2270,7 @@ contract AeraVaultV2 is
     }
 
     /// @notice Withdraw the amount of underlying asset from yield token.
-    /// @dev Will only be called by withdrawFromYieldTokens().
+    /// @dev Will only be called by withdrawTokens() and withdrawFromYieldTokens().
     /// @param yieldToken Yield token to redeem.
     /// @param underlyingAsset Underlying asset to withdraw.
     /// @param amount Amount of underlying asset to withdraw from yield token.
