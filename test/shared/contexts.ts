@@ -10,10 +10,13 @@ export function baseContext(description: string, testSuite: () => void): void {
       this.signers = {} as Signers;
       this.mocks = {} as Mocks;
 
-      const { admin, guardian, user } = await ethers.getNamedSigners();
+      const { admin, guardian, user, stranger } =
+        await ethers.getNamedSigners();
       this.signers.admin = admin;
       this.signers.guardian = guardian;
+      this.signers.admin = admin;
       this.signers.user = user;
+      this.signers.stranger = stranger;
 
       // Fixture loader setup
       this.loadFixture = waffle.createFixtureLoader([

@@ -17,7 +17,7 @@ export function shouldBehaveLikeSetStrikeMultiplier(): void {
       it("reverts", async function () {
         await expect(
           this.putOptionsVault
-            .connect(this.signers.manager)
+            .connect(this.signers.stranger)
             .setStrikeMultiplier(100, 1000),
         ).to.be.revertedWith("Aera__CallerIsNotController");
       });

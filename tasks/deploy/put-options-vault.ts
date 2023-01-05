@@ -14,6 +14,7 @@ export type DeployPutOptionsVault = {
   strikeMultiplierMax: BigNumberish;
   name: string;
   symbol: string;
+  opynAddressBook: string;
   silent: boolean;
 };
 
@@ -43,6 +44,12 @@ task(
   .addParam("strikeMultiplierMax", "Strike multiplier max", null, types.float)
   .addParam("name", "ERC4626 token name", null, types.string)
   .addParam("symbol", "ERC4626 token symbol", null, types.string)
+  .addParam(
+    "opynAddressBook",
+    "Opyn V2 Address Book address",
+    null,
+    types.string,
+  )
   .addOptionalParam(
     "silent",
     "Disable console log on deployment",
@@ -64,6 +71,7 @@ task(
         strikeMultiplierMax,
         name,
         symbol,
+        opynAddressBook,
         silent,
       }: DeployPutOptionsVault,
       { deployments, ethers },
@@ -82,6 +90,7 @@ task(
         );
         console.log(`Name: ${name}`);
         console.log(`Symbol: ${symbol}`);
+        console.log(`Opyn Address Book: ${opynAddressBook}`);
       }
       const { admin } = await ethers.getNamedSigners();
 
@@ -120,6 +129,7 @@ task(
           },
           name,
           symbol,
+          opynAddressBook,
         ],
         from: admin.address,
         log: true,

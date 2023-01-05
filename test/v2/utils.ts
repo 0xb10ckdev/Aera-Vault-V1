@@ -220,3 +220,23 @@ export const adjustValue = (
     ),
   );
 };
+
+export const convertToShares = (
+  assets: BigNumber,
+  totalSupply: BigNumber,
+  totalAssets: BigNumber,
+): BigNumber => {
+  if (assets.isZero() || totalSupply.isZero()) return assets;
+
+  return assets.mul(totalSupply).div(totalAssets);
+};
+
+export const convertToAssets = (
+  shares: BigNumber,
+  totalSupply: BigNumber,
+  totalAssets: BigNumber,
+): BigNumber => {
+  if (totalSupply.isZero()) return shares;
+
+  return shares.mul(totalAssets).div(totalSupply);
+};

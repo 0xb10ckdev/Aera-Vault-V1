@@ -2,21 +2,20 @@ import { BigNumberish } from "ethers";
 import { Context } from "mocha";
 import { MockOToken } from "../../../../typechain";
 import { toUnit } from "../../utils";
-import { MockOToken__factory } from "./../../../../typechain/factories/MockOToken__factory";
+import { MockOToken__factory } from "../../../../typechain/factories/MockOToken__factory";
 import {
   DEFAULT_PREMIUM,
   DEFAULT_SPOT_PRICE,
   O_TOKEN_DECIMALS,
-  PRICER_DECIMALS,
-  USDC_DECIMALS,
 } from "./constants";
 
 export async function createOToken(
   this: Context,
   strikePrice: BigNumberish,
   expiryTimestamp: BigNumberish,
+  whitelist = true,
 ): Promise<MockOToken> {
-  return await new MockOToken__factory(this.signers.admin).deploy(
+  const oToken = await new MockOToken__factory(this.signers.admin).deploy(
     this.mocks.oTokenController.address,
     this.weth.address,
     this.usdc.address,
@@ -25,6 +24,12 @@ export async function createOToken(
     expiryTimestamp,
     true,
   );
+
+  if (whitelist) {
+    await this.mocks.whitelist.whitelistOtoken(oToken.address);
+  }
+
+  return oToken;
 }
 
 export async function createAndFillBuyOrder(
@@ -43,11 +48,7 @@ export async function createAndFillBuyOrder(
     spotPrice,
   );
 
-  await this.mocks.pricer.setPremium(premium);
-  await oToken.approve(this.putOptionsVault.address, oTokenAmount);
-  await this.putOptionsVault.fillBuyOrder(oToken.address, oTokenAmount);
-
-  return { oToken };
+  return await this.fillBuyOrder(oToken, oTokenAmount, premium);
 }
 
 export async function createBuyOrder(
@@ -67,7 +68,18 @@ export async function createBuyOrder(
   await this.usdc.approve(this.putOptionsVault.address, usdcAmount);
   await this.putOptionsVault.deposit(usdcAmount, this.signers.admin.address);
 
-  return {
-    oToken,
-  };
+  return { oToken };
+}
+
+export async function fillBuyOrder(
+  this: Context,
+  oToken: MockOToken,
+  oTokenAmount: BigNumberish = toUnit(10, O_TOKEN_DECIMALS),
+  premium: BigNumberish = DEFAULT_PREMIUM,
+): Promise<{ oToken: MockOToken }> {
+  await this.mocks.pricer.setPremium(premium);
+  await oToken.approve(this.putOptionsVault.address, oTokenAmount);
+  await this.putOptionsVault.fillBuyOrder(oToken.address, oTokenAmount);
+
+  return { oToken };
 }

@@ -52,7 +52,7 @@ export function shouldBehaveLikeCancelSellOrder(): void {
         it("reverts", async function () {
           await expect(
             this.putOptionsVault
-              .connect(this.signers.manager)
+              .connect(this.signers.stranger)
               .cancelSellOrder(),
           ).to.be.revertedWith("Aera__CallerIsNotBroker");
         });
@@ -67,7 +67,7 @@ export function shouldBehaveLikeCancelSellOrder(): void {
 
         it("works", async function () {
           await this.putOptionsVault
-            .connect(this.signers.manager)
+            .connect(this.signers.stranger)
             .cancelSellOrder();
 
           expect((await this.putOptionsVault.sellOrder()).active).is.false;

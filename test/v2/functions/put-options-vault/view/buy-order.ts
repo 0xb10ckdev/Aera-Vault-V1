@@ -8,7 +8,7 @@ import {
   STRIKE_MULTIPLIER_MIN,
   USDC_DECIMALS,
 } from "../constants";
-import { getCurrentTime } from "./../../../utils";
+import { getCurrentTime } from "../../../utils";
 
 export function shouldBehaveLikeBuyOrderGetter(): void {
   const DEPOSIT_AMOUNT = toUnit(500, USDC_DECIMALS);

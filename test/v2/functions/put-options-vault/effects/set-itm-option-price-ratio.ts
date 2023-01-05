@@ -16,7 +16,7 @@ export function shouldBehaveLikeSetITMOptionPriceRatio(): void {
       it("reverts", async function () {
         await expect(
           this.putOptionsVault
-            .connect(this.signers.manager)
+            .connect(this.signers.stranger)
             .setITMOptionPriceRatio(100),
         ).to.be.revertedWith("Aera__CallerIsNotController");
       });

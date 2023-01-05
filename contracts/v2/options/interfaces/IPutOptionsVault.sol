@@ -57,6 +57,7 @@ interface IPutOptionsVault is IERC4626 {
     error Aera__OwnerIsZeroAddress();
     error Aera__ControllerIsZeroAddress();
     error Aera__LiquidatorIsZeroAddress();
+    error Aera__OpynAddressBookIsZeroAddress();
     error Aera__BrokerIsZeroAddress();
     error Aera__UnderlyingAssetIsZeroAddress();
     error Aera__UnderlyingOptionsAssetIsZeroAddress();
@@ -95,6 +96,7 @@ interface IPutOptionsVault is IERC4626 {
         uint256 max,
         uint256 actual
     );
+    error Aera__NotWhitelistedOToken(address oToken);
 
     /// STRUCTS ///
 

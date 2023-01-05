@@ -1,4 +1,4 @@
-import { setNextBlockTimestamp, getCurrentTime } from "./../../../utils";
+import { setNextBlockTimestamp, getCurrentTime } from "../../../utils";
 import { expect } from "chai";
 import { ONE } from "../../../constants";
 import { toUnit } from "../../../utils";
@@ -47,7 +47,7 @@ export function shouldBehaveLikeCancelBuyOrder(): void {
         it("reverts", async function () {
           await expect(
             this.putOptionsVault
-              .connect(this.signers.manager)
+              .connect(this.signers.stranger)
               .cancelBuyOrder(),
           ).to.be.revertedWith("Aera__CallerIsNotBroker");
         });
@@ -62,7 +62,7 @@ export function shouldBehaveLikeCancelBuyOrder(): void {
 
         it("works", async function () {
           await this.putOptionsVault
-            .connect(this.signers.manager)
+            .connect(this.signers.stranger)
             .cancelBuyOrder();
 
           expect((await this.putOptionsVault.buyOrder()).active).is.false;

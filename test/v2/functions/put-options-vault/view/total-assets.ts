@@ -1,4 +1,4 @@
-import { DEFAULT_ITM_OPTION_PRICE_RATIO } from "./../constants";
+import { DEFAULT_ITM_OPTION_PRICE_RATIO } from "../constants";
 import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { MockOToken } from "../../../../../typechain";
@@ -10,7 +10,7 @@ import {
   PRICER_DECIMALS,
   USDC_DECIMALS,
 } from "../constants";
-import { adjustValue } from "./../../../utils";
+import { adjustValue } from "../../../utils";
 import { ONE } from "../../../constants";
 
 export function shouldBehaveLikeTotalAssetsGetter(): void {

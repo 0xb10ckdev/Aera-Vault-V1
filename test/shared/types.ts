@@ -1,3 +1,4 @@
+import { MockAddressBook, MockWhitelist } from "../../typechain";
 // eslint-disable @typescript-eslint/no-explicit-any
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { Fixture } from "ethereum-waffle";
@@ -58,10 +59,13 @@ export interface Signers {
   admin: SignerWithAddress;
   guardian: SignerWithAddress;
   user: SignerWithAddress;
+  stranger: SignerWithAddress;
 }
 
 export interface Mocks {
   pricer: PutOptionsPricerMock;
   oTokenController: MockOTokenController;
   gammaOracle: MockGammaOracle;
+  addressBook: MockAddressBook;
+  whitelist: MockWhitelist;
 }

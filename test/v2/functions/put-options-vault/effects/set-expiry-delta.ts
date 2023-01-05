@@ -16,7 +16,7 @@ export function shouldBehaveLikeSetExpiryDelta(): void {
       it("reverts", async function () {
         await expect(
           this.putOptionsVault
-            .connect(this.signers.manager)
+            .connect(this.signers.stranger)
             .setExpiryDelta(0, 100),
         ).to.be.revertedWith("Aera__CallerIsNotController");
       });

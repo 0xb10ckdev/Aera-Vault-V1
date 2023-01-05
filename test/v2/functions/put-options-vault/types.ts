@@ -6,6 +6,7 @@ declare module "mocha" {
     createOToken: (
       strikePrice: BigNumberish,
       expireTimestamp: number,
+      whitelist?: boolean,
     ) => Promise<MockOToken>;
 
     createAndFillBuyOrder: (
@@ -23,6 +24,13 @@ declare module "mocha" {
       expiryTimestamp: number,
       usdcAmount: BigNumberish,
       spotPrice?: BigNumberish,
+    ): Promise<{ oToken: MockOToken }>;
+
+    fillBuyOrder(
+      this: Context,
+      oToken: MockOToken,
+      oTokenAmount?: BigNumberish,
+      premium?: BigNumberish,
     ): Promise<{ oToken: MockOToken }>;
   }
 }

@@ -23,6 +23,8 @@ import {
   shouldBehaveLikeLiquidatorGetter,
   shouldBehaveLikeMaxDepositGetter,
   shouldBehaveLikeMaxMintGetter,
+  shouldBehaveLikeMaxRedeemGetter,
+  shouldBehaveLikeMaxWithdrawGetter,
   shouldBehaveLikeOptionsPremiumDiscountGetter,
   shouldBehaveLikePositionsGetter,
   shouldBehaveLikePricerGetter,
@@ -101,6 +103,14 @@ export function shouldBehaveLikePutOptionsVault(): void {
 
       describe("totalAssets", function () {
         shouldBehaveLikeTotalAssetsGetter();
+      });
+
+      describe("maxWithdraw", function () {
+        shouldBehaveLikeMaxWithdrawGetter();
+      });
+
+      describe("maxRedeem", function () {
+        shouldBehaveLikeMaxRedeemGetter();
       });
     });
 

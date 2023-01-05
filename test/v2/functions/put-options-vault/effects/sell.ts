@@ -29,7 +29,7 @@ export function shouldBehaveLikeSell(): void {
       it("reverts", async function () {
         await expect(
           this.putOptionsVault
-            .connect(this.signers.manager)
+            .connect(this.signers.stranger)
             .sell(oToken.address, 1),
         ).to.be.revertedWith("Aera__CallerIsNotLiquidator");
       });

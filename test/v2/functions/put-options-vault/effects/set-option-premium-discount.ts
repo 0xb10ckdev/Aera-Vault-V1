@@ -17,7 +17,7 @@ export function shouldBehaveLikeSetOptionPremiumDiscount(): void {
       it("reverts", async function () {
         await expect(
           this.putOptionsVault
-            .connect(this.signers.manager)
+            .connect(this.signers.stranger)
             .setOptionPremiumDiscount(100),
         ).to.be.revertedWith("Aera__CallerIsNotController");
       });

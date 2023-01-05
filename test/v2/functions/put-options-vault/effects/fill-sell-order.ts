@@ -20,7 +20,7 @@ export function shouldBehaveLikeFillSellOrder(): void {
   describe("when called by stranger", function () {
     it("reverts", async function () {
       await expect(
-        this.putOptionsVault.connect(this.signers.manager).fillSellOrder(1),
+        this.putOptionsVault.connect(this.signers.stranger).fillSellOrder(1),
       ).to.be.revertedWith(`Aera__CallerIsNotBroker()`);
     });
   });
@@ -54,29 +54,30 @@ export function shouldBehaveLikeFillSellOrder(): void {
         });
       });
 
-      describe("when enough USDC is offered", function () {
-        const ONE_THOUSAND_USDC = toUnit(1000, USDC_DECIMALS);
+      describe("when exact USDC is offered", function () {
+        // (4 oTokens * 140 USDC) - 5% discount = 560 - 5% = 532 USDC
+        const EXACT_USDC_PRICE = toUnit(532, USDC_DECIMALS);
 
         beforeEach(async function () {
           await this.usdc.approve(
             this.putOptionsVault.address,
-            ONE_THOUSAND_USDC,
+            EXACT_USDC_PRICE,
           );
         });
 
         it("transfers USDC to vault", async function () {
           await expect(() =>
-            this.putOptionsVault.fillSellOrder(ONE_THOUSAND_USDC),
+            this.putOptionsVault.fillSellOrder(EXACT_USDC_PRICE),
           ).to.changeTokenBalances(
             this.usdc,
             [this.signers.admin, this.putOptionsVault],
-            [-ONE_THOUSAND_USDC.toBigInt(), ONE_THOUSAND_USDC],
+            [-EXACT_USDC_PRICE.toBigInt(), EXACT_USDC_PRICE],
           );
         });
 
         it("transfers oToken to user", async function () {
           await expect(() =>
-            this.putOptionsVault.fillSellOrder(ONE_THOUSAND_USDC),
+            this.putOptionsVault.fillSellOrder(EXACT_USDC_PRICE),
           ).to.changeTokenBalances(
             oToken,
             [this.signers.admin, this.putOptionsVault],
@@ -85,14 +86,14 @@ export function shouldBehaveLikeFillSellOrder(): void {
         });
 
         it("emits", async function () {
-          await expect(this.putOptionsVault.fillSellOrder(ONE_THOUSAND_USDC))
+          await expect(this.putOptionsVault.fillSellOrder(EXACT_USDC_PRICE))
             .to.emit(this.putOptionsVault, "SellOrderFilled")
-            .withArgs(oToken.address, ONE_THOUSAND_USDC);
+            .withArgs(oToken.address, EXACT_USDC_PRICE);
         });
 
         describe("side effects", function () {
           beforeEach(async function () {
-            await this.putOptionsVault.fillSellOrder(ONE_THOUSAND_USDC);
+            await this.putOptionsVault.fillSellOrder(EXACT_USDC_PRICE);
           });
 
           it("deletes sellOrder", async function () {
@@ -105,10 +106,28 @@ export function shouldBehaveLikeFillSellOrder(): void {
           });
         });
       });
+
+      describe("when offered is greater than required", function () {
+        const OFFERED = toUnit(550, USDC_DECIMALS);
+
+        beforeEach(async function () {
+          await this.usdc.approve(this.putOptionsVault.address, OFFERED);
+        });
+
+        it("works", async function () {
+          await expect(() =>
+            this.putOptionsVault.fillSellOrder(OFFERED),
+          ).to.changeTokenBalances(
+            this.usdc,
+            [this.signers.admin, this.putOptionsVault],
+            [-OFFERED.toBigInt(), OFFERED],
+          );
+        });
+      });
     });
 
     describe("when selling partial oToken vault balance", function () {
-      const ONE_THOUSAND_USDC = toUnit(1000, USDC_DECIMALS);
+      const EXACT_USDC_PRICE = toUnit(134, USDC_DECIMALS);
 
       beforeEach(async function () {
         await this.putOptionsVault.sell(
@@ -117,9 +136,9 @@ export function shouldBehaveLikeFillSellOrder(): void {
         );
         await this.usdc.approve(
           this.putOptionsVault.address,
-          ONE_THOUSAND_USDC,
+          EXACT_USDC_PRICE,
         );
-        await this.putOptionsVault.fillSellOrder(ONE_THOUSAND_USDC);
+        await this.putOptionsVault.fillSellOrder(EXACT_USDC_PRICE);
       });
 
       it("does not remove oToken from positions", async function () {

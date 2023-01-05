@@ -1,47 +1,82 @@
 import { expect } from "chai";
 import { ONE } from "../../../constants";
-import { toUnit } from "../../../utils";
-import { getCurrentTime, setNextBlockTimestamp } from "./../../../utils";
+import { getCurrentTime, setNextBlockTimestamp, toUnit } from "../../../utils";
 import {
   EXPIRY_DELTA_MAX,
   EXPIRY_DELTA_MIN,
   STRIKE_MULTIPLIER_MAX,
   STRIKE_MULTIPLIER_MIN,
   USDC_DECIMALS,
-} from "./../constants";
+} from "../constants";
 
 export function shouldBehaveLikeDeposit(): void {
-  const AMOUNT = toUnit(1_000, USDC_DECIMALS);
+  const ONE_THOUSAND_USDC = toUnit(1_000, USDC_DECIMALS);
 
-  describe("access", function () {
-    describe("when owner deposits", function () {
-      beforeEach(async function () {
-        await this.usdc.approve(this.putOptionsVault.address, AMOUNT);
-      });
+  describe("when owner deposits", function () {
+    beforeEach(async function () {
+      await this.usdc.approve(this.putOptionsVault.address, ONE_THOUSAND_USDC);
+    });
 
+    describe("when owner is receiver", function () {
       it("works", async function () {
         await expect(
-          this.putOptionsVault.deposit(AMOUNT, this.signers.admin.address),
-        ).not.to.throw;
+          this.putOptionsVault.deposit(
+            ONE_THOUSAND_USDC,
+            this.signers.admin.address,
+          ),
+        ).not.to.be.reverted;
       });
     });
 
-    describe("when stranger deposits", function () {
+    describe("when stranger is receiver", function () {
       it("reverts", async function () {
         await expect(
-          this.putOptionsVault
-            .connect(this.signers.manager)
-            .deposit(AMOUNT, this.signers.admin.address),
-        ).to.revertedWith("ERC4626: deposit more than max");
+          this.putOptionsVault.deposit(
+            ONE_THOUSAND_USDC,
+            this.signers.stranger.address,
+          ),
+        ).to.be.revertedWith("ERC4626: deposit more than max");
       });
     });
   });
 
-  describe("when deposit", function () {
+  describe("when stranger deposits", function () {
+    beforeEach(async function () {
+      await this.usdc.transfer(
+        this.signers.stranger.address,
+        ONE_THOUSAND_USDC,
+      );
+      await this.usdc
+        .connect(this.signers.stranger)
+        .approve(this.putOptionsVault.address, ONE_THOUSAND_USDC);
+    });
+
+    describe("when stranger is the receiver", function () {
+      it("reverts", async function () {
+        await expect(
+          this.putOptionsVault
+            .connect(this.signers.stranger)
+            .deposit(ONE_THOUSAND_USDC, this.signers.stranger.address),
+        ).to.be.revertedWith("ERC4626: deposit more than max");
+      });
+    });
+
+    describe("when owner is the receiver", function () {
+      it("reverts", async function () {
+        await expect(
+          this.putOptionsVault
+            .connect(this.signers.stranger)
+            .deposit(ONE_THOUSAND_USDC, this.signers.admin.address),
+        ).to.be.revertedWith("ERC4626: deposit more than max");
+      });
+    });
+  });
+
+  describe("when owner deposits", function () {
     let now: number;
     const PRICE = ONE;
     beforeEach(async function () {
-      await this.usdc.approve(this.putOptionsVault.address, AMOUNT);
+      await this.usdc.approve(this.putOptionsVault.address, ONE_THOUSAND_USDC);
       await this.mocks.pricer.setSpot(PRICE);
 
       const currentTime = await getCurrentTime();
@@ -59,12 +94,15 @@ export function shouldBehaveLikeDeposit(): void {
     });
 
     it("creates buy order", async function () {
-      await this.putOptionsVault.deposit(AMOUNT, this.signers.admin.address);
+      await this.putOptionsVault.deposit(
+        ONE_THOUSAND_USDC,
+        this.signers.admin.address,
+      );
 
       const buyOrder = await this.putOptionsVault.buyOrder();
 
       expect(buyOrder.active).to.be.true;
-      expect(buyOrder.amount).to.eq(AMOUNT);
+      expect(buyOrder.amount).to.eq(ONE_THOUSAND_USDC);
       expect(buyOrder.created).to.eq(now);
       expect(buyOrder.minExpiryTimestamp).is.eq(now + EXPIRY_DELTA_MIN);
       expect(buyOrder.maxExpiryTimestamp).is.eq(now + EXPIRY_DELTA_MAX);
@@ -78,7 +116,10 @@ export function shouldBehaveLikeDeposit(): void {
 
     it("emits", async function () {
       await expect(
-        this.putOptionsVault.deposit(AMOUNT, this.signers.admin.address),
+        this.putOptionsVault.deposit(
+          ONE_THOUSAND_USDC,
+          this.signers.admin.address,
+        ),
       )
         .to.emit(this.putOptionsVault, "BuyOrderCreated")
         .withArgs(
@@ -86,7 +127,7 @@ export function shouldBehaveLikeDeposit(): void {
           now + EXPIRY_DELTA_MAX,
           PRICE.mul(STRIKE_MULTIPLIER_MIN * 100).div(100),
           PRICE.mul(STRIKE_MULTIPLIER_MAX * 100).div(100),
-          AMOUNT,
+          ONE_THOUSAND_USDC,
         );
     });
   });

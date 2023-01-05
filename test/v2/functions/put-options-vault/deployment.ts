@@ -32,6 +32,7 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
         strikeMultiplierMax: toWei(STRIKE_MULTIPLIER_MAX),
         name: "USDC Put Option Vault",
         symbol: "oUSDCpVault",
+        opynAddressBook: this.mocks.addressBook.address,
       };
 
       factory = new PutOptionsVault__factory(this.signers.admin);
@@ -49,6 +50,7 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
         { min: args.strikeMultiplierMin, max: args.strikeMultiplierMax },
         args.name,
         args.symbol,
+        args.opynAddressBook,
       );
     }
 
@@ -93,6 +95,14 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
         await expect(
           deployVault({ ...validArgs, underlyingOptionsAsset: ZERO_ADDRESS }),
         ).to.be.revertedWith("Aera__UnderlyingOptionsAssetIsZeroAddress");
+      });
+    });
+
+    describe("when Opyn Address Book is zero address", () => {
+      it("reverts", async () => {
+        await expect(
+          deployVault({ ...validArgs, opynAddressBook: ZERO_ADDRESS }),
+        ).to.be.revertedWith("Aera__OpynAddressBookIsZeroAddress");
       });
     });
 

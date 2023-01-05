@@ -9,12 +9,15 @@ import "../dependencies/openzeppelin/ERC4626.sol";
 import "../dependencies/openzeppelin/Ownable.sol";
 import "../dependencies/gamma-protocol/IOTokenController.sol";
 import "../dependencies/gamma-protocol/Actions.sol";
+import "../dependencies/gamma-protocol/AddressBookInterface.sol";
+import "../dependencies/gamma-protocol/WhitelistInterface.sol";
 import "./interfaces/IPutOptionsVault.sol";
 import "./interfaces/IOToken.sol";
 import "./pricers/IPutOptionsPricer.sol";
 import "hardhat/console.sol";
 
 contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
+    using Math for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
 
@@ -23,18 +26,15 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     /// @notice Minimum total value in USDC that can be used to purchase options
     uint256 private constant _MIN_CHUNK_VALUE = 1 * 10 ** 6;
 
-    /// @notice Strike price discount measured off of current market price in bps
-    uint256 private constant _STRIKE_PRICE = 1 * 10 ** 7;
-
-    /// @notice Overall time to expiry for each purchased option
-    uint256 private constant _TIME_TO_EXPIRY = 30 days;
-
-    /// @notice Time for a broker to fill buy/sell order.
-    ///         After that period anyone can cancel order.
+    /// @notice Period of time for a broker to fill buy/sell order.
+    ///         After that period order can be cancelled by anyone.
     uint256 private constant _MIN_ORDER_ACTIVE = 3 days;
 
     /// @notice oToken decimals
     uint8 private constant _O_TOKEN_DECIMALS = 8;
+
+    bool private constant _BUY_O_TOKEN = true;
+    bool private constant _SELL_O_TOKEN = false;
 
     IPutOptionsPricer private immutable _pricer;
     address private immutable _broker;
@@ -42,6 +42,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     address private immutable _liquidator;
     /// @notice Underlying asset for Opyn option (namely WETH)
     IERC20 private immutable _underlyingOptionsAsset;
+    address private immutable _opynAddressBook;
 
     /// @notice Discount for option premium, when buying/selling option from/to the broker
     uint256 private _optionPremiumDiscount = 0.05 * 10 ** 18;
@@ -92,11 +93,15 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         Range memory expiryDelta_,
         Range memory strikeMultiplier_,
         string memory name_,
-        string memory symbol_
+        string memory symbol_,
+        address opynAddressBook_
     ) ERC4626(underlyingAsset_) ERC20(name_, symbol_) {
         if (controller_ == address(0)) revert Aera__ControllerIsZeroAddress();
         if (liquidator_ == address(0)) revert Aera__LiquidatorIsZeroAddress();
         if (broker_ == address(0)) revert Aera__BrokerIsZeroAddress();
+        if (opynAddressBook_ == address(0)) {
+            revert Aera__OpynAddressBookIsZeroAddress();
+        }
         if (address(underlyingAsset_) == address(0)) {
             revert Aera__UnderlyingAssetIsZeroAddress();
         }
@@ -117,6 +122,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         _controller = controller_;
         _liquidator = liquidator_;
         _underlyingOptionsAsset = underlyingOptionsAsset_;
+        _opynAddressBook = opynAddressBook_;
         _setExpiryDelta(expiryDelta_.min, expiryDelta_.max);
         _setStrikeMultiplier(strikeMultiplier_.min, strikeMultiplier_.max);
     }
@@ -173,6 +179,8 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         // _buyOrder is deleted first to prevent reentrancy
         delete _buyOrder;
 
+        _verifyOTokenWhitelisted(oToken);
+
         (
             address collateralAsset,
             address underlyingAsset,
@@ -182,7 +190,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             bool isPut
         ) = IOToken(oToken).getOtokenDetails();
 
-        _checkOToken(
+        _verifyParameterMatch(
             order,
             collateralAsset,
             underlyingAsset,
@@ -195,7 +203,8 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         uint256 required = _estimateOTokenAmount(
             strikePrice,
             expiryTimestamp,
-            order.amount
+            order.amount,
+            _BUY_O_TOKEN
         );
 
         if (required > amount) {
@@ -227,16 +236,23 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         (, , , uint256 strikePrice, uint256 expiryTimestamp, ) = oToken
             .getOtokenDetails();
 
-        uint256 oTokenAmount = _estimateOTokenAmount(
+        uint256 tokens = _estimateOTokenAmount(
             strikePrice,
             expiryTimestamp,
-            amount
+            amount,
+            _SELL_O_TOKEN
         );
 
-        if (oTokenAmount < order.amount) {
+        if (tokens < order.amount) {
             revert Aera__NotEnoughAssets(amount);
         }
+
         emit SellOrderFilled(address(oToken), amount);
+
+        // slither-disable-next-line incorrect-equality
+        if (oToken.balanceOf(address(this)) - order.amount == 0) {
+            _oTokens.remove(address(oToken));
+        }
 
         SafeERC20.safeTransferFrom(
             IERC20(asset()),
@@ -246,10 +262,6 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         );
 
         SafeERC20.safeTransfer(oToken, msg.sender, order.amount);
-        // slither-disable-next-line incorrect-equality
-        if (oToken.balanceOf(address(this)) == 0) {
-            _oTokens.remove(address(oToken));
-        }
     }
 
     /// @inheritdoc IPutOptionsVault
@@ -307,7 +319,8 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     /// @inheritdoc ERC4626
     function maxDeposit(
         address receiver
-    ) public view override(IERC4626, ERC4626) returns (uint256 maxAssets) {
+    ) public view override(ERC4626, IERC4626) returns (uint256 maxAssets) {
+        if (receiver != owner()) return 0;
         if (msg.sender != owner()) return 0;
 
         return super.maxDeposit(receiver);
@@ -317,12 +330,40 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     function maxMint(
         address receiver
     ) public view override(ERC4626, IERC4626) returns (uint256 maxShares) {
+        if (receiver != owner()) return 0;
         if (msg.sender != owner()) return 0;
 
         return super.maxMint(receiver);
     }
 
     /// @inheritdoc ERC4626
+    /// @notice Assuming single owner holds all shares
+    function maxWithdraw(
+        address receiver
+    ) public view override(ERC4626, IERC4626) returns (uint256) {
+        uint256 amount = super.maxWithdraw(receiver);
+        uint256 buyOrderAmount = _buyOrder.amount;
+        if (buyOrderAmount >= amount) return 0;
+
+        return amount - buyOrderAmount;
+    }
+
+    /// @inheritdoc ERC4626
+    /// @notice Assuming single owner holds all shares
+    function maxRedeem(
+        address receiver
+    ) public view override(ERC4626, IERC4626) returns (uint256) {
+        uint256 shares = super.maxRedeem(receiver);
+        uint256 buyOrderShares = _convertToShares(
+            _buyOrder.amount,
+            Math.Rounding.Down
+        );
+        if (buyOrderShares >= shares) return 0;
+
+        return shares - buyOrderShares;
+    }
+
+    // @inheritdoc ERC4626
     function totalAssets()
         public
         view
@@ -336,7 +377,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             optionsValue += _getOptionValue(IOToken(tokens[i]));
         }
 
-        return optionsValue + IERC20(asset()).balanceOf(address(this));
+        return super.totalAssets() + optionsValue;
     }
 
     /// @inheritdoc IPutOptionsVault
@@ -424,7 +465,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         return _itmOptionPriceRatio;
     }
 
-    function _afterDeposit(uint256 assets, uint256 shares) internal override {
+    function _afterDeposit(uint256, uint256) internal override {
         uint256 balance = IERC20(asset()).balanceOf(address(this));
 
         if (balance < _MIN_CHUNK_VALUE) return;
@@ -587,8 +628,10 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             (_ONE * 10 ** _O_TOKEN_DECIMALS));
     }
 
-    // Reference: https://opyn.gitbook.io/opyn/get-started/actions#redeem
-    // Example: https://github.com/opynfinance/GammaProtocol/blob/master/test/integration-tests/nakedPutExpireITM.test.ts#L272
+    /**
+     * @dev Reference: https://opyn.gitbook.io/opyn/get-started/actions#redeem
+     *      Example: https://github.com/opynfinance/GammaProtocol/blob/master/test/integration-tests/nakedPutExpireITM.test.ts#L272
+     */
     function _createRedeemAction(
         IOToken oToken
     ) internal view returns (Actions.ActionArgs[] memory) {
@@ -631,7 +674,15 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         emit ExpiryDeltaChanged(min, max);
     }
 
-    function _checkOToken(
+    function _verifyOTokenWhitelisted(address oToken) internal view {
+        address whitelist = AddressBookInterface(_opynAddressBook)
+            .getWhitelist();
+        if (!WhitelistInterface(whitelist).isWhitelistedOtoken(oToken)) {
+            revert Aera__NotWhitelistedOToken(oToken);
+        }
+    }
+
+    function _verifyParameterMatch(
         BuyOrder memory order,
         address collateralAsset,
         address underlyingAsset,
@@ -649,7 +700,6 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         }
 
         address asset = asset();
-
         if (collateralAsset != asset) {
             revert Aera__InvalidCollateralAsset(asset, collateralAsset);
         }
@@ -679,10 +729,16 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         }
     }
 
+    /// @dev Estimates how much oTokens could we buy/sell for given amount of underlying tokens (USDC)
+    /// @param strikePrice - oToken strike price
+    /// @param expiryTimestamp - oToken expiry timestamp
+    /// @param amount - amount of underlying tokens (USDC)
+    /// @param buyingOTokens - specifies whether we're buying or selling oTokens
     function _estimateOTokenAmount(
         uint256 strikePrice,
         uint256 expiryTimestamp,
-        uint256 amount
+        uint256 amount,
+        bool buyingOTokens
     ) internal view returns (uint256) {
         uint256 oneOptionPremium = _pricer.getPremium(
             strikePrice,
@@ -696,8 +752,11 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             _pricer.decimals()
         );
 
-        uint256 optionWithDiscount = (oneOptionPremium *
-            (_ONE + _optionPremiumDiscount)) / _ONE;
+        uint256 discount = buyingOTokens
+            ? (_ONE + _optionPremiumDiscount)
+            : (_ONE - _optionPremiumDiscount);
+
+        uint256 optionWithDiscount = (oneOptionPremium * discount) / _ONE;
 
         return
             _adjustValue(

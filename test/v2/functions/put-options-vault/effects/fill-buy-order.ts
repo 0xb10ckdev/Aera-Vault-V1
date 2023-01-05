@@ -41,7 +41,7 @@ export function shouldBehaveLikeFillBuyOrder(): void {
     it("reverts", async function () {
       await expect(
         this.putOptionsVault
-          .connect(this.signers.manager)
+          .connect(this.signers.stranger)
           .fillBuyOrder(oToken.address, O_TOKEN_AMOUNT),
       ).to.be.revertedWith("Aera__CallerIsNotBroker");
     });
@@ -101,6 +101,20 @@ export function shouldBehaveLikeFillBuyOrder(): void {
             this.putOptionsVault.fillBuyOrder(oToken.address, O_TOKEN_AMOUNT),
           ).to.be.revertedWith(
             `Aera__InvalidStrikeAsset("${this.usdc.address}", "${this.weth.address}")`,
+          );
+        });
+      });
+
+      describe("when oToken is not whitelisted", function () {
+        beforeEach(async function () {
+          await this.mocks.whitelist.blacklistOtoken(oToken.address);
+        });
+
+        it("reverts", async function () {
+          await expect(
+            this.putOptionsVault.fillBuyOrder(oToken.address, O_TOKEN_AMOUNT),
+          ).to.be.revertedWith(
+            `Aera__NotWhitelistedOToken("${oToken.address}")`,
           );
         });
       });
