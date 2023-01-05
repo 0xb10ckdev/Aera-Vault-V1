@@ -1,5 +1,4 @@
 import { expect } from "chai";
-import { BigNumber } from "ethers";
 import { MockOToken } from "../../../../../typechain";
 import { adjustValue, getCurrentTime, toUnit } from "../../../utils";
 import {

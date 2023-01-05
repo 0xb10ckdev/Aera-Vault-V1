@@ -37,10 +37,11 @@ contract MockGammaOracle {
     }
 
     // get chainlink historic round data
-    function getChainlinkRoundData(
-        address _asset,
-        uint80 _roundId
-    ) external view returns (uint256, uint256) {
+    function getChainlinkRoundData(address _asset, uint80 _roundId)
+        external
+        view
+        returns (uint256, uint256)
+    {
         uint256 price = _roundPrice[_asset][_roundId];
         uint256 timestamp = _roundTimestamp[_asset][_roundId];
 
@@ -98,10 +99,11 @@ contract MockGammaOracle {
         isFinalized[_asset][_expiryTimestamp] = _isFinalized;
     }
 
-    function getExpiryPrice(
-        address _asset,
-        uint256 _expiryTimestamp
-    ) external view returns (uint256, bool) {
+    function getExpiryPrice(address _asset, uint256 _expiryTimestamp)
+        external
+        view
+        returns (uint256, bool)
+    {
         uint256 price = stablePrice[_asset];
         bool _isFinalized = true;
 
@@ -117,22 +119,27 @@ contract MockGammaOracle {
         return assetPricer[_asset];
     }
 
-    function getPricerLockingPeriod(
-        address _pricer
-    ) external view returns (uint256) {
+    function getPricerLockingPeriod(address _pricer)
+        external
+        view
+        returns (uint256)
+    {
         return pricerLockingPeriod[_pricer];
     }
 
-    function getPricerDisputePeriod(
-        address _pricer
-    ) external view returns (uint256) {
+    function getPricerDisputePeriod(address _pricer)
+        external
+        view
+        returns (uint256)
+    {
         return pricerDisputePeriod[_pricer];
     }
 
-    function isLockingPeriodOver(
-        address _asset,
-        uint256 _expiryTimestamp
-    ) public view returns (bool) {
+    function isLockingPeriodOver(address _asset, uint256 _expiryTimestamp)
+        public
+        view
+        returns (bool)
+    {
         return _isLockingPeriodOver[_asset][_expiryTimestamp];
     }
 
@@ -144,10 +151,11 @@ contract MockGammaOracle {
         _isLockingPeriodOver[_asset][_expiryTimestamp] = _result;
     }
 
-    function isDisputePeriodOver(
-        address _asset,
-        uint256 _expiryTimestamp
-    ) external view returns (bool) {
+    function isDisputePeriodOver(address _asset, uint256 _expiryTimestamp)
+        external
+        view
+        returns (bool)
+    {
         return _isDisputePeriodOver[_asset][_expiryTimestamp];
     }
 
@@ -163,17 +171,15 @@ contract MockGammaOracle {
         assetPricer[_asset] = _pricer;
     }
 
-    function setLockingPeriod(
-        address _pricer,
-        uint256 _lockingPeriod
-    ) external {
+    function setLockingPeriod(address _pricer, uint256 _lockingPeriod)
+        external
+    {
         pricerLockingPeriod[_pricer] = _lockingPeriod;
     }
 
-    function setDisputePeriod(
-        address _pricer,
-        uint256 _disputePeriod
-    ) external {
+    function setDisputePeriod(address _pricer, uint256 _disputePeriod)
+        external
+    {
         pricerDisputePeriod[_pricer] = _disputePeriod;
     }
 

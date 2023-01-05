@@ -1,3 +1,4 @@
+// solhint-disable no-empty-blocks
 /**
  * SPDX-License-Identifier: UNLICENSED
  */
@@ -9,7 +10,6 @@ import "../../dependencies/gamma-protocol/AddressBookInterface.sol";
  * @dev Mock AddressBook
  *      THIS CONTRACT IS FOR TESTING PURPOSES ONLY. DO NOT USE IN PRODUCTION.
  */
-
 contract MockAddressBook is AddressBookInterface {
     address private _whitelist;
     address private _oTokenFactory;
@@ -45,9 +45,12 @@ contract MockAddressBook is AddressBookInterface {
         returns (address)
     {}
 
-    function getAddress(
-        bytes32 _id
-    ) external view override returns (address) {}
+    function getAddress(bytes32 _id)
+        external
+        view
+        override
+        returns (address)
+    {}
 
     function setOtokenImpl(address otokenImpl) external override {}
 
@@ -71,9 +74,10 @@ contract MockAddressBook is AddressBookInterface {
 
     function setMarginCalculator(address _calculator) external override {}
 
-    function setLiquidationManager(
-        address _liquidationManager
-    ) external override {}
+    function setLiquidationManager(address _liquidationManager)
+        external
+        override
+    {}
 
     function setAddress(bytes32 _id, address _newImpl) external override {}
 }

@@ -1,3 +1,4 @@
+// solhint-disable no-empty-blocks
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 

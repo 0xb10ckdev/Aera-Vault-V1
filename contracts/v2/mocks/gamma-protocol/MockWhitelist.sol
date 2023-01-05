@@ -1,3 +1,4 @@
+// solhint-disable no-empty-blocks
 /**
  * SPDX-License-Identifier: UNLICENSED
  */
@@ -22,19 +23,28 @@ contract MockWhitelist is WhitelistInterface {
         bool _isPut
     ) external view override returns (bool) {}
 
-    function isWhitelistedCollateral(
-        address _collateral
-    ) external view override returns (bool) {}
+    function isWhitelistedCollateral(address _collateral)
+        external
+        view
+        override
+        returns (bool)
+    {}
 
-    function isWhitelistedOtoken(
-        address _otoken
-    ) external view override returns (bool) {
+    function isWhitelistedOtoken(address _otoken)
+        external
+        view
+        override
+        returns (bool)
+    {
         return _whitelistedTokens[_otoken];
     }
 
-    function isWhitelistedCallee(
-        address _callee
-    ) external view override returns (bool) {}
+    function isWhitelistedCallee(address _callee)
+        external
+        view
+        override
+        returns (bool)
+    {}
 
     function whitelistProduct(
         address _underlying,

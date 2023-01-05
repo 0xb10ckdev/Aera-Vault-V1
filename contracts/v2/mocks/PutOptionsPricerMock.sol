@@ -1,3 +1,4 @@
+// solhint-disable no-empty-blocks
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
@@ -13,9 +14,12 @@ contract PutOptionsPricerMock is ERC165, IPutOptionsPricer {
     uint256 private _spot;
     uint8 private _decimals = 8;
 
-    function supportsInterface(
-        bytes4 interfaceId
-    ) public view override(ERC165, IERC165) returns (bool) {
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC165, IERC165)
+        returns (bool)
+    {
         return
             type(IPutOptionsPricer).interfaceId == interfaceId ||
             super.supportsInterface(interfaceId);
@@ -23,9 +27,9 @@ contract PutOptionsPricerMock is ERC165, IPutOptionsPricer {
 
     /// @inheritdoc IPutOptionsPricer
     function getPremium(
-        uint256 strikePrice,
-        uint256 expiryTimestamp,
-        bool isPut
+        uint256,
+        uint256,
+        bool
     ) external view override returns (uint256) {
         return _premium;
     }

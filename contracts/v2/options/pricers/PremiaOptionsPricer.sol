@@ -1,3 +1,4 @@
+// solhint-disable no-empty-blocks
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
@@ -5,9 +6,12 @@ import "../../dependencies/openzeppelin/ERC165.sol";
 import "./IPutOptionsPricer.sol";
 
 contract PremiaOptionsPricer is ERC165, IPutOptionsPricer {
-    function supportsInterface(
-        bytes4 interfaceId
-    ) public view override(ERC165, IERC165) returns (bool) {
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        override(ERC165, IERC165)
+        returns (bool)
+    {
         return
             type(IPutOptionsPricer).interfaceId == interfaceId ||
             super.supportsInterface(interfaceId);

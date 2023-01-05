@@ -21,10 +21,10 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
 
-    uint256 private constant _ONE = 10 ** 18;
+    uint256 private constant _ONE = 10**18;
 
     /// @notice Minimum total value in USDC that can be used to purchase options
-    uint256 private constant _MIN_CHUNK_VALUE = 1 * 10 ** 6;
+    uint256 private constant _MIN_CHUNK_VALUE = 1 * 10**6;
 
     /// @notice Period of time for a broker to fill buy/sell order.
     ///         After that period order can be cancelled by anyone.
@@ -45,11 +45,11 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     address private immutable _opynAddressBook;
 
     /// @notice Discount for option premium, when buying/selling option from/to the broker
-    uint256 private _optionPremiumDiscount = 0.05 * 10 ** 18;
+    uint256 private _optionPremiumDiscount = 0.05 * 10**18;
 
     /// @notice ITM option price ratio which is applied after option is expired, but before
     ///         price is finalized
-    uint256 private _itmOptionPriceRatio = 0.99 * 10 ** 18;
+    uint256 private _itmOptionPriceRatio = 0.99 * 10**18;
     SellOrder private _sellOrder;
     BuyOrder private _buyOrder;
     Range private _expiryDelta;
@@ -133,10 +133,11 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     }
 
     /// @inheritdoc IPutOptionsVault
-    function sell(
-        address oToken,
-        uint256 amount
-    ) external override onlyLiquidator {
+    function sell(address oToken, uint256 amount)
+        external
+        override
+        onlyLiquidator
+    {
         if (!_oTokens.contains(oToken)) revert Aera__UnknownOToken(oToken);
 
         uint256 balance = IOToken(oToken).balanceOf(address(this));
@@ -155,26 +156,30 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     }
 
     /// @inheritdoc IPutOptionsVault
-    function setExpiryDelta(
-        uint256 min,
-        uint256 max
-    ) external override onlyController {
+    function setExpiryDelta(uint256 min, uint256 max)
+        external
+        override
+        onlyController
+    {
         _setExpiryDelta(min, max);
     }
 
     /// @inheritdoc IPutOptionsVault
-    function setStrikeMultiplier(
-        uint256 min,
-        uint256 max
-    ) external override onlyController {
+    function setStrikeMultiplier(uint256 min, uint256 max)
+        external
+        override
+        onlyController
+    {
         _setStrikeMultiplier(min, max);
     }
 
     /// @inheritdoc IPutOptionsVault
-    function fillBuyOrder(
-        address oToken,
-        uint256 amount
-    ) external override onlyBroker whenBuyOrderActive {
+    function fillBuyOrder(address oToken, uint256 amount)
+        external
+        override
+        onlyBroker
+        whenBuyOrderActive
+    {
         BuyOrder memory order = _buyOrder;
         // _buyOrder is deleted first to prevent reentrancy
         delete _buyOrder;
@@ -225,9 +230,12 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     }
 
     /// @inheritdoc IPutOptionsVault
-    function fillSellOrder(
-        uint256 amount
-    ) external override onlyBroker whenSellOrderActive {
+    function fillSellOrder(uint256 amount)
+        external
+        override
+        onlyBroker
+        whenSellOrderActive
+    {
         SellOrder memory order = _sellOrder;
         // _sellOrder is deleted first to prevent reentrancy
         delete _sellOrder;
@@ -295,9 +303,11 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     }
 
     /// @inheritdoc IPutOptionsVault
-    function setOptionPremiumDiscount(
-        uint256 discount
-    ) external override onlyController {
+    function setOptionPremiumDiscount(uint256 discount)
+        external
+        override
+        onlyController
+    {
         if (discount > _ONE) {
             revert Aera__DiscountExceedsMaximumValue(discount, _ONE);
         }
@@ -308,18 +318,23 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     }
 
     /// @inheritdoc IPutOptionsVault
-    function setITMOptionPriceRatio(
-        uint256 ratio
-    ) external override onlyController {
+    function setITMOptionPriceRatio(uint256 ratio)
+        external
+        override
+        onlyController
+    {
         _itmOptionPriceRatio = ratio;
 
         emit ITMOptionPriceRatioChanged(ratio);
     }
 
     /// @inheritdoc ERC4626
-    function maxDeposit(
-        address receiver
-    ) public view override(ERC4626, IERC4626) returns (uint256 maxAssets) {
+    function maxDeposit(address receiver)
+        public
+        view
+        override(ERC4626, IERC4626)
+        returns (uint256 maxAssets)
+    {
         if (receiver != owner()) return 0;
         if (msg.sender != owner()) return 0;
 
@@ -327,9 +342,12 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     }
 
     /// @inheritdoc ERC4626
-    function maxMint(
-        address receiver
-    ) public view override(ERC4626, IERC4626) returns (uint256 maxShares) {
+    function maxMint(address receiver)
+        public
+        view
+        override(ERC4626, IERC4626)
+        returns (uint256 maxShares)
+    {
         if (receiver != owner()) return 0;
         if (msg.sender != owner()) return 0;
 
@@ -338,9 +356,12 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
 
     /// @inheritdoc ERC4626
     /// @notice Assuming single owner holds all shares
-    function maxWithdraw(
-        address receiver
-    ) public view override(ERC4626, IERC4626) returns (uint256) {
+    function maxWithdraw(address receiver)
+        public
+        view
+        override(ERC4626, IERC4626)
+        returns (uint256)
+    {
         uint256 amount = super.maxWithdraw(receiver);
         uint256 buyOrderAmount = _buyOrder.amount;
         if (buyOrderAmount >= amount) return 0;
@@ -350,9 +371,12 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
 
     /// @inheritdoc ERC4626
     /// @notice Assuming single owner holds all shares
-    function maxRedeem(
-        address receiver
-    ) public view override(ERC4626, IERC4626) returns (uint256) {
+    function maxRedeem(address receiver)
+        public
+        view
+        override(ERC4626, IERC4626)
+        returns (uint256)
+    {
         uint256 shares = super.maxRedeem(receiver);
         uint256 buyOrderShares = _convertToShares(
             _buyOrder.amount,
@@ -523,6 +547,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
                 _oTokens.remove(address(oToken));
 
                 emit OptionRedeemed(address(oToken));
+                // solhint-disable-next-line no-empty-blocks
             } catch {}
         }
     }
@@ -588,7 +613,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             _adjustValue(
                 (_pricer.getPremium(strikePrice, expiryTimestamp, true) *
                     oToken.balanceOf(address(this))) /
-                    (10 ** _pricer.decimals()),
+                    (10**_pricer.decimals()),
                 _O_TOKEN_DECIMALS,
                 decimals()
             );
@@ -624,17 +649,20 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         // slither-disable-next-line calls-loop
         return (((strikePrice - price) *
             _itmOptionPriceRatio *
-            oToken.balanceOf(address(this))) /
-            (_ONE * 10 ** _O_TOKEN_DECIMALS));
+            oToken.balanceOf(address(this))) / (_ONE * 10**_O_TOKEN_DECIMALS));
     }
 
+    /* solhint-disable max-line-length */
     /**
      * @dev Reference: https://opyn.gitbook.io/opyn/get-started/actions#redeem
      *      Example: https://github.com/opynfinance/GammaProtocol/blob/master/test/integration-tests/nakedPutExpireITM.test.ts#L272
      */
-    function _createRedeemAction(
-        IOToken oToken
-    ) internal view returns (Actions.ActionArgs[] memory) {
+    /* solhint-enable max-line-length */
+    function _createRedeemAction(IOToken oToken)
+        internal
+        view
+        returns (Actions.ActionArgs[] memory)
+    {
         Actions.ActionArgs[] memory actions = new Actions.ActionArgs[](1);
         actions[0] = Actions.ActionArgs({
             actionType: Actions.ActionType.Redeem,
@@ -760,8 +788,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
 
         return
             _adjustValue(
-                (adjustedAmount * 10 ** _O_TOKEN_DECIMALS) /
-                    optionWithDiscount,
+                (adjustedAmount * 10**_O_TOKEN_DECIMALS) / optionWithDiscount,
                 _pricer.decimals(),
                 _O_TOKEN_DECIMALS
             );
@@ -774,9 +801,9 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     ) internal pure returns (uint256) {
         if (valueDecimals == targetDecimals) return value;
         if (valueDecimals < targetDecimals) {
-            return value * (10 ** (targetDecimals - valueDecimals));
+            return value * (10**(targetDecimals - valueDecimals));
         }
 
-        return value / (10 ** (valueDecimals - targetDecimals));
+        return value / (10**(valueDecimals - targetDecimals));
     }
 }

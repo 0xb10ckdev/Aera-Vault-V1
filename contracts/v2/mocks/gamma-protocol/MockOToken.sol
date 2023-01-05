@@ -41,7 +41,14 @@ contract MockOToken is ERC20Mock {
     function getOtokenDetails()
         external
         view
-        returns (address, address, address, uint256, uint256, bool)
+        returns (
+            address,
+            address,
+            address,
+            uint256,
+            uint256,
+            bool
+        )
     {
         return (
             collateralAsset,
@@ -62,7 +69,8 @@ contract MockOToken is ERC20Mock {
     }
 
     function getChainId() external view returns (uint256 chainId) {
-        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
+        this; // silence state mutability warning without generating bytecode
+        // - see https://github.com/ethereum/solidity/issues/2691
         // solhint-disable-next-line no-inline-assembly
         assembly {
             chainId := chainid()

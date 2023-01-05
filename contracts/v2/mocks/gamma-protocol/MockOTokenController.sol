@@ -45,10 +45,12 @@ contract MockOTokenController is IOTokenController {
         OtokenInterface(_otoken).burnOtoken(_account, _amount);
     }
 
-    function getPayout(
-        address,
-        uint256
-    ) external view override returns (uint256) {
+    function getPayout(address, uint256)
+        external
+        view
+        override
+        returns (uint256)
+    {
         return _payout;
     }
 

@@ -1,6 +1,5 @@
 import { expect } from "chai";
-import { ONE } from "../../../constants";
-import { toUnit } from "../../../utils";
+import { getCurrentTime, toUnit } from "../../../utils";
 import {
   EXPIRY_DELTA_MAX,
   EXPIRY_DELTA_MIN,
@@ -8,7 +7,6 @@ import {
   STRIKE_MULTIPLIER_MIN,
   USDC_DECIMALS,
 } from "../constants";
-import { getCurrentTime } from "../../../utils";
 
 export function shouldBehaveLikeBuyOrderGetter(): void {
   const DEPOSIT_AMOUNT = toUnit(500, USDC_DECIMALS);
