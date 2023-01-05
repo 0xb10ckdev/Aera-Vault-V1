@@ -1,4 +1,4 @@
-import { BigNumberish } from "ethers";
+import { BigNumber, BigNumberish } from "ethers";
 import { MockOToken } from "../../../../typechain";
 
 declare module "mocha" {
@@ -34,3 +34,13 @@ declare module "mocha" {
     ): Promise<{ oToken: MockOToken }>;
   }
 }
+
+export type BuyOrder = {
+  amount: BigNumber;
+  minStrikePrice: BigNumber;
+  maxStrikePrice: BigNumber;
+  minExpiryTimestamp: BigNumber;
+  maxExpiryTimestamp: BigNumber;
+  created: BigNumber;
+  active: boolean;
+};

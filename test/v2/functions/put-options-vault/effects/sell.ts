@@ -76,5 +76,17 @@ export function shouldBehaveLikeSell(): void {
         .to.emit(this.putOptionsVault, "SellOrderCreated")
         .withArgs(oToken.address, oTokenAmount);
     });
+
+    describe("when sell order is active", function () {
+      beforeEach(async function () {
+        await this.putOptionsVault.sell(oToken.address, 1);
+      });
+
+      it("emits", async function () {
+        await expect(this.putOptionsVault.sell(oToken.address, oTokenAmount))
+          .to.emit(this.putOptionsVault, "SellOrderCancelled")
+          .withArgs(oToken.address, 1);
+      });
+    });
   });
 }

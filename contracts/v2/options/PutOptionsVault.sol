@@ -14,7 +14,6 @@ import "../dependencies/gamma-protocol/WhitelistInterface.sol";
 import "./interfaces/IPutOptionsVault.sol";
 import "./interfaces/IOToken.sol";
 import "./pricers/IPutOptionsPricer.sol";
-import "hardhat/console.sol";
 
 contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     using Math for uint256;
@@ -141,8 +140,12 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         if (!_oTokens.contains(oToken)) revert Aera__UnknownOToken(oToken);
 
         uint256 balance = IOToken(oToken).balanceOf(address(this));
-        if (balance < amount) {
+        if (amount > balance) {
             revert Aera__InsufficientBalanceToSell(amount, balance);
+        }
+
+        if (_sellOrder.active) {
+            _cancelSellOrder();
         }
 
         _sellOrder = SellOrder({
@@ -184,7 +187,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         // _buyOrder is deleted first to prevent reentrancy
         delete _buyOrder;
 
-        _verifyOTokenWhitelisted(oToken);
+        _verifyWhitelisted(oToken);
 
         (
             address collateralAsset,
@@ -212,7 +215,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             _BUY_O_TOKEN
         );
 
-        if (required > amount) {
+        if (amount < required) {
             revert Aera__NotEnoughOTokens(required, amount);
         }
 
@@ -251,7 +254,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             _SELL_O_TOKEN
         );
 
-        if (tokens < order.amount) {
+        if (order.amount > tokens) {
             revert Aera__NotEnoughAssets(amount);
         }
 
@@ -279,15 +282,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             msg.sender != _broker
         ) revert Aera__CallerIsNotBroker();
 
-        emit BuyOrderCancelled(
-            _buyOrder.minExpiryTimestamp,
-            _buyOrder.maxExpiryTimestamp,
-            _buyOrder.minStrikePrice,
-            _buyOrder.maxStrikePrice,
-            _buyOrder.amount
-        );
-
-        delete _buyOrder;
+        _cancelBuyOrder();
     }
 
     /// @inheritdoc IPutOptionsVault
@@ -297,9 +292,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             msg.sender != _broker
         ) revert Aera__CallerIsNotBroker();
 
-        emit SellOrderCancelled(_sellOrder.oToken, _sellOrder.amount);
-
-        delete _sellOrder;
+        _cancelSellOrder();
     }
 
     /// @inheritdoc IPutOptionsVault
@@ -494,6 +487,10 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
 
         if (balance < _MIN_CHUNK_VALUE) return;
 
+        if (_buyOrder.active) {
+            _cancelBuyOrder();
+        }
+
         uint256 spotPrice = _pricer.getSpot();
 
         uint64 minExpiryTimestamp = uint64(block.timestamp + _expiryDelta.min);
@@ -529,24 +526,30 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     }
 
     function _checkExpired() internal returns (bool optionsMatured) {
+        address sellOrderToken = _sellOrder.oToken;
         // Copy the tokens array and iterate over it
         // so not deal with unexpected reorderings in _oTokens
         // when oToken is removed
         address[] memory tokens = _oTokens.values();
         for (uint256 i = 0; i < tokens.length; i++) {
-            IOToken oToken = IOToken(tokens[i]);
+            address oToken = tokens[i];
 
             // controller will check for option expiration and finalized
             // oracle price and revert when option is not redeemable
             try
-                IOTokenController(oToken.controller()).operate(
+                IOTokenController(IOToken(oToken).controller()).operate(
                     _createRedeemAction(oToken)
                 )
             {
                 optionsMatured = true;
-                _oTokens.remove(address(oToken));
 
-                emit OptionRedeemed(address(oToken));
+                _oTokens.remove(oToken);
+
+                if (oToken == sellOrderToken) {
+                    _cancelSellOrder();
+                }
+
+                emit OptionRedeemed(oToken);
                 // solhint-disable-next-line no-empty-blocks
             } catch {}
         }
@@ -658,7 +661,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
      *      Example: https://github.com/opynfinance/GammaProtocol/blob/master/test/integration-tests/nakedPutExpireITM.test.ts#L272
      */
     /* solhint-enable max-line-length */
-    function _createRedeemAction(IOToken oToken)
+    function _createRedeemAction(address oToken)
         internal
         view
         returns (Actions.ActionArgs[] memory)
@@ -670,7 +673,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             secondAddress: address(this),
             asset: address(oToken),
             vaultId: 0,
-            amount: oToken.balanceOf(address(this)),
+            amount: IERC20(oToken).balanceOf(address(this)),
             index: 0,
             data: ""
         });
@@ -702,7 +705,25 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         emit ExpiryDeltaChanged(min, max);
     }
 
-    function _verifyOTokenWhitelisted(address oToken) internal view {
+    function _cancelSellOrder() internal {
+        emit SellOrderCancelled(_sellOrder.oToken, _sellOrder.amount);
+
+        delete _sellOrder;
+    }
+
+    function _cancelBuyOrder() internal {
+        emit BuyOrderCancelled(
+            _buyOrder.minExpiryTimestamp,
+            _buyOrder.maxExpiryTimestamp,
+            _buyOrder.minStrikePrice,
+            _buyOrder.maxStrikePrice,
+            _buyOrder.amount
+        );
+
+        delete _buyOrder;
+    }
+
+    function _verifyWhitelisted(address oToken) internal view {
         address whitelist = AddressBookInterface(_opynAddressBook)
             .getWhitelist();
         if (!WhitelistInterface(whitelist).isWhitelistedOtoken(oToken)) {

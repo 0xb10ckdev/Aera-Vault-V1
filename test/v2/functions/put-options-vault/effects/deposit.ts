@@ -2,12 +2,14 @@ import { expect } from "chai";
 import { ONE } from "../../../constants";
 import { getCurrentTime, setNextBlockTimestamp, toUnit } from "../../../utils";
 import {
+  DEFAULT_MIN_CHUNK_VALUE,
   EXPIRY_DELTA_MAX,
   EXPIRY_DELTA_MIN,
   STRIKE_MULTIPLIER_MAX,
   STRIKE_MULTIPLIER_MIN,
   USDC_DECIMALS,
 } from "../constants";
+import { BuyOrder } from "../types";
 
 export function shouldBehaveLikeDeposit(): void {
   const ONE_THOUSAND_USDC = toUnit(1_000, USDC_DECIMALS);
@@ -129,6 +131,39 @@ export function shouldBehaveLikeDeposit(): void {
           PRICE.mul(STRIKE_MULTIPLIER_MAX * 100).div(100),
           ONE_THOUSAND_USDC,
         );
+    });
+
+    describe("when buy order is active", function () {
+      let buyOrder: BuyOrder;
+
+      beforeEach(async function () {
+        await this.usdc.approve(
+          this.putOptionsVault.address,
+          ONE_THOUSAND_USDC.add(DEFAULT_MIN_CHUNK_VALUE),
+        );
+        await this.putOptionsVault.deposit(
+          DEFAULT_MIN_CHUNK_VALUE,
+          this.signers.admin.address,
+        );
+        buyOrder = await this.putOptionsVault.buyOrder();
+      });
+
+      it("emits", async function () {
+        await expect(
+          this.putOptionsVault.deposit(
+            ONE_THOUSAND_USDC,
+            this.signers.admin.address,
+          ),
+        )
+          .to.emit(this.putOptionsVault, "BuyOrderCancelled")
+          .withArgs(
+            buyOrder.minExpiryTimestamp,
+            buyOrder.maxExpiryTimestamp,
+            buyOrder.minStrikePrice,
+            buyOrder.maxStrikePrice,
+            buyOrder.amount,
+          );
+      });
     });
   });
 }

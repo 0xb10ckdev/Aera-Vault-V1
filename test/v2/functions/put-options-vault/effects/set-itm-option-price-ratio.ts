@@ -8,7 +8,7 @@ export function shouldBehaveLikeSetITMOptionPriceRatio(): void {
           this.putOptionsVault
             .connect(this.signers.admin)
             .setITMOptionPriceRatio(100),
-        ).not.to.throw;
+        ).not.to.be.reverted;
       });
     });
 

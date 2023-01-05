@@ -17,3 +17,4 @@ export const PRICER_DECIMALS = 8;
 
 export const DEFAULT_SPOT_PRICE = toUnit(1000, USDC_DECIMALS);
 export const DEFAULT_PREMIUM = toUnit(140, PRICER_DECIMALS);
+export const DEFAULT_MIN_CHUNK_VALUE = toUnit(1, USDC_DECIMALS);

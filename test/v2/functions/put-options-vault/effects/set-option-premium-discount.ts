@@ -9,7 +9,7 @@ export function shouldBehaveLikeSetOptionPremiumDiscount(): void {
           this.putOptionsVault
             .connect(this.signers.admin)
             .setOptionPremiumDiscount(100),
-        ).not.to.throw;
+        ).not.to.be.reverted;
       });
     });
 

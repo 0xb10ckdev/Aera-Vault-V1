@@ -8,7 +8,7 @@ export function shouldBehaveLikeSetExpiryDelta(): void {
           this.putOptionsVault
             .connect(this.signers.admin)
             .setExpiryDelta(0, 100),
-        ).not.to.throw;
+        ).not.to.be.reverted;
       });
     });
 

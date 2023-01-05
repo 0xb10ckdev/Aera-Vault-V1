@@ -9,7 +9,7 @@ export function shouldBehaveLikeSetStrikeMultiplier(): void {
           this.putOptionsVault
             .connect(this.signers.admin)
             .setStrikeMultiplier(100, 1000),
-        ).not.to.throw;
+        ).not.to.be.reverted;
       });
     });
 

@@ -1,3 +1,4 @@
+import { BigNumber } from "ethers";
 import { expect } from "chai";
 import { MockOToken } from "../../../../../typechain";
 import { getCurrentTime, toUnit } from "../../../utils";
@@ -6,7 +7,7 @@ import { EXPIRY_DELTA_MIN, USDC_DECIMALS } from "../constants";
 export function shouldBehaveLikeCheckExpired(): void {
   describe("when called on empty positions", function () {
     it("works", async function () {
-      await expect(this.putOptionsVault.checkExpired()).not.to.throw;
+      await expect(this.putOptionsVault.checkExpired()).not.to.be.reverted;
     });
   });
 
@@ -44,6 +45,27 @@ export function shouldBehaveLikeCheckExpired(): void {
         await expect(this.putOptionsVault.checkExpired())
           .to.emit(this.putOptionsVault, "OptionRedeemed")
           .withArgs(oToken.address);
+      });
+    });
+
+    describe("when sell order is active", function () {
+      let oTokenAmount: BigNumber;
+      beforeEach(async function () {
+        oTokenAmount = await oToken.balanceOf(this.putOptionsVault.address);
+
+        await this.putOptionsVault.sell(oToken.address, oTokenAmount);
+      });
+
+      it("cancels sell order", async function () {
+        await this.putOptionsVault.checkExpired();
+
+        expect((await this.putOptionsVault.sellOrder()).active).is.false;
+      });
+
+      it("emits", async function () {
+        await expect(this.putOptionsVault.checkExpired())
+          .to.emit(this.putOptionsVault, "SellOrderCancelled")
+          .withArgs(oToken.address, oTokenAmount);
       });
     });
   });
