@@ -1,7 +1,11 @@
 import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
-import { ONE, PRICE_DEVIATION } from "../../constants";
+import {
+  MIN_YIELD_ACTION_THRESHOLD,
+  ONE,
+  PRICE_DEVIATION,
+} from "../../constants";
 import { toWei, tokenValueArray, tokenWithValues } from "../../utils";
 
 export function testWithdraw(): void {
@@ -170,88 +174,130 @@ export function testWithdraw(): void {
       }
     });
 
-    it("when withdrawing tokens", async function () {
-      for (let i = 0; i < this.numTokens; i++) {
-        await this.tokens[i].approve(this.vault.address, toWei(100000));
-      }
-      await this.vault.depositRiskingArbitrage(
-        tokenValueArray(this.tokenAddresses, toWei(10000), this.numTokens),
-      );
-
-      const { holdings, adminBalances } = await this.getState();
-      const guardiansFeeTotal = await this.getGuardiansFeeTotal();
-
-      const amounts = this.tokens.map(() =>
-        toWei(Math.floor(10 + Math.random() * 10)),
-      );
-
-      const spotPrices = [];
-      for (let i = 0; i < this.numPoolTokens; i++) {
-        spotPrices.push(await this.vault.getSpotPrices(this.sortedTokens[i]));
-      }
-
-      const trx = await this.vault.withdraw(
-        tokenWithValues(this.tokenAddresses, amounts),
-      );
-
-      const weights = await this.vault.getNormalizedWeights();
-
-      await expect(trx)
-        .to.emit(this.vault, "Withdraw")
-        .withArgs(amounts, amounts, weights);
-
-      const newGuardiansFeeTotal = await this.getGuardiansFeeTotal();
-
-      const { holdings: newHoldings, adminBalances: newAdminBalances } =
-        await this.getState();
-
-      for (let i = 0; i < this.numPoolTokens; i++) {
-        const newSpotPrices = await this.vault.getSpotPrices(
-          this.sortedTokens[i],
+    describe("when withdrawing tokens", async function () {
+      it("when yield action amount is greater than threshold", async function () {
+        for (let i = 0; i < this.numTokens; i++) {
+          await this.tokens[i].approve(this.vault.address, toWei(100000));
+        }
+        await this.vault.depositRiskingArbitrage(
+          tokenValueArray(this.tokenAddresses, toWei(10000), this.numTokens),
         );
 
-        expect(
-          await this.vault.getSpotPrice(
+        const { holdings, adminBalances } = await this.getState();
+        const guardiansFeeTotal = await this.getGuardiansFeeTotal();
+
+        const amounts = this.tokens.map(() =>
+          toWei(Math.floor(10 + Math.random() * 10)),
+        );
+
+        const spotPrices = [];
+        for (let i = 0; i < this.numPoolTokens; i++) {
+          spotPrices.push(
+            await this.vault.getSpotPrices(this.sortedTokens[i]),
+          );
+        }
+
+        const trx = await this.vault.withdraw(
+          tokenWithValues(this.tokenAddresses, amounts),
+        );
+
+        const weights = await this.vault.getNormalizedWeights();
+
+        await expect(trx)
+          .to.emit(this.vault, "Withdraw")
+          .withArgs(amounts, amounts, weights);
+
+        const newGuardiansFeeTotal = await this.getGuardiansFeeTotal();
+
+        const { holdings: newHoldings, adminBalances: newAdminBalances } =
+          await this.getState();
+
+        for (let i = 0; i < this.numPoolTokens; i++) {
+          const newSpotPrices = await this.vault.getSpotPrices(
             this.sortedTokens[i],
-            this.sortedTokens[(i + 1) % this.numPoolTokens],
-          ),
-        ).to.equal(newSpotPrices[(i + 1) % this.numPoolTokens]);
+          );
 
-        for (let j = 0; j < this.numPoolTokens; j++) {
-          expect(newSpotPrices[j]).to.be.closeTo(
-            spotPrices[i][j],
-            spotPrices[i][j].mul(PRICE_DEVIATION).div(ONE).toNumber(),
-          );
-        }
-      }
-      for (let i = 0; i < this.numTokens; i++) {
-        expect(await this.vault.holding(i)).to.equal(newHoldings[i]);
-        expect(newHoldings[i]).to.equal(
-          holdings[i]
-            .sub(amounts[i])
-            .sub(newGuardiansFeeTotal[i])
-            .add(guardiansFeeTotal[i]),
-        );
-        if (i < this.numPoolTokens) {
-          let poolTokenWithdrawnAmount = BigNumber.from(0);
-          for (let j = 0; j < this.numYieldTokens; j++) {
-            if (this.underlyingIndexes[j] == i && !this.isWithdrawable[j]) {
-              poolTokenWithdrawnAmount = poolTokenWithdrawnAmount.add(
-                amounts[j + this.numPoolTokens],
-              );
-            }
+          expect(
+            await this.vault.getSpotPrice(
+              this.sortedTokens[i],
+              this.sortedTokens[(i + 1) % this.numPoolTokens],
+            ),
+          ).to.equal(newSpotPrices[(i + 1) % this.numPoolTokens]);
+
+          for (let j = 0; j < this.numPoolTokens; j++) {
+            expect(newSpotPrices[j]).to.be.closeTo(
+              spotPrices[i][j],
+              spotPrices[i][j].mul(PRICE_DEVIATION).div(ONE).toNumber(),
+            );
           }
-          expect(newAdminBalances[i]).to.equal(
-            adminBalances[i].add(amounts[i]).add(poolTokenWithdrawnAmount),
-          );
-        } else if (this.isWithdrawable[i - this.numPoolTokens]) {
-          expect(newAdminBalances[i]).to.equal(
-            adminBalances[i].add(amounts[i]),
-          );
-        } else {
-          expect(newAdminBalances[i]).to.equal(adminBalances[i]);
         }
-      }
+        for (let i = 0; i < this.numTokens; i++) {
+          expect(await this.vault.holding(i)).to.equal(newHoldings[i]);
+          expect(newHoldings[i]).to.equal(
+            holdings[i]
+              .sub(amounts[i])
+              .sub(newGuardiansFeeTotal[i])
+              .add(guardiansFeeTotal[i]),
+          );
+          if (i < this.numPoolTokens) {
+            let poolTokenWithdrawnAmount = BigNumber.from(0);
+            for (let j = 0; j < this.numYieldTokens; j++) {
+              if (this.underlyingIndexes[j] == i && !this.isWithdrawable[j]) {
+                poolTokenWithdrawnAmount = poolTokenWithdrawnAmount.add(
+                  amounts[j + this.numPoolTokens],
+                );
+              }
+            }
+            expect(newAdminBalances[i]).to.equal(
+              adminBalances[i].add(amounts[i]).add(poolTokenWithdrawnAmount),
+            );
+          } else if (this.isWithdrawable[i - this.numPoolTokens]) {
+            expect(newAdminBalances[i]).to.equal(
+              adminBalances[i].add(amounts[i]),
+            );
+          } else {
+            expect(newAdminBalances[i]).to.equal(adminBalances[i]);
+          }
+        }
+      });
+
+      it("when yield action amount is less than threshold", async function () {
+        for (let i = 0; i < this.numTokens; i++) {
+          await this.tokens[i].approve(this.vault.address, toWei(100000));
+        }
+        await this.vault.depositRiskingArbitrage(
+          tokenValueArray(this.tokenAddresses, toWei(10000), this.numTokens),
+        );
+
+        const amounts = this.tokens.map(() =>
+          MIN_YIELD_ACTION_THRESHOLD.sub(1),
+        );
+
+        const spotPrices = [];
+        for (let i = 0; i < this.numPoolTokens; i++) {
+          spotPrices.push(
+            await this.vault.getSpotPrices(this.sortedTokens[i]),
+          );
+        }
+
+        const trx = await this.vault.withdraw(
+          tokenWithValues(this.tokenAddresses, amounts),
+        );
+
+        const weights = await this.vault.getNormalizedWeights();
+
+        const withdrawnAmounts = amounts.map(
+          (amount: BigNumber, index: number) =>
+            index >= this.numPoolTokens &&
+            !this.isWithdrawable[index - this.numPoolTokens]
+              ? BigNumber.from(0)
+              : amount,
+        );
+
+        await expect(trx)
+          .to.emit(this.vault, "Withdraw")
+          .withArgs(amounts, withdrawnAmounts, weights);
+      });
     });
 
     it("when withdrawing tokens with withdrawIfBalanceUnchanged", async function () {
