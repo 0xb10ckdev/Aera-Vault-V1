@@ -8,6 +8,7 @@ import {
   MAX_ORACLE_DELAY,
   MAX_ORACLE_SPOT_DIVERGENCE,
   MIN_SIGNIFICANT_DEPOSIT_VALUE,
+  MIN_YIELD_ACTION_THRESHOLD,
 } from "../../test/v2/constants";
 
 // https://github.com/balancer-labs/balancer-v2-monorepo/blob/master/pkg/balancer-js/test/tokens.test.ts
@@ -43,6 +44,8 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
 
     vaultConfig.minSignificantDepositValue =
       vaultConfig.minSignificantDepositValue || MIN_SIGNIFICANT_DEPOSIT_VALUE;
+    vaultConfig.minYieldActionThreshold =
+      vaultConfig.minYieldActionThreshold || MIN_YIELD_ACTION_THRESHOLD;
     vaultConfig.maxOracleSpotDivergence =
       vaultConfig.maxOracleSpotDivergence || MAX_ORACLE_SPOT_DIVERGENCE;
     vaultConfig.maxOracleDelay =
@@ -122,6 +125,9 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       );
       console.log(
         `Minimum Significant Deposit Value: ${vaultConfig.minSignificantDepositValue}`,
+      );
+      console.log(
+        `Minimum Yield Action Threshold: ${vaultConfig.minYieldActionThreshold}`,
       );
       console.log(
         `Maximum Oracle Spot Divergence: ${vaultConfig.maxOracleSpotDivergence}`,
