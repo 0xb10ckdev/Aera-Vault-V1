@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
-import "../dependencies/openzeppelin/IERC20.sol";
+import "../dependencies/balancer-labs/interfaces/contracts/solidity-utils/openzeppelin/IERC20.sol";
 
 interface IBMerkleOrchard {
     struct Claim {

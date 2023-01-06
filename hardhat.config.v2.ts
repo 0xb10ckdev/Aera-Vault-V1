@@ -13,7 +13,7 @@ const config: HardhatUserConfig = {
     compilers: [
       {
         // these settings are for Balancer contracts
-        version: "0.7.1",
+        version: "0.8.11",
         settings: {
           optimizer: {
             enabled: true,
@@ -38,7 +38,7 @@ const config: HardhatUserConfig = {
     overrides: {
       "contracts/v2/dependencies/balancer-labs/pool-weighted/contracts/managed/ManagedPoolFactory.sol":
         {
-          version: "0.7.1",
+          version: "0.8.11",
           settings: {
             optimizer: {
               enabled: true,
@@ -49,7 +49,7 @@ const config: HardhatUserConfig = {
         },
       "contracts/v2/dependencies/balancer-labs/pool-weighted/contracts/managed/ManagedPool.sol":
         {
-          version: "0.7.1",
+          version: "0.8.11",
           settings: {
             optimizer: {
               enabled: true,

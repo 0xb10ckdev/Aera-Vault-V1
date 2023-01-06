@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 // solhint-disable-next-line compiler-version
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.11;
 pragma experimental ABIEncoderV2;
 
 import "../dependencies/balancer-labs/pool-utils/contracts/test/MockVault.sol";

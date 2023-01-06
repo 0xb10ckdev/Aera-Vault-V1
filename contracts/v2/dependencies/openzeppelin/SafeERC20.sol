@@ -3,7 +3,7 @@
 
 pragma solidity ^0.8.0;
 
-import "./IERC20.sol";
+import "../balancer-labs/interfaces/contracts/solidity-utils/openzeppelin/IERC20.sol";
 import "./Address.sol";
 
 /**

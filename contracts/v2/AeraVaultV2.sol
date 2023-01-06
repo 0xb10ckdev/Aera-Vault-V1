@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
-import "./dependencies/openzeppelin/IERC20.sol";
+import "./dependencies/balancer-labs/interfaces/contracts/solidity-utils/openzeppelin/IERC20.sol";
 import "./dependencies/openzeppelin/Math.sol";
 import "./dependencies/openzeppelin/Multicall.sol";
 import "./dependencies/openzeppelin/Ownable.sol";
@@ -758,7 +758,7 @@ contract AeraVaultV2 is
     }
 
     /// @notice Disable ownership renounceable
-    function renounceOwnership() public override onlyOwner {
+    function renounceOwnership() public view override onlyOwner {
         revert Aera__VaultIsNotRenounceable();
     }
 
@@ -814,7 +814,7 @@ contract AeraVaultV2 is
             );
         }
 
-        startTime = Math.max(block.timestamp, startTime);
+        startTime = OZMath.max(block.timestamp, startTime);
         if (startTime > endTime) {
             revert Aera__WeightChangeEndBeforeStart();
         }
@@ -2190,7 +2190,7 @@ contract AeraVaultV2 is
                 depositedAmount = depositUnderlyingAsset(
                     yieldTokens[i],
                     poolTokens[underlyingIndex],
-                    Math.min(depositAmounts[i], balances[i])
+                    OZMath.min(depositAmounts[i], balances[i])
                 );
                 balances[underlyingIndex] -= depositedAmount;
             }
@@ -2225,7 +2225,7 @@ contract AeraVaultV2 is
             }
 
             // slither-disable-next-line variable-scope
-            uint256 depositAmount = Math.min(amount, maxDepositAmount);
+            uint256 depositAmount = OZMath.min(amount, maxDepositAmount);
 
             setAllowance(underlyingAsset, address(yieldToken), depositAmount);
 
@@ -2293,7 +2293,7 @@ contract AeraVaultV2 is
 
             // slither-disable-next-line variable-scope
             yieldToken.withdraw(
-                Math.min(amount, maxWithdrawalAmount),
+                OZMath.min(amount, maxWithdrawalAmount),
                 address(this),
                 address(this)
             );
@@ -2448,7 +2448,7 @@ contract AeraVaultV2 is
                 availableAmount = yieldTokens[i].convertToAssets(
                     holdings[index]
                 );
-                availableAmount = Math.min(
+                availableAmount = OZMath.min(
                     availableAmount,
                     yieldTokens[i].maxWithdraw(address(this))
                 );
@@ -2467,7 +2467,10 @@ contract AeraVaultV2 is
     /// @notice Check vault initialization parameters.
     /// @dev Will only be called by constructor.
     /// @param vaultParams Initialization parameters.
-    function checkVaultParams(NewVaultParams memory vaultParams) internal {
+    function checkVaultParams(NewVaultParams memory vaultParams)
+        internal
+        view
+    {
         if (numPoolTokens != vaultParams.weights.length) {
             revert Aera__ValueLengthIsNotSame(
                 numPoolTokens,

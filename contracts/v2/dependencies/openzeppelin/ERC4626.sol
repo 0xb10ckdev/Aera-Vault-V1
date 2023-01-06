@@ -24,7 +24,7 @@ import "./Math.sol";
  * _Available since v4.7._
  */
 abstract contract ERC4626 is ERC20, IERC4626 {
-    using Math for uint256;
+    using OZMath for uint256;
 
     IERC20 private immutable _asset;
     uint8 private immutable _decimals;
@@ -76,12 +76,12 @@ abstract contract ERC4626 is ERC20, IERC4626 {
 
     /** @dev See {IERC4626-convertToShares}. */
     function convertToShares(uint256 assets) public view virtual override returns (uint256 shares) {
-        return _convertToShares(assets, Math.Rounding.Down);
+        return _convertToShares(assets, OZMath.Rounding.Down);
     }
 
     /** @dev See {IERC4626-convertToAssets}. */
     function convertToAssets(uint256 shares) public view virtual override returns (uint256 assets) {
-        return _convertToAssets(shares, Math.Rounding.Down);
+        return _convertToAssets(shares, OZMath.Rounding.Down);
     }
 
     /** @dev See {IERC4626-maxDeposit}. */
@@ -96,7 +96,7 @@ abstract contract ERC4626 is ERC20, IERC4626 {
 
     /** @dev See {IERC4626-maxWithdraw}. */
     function maxWithdraw(address owner) public view virtual override returns (uint256) {
-        return _convertToAssets(balanceOf(owner), Math.Rounding.Down);
+        return _convertToAssets(balanceOf(owner), OZMath.Rounding.Down);
     }
 
     /** @dev See {IERC4626-maxRedeem}. */
@@ -106,22 +106,22 @@ abstract contract ERC4626 is ERC20, IERC4626 {
 
     /** @dev See {IERC4626-previewDeposit}. */
     function previewDeposit(uint256 assets) public view virtual override returns (uint256) {
-        return _convertToShares(assets, Math.Rounding.Down);
+        return _convertToShares(assets, OZMath.Rounding.Down);
     }
 
     /** @dev See {IERC4626-previewMint}. */
     function previewMint(uint256 shares) public view virtual override returns (uint256) {
-        return _convertToAssets(shares, Math.Rounding.Up);
+        return _convertToAssets(shares, OZMath.Rounding.Up);
     }
 
     /** @dev See {IERC4626-previewWithdraw}. */
     function previewWithdraw(uint256 assets) public view virtual override returns (uint256) {
-        return _convertToShares(assets, Math.Rounding.Up);
+        return _convertToShares(assets, OZMath.Rounding.Up);
     }
 
     /** @dev See {IERC4626-previewRedeem}. */
     function previewRedeem(uint256 shares) public view virtual override returns (uint256) {
-        return _convertToAssets(shares, Math.Rounding.Down);
+        return _convertToAssets(shares, OZMath.Rounding.Down);
     }
 
     /** @dev See {IERC4626-deposit}. */
@@ -178,7 +178,7 @@ abstract contract ERC4626 is ERC20, IERC4626 {
      * Will revert if assets > 0, totalSupply > 0 and totalAssets = 0. That corresponds to a case where any asset
      * would represent an infinite amount of shares.
      */
-    function _convertToShares(uint256 assets, Math.Rounding rounding) internal view virtual returns (uint256 shares) {
+    function _convertToShares(uint256 assets, OZMath.Rounding rounding) internal view virtual returns (uint256 shares) {
         uint256 supply = totalSupply();
         return
             (assets == 0 || supply == 0)
@@ -193,7 +193,7 @@ abstract contract ERC4626 is ERC20, IERC4626 {
      */
     function _initialConvertToShares(
         uint256 assets,
-        Math.Rounding /*rounding*/
+        OZMath.Rounding /*rounding*/
     ) internal view virtual returns (uint256 shares) {
         return assets;
     }
@@ -201,7 +201,7 @@ abstract contract ERC4626 is ERC20, IERC4626 {
     /**
      * @dev Internal conversion function (from shares to assets) with support for rounding direction.
      */
-    function _convertToAssets(uint256 shares, Math.Rounding rounding) internal view virtual returns (uint256 assets) {
+    function _convertToAssets(uint256 shares, OZMath.Rounding rounding) internal view virtual returns (uint256 assets) {
         uint256 supply = totalSupply();
         return
             (supply == 0) ? _initialConvertToAssets(shares, rounding) : shares.mulDiv(totalAssets(), supply, rounding);
@@ -214,7 +214,7 @@ abstract contract ERC4626 is ERC20, IERC4626 {
      */
     function _initialConvertToAssets(
         uint256 shares,
-        Math.Rounding /*rounding*/
+        OZMath.Rounding /*rounding*/
     ) internal view virtual returns (uint256 assets) {
         return shares;
     }

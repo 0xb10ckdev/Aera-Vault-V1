@@ -12,7 +12,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.11;
 pragma experimental ABIEncoderV2;
 
 import "../../../interfaces/contracts/solidity-utils/openzeppelin/IERC20.sol";
@@ -208,7 +208,7 @@ contract MockVault is IPoolSwapStructs {
         IERC20[] memory tokens = new IERC20[](currentBalances.length);
         int256[] memory deltas = new int256[](amountsOut.length);
         for (uint256 i = 0; i < amountsOut.length; ++i) {
-            deltas[i] = int256(-amountsOut[i]);
+            deltas[i] = -int256(amountsOut[i]);
         }
 
         emit PoolBalanceChanged(poolId, msg.sender, tokens, deltas, dueProtocolFeeAmounts);
@@ -216,7 +216,7 @@ contract MockVault is IPoolSwapStructs {
 
     // Needed to support authorizer adaptor entrypoint
     function getActionId(bytes4 selector) public view returns (bytes32) {
-        return keccak256(abi.encodePacked(bytes32(uint256(address(this))), selector));
+        return keccak256(abi.encodePacked(bytes32(uint256(uint160(address(this)))), selector));
     }
 
     function setAuthorizer(IAuthorizer newAuthorizer) external {

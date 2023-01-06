@@ -15,7 +15,7 @@
 import "../../../solidity-utils/contracts/math/FixedPoint.sol";
 import "../../../solidity-utils/contracts/math/Math.sol";
 
-pragma solidity ^0.7.0;
+pragma solidity ^0.8.11;
 
 // solhint-disable not-rely-on-time
 
