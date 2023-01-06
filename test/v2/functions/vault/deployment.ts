@@ -18,6 +18,7 @@ import {
   MIN_RELIABLE_VAULT_VALUE,
   MIN_SIGNIFICANT_DEPOSIT_VALUE,
   MIN_SWAP_FEE,
+  MIN_YIELD_ACTION_THRESHOLD,
   MIN_WEIGHT,
   ONE,
   ZERO_ADDRESS,
@@ -90,6 +91,7 @@ export function testDeployment(): void {
         guardian: guardian.address,
         minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
         minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE,
+        minYieldActionThreshold: MIN_YIELD_ACTION_THRESHOLD,
         maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE,
         maxOracleDelay: MAX_ORACLE_DELAY,
         minFeeDuration: MIN_FEE_DURATION,
@@ -163,6 +165,13 @@ export function testDeployment(): void {
       validParams.minSignificantDepositValue = toWei(0);
       await expect(deployVault(validParams)).to.be.revertedWith(
         "Aera__MinSignificantDepositValueIsZero",
+      );
+    });
+
+    it("when minimum yield action threshold is zero", async function () {
+      validParams.minYieldActionThreshold = toWei(0);
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Aera__MinYieldActionThresholdIsZero",
       );
     });
 

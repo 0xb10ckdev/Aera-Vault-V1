@@ -336,6 +336,37 @@ export function testUpdateWeightsGradually(): void {
       });
 
       describe("when underlying tokens are enough to mint yield tokens", async function () {
+        it("update no weights when yield action amount is less than threshold", async function () {
+          const weights = await this.vault.getNormalizedWeights();
+          const targetWeights = [...weights];
+          for (let i = 0; i < this.numYieldTokens; i++) {
+            targetWeights[this.underlyingIndexes[i]] = targetWeights[
+              this.underlyingIndexes[i]
+            ].sub(toWei(0.00001));
+            targetWeights[i + this.numPoolTokens] = targetWeights[
+              i + this.numPoolTokens
+            ].add(toWei(0.00001));
+          }
+
+          await expect(
+            this.vault
+              .connect(this.signers.guardian)
+              .updateWeightsGradually(
+                tokenWithValues(this.tokenAddresses, targetWeights),
+                startTime,
+                endTime,
+              ),
+          )
+            .to.emit(this.vault, "UpdateWeightsGradually")
+            .withArgs(startTime, endTime, targetWeights);
+
+          const newWeights = await this.vault.getNormalizedWeights();
+
+          for (let i = 0; i < this.numTokens; i++) {
+            expect(newWeights[i]).to.equal(weights[i]);
+          }
+        });
+
         it("update weights of only underlying tokens and yield tokens", async function () {
           const weights = await this.vault.getNormalizedWeights();
           const targetWeights = [...weights];
