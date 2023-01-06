@@ -38,6 +38,8 @@ interface IAeraVaultV2 is
     //                        It will be measured in base token terms.
     // minSignificantDepositValue: Minimum significant deposit value.
     //                             It will be measured in base token terms.
+    // minYieldActionThreshold: Minimum action threshold for yield bearing assets.
+    //                          It will be measured in base token terms.
     // maxOracleSpotDivergence: Maximum oracle spot price divergence.
     // maxOracleDelay: Maximum update delay of oracles.
     // minFeeDuration: Minimum period to charge management fee.
@@ -57,6 +59,7 @@ interface IAeraVaultV2 is
         address guardian;
         uint256 minReliableVaultValue;
         uint256 minSignificantDepositValue;
+        uint256 minYieldActionThreshold;
         uint256 maxOracleSpotDivergence;
         uint256 maxOracleDelay;
         uint256 minFeeDuration;
