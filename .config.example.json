@@ -11,6 +11,7 @@
   "validator": "0x",
   "minReliableVaultValue": "1000000000000000000",
   "minSignificantDepositValue": "200000000000000000000",
+  "minYieldActionThreshold": "10000000000000000",
   "maxOracleSpotDivergence": "1100000000000000000",
   "maxOracleDelay": "18000",
   "minFeeDuration": "5184000",
