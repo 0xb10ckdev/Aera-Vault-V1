@@ -1,9 +1,8 @@
-import { BigNumberish, Signer } from "ethers";
+import { BigNumberish, ContractTransaction, Signer } from "ethers";
 import { ethers } from "hardhat";
 import { getChainId, getConfig } from "../../scripts/config";
 import {
-  AeraVaultV2Mock,
-  AeraVaultV2Mock__factory,
+  AeraVaultFactoryV2__factory,
   ManagedPoolFactory,
   ManagedPoolFactory__factory,
 } from "../../typechain";
@@ -92,12 +91,15 @@ export const deployFactory = async (
 
 export const deployVault = async (
   params: VaultParams,
-): Promise<AeraVaultV2Mock> => {
-  const vault = await ethers.getContractFactory<AeraVaultV2Mock__factory>(
-    "AeraVaultV2Mock",
-  );
+): Promise<ContractTransaction> => {
+  const vaultFactory =
+    await ethers.getContractFactory<AeraVaultFactoryV2__factory>(
+      "AeraVaultFactoryV2",
+    );
 
-  return await vault.connect(params.signer).deploy({
+  const factory = await vaultFactory.connect(params.signer).deploy();
+
+  return await factory.connect(params.signer).create({
     factory: params.factory,
     name: params.name,
     symbol: params.symbol,
