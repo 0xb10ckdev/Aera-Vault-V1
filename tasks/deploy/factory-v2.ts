@@ -1,7 +1,7 @@
 import { task, types } from "hardhat/config";
 import { getConfig } from "../../scripts/config";
 
-task("deploy:factory", "Deploys a Base Managed Pool Factory")
+task("deploy:factoryV2", "Deploys a Managed Pool Factory")
   .addParam("maxYield", "Maximum yield value of fee provider")
   .addParam("maxAum", "Maximum aum value of fee provider")
   .addOptionalParam(
