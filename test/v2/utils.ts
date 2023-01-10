@@ -1,5 +1,6 @@
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { BigNumber, BigNumberish, Signer } from "ethers";
-import { ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 import { getChainId, getConfig } from "../../scripts/config";
 import {
   AeraVaultV2Mock,
@@ -8,13 +9,13 @@ import {
   ManagedPoolFactory__factory,
 } from "../../typechain";
 import {
-  ONE,
   MAX_MANAGEMENT_FEE,
   MAX_ORACLE_DELAY,
   MAX_ORACLE_SPOT_DIVERGENCE,
   MIN_FEE_DURATION,
   MIN_RELIABLE_VAULT_VALUE,
   MIN_SIGNIFICANT_DEPOSIT_VALUE,
+  ONE,
   ZERO_ADDRESS,
 } from "./constants";
 
@@ -199,6 +200,20 @@ export const setNextBlockTimestamp = async (
   timestamp: number,
 ): Promise<void> => {
   await ethers.provider.send("evm_setNextBlockTimestamp", [timestamp]);
+};
+
+export const mineBlock = async (): Promise<void> =>
+  await ethers.provider.send("evm_mine", []);
+
+export const impersonate = async (
+  account: string,
+): Promise<SignerWithAddress> => {
+  await hre.network.provider.request({
+    method: "hardhat_impersonateAccount",
+    params: [account],
+  });
+
+  return await hre.ethers.getSigner(account);
 };
 
 export const adjustValue = (

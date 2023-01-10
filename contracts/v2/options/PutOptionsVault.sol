@@ -528,7 +528,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     function _checkExpired() internal returns (bool optionsMatured) {
         address sellOrderToken = _sellOrder.oToken;
         // Copy the tokens array and iterate over it
-        // so not deal with unexpected reorderings in _oTokens
+        // so not to deal with unexpected reorderings in _oTokens
         // when oToken is removed
         address[] memory tokens = _oTokens.values();
         for (uint256 i = 0; i < tokens.length; i++) {
@@ -671,7 +671,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             actionType: Actions.ActionType.Redeem,
             owner: address(0),
             secondAddress: address(this),
-            asset: address(oToken),
+            asset: oToken,
             vaultId: 0,
             amount: IERC20(oToken).balanceOf(address(this)),
             index: 0,

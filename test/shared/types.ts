@@ -1,16 +1,18 @@
-import { MockAddressBook, MockWhitelist } from "../../typechain";
 // eslint-disable @typescript-eslint/no-explicit-any
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { Fixture } from "ethereum-waffle";
 import { BigNumber } from "ethers";
 import {
+  AddressBookInterface,
   AeraVaultV2Mock,
   ERC4626Mock,
   IERC20,
   IPutOptionsPricer,
   ManagedPoolFactory,
+  MockAddressBook,
   MockGammaOracle,
   MockOTokenController,
+  MockWhitelist,
   OracleMock,
   PermissiveWithdrawalValidator,
   PutOptionsPricerMock,
@@ -39,6 +41,7 @@ declare module "mocha" {
     oracleAddresses: string[];
     unsortedTokens: string[];
     underlyingIndexes: number[];
+    opynAddressBook: AddressBookInterface;
     putOptionsVault: PutOptionsVault;
     pricer: IPutOptionsPricer;
     vault: AeraVaultV2Mock;

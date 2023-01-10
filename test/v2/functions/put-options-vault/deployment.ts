@@ -55,7 +55,7 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
     }
 
     it("deploys", async () => {
-      await expect(deployVault(validArgs)).not.reverted;
+      await expect(deployVault(validArgs)).not.to.be.reverted;
     });
 
     describe("when controller is zero address", () => {

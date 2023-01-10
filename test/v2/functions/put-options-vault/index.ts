@@ -35,7 +35,7 @@ import {
 } from "./view";
 
 export function shouldBehaveLikePutOptionsVault(): void {
-  describe.only("Put Options Vault", function () {
+  describe("Put Options Vault", function () {
     describe("Deployment", function () {
       shouldBehaveLikePutOptionsVaultDeployment();
     });
