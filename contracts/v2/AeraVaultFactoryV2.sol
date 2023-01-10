@@ -26,7 +26,6 @@ contract AeraVaultFactoryV2 is IAeraVaultFactoryV2, Ownable {
         onlyOwner
     {
         AeraVaultV2 vault = new AeraVaultV2(vaultParams);
-        vault.transferOwnership(newOwner);
 
         emit VaultCreated(address(vault), vaultParams);
     }
