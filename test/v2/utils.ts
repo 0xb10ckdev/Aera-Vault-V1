@@ -35,6 +35,7 @@ export type VaultParams = {
   }[];
   numeraireAssetIndex: number;
   swapFeePercentage: BigNumberish;
+  owner: string;
   guardian: string;
   minReliableVaultValue?: BigNumberish;
   minSignificantDepositValue?: BigNumberish;
@@ -109,6 +110,7 @@ export const deployVault = async (
     yieldTokens: params.yieldTokens,
     numeraireAssetIndex: params.numeraireAssetIndex,
     swapFeePercentage: params.swapFeePercentage,
+    owner: params.owner,
     guardian: params.guardian,
     minReliableVaultValue:
       params.minReliableVaultValue || MIN_RELIABLE_VAULT_VALUE,
