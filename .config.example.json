@@ -7,6 +7,7 @@
   "yieldTokens": [],
   "numeraireAssetIndex": 0,
   "swapFeePercentage": "1000000000000",
+  "owner": "0x",
   "guardian": "0x",
   "validator": "0x",
   "minReliableVaultValue": "1000000000000000000",

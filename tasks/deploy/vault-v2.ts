@@ -31,6 +31,8 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
   )
   .addFlag("printTransactionData", "Get transaction data for deployment")
   .setAction(async (taskArgs, { ethers, network }) => {
+    const { admin } = await ethers.getNamedSigners();
+
     const config = getConfig(network.config.chainId || 1);
 
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
@@ -42,6 +44,7 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       return;
     }
 
+    vaultConfig.owner = vaultConfig.owner || admin.address;
     vaultConfig.minSignificantDepositValue =
       vaultConfig.minSignificantDepositValue || MIN_SIGNIFICANT_DEPOSIT_VALUE;
     vaultConfig.minYieldActionThreshold =
@@ -106,8 +109,6 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       }
     }
 
-    const { admin } = await ethers.getNamedSigners();
-
     if (!taskArgs.silent) {
       console.log("Deploying vault with");
       console.log(`Factory: ${vaultConfig.factory}`);
@@ -119,6 +120,7 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
       console.log("YieldTokens:\n", yieldTokens.join("\n"));
       console.log("Numeraire Asset Index:\n", vaultConfig.numeraireAssetIndex);
       console.log(`Swap Fee: ${vaultConfig.swapFeePercentage}`);
+      console.log(`Owner: ${vaultConfig.owner}`);
       console.log(`Guardian: ${vaultConfig.guardian}`);
       console.log(
         `Minimum Reliable Vault Value: ${vaultConfig.minReliableVaultValue}`,
