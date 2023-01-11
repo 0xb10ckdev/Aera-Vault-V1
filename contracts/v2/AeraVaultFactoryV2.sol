@@ -27,6 +27,7 @@ contract AeraVaultFactoryV2 is IAeraVaultFactoryV2, Ownable {
     {
         AeraVaultV2 vault = new AeraVaultV2(vaultParams);
 
+        // slither-disable-next-line reentrancy-events
         emit VaultCreated(address(vault), vaultParams);
     }
 }
