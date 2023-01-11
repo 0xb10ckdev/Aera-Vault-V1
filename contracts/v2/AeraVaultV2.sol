@@ -360,6 +360,12 @@ contract AeraVaultV2 is
         )
         YieldTokenStorage(vaultParams.yieldTokens)
     {
+        if (vaultParams.owner == address(0)) {
+            revert Aera__OwnerIsZeroAddress();
+        }
+
+        _transferOwnership(vaultParams.owner);
+
         numPoolTokens = vaultParams.poolTokens.length;
         numTokens = numPoolTokens + numYieldTokens;
 
