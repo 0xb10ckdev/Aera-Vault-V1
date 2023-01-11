@@ -88,6 +88,7 @@ export function testDeployment(): void {
         })),
         numeraireAssetIndex: 0,
         swapFeePercentage: MIN_SWAP_FEE,
+        owner: admin.address,
         guardian: guardian.address,
         minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
         minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE,
@@ -243,6 +244,13 @@ export function testDeployment(): void {
       validParams.weights = valueArray(MIN_WEIGHT, poolTokens.length);
       await expect(deployVault(validParams)).to.be.revertedWith(
         BALANCER_ERRORS.NORMALIZED_WEIGHT_INVARIANT,
+      );
+    });
+
+    it("when owner is zero address", async function () {
+      validParams.owner = ZERO_ADDRESS;
+      await expect(deployVault(validParams)).to.be.revertedWith(
+        "Aera__OwnerIsZeroAddress",
       );
     });
 
