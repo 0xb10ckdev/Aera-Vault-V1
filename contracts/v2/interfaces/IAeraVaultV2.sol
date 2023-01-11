@@ -33,7 +33,7 @@ interface IAeraVaultV2 is
     // yieldTokens: Yield bearing asset addresses.
     // numeraireAssetIndex: Index of base token for oracles.
     // swapFeePercentage: Pool swap fee.
-    // guardian: Vault owner address.
+    // owner: Vault owner address.
     // guardian: Vault guardian address.
     // minReliableVaultValue: Minimum reliable vault TVL.
     //                        It will be measured in base token terms.
