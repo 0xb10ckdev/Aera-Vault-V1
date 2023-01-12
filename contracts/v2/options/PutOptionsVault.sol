@@ -14,9 +14,11 @@ import "../dependencies/gamma-protocol/WhitelistInterface.sol";
 import "./interfaces/IPutOptionsVault.sol";
 import "./interfaces/IOToken.sol";
 import "./pricers/IPutOptionsPricer.sol";
+import "./Decimals.sol";
 
 contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     using Math for uint256;
+    using Decimals for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
 
@@ -42,6 +44,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     /// @notice Underlying asset for Opyn option (namely WETH)
     IERC20 private immutable _underlyingOptionsAsset;
     address private immutable _opynAddressBook;
+    uint8 private immutable _pricerDecimals;
 
     /// @notice Discount for option premium, when buying/selling option from/to the broker
     uint256 private _optionPremiumDiscount = 0.05 * 10**18;
@@ -117,6 +120,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         }
 
         _pricer = IPutOptionsPricer(pricer_);
+        _pricerDecimals = _pricer.decimals();
         _broker = broker_;
         _controller = controller_;
         _liquidator = liquidator_;
@@ -613,13 +617,9 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     ) internal view returns (uint256) {
         // slither-disable-next-line calls-loop
         return
-            _adjustValue(
-                (_pricer.getPremium(strikePrice, expiryTimestamp, true) *
-                    oToken.balanceOf(address(this))) /
-                    (10**_pricer.decimals()),
-                _O_TOKEN_DECIMALS,
-                decimals()
-            );
+            ((_pricer.getPremium(strikePrice, expiryTimestamp, true) *
+                oToken.balanceOf(address(this))) / (10**_pricerDecimals))
+                .adjust(_O_TOKEN_DECIMALS, decimals());
     }
 
     function _getExpiredOptionPayout(
@@ -778,7 +778,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         }
     }
 
-    /// @dev Estimates how much oTokens could we buy/sell for given amount of underlying tokens (USDC)
+    /// @dev Estimates how much oTokens we can buy/sell for given amount of underlying tokens (USDC)
     /// @param strikePrice - oToken strike price
     /// @param expiryTimestamp - oToken expiry timestamp
     /// @param amount - amount of underlying tokens (USDC)
@@ -795,11 +795,9 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             true
         );
 
-        uint256 adjustedAmount = _adjustValue(
-            amount,
-            decimals(),
-            _pricer.decimals()
-        );
+        // In case of USDC (which have 6 decimals) we're upscaling amount
+        // to 8 decimals, to increase precision
+        uint256 adjustedAmount = amount.adjust(decimals(), _pricerDecimals);
 
         uint256 discount = buyingOTokens
             ? (_ONE + _optionPremiumDiscount)
@@ -808,23 +806,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         uint256 optionWithDiscount = (oneOptionPremium * discount) / _ONE;
 
         return
-            _adjustValue(
-                (adjustedAmount * 10**_O_TOKEN_DECIMALS) / optionWithDiscount,
-                _pricer.decimals(),
-                _O_TOKEN_DECIMALS
-            );
-    }
-
-    function _adjustValue(
-        uint256 value,
-        uint256 valueDecimals,
-        uint256 targetDecimals
-    ) internal pure returns (uint256) {
-        if (valueDecimals == targetDecimals) return value;
-        if (valueDecimals < targetDecimals) {
-            return value * (10**(targetDecimals - valueDecimals));
-        }
-
-        return value / (10**(valueDecimals - targetDecimals));
+            ((adjustedAmount * 10**_O_TOKEN_DECIMALS) / optionWithDiscount)
+                .adjust(_pricerDecimals, _O_TOKEN_DECIMALS);
     }
 }

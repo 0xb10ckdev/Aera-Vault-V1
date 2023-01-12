@@ -24,9 +24,12 @@ import {
 export function shouldBehaveLikePutOptionsCreateFillRedeemBuyOrder(): void {
   const ONE_THOUSAND_USDC = toUnit(1_000, USDC_DECIMALS);
 
+  const O_TOKEN_ADDRESS = "0x5f7bdc51e2d96a97824F02619d4F3F87827E28bb";
+  const O_TOKEN_HOLDER = "0x3396c5ade0266f1bd93911f9acb9413333a735da";
+
   describe("create-fill-redeem buy order", function () {
     let oToken: IOToken;
-    const ETH_USDC_PRICE = 3147;
+    const ETH_USDC_PRICE = 4200;
     const PREMIUM = toUnit(140, 8);
     let strikePrice: BigNumber;
 
@@ -41,17 +44,12 @@ export function shouldBehaveLikePutOptionsCreateFillRedeemBuyOrder(): void {
         this.signers.admin.address,
       );
 
-      oToken = IOToken__factory.connect(
-        "0x7B3Db87712a12e197ff8568B9DF59CcEd46674A6",
-        this.signers.admin,
-      );
+      oToken = IOToken__factory.connect(O_TOKEN_ADDRESS, this.signers.admin);
 
       strikePrice = await oToken.strikePrice();
 
       await oToken
-        .connect(
-          await impersonate("0x3396c5ade0266f1bd93911f9acb9413333a735da"),
-        )
+        .connect(await impersonate(O_TOKEN_HOLDER))
         .transfer(this.signers.admin.address, toUnit(1000, O_TOKEN_DECIMALS));
     });
 
@@ -109,37 +107,72 @@ export function shouldBehaveLikePutOptionsCreateFillRedeemBuyOrder(): void {
           (await oToken.expiryTimestamp()).toNumber(),
         );
         await mineBlock();
-
-        await setExpiryPrice.call(this, strikePrice.sub(EXPIRY_PRICE_DELTA));
-
-        await setNextBlockTimestamp(
-          (await oToken.expiryTimestamp()).toNumber() + 86400 * 3,
-        );
-        await mineBlock();
       });
 
-      it("works", async function () {
-        await expect(() =>
-          this.putOptionsVault.checkExpired({
-            gasLimit: 5000000,
-          }),
-        ).to.changeTokenBalance(
-          this.usdc,
-          this.putOptionsVault,
-          toUnit(10 * 100, USDC_DECIMALS), // 10 oTokens each 100 USDC ITM strike price
-        );
+      describe("ITM", function () {
+        beforeEach(async function () {
+          await setExpiryPrice.call(this, strikePrice.sub(EXPIRY_PRICE_DELTA));
 
-        expect(await this.putOptionsVault.positions()).to.be.lengthOf(0);
+          await setNextBlockTimestamp(
+            (await oToken.expiryTimestamp()).toNumber() + 86400 * 3,
+          );
+          await mineBlock();
+        });
+
+        it("redeems USDC", async function () {
+          await expect(() =>
+            this.putOptionsVault.checkExpired({
+              gasLimit: 5000000,
+            }),
+          ).to.changeTokenBalance(
+            this.usdc,
+            this.putOptionsVault,
+            toUnit(10 * 100, USDC_DECIMALS), // 10 oTokens each 100 USDC ITM strike price
+          );
+
+          expect(await this.putOptionsVault.positions()).to.be.lengthOf(0);
+        });
+
+        it("emits", async function () {
+          await expect(
+            this.putOptionsVault.checkExpired({
+              gasLimit: 5000000,
+            }),
+          )
+            .to.emit(this.putOptionsVault, "OptionRedeemed")
+            .withArgs(oToken.address);
+        });
       });
 
-      it("emits", async function () {
-        await expect(
-          this.putOptionsVault.checkExpired({
-            gasLimit: 5000000,
-          }),
-        )
-          .to.emit(this.putOptionsVault, "OptionRedeemed")
-          .withArgs(oToken.address);
+      describe("OTM", function () {
+        beforeEach(async function () {
+          await setExpiryPrice.call(this, strikePrice.add(EXPIRY_PRICE_DELTA));
+
+          await setNextBlockTimestamp(
+            (await oToken.expiryTimestamp()).toNumber() + 86400 * 3,
+          );
+          await mineBlock();
+        });
+
+        it("does nothing", async function () {
+          await expect(() =>
+            this.putOptionsVault.checkExpired({
+              gasLimit: 5000000,
+            }),
+          ).to.changeTokenBalance(this.usdc, this.putOptionsVault, 0);
+
+          expect(await this.putOptionsVault.positions()).to.be.lengthOf(0);
+        });
+
+        it("emits", async function () {
+          await expect(
+            this.putOptionsVault.checkExpired({
+              gasLimit: 5000000,
+            }),
+          )
+            .to.emit(this.putOptionsVault, "OptionRedeemed")
+            .withArgs(oToken.address);
+        });
       });
     });
   });

@@ -14,7 +14,6 @@ export function baseContext(description: string, testSuite: () => void): void {
         await ethers.getNamedSigners();
       this.signers.admin = admin;
       this.signers.guardian = guardian;
-      this.signers.admin = admin;
       this.signers.user = user;
       this.signers.stranger = stranger;
 
