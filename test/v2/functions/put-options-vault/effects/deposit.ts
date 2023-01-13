@@ -104,7 +104,7 @@ export function shouldBehaveLikeDeposit(): void {
       const buyOrder = await this.putOptionsVault.buyOrder();
 
       expect(buyOrder.active).to.be.true;
-      expect(buyOrder.amount).to.eq(ONE_THOUSAND_USDC);
+      expect(buyOrder.underlyingAssetAmount).to.eq(ONE_THOUSAND_USDC);
       expect(buyOrder.created).to.eq(now);
       expect(buyOrder.minExpiryTimestamp).is.eq(now + EXPIRY_DELTA_MIN);
       expect(buyOrder.maxExpiryTimestamp).is.eq(now + EXPIRY_DELTA_MAX);
@@ -161,7 +161,7 @@ export function shouldBehaveLikeDeposit(): void {
             buyOrder.maxExpiryTimestamp,
             buyOrder.minStrikePrice,
             buyOrder.maxStrikePrice,
-            buyOrder.amount,
+            buyOrder.underlyingAssetAmount,
           );
       });
     });

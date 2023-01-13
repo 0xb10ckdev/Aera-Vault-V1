@@ -36,7 +36,7 @@ declare module "mocha" {
 }
 
 export type BuyOrder = {
-  amount: BigNumber;
+  underlyingAssetAmount: BigNumber;
   minStrikePrice: BigNumber;
   maxStrikePrice: BigNumber;
   minExpiryTimestamp: BigNumber;

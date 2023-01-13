@@ -27,7 +27,7 @@ export function shouldBehaveLikeBuyOrderGetter(): void {
     const order = await this.putOptionsVault.buyOrder();
 
     expect(order.active).to.be.true;
-    expect(order.amount).to.eq(DEPOSIT_AMOUNT);
+    expect(order.underlyingAssetAmount).to.eq(DEPOSIT_AMOUNT);
     expect(order.created).to.eq(now);
     expect(order.minExpiryTimestamp).is.eq(now + EXPIRY_DELTA_MIN);
     expect(order.maxExpiryTimestamp).is.eq(now + EXPIRY_DELTA_MAX);

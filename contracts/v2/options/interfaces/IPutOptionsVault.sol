@@ -24,7 +24,7 @@ interface IPutOptionsVault is IERC4626 {
         uint256 maxExpiryTimestamp,
         uint256 minStrikePrice,
         uint256 maxStrikePrice,
-        uint256 amount
+        uint256 underlyingAssetAmount
     );
 
     /// @notice Raised when buy order is filled
@@ -36,7 +36,7 @@ interface IPutOptionsVault is IERC4626 {
         uint64 maxExpiryTimestamp,
         uint128 minStrikePrice,
         uint128 maxStrikePrice,
-        uint256 amount
+        uint256 underlyingAssetAmount
     );
 
     /// @notice Raised when sell order is created
@@ -114,7 +114,7 @@ interface IPutOptionsVault is IERC4626 {
 
     /// @notice Container for buy order information
     struct BuyOrder {
-        uint256 amount;
+        uint256 underlyingAssetAmount;
         uint128 minStrikePrice; // min value of strike price with 8 decimals
         uint128 maxStrikePrice; // max value of strike price with 8 decimals
         uint64 minExpiryTimestamp; // min value of expiry
@@ -185,7 +185,7 @@ interface IPutOptionsVault is IERC4626 {
     function underlyingOptionsAsset()
         external
         view
-        returns (IERC20 underlyingOptionsAssetAddress);
+        returns (address underlyingOptionsAssetAddress);
 
     /// @notice Reveal current buy order if it exists
     function buyOrder() external view returns (BuyOrder memory);

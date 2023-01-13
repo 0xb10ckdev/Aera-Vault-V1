@@ -38,7 +38,7 @@ export function shouldBehaveLikeCancelBuyOrder(): void {
           buyOrder.maxExpiryTimestamp,
           buyOrder.minStrikePrice,
           buyOrder.maxStrikePrice,
-          buyOrder.amount,
+          buyOrder.underlyingAssetAmount,
         );
     });
 
