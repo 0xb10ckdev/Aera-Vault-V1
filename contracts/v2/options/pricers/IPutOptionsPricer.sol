@@ -4,7 +4,7 @@ pragma solidity 0.8.11;
 import "../../dependencies/openzeppelin/IERC165.sol";
 
 interface IPutOptionsPricer is IERC165 {
-    /// @notice Calculate options premium for 1 options contract
+    /// @notice Calculate options premium for 1 options contract. Price should have 8 decimals.
     function getPremium(
         uint256 strikePrice,
         uint256 expiryTimestamp,

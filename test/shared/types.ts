@@ -12,6 +12,7 @@ import {
   MockAddressBook,
   MockGammaOracle,
   MockOTokenController,
+  MockVolatilitySurfaceOracle,
   MockWhitelist,
   OracleMock,
   PermissiveWithdrawalValidator,
@@ -71,4 +72,6 @@ export interface Mocks {
   gammaOracle: MockGammaOracle;
   addressBook: MockAddressBook;
   whitelist: MockWhitelist;
+  oracle: OracleMock;
+  volatilitySurfaceOracle: MockVolatilitySurfaceOracle;
 }

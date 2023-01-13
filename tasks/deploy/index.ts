@@ -11,3 +11,4 @@ import "./oranges";
 import "./mangos";
 import "./kiwis";
 import "./put-options-vault";
+import "./premia-options-pricer";
