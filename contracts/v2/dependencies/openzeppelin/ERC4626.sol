@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.7.0) (token/ERC20/extensions/ERC4626.sol)
 
-// Blockvis/Auditless/Gauntlet update
+// Modified by Aera team
 // Added _beforeWithdraw/_afterDeposit hooks to match
 // with solmate (https://github.com/transmissions11/solmate/blob/main/src/mixins/ERC4626.sol) implementation
 
