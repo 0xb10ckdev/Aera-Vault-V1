@@ -12,7 +12,7 @@ export function shouldBehaveLikeFillSellOrder(): void {
   describe("when sell order is not active", function () {
     it("reverts", async function () {
       await expect(this.putOptionsVault.fillSellOrder(1)).to.be.revertedWith(
-        `Aera__SellOrderIsNotActive()`,
+        `AeraPOV__SellOrderIsNotActive()`,
       );
     });
   });
@@ -21,7 +21,7 @@ export function shouldBehaveLikeFillSellOrder(): void {
     it("reverts", async function () {
       await expect(
         this.putOptionsVault.connect(this.signers.stranger).fillSellOrder(1),
-      ).to.be.revertedWith(`Aera__CallerIsNotBroker()`);
+      ).to.be.revertedWith(`AeraPOV__CallerIsNotBroker()`);
     });
   });
 
@@ -50,7 +50,7 @@ export function shouldBehaveLikeFillSellOrder(): void {
         it("reverts", async function () {
           await expect(
             this.putOptionsVault.fillSellOrder(ONE_USDC),
-          ).to.be.revertedWith(`Aera__NotEnoughAssets(${ONE_USDC})`);
+          ).to.be.revertedWith(`AeraPOV__NotEnoughAssets(${ONE_USDC})`);
         });
       });
 

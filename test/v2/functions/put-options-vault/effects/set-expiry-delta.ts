@@ -18,7 +18,7 @@ export function shouldBehaveLikeSetExpiryDelta(): void {
           this.putOptionsVault
             .connect(this.signers.stranger)
             .setExpiryDelta(0, 100),
-        ).to.be.revertedWith("Aera__CallerIsNotController");
+        ).to.be.revertedWith("AeraPOV__CallerIsNotController");
       });
     });
   });
@@ -28,7 +28,7 @@ export function shouldBehaveLikeSetExpiryDelta(): void {
       it("reverts", async function () {
         await expect(
           this.putOptionsVault.setExpiryDelta(100, 0),
-        ).to.be.revertedWith(`Aera__ExpiryDeltaRangeNotValid(100, 0)`);
+        ).to.be.revertedWith(`AeraPOV__ExpiryDeltaRangeNotValid(100, 0)`);
       });
     });
 

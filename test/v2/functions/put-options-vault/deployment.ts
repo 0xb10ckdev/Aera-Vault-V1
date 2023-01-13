@@ -62,7 +62,7 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
       it("reverts", async () => {
         await expect(
           deployVault({ ...validArgs, controller: ZERO_ADDRESS }),
-        ).to.be.revertedWith("Aera__ControllerIsZeroAddress");
+        ).to.be.revertedWith("AeraPOV__ControllerIsZeroAddress");
       });
     });
 
@@ -70,7 +70,7 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
       it("reverts", async () => {
         await expect(
           deployVault({ ...validArgs, liquidator: ZERO_ADDRESS }),
-        ).to.be.revertedWith("Aera__LiquidatorIsZeroAddress");
+        ).to.be.revertedWith("AeraPOV__LiquidatorIsZeroAddress");
       });
     });
 
@@ -78,7 +78,7 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
       it("reverts", async () => {
         await expect(
           deployVault({ ...validArgs, broker: ZERO_ADDRESS }),
-        ).to.be.revertedWith("Aera__BrokerIsZeroAddress");
+        ).to.be.revertedWith("AeraPOV__BrokerIsZeroAddress");
       });
     });
 
@@ -86,7 +86,7 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
       it("reverts", async () => {
         await expect(
           deployVault({ ...validArgs, underlyingAsset: ZERO_ADDRESS }),
-        ).to.be.revertedWith("Aera__UnderlyingAssetIsZeroAddress");
+        ).to.be.revertedWith("AeraPOV__UnderlyingAssetIsZeroAddress");
       });
     });
 
@@ -94,7 +94,7 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
       it("reverts", async () => {
         await expect(
           deployVault({ ...validArgs, underlyingOptionsAsset: ZERO_ADDRESS }),
-        ).to.be.revertedWith("Aera__UnderlyingOptionsAssetIsZeroAddress");
+        ).to.be.revertedWith("AeraPOV__UnderlyingOptionsAssetIsZeroAddress");
       });
     });
 
@@ -102,7 +102,7 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
       it("reverts", async () => {
         await expect(
           deployVault({ ...validArgs, opynAddressBook: ZERO_ADDRESS }),
-        ).to.be.revertedWith("Aera__OpynAddressBookIsZeroAddress");
+        ).to.be.revertedWith("AeraPOV__OpynAddressBookIsZeroAddress");
       });
     });
 
@@ -115,7 +115,7 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
               expiryDeltaMin: 100,
               expiryDeltaMax: 0,
             }),
-          ).to.be.revertedWith(`Aera__ExpiryDeltaRangeNotValid(100, 0)`);
+          ).to.be.revertedWith(`AeraPOV__ExpiryDeltaRangeNotValid(100, 0)`);
         });
       });
 
@@ -139,7 +139,9 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
               strikeMultiplierMin: 100,
               strikeMultiplierMax: 10,
             }),
-          ).to.be.revertedWith(`Aera__StrikeMultiplierRangeNotValid(100, 10)`);
+          ).to.be.revertedWith(
+            `AeraPOV__StrikeMultiplierRangeNotValid(100, 10)`,
+          );
         });
       });
 
@@ -152,7 +154,7 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
               strikeMultiplierMax: 100,
             }),
           ).to.be.revertedWith(
-            `Aera__StrikeMultiplierMinValueBelowExpected(0, 1)`,
+            `AeraPOV__StrikeMultiplierMinValueBelowExpected(0, 1)`,
           );
         });
       });
@@ -167,7 +169,7 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
               strikeMultiplierMax: max,
             }),
           ).to.be.revertedWith(
-            `Aera__StrikeMultiplierMaxValueExceedsExpected(${max}, ${max.sub(
+            `AeraPOV__StrikeMultiplierMaxValueExceedsExpected(${max}, ${max.sub(
               1,
             )})`,
           );
@@ -197,7 +199,7 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
               pricer: ZERO_ADDRESS,
             }),
           ).to.be.revertedWith(
-            `Aera__PutOptionsPricerIsNotValid("${ZERO_ADDRESS}")`,
+            `AeraPOV__PutOptionsPricerIsNotValid("${ZERO_ADDRESS}")`,
           );
         });
       });
@@ -210,7 +212,7 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
               pricer: this.weth.address,
             }),
           ).to.be.revertedWith(
-            `Aera__PutOptionsPricerIsNotValid("${this.weth.address}")`,
+            `AeraPOV__PutOptionsPricerIsNotValid("${this.weth.address}")`,
           );
         });
       });

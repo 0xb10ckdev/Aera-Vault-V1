@@ -19,7 +19,7 @@ export function shouldBehaveLikeSetStrikeMultiplier(): void {
           this.putOptionsVault
             .connect(this.signers.stranger)
             .setStrikeMultiplier(100, 1000),
-        ).to.be.revertedWith("Aera__CallerIsNotController");
+        ).to.be.revertedWith("AeraPOV__CallerIsNotController");
       });
     });
   });
@@ -29,7 +29,9 @@ export function shouldBehaveLikeSetStrikeMultiplier(): void {
       it("reverts", async function () {
         await expect(
           this.putOptionsVault.setStrikeMultiplier(100, 10),
-        ).to.be.revertedWith(`Aera__StrikeMultiplierRangeNotValid(100, 10)`);
+        ).to.be.revertedWith(
+          `AeraPOV__StrikeMultiplierRangeNotValid(100, 10)`,
+        );
       });
     });
 
@@ -38,7 +40,7 @@ export function shouldBehaveLikeSetStrikeMultiplier(): void {
         await expect(
           this.putOptionsVault.setStrikeMultiplier(0, 100),
         ).to.be.revertedWith(
-          `Aera__StrikeMultiplierMinValueBelowExpected(0, 1)`,
+          `AeraPOV__StrikeMultiplierMinValueBelowExpected(0, 1)`,
         );
       });
     });
@@ -49,7 +51,7 @@ export function shouldBehaveLikeSetStrikeMultiplier(): void {
         await expect(
           this.putOptionsVault.setStrikeMultiplier(10, max),
         ).to.be.revertedWith(
-          `Aera__StrikeMultiplierMaxValueExceedsExpected(${max}, ${max.sub(
+          `AeraPOV__StrikeMultiplierMaxValueExceedsExpected(${max}, ${max.sub(
             1,
           )})`,
         );

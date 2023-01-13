@@ -33,7 +33,7 @@ export function shouldBehaveLikeFillBuyOrder(): void {
     it("reverts", async function () {
       await expect(
         this.putOptionsVault.fillBuyOrder(oToken.address, O_TOKEN_AMOUNT),
-      ).to.be.revertedWith("Aera__BuyOrderIsNotActive");
+      ).to.be.revertedWith("AeraPOV__BuyOrderIsNotActive");
     });
   });
 
@@ -43,7 +43,7 @@ export function shouldBehaveLikeFillBuyOrder(): void {
         this.putOptionsVault
           .connect(this.signers.stranger)
           .fillBuyOrder(oToken.address, O_TOKEN_AMOUNT),
-      ).to.be.revertedWith("Aera__CallerIsNotBroker");
+      ).to.be.revertedWith("AeraPOV__CallerIsNotBroker");
     });
   });
 
@@ -65,7 +65,7 @@ export function shouldBehaveLikeFillBuyOrder(): void {
 
           await expect(
             this.putOptionsVault.fillBuyOrder(oToken.address, O_TOKEN_AMOUNT),
-          ).to.be.revertedWith("Aera__ExpectedPutOption");
+          ).to.be.revertedWith("AeraPOV__ExpectedPutOption");
         });
       });
 
@@ -76,7 +76,7 @@ export function shouldBehaveLikeFillBuyOrder(): void {
           await expect(
             this.putOptionsVault.fillBuyOrder(oToken.address, O_TOKEN_AMOUNT),
           ).to.be.revertedWith(
-            `Aera__InvalidUnderlyingAsset("${this.weth.address}", "${this.usdc.address}")`,
+            `AeraPOV__InvalidUnderlyingAsset("${this.weth.address}", "${this.usdc.address}")`,
           );
         });
       });
@@ -88,7 +88,7 @@ export function shouldBehaveLikeFillBuyOrder(): void {
           await expect(
             this.putOptionsVault.fillBuyOrder(oToken.address, O_TOKEN_AMOUNT),
           ).to.be.revertedWith(
-            `Aera__InvalidCollateralAsset("${this.usdc.address}", "${this.weth.address}")`,
+            `AeraPOV__InvalidCollateralAsset("${this.usdc.address}", "${this.weth.address}")`,
           );
         });
       });
@@ -100,7 +100,7 @@ export function shouldBehaveLikeFillBuyOrder(): void {
           await expect(
             this.putOptionsVault.fillBuyOrder(oToken.address, O_TOKEN_AMOUNT),
           ).to.be.revertedWith(
-            `Aera__InvalidStrikeAsset("${this.usdc.address}", "${this.weth.address}")`,
+            `AeraPOV__InvalidStrikeAsset("${this.usdc.address}", "${this.weth.address}")`,
           );
         });
       });
@@ -114,7 +114,7 @@ export function shouldBehaveLikeFillBuyOrder(): void {
           await expect(
             this.putOptionsVault.fillBuyOrder(oToken.address, O_TOKEN_AMOUNT),
           ).to.be.revertedWith(
-            `Aera__NotWhitelistedOToken("${oToken.address}")`,
+            `AeraPOV__NotWhitelistedOToken("${oToken.address}")`,
           );
         });
       });
@@ -136,7 +136,7 @@ export function shouldBehaveLikeFillBuyOrder(): void {
                 O_TOKEN_AMOUNT,
               ),
             ).to.be.revertedWith(
-              `Aera__ExpiryTimestampIsNotInRange(${minExpiryTimestamp}, ${maxExpiryTimestamp}, ${minExpiryTimestamp.sub(
+              `AeraPOV__ExpiryTimestampIsNotInRange(${minExpiryTimestamp}, ${maxExpiryTimestamp}, ${minExpiryTimestamp.sub(
                 1,
               )})`,
             );
@@ -159,7 +159,7 @@ export function shouldBehaveLikeFillBuyOrder(): void {
                 O_TOKEN_AMOUNT,
               ),
             ).to.be.revertedWith(
-              `Aera__ExpiryTimestampIsNotInRange(${minExpiryTimestamp}, ${maxExpiryTimestamp}, ${maxExpiryTimestamp.add(
+              `AeraPOV__ExpiryTimestampIsNotInRange(${minExpiryTimestamp}, ${maxExpiryTimestamp}, ${maxExpiryTimestamp.add(
                 1,
               )})`,
             );
@@ -185,7 +185,7 @@ export function shouldBehaveLikeFillBuyOrder(): void {
                 O_TOKEN_AMOUNT,
               ),
             ).to.be.revertedWith(
-              `Aera__StrikePriceIsNotInRange(${minStrikePrice}, ${maxStrikePrice}, ${minStrikePrice.sub(
+              `AeraPOV__StrikePriceIsNotInRange(${minStrikePrice}, ${maxStrikePrice}, ${minStrikePrice.sub(
                 1,
               )})`,
             );
@@ -209,7 +209,7 @@ export function shouldBehaveLikeFillBuyOrder(): void {
                 O_TOKEN_AMOUNT,
               ),
             ).to.be.revertedWith(
-              `Aera__StrikePriceIsNotInRange(${minStrikePrice}, ${maxStrikePrice}, ${maxStrikePrice.add(
+              `AeraPOV__StrikePriceIsNotInRange(${minStrikePrice}, ${maxStrikePrice}, ${maxStrikePrice.add(
                 1,
               )})`,
             );
@@ -232,7 +232,7 @@ export function shouldBehaveLikeFillBuyOrder(): void {
         await expect(
           this.putOptionsVault.fillBuyOrder(oToken.address, OFFERED_O_TOKENS),
         ).to.be.revertedWith(
-          `Aera__NotEnoughOTokens(380952380, ${OFFERED_O_TOKENS})`,
+          `AeraPOV__NotEnoughOTokens(380952380, ${OFFERED_O_TOKENS})`,
         );
       });
     });

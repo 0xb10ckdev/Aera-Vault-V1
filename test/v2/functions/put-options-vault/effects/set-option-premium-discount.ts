@@ -19,7 +19,7 @@ export function shouldBehaveLikeSetOptionPremiumDiscount(): void {
           this.putOptionsVault
             .connect(this.signers.stranger)
             .setOptionPremiumDiscount(100),
-        ).to.be.revertedWith("Aera__CallerIsNotController");
+        ).to.be.revertedWith("AeraPOV__CallerIsNotController");
       });
     });
   });
@@ -31,7 +31,7 @@ export function shouldBehaveLikeSetOptionPremiumDiscount(): void {
         await expect(
           this.putOptionsVault.setOptionPremiumDiscount(max.add(1)),
         ).to.be.revertedWith(
-          `Aera__DiscountExceedsMaximumValue(${max.add(1)}, ${max})`,
+          `AeraPOV__DiscountExceedsMaximumValue(${max.add(1)}, ${max})`,
         );
       });
     });

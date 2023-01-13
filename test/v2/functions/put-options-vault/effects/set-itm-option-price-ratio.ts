@@ -18,7 +18,7 @@ export function shouldBehaveLikeSetITMOptionPriceRatio(): void {
           this.putOptionsVault
             .connect(this.signers.stranger)
             .setITMOptionPriceRatio(100),
-        ).to.be.revertedWith("Aera__CallerIsNotController");
+        ).to.be.revertedWith("AeraPOV__CallerIsNotController");
       });
     });
   });

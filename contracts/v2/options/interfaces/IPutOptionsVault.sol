@@ -53,50 +53,56 @@ interface IPutOptionsVault is IERC4626 {
 
     /// ERRORS ///
 
-    error Aera__PricerIsZeroAddress();
-    error Aera__OwnerIsZeroAddress();
-    error Aera__ControllerIsZeroAddress();
-    error Aera__LiquidatorIsZeroAddress();
-    error Aera__OpynAddressBookIsZeroAddress();
-    error Aera__BrokerIsZeroAddress();
-    error Aera__UnderlyingAssetIsZeroAddress();
-    error Aera__UnderlyingOptionsAssetIsZeroAddress();
-    error Aera__PutOptionsPricerIsNotValid(address pricer);
-    error Aera__CallerIsNotBroker();
-    error Aera__CallerIsNotLiquidator();
-    error Aera__CallerIsNotController();
-    error Aera__ExpiryDeltaRangeNotValid(uint256 min, uint256 max);
-    error Aera__StrikeMultiplierRangeNotValid(uint256 min, uint256 max);
-    error Aera__StrikeMultiplierMinValueBelowExpected(
+    error AeraPOV__PricerIsZeroAddress();
+    error AeraPOV__OwnerIsZeroAddress();
+    error AeraPOV__ControllerIsZeroAddress();
+    error AeraPOV__LiquidatorIsZeroAddress();
+    error AeraPOV__OpynAddressBookIsZeroAddress();
+    error AeraPOV__BrokerIsZeroAddress();
+    error AeraPOV__UnderlyingAssetIsZeroAddress();
+    error AeraPOV__UnderlyingOptionsAssetIsZeroAddress();
+    error AeraPOV__PutOptionsPricerIsNotValid(address pricer);
+    error AeraPOV__CallerIsNotBroker();
+    error AeraPOV__CallerIsNotLiquidator();
+    error AeraPOV__CallerIsNotController();
+    error AeraPOV__ExpiryDeltaRangeNotValid(uint256 min, uint256 max);
+    error AeraPOV__StrikeMultiplierRangeNotValid(uint256 min, uint256 max);
+    error AeraPOV__StrikeMultiplierMinValueBelowExpected(
         uint256 actual,
         uint256 expected
     );
-    error Aera__StrikeMultiplierMaxValueExceedsExpected(
+    error AeraPOV__StrikeMultiplierMaxValueExceedsExpected(
         uint256 actual,
         uint256 expected
     );
-    error Aera__BuyOrderIsNotActive();
-    error Aera__SellOrderIsNotActive();
-    error Aera__InsufficientBalanceToSell(uint256 requested, uint256 balance);
-    error Aera__NotEnoughOTokens(uint256 expected, uint256 actual);
-    error Aera__NotEnoughAssets(uint256 actual);
-    error Aera__UnknownOToken(address oToken);
-    error Aera__DiscountExceedsMaximumValue(uint256 discount, uint256 maximum);
-    error Aera__ExpectedPutOption();
-    error Aera__InvalidUnderlyingAsset(address expected, address actual);
-    error Aera__InvalidCollateralAsset(address expected, address actual);
-    error Aera__InvalidStrikeAsset(address expected, address actual);
-    error Aera__ExpiryTimestampIsNotInRange(
+    error AeraPOV__BuyOrderIsNotActive();
+    error AeraPOV__SellOrderIsNotActive();
+    error AeraPOV__InsufficientBalanceToSell(
+        uint256 requested,
+        uint256 balance
+    );
+    error AeraPOV__NotEnoughOTokens(uint256 expected, uint256 actual);
+    error AeraPOV__NotEnoughAssets(uint256 actual);
+    error AeraPOV__UnknownOToken(address oToken);
+    error AeraPOV__DiscountExceedsMaximumValue(
+        uint256 discount,
+        uint256 maximum
+    );
+    error AeraPOV__ExpectedPutOption();
+    error AeraPOV__InvalidUnderlyingAsset(address expected, address actual);
+    error AeraPOV__InvalidCollateralAsset(address expected, address actual);
+    error AeraPOV__InvalidStrikeAsset(address expected, address actual);
+    error AeraPOV__ExpiryTimestampIsNotInRange(
         uint256 min,
         uint256 max,
         uint256 actual
     );
-    error Aera__StrikePriceIsNotInRange(
+    error AeraPOV__StrikePriceIsNotInRange(
         uint256 min,
         uint256 max,
         uint256 actual
     );
-    error Aera__NotWhitelistedOToken(address oToken);
+    error AeraPOV__NotWhitelistedOToken(address oToken);
 
     /// STRUCTS ///
 

@@ -13,7 +13,7 @@ export function shouldBehaveLikeCancelSellOrder(): void {
   describe("when sell order is not active", function () {
     it("reverts", async function () {
       await expect(this.putOptionsVault.cancelSellOrder()).to.be.revertedWith(
-        "Aera__SellOrderIsNotActive",
+        "AeraPOV__SellOrderIsNotActive",
       );
     });
   });
@@ -54,7 +54,7 @@ export function shouldBehaveLikeCancelSellOrder(): void {
             this.putOptionsVault
               .connect(this.signers.stranger)
               .cancelSellOrder(),
-          ).to.be.revertedWith("Aera__CallerIsNotBroker");
+          ).to.be.revertedWith("AeraPOV__CallerIsNotBroker");
         });
       });
 

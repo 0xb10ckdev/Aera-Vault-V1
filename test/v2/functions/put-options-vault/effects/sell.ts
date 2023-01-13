@@ -31,7 +31,7 @@ export function shouldBehaveLikeSell(): void {
           this.putOptionsVault
             .connect(this.signers.stranger)
             .sell(oToken.address, 1),
-        ).to.be.revertedWith("Aera__CallerIsNotLiquidator");
+        ).to.be.revertedWith("AeraPOV__CallerIsNotLiquidator");
       });
     });
   });
@@ -40,7 +40,7 @@ export function shouldBehaveLikeSell(): void {
     it("reverts", async function () {
       await expect(
         this.putOptionsVault.sell(this.usdc.address, 1),
-      ).to.be.revertedWith(`Aera__UnknownOToken("${this.usdc.address}")`);
+      ).to.be.revertedWith(`AeraPOV__UnknownOToken("${this.usdc.address}")`);
     });
   });
 
@@ -51,7 +51,7 @@ export function shouldBehaveLikeSell(): void {
       await expect(
         this.putOptionsVault.sell(oToken.address, amount),
       ).to.be.revertedWith(
-        `Aera__InsufficientBalanceToSell(${amount}, ${oTokenAmount})`,
+        `AeraPOV__InsufficientBalanceToSell(${amount}, ${oTokenAmount})`,
       );
     });
   });
