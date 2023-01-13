@@ -1,6 +1,4 @@
-/**
- * SPDX-License-Identifier: UNLICENSED
- */
+// SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.11;
 
 // This is a copy of https://github.com/opynfinance/GammaProtocol/blob/master/contracts/mocks/MockOracle.sol
