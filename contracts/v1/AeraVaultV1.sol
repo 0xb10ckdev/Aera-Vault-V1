@@ -83,6 +83,7 @@ contract AeraVaultV1 is IAeraVaultV1, Ownable, ReentrancyGuard {
 
     /// @notice Describes vault purpose and modelling assumptions for differentiating between vaults
     /// @dev string cannot be immutable bytecode but only set in constructor
+    // slither-disable-next-line immutable-states
     string public description;
 
     /// @notice Indicates that the Vault has been initialized
