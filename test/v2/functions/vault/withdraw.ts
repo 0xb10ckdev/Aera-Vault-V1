@@ -329,7 +329,7 @@ export function testWithdraw(): void {
             adminBalances[i].add(amounts[i]).add(poolTokenWithdrawnAmount),
           );
         } else if (this.isWithdrawable[i - this.numPoolTokens]) {
-          expect(newAdminBalances[i]).to.equal(
+         expect(newAdminBalances[i]).to.equal(
             adminBalances[i].add(amounts[i]),
           );
         } else {
