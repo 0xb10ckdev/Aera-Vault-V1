@@ -3,6 +3,7 @@
 pragma solidity 0.8.11;
 
 import "../dependencies/premia/oracle/IVolatilitySurfaceOracle.sol";
+import "../dependencies/abdk/ABDKMath64x64.sol";
 
 /**
  * @dev Mock VolatilitySurfaceOracle
@@ -44,7 +45,9 @@ contract MockVolatilitySurfaceOracle is IVolatilitySurfaceOracle {
         view
         override
         returns (int128)
-    {}
+    {
+        return ABDKMath64x64.divu(maturity - block.timestamp, 365 days);
+    }
 
     function getAnnualizedVolatility64x64(
         address base,
