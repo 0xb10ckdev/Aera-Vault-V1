@@ -113,6 +113,7 @@ contract AeraVaultV2 is
 
     /// @notice Describes vault purpose and modeling assumptions for differentiating between vaults.
     /// @dev string cannot be immutable bytecode but only set in constructor.
+    // slither-disable-next-line immutable-states
     string public description;
 
     /// @notice Indicates that the Vault has been initialized.
