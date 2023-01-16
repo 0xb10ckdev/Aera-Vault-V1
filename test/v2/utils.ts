@@ -16,6 +16,7 @@ import {
   MIN_RELIABLE_VAULT_VALUE,
   MIN_SIGNIFICANT_DEPOSIT_VALUE,
   ONE,
+  MIN_YIELD_ACTION_THRESHOLD,
   ZERO_ADDRESS,
 } from "./constants";
 
@@ -39,6 +40,7 @@ export type VaultParams = {
   guardian: string;
   minReliableVaultValue?: BigNumberish;
   minSignificantDepositValue?: BigNumberish;
+  minYieldActionThreshold?: BigNumberish;
   maxOracleSpotDivergence?: BigNumberish;
   maxOracleDelay?: BigNumberish;
   minFeeDuration?: BigNumberish;
@@ -111,6 +113,8 @@ export const deployVault = async (
       params.minReliableVaultValue || MIN_RELIABLE_VAULT_VALUE,
     minSignificantDepositValue:
       params.minSignificantDepositValue || MIN_SIGNIFICANT_DEPOSIT_VALUE,
+    minYieldActionThreshold:
+      params.minYieldActionThreshold || MIN_YIELD_ACTION_THRESHOLD,
     maxOracleSpotDivergence:
       params.maxOracleSpotDivergence || MAX_ORACLE_SPOT_DIVERGENCE,
     maxOracleDelay: params.maxOracleDelay || MAX_ORACLE_DELAY,

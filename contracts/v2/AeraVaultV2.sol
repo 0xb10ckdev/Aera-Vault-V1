@@ -96,6 +96,9 @@ contract AeraVaultV2 is
     /// @notice Minimum significant deposit value measured in base token terms.
     uint256 public immutable minSignificantDepositValue;
 
+    /// @notice Minimum action threshold for yield bearing assets measured in base token terms.
+    uint256 public immutable minYieldActionThreshold;
+
     /// @notice Maximum oracle spot price divergence.
     uint256 public immutable maxOracleSpotDivergence;
 
@@ -254,6 +257,7 @@ contract AeraVaultV2 is
     error Aera__MinFeeDurationIsZero();
     error Aera__MinReliableVaultValueIsZero();
     error Aera__MinSignificantDepositValueIsZero();
+    error Aera__MinYieldActionThresholdIsZero();
     error Aera__MaxOracleSpotDivergenceIsZero();
     error Aera__MaxOracleDelayIsZero();
     error Aera__GuardianIsZeroAddress();
@@ -402,6 +406,7 @@ contract AeraVaultV2 is
         minFeeDuration = vaultParams.minFeeDuration;
         minReliableVaultValue = vaultParams.minReliableVaultValue;
         minSignificantDepositValue = vaultParams.minSignificantDepositValue;
+        minYieldActionThreshold = vaultParams.minYieldActionThreshold;
         maxOracleSpotDivergence = vaultParams.maxOracleSpotDivergence;
         maxOracleDelay = vaultParams.maxOracleDelay;
         managementFee = vaultParams.managementFee;
@@ -1259,6 +1264,16 @@ contract AeraVaultV2 is
             amounts
         );
 
+        uint256[] memory oraclePrices;
+
+        // Use new block to avoid stack too deep issue
+        {
+            uint256[] memory updatedAt;
+            (oraclePrices, updatedAt) = getOraclePrices();
+
+            checkOracleStatus(updatedAt);
+        }
+
         uint256[] memory balances = new uint256[](numTokens);
         for (uint256 i = 0; i < numPoolTokens; i++) {
             if (amounts[i] > 0) {
@@ -1285,6 +1300,7 @@ contract AeraVaultV2 is
         }
 
         uint256[] memory underlyingIndexes = getUnderlyingIndexes();
+        uint256 underlyingIndex;
         IERC20 underlyingAsset;
         uint256 index = numPoolTokens;
 
@@ -1294,11 +1310,14 @@ contract AeraVaultV2 is
                     balances[index] = amounts[index];
                     yieldTokens[i].safeTransfer(owner(), balances[index]);
                 } else {
-                    underlyingAsset = poolTokens[underlyingIndexes[i]];
+                    underlyingIndex = underlyingIndexes[i];
+                    underlyingAsset = poolTokens[underlyingIndex];
                     balances[index] = withdrawUnderlyingAsset(
                         yieldTokens[i],
                         underlyingAsset,
-                        amounts[index]
+                        amounts[index],
+                        oraclePrices[underlyingIndex],
+                        underlyingIndex
                     );
                     underlyingAsset.safeTransfer(owner(), balances[index]);
                 }
@@ -1826,20 +1845,29 @@ contract AeraVaultV2 is
         IERC4626[] memory yieldTokens = getYieldTokens();
 
         (
+            uint256[] memory oraclePrices,
+            uint256[] memory updatedAt
+        ) = getOraclePrices();
+
+        checkOracleStatus(updatedAt);
+
+        (
             uint256[] memory depositAmounts,
             uint256[] memory withdrawAmounts
         ) = calcAdjustmentAmounts(
                 underlyingIndexes,
                 poolHoldings,
                 underlyingBalances,
-                targetWeights
+                targetWeights,
+                oraclePrices
             );
 
         uint256[] memory balances = withdrawFromYieldTokens(
             poolTokens,
             yieldTokens,
             underlyingIndexes,
-            withdrawAmounts
+            withdrawAmounts,
+            oraclePrices
         );
 
         depositToYieldTokens(
@@ -1848,7 +1876,8 @@ contract AeraVaultV2 is
             underlyingIndexes,
             poolHoldings,
             depositAmounts,
-            balances
+            balances,
+            oraclePrices
         );
     }
 
@@ -2022,13 +2051,15 @@ contract AeraVaultV2 is
     /// @param poolHoldings Balances of tokens in Balancer Pool.
     /// @param underlyingBalances Total balance of underlying assets in yield tokens.
     /// @param targetWeights Target weights of tokens in Vault.
+    /// @param oraclePrices Array of oracle prices.
     /// @return depositAmounts Amounts of underlying assets to deposit to yield tokens.
     /// @return withdrawAmounts Amounts of underlying assets to withdraw from yield tokens.
     function calcAdjustmentAmounts(
         uint256[] memory underlyingIndexes,
         uint256[] memory poolHoldings,
         uint256[] memory underlyingBalances,
-        uint256[] memory targetWeights
+        uint256[] memory targetWeights,
+        uint256[] memory oraclePrices
     )
         internal
         view
@@ -2037,13 +2068,6 @@ contract AeraVaultV2 is
             uint256[] memory withdrawAmounts
         )
     {
-        (
-            uint256[] memory oraclePrices,
-            uint256[] memory updatedAt
-        ) = getOraclePrices();
-
-        checkOracleStatus(updatedAt);
-
         uint256 value = getValue(
             getUnderlyingTotalBalances(
                 underlyingIndexes,
@@ -2161,13 +2185,15 @@ contract AeraVaultV2 is
     /// @param poolHoldings Balances of tokens in Balancer Pool.
     /// @param depositAmounts Amounts of underlying assets to deposit to yield tokens.
     /// @param balances The balance of underlying assets in Vault.
+    /// @param oraclePrices Array of oracle prices.
     function depositToYieldTokens(
         IERC20[] memory poolTokens,
         IERC4626[] memory yieldTokens,
         uint256[] memory underlyingIndexes,
         uint256[] memory poolHoldings,
         uint256[] memory depositAmounts,
-        uint256[] memory balances
+        uint256[] memory balances,
+        uint256[] memory oraclePrices
     ) internal {
         uint256[] memory necessaryAmounts = calcNecessaryAmounts(
             underlyingIndexes,
@@ -2191,7 +2217,9 @@ contract AeraVaultV2 is
                 depositedAmount = depositUnderlyingAsset(
                     yieldTokens[i],
                     poolTokens[underlyingIndex],
-                    Math.min(depositAmounts[i], balances[i])
+                    Math.min(depositAmounts[i], balances[i]),
+                    oraclePrices[underlyingIndex],
+                    underlyingIndex
                 );
                 balances[underlyingIndex] -= depositedAmount;
             }
@@ -2210,13 +2238,28 @@ contract AeraVaultV2 is
     /// @param yieldToken Yield token to mint.
     /// @param underlyingAsset Underlying asset to deposit.
     /// @param amount Amount of underlying asset to deposit to yield token.
+    /// @param oraclePrice Oracle price.
+    /// @param underlyingIndex True if underlying asset is base token.
     /// @return Exact deposited amount of underlying asset.
     // solhint-disable no-empty-blocks
     function depositUnderlyingAsset(
         IERC4626 yieldToken,
         IERC20 underlyingAsset,
-        uint256 amount
+        uint256 amount,
+        uint256 oraclePrice,
+        uint256 underlyingIndex
     ) internal returns (uint256) {
+        if (underlyingIndex == numeraireAssetIndex) {
+            if (amount < minYieldActionThreshold) {
+                return 0;
+            }
+        } else {
+            uint256 tokenValue = (amount * oraclePrice) / ONE;
+            if (tokenValue < minYieldActionThreshold) {
+                return 0;
+            }
+        }
+
         try yieldToken.maxDeposit(address(this)) returns (
             uint256 maxDepositAmount
         ) {
@@ -2246,12 +2289,14 @@ contract AeraVaultV2 is
     /// @param yieldTokens Array of yield tokens.
     /// @param underlyingIndexes Array of underlying indexes.
     /// @param withdrawAmounts Amounts of underlying assets to withdraw from yield tokens.
+    /// @param oraclePrices Array of oracle prices.
     /// @return amounts Exact withdrawn amounts of an underlying asset.
     function withdrawFromYieldTokens(
         IERC20[] memory poolTokens,
         IERC4626[] memory yieldTokens,
         uint256[] memory underlyingIndexes,
-        uint256[] memory withdrawAmounts
+        uint256[] memory withdrawAmounts,
+        uint256[] memory oraclePrices
     ) internal returns (uint256[] memory amounts) {
         amounts = new uint256[](numPoolTokens);
 
@@ -2263,7 +2308,9 @@ contract AeraVaultV2 is
                 amounts[underlyingIndex] += withdrawUnderlyingAsset(
                     yieldTokens[i],
                     poolTokens[underlyingIndex],
-                    withdrawAmounts[i]
+                    withdrawAmounts[i],
+                    oraclePrices[underlyingIndex],
+                    underlyingIndex
                 );
             }
             ++index;
@@ -2275,13 +2322,28 @@ contract AeraVaultV2 is
     /// @param yieldToken Yield token to redeem.
     /// @param underlyingAsset Underlying asset to withdraw.
     /// @param amount Amount of underlying asset to withdraw from yield token.
+    /// @param oraclePrice Oracle price.
+    /// @param underlyingIndex Index of underlying asset.
     /// @return Exact withdrawn amount of underlying asset.
     // solhint-disable no-empty-blocks
     function withdrawUnderlyingAsset(
         IERC4626 yieldToken,
         IERC20 underlyingAsset,
-        uint256 amount
+        uint256 amount,
+        uint256 oraclePrice,
+        uint256 underlyingIndex
     ) internal returns (uint256) {
+        if (underlyingIndex == numeraireAssetIndex) {
+            if (amount < minYieldActionThreshold) {
+                return 0;
+            }
+        } else {
+            uint256 tokenValue = (amount * oraclePrice) / ONE;
+            if (tokenValue < minYieldActionThreshold) {
+                return 0;
+            }
+        }
+
         try yieldToken.maxWithdraw(address(this)) returns (
             uint256 maxWithdrawalAmount
         ) {
@@ -2540,6 +2602,9 @@ contract AeraVaultV2 is
         }
         if (vaultParams.minSignificantDepositValue == 0) {
             revert Aera__MinSignificantDepositValueIsZero();
+        }
+        if (vaultParams.minYieldActionThreshold == 0) {
+            revert Aera__MinYieldActionThresholdIsZero();
         }
         if (vaultParams.maxOracleSpotDivergence == 0) {
             revert Aera__MaxOracleSpotDivergenceIsZero();

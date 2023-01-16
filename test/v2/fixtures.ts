@@ -22,6 +22,7 @@ import {
   MIN_RELIABLE_VAULT_VALUE,
   MIN_SIGNIFICANT_DEPOSIT_VALUE,
   MIN_SWAP_FEE,
+  MIN_YIELD_ACTION_THRESHOLD,
   ONE,
   ZERO_ADDRESS,
 } from "./constants";
@@ -195,6 +196,7 @@ export const setupVaultWithBalancerVaultMock =
       guardian: guardian.address,
       minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
       minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE,
+      minYieldActionThreshold: MIN_YIELD_ACTION_THRESHOLD,
       maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE,
       maxOracleDelay: MAX_ORACLE_DELAY,
       minFeeDuration: MIN_FEE_DURATION,
@@ -261,6 +263,7 @@ export const setupVaultWithBalancerVault = async (): Promise<DeployedData> => {
       guardian: guardian.address,
       minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
       minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE,
+      minYieldActionThreshold: MIN_YIELD_ACTION_THRESHOLD,
       maxOracleSpotDivergence: MAX_ORACLE_SPOT_DIVERGENCE,
       maxOracleDelay: MAX_ORACLE_DELAY,
       minFeeDuration: MIN_FEE_DURATION,
