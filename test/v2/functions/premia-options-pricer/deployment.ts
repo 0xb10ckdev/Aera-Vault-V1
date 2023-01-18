@@ -67,17 +67,6 @@ export function shouldBehaveLikePremiaOptionsPricerDeployment(): void {
           ).to.be.revertedWith("Aera__BaseTokenIsNotContract()");
         });
       });
-
-      describe("when not USDC", function () {
-        it("reverts", async function () {
-          await expect(
-            deployPricer({
-              ...validArgs,
-              baseToken: this.weth.address,
-            }),
-          ).to.be.revertedWith("Aera__UnexpectedBaseToken()");
-        });
-      });
     });
 
     describe("when underlyingToken", function () {
@@ -89,17 +78,6 @@ export function shouldBehaveLikePremiaOptionsPricerDeployment(): void {
               underlyingToken: this.signers.admin.address,
             }),
           ).to.be.revertedWith("Aera__UnderlyingTokenIsNotContract()");
-        });
-      });
-
-      describe("when not WETH", function () {
-        it("reverts", async function () {
-          await expect(
-            deployPricer({
-              ...validArgs,
-              underlyingToken: this.usdc.address,
-            }),
-          ).to.be.revertedWith("Aera__UnexpectedUnderlyingToken()");
         });
       });
     });

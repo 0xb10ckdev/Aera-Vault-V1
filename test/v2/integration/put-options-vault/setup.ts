@@ -21,8 +21,8 @@ import {
   fillBuyOrder,
 } from "../../functions/put-options-vault/options-utils";
 import { impersonate, toUnit, toWei } from "../../utils";
-import { shouldBehaveLikePutOptionsVaultDeployment } from "./deployment";
 import { shouldBehaveLikePutOptionsCreateFillRedeemBuyOrder } from "./create-fill-redeem-buy-order";
+import { shouldBehaveLikePutOptionsVaultDeployment } from "./deployment";
 
 export function integrationTestPutOptionsVault(): void {
   const USDC_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";

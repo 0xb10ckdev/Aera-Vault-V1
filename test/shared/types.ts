@@ -1,3 +1,4 @@
+import { AggregatorV2V3Interface } from "./../../typechain/AggregatorV2V3Interface.d";
 // eslint-disable @typescript-eslint/no-explicit-any
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
 import { Fixture } from "ethereum-waffle";
@@ -8,6 +9,7 @@ import {
   ERC4626Mock,
   IERC20,
   IPutOptionsPricer,
+  IVolatilitySurfaceOracle,
   ManagedPoolFactory,
   MockAddressBook,
   MockGammaOracle,
@@ -16,6 +18,7 @@ import {
   MockWhitelist,
   OracleMock,
   PermissiveWithdrawalValidator,
+  PremiaOptionsPricer,
   PutOptionsPricerMock,
   PutOptionsVault,
   WithdrawalValidatorMock,
@@ -45,10 +48,13 @@ declare module "mocha" {
     opynAddressBook: AddressBookInterface;
     putOptionsVault: PutOptionsVault;
     pricer: IPutOptionsPricer;
+    premiaPricer: PremiaOptionsPricer;
     vault: AeraVaultV2Mock;
     validator: WithdrawalValidatorMock;
     usdc: IERC20;
     weth: IERC20;
+    chainlinkOracle: AggregatorV2V3Interface;
+    volatilitySurfaceOracle: IVolatilitySurfaceOracle;
     permissiveValidator: PermissiveWithdrawalValidator;
     factory: ManagedPoolFactory;
     poolTokens: IERC20[];

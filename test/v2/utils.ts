@@ -230,6 +230,43 @@ export const impersonate = async (
   return await hre.ethers.getSigner(account);
 };
 
+export async function reset(
+  url?: string,
+  blockNumber?: number,
+): Promise<void> {
+  const provider = hre.network.provider;
+
+  if (url === undefined) {
+    await provider.request({
+      method: "hardhat_reset",
+      params: [],
+    });
+  } else if (blockNumber === undefined) {
+    await provider.request({
+      method: "hardhat_reset",
+      params: [
+        {
+          forking: {
+            jsonRpcUrl: url,
+          },
+        },
+      ],
+    });
+  } else {
+    await provider.request({
+      method: "hardhat_reset",
+      params: [
+        {
+          forking: {
+            jsonRpcUrl: url,
+            blockNumber: blockNumber,
+          },
+        },
+      ],
+    });
+  }
+}
+
 export const adjustValue = (
   value: BigNumber,
   valueDecimals: number,

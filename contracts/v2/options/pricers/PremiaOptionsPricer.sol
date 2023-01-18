@@ -14,6 +14,7 @@ import "../Decimals.sol";
 contract PremiaOptionsPricer is ERC165, IPutOptionsPricer {
     using Address for address;
     using Decimals for uint256;
+    using ABDKMath64x64 for int128;
 
     error Aera__VolatilitySurfaceOracleIsNotContract();
     error Aera__ChainlinkOracleIsNotContract();
@@ -23,10 +24,8 @@ contract PremiaOptionsPricer is ERC165, IPutOptionsPricer {
     error Aera__UnexpectedUnderlyingToken();
 
     uint8 private constant _DECIMALS = 8;
-    bytes32 private constant _USDC_HASH = keccak256(abi.encodePacked("USDC"));
-    bytes32 private constant _WETH_HASH = keccak256(abi.encodePacked("WETH"));
 
-    IVolatilitySurfaceOracle private immutable _premiaOracle;
+    IVolatilitySurfaceOracle private immutable _volatilitySurfaceOracle;
     AggregatorV2V3Interface private immutable _chainlinkOracle;
     uint8 private immutable _chainlinkDecimals;
     address private immutable _baseToken;
@@ -49,9 +48,9 @@ contract PremiaOptionsPricer is ERC165, IPutOptionsPricer {
             revert Aera__UnderlyingTokenIsNotContract();
         }
 
-        _verifyTokens(baseToken, underlyingToken);
-
-        _premiaOracle = IVolatilitySurfaceOracle(volatilitySurfaceOracle);
+        _volatilitySurfaceOracle = IVolatilitySurfaceOracle(
+            volatilitySurfaceOracle
+        );
         _baseToken = baseToken;
         _underlyingToken = underlyingToken;
         _chainlinkOracle = AggregatorV2V3Interface(chainlinkOracle);
@@ -79,20 +78,20 @@ contract PremiaOptionsPricer is ERC165, IPutOptionsPricer {
 
         int128 spot64x64 = ABDKMath64x64.fromUInt(_getSpot()) / denominator;
         int128 strike64x64 = ABDKMath64x64.fromUInt(strikePrice) / denominator;
-        int128 timeToMaturity64x64 = _premiaOracle.getTimeToMaturity64x64(
-            uint64(expiryTimestamp)
-        );
+        int128 timeToMaturity64x64 = _volatilitySurfaceOracle
+            .getTimeToMaturity64x64(uint64(expiryTimestamp));
 
-        int128 premium64x64 = _premiaOracle.getBlackScholesPrice64x64(
-            _baseToken,
-            _underlyingToken,
-            spot64x64,
-            strike64x64,
-            timeToMaturity64x64,
-            !isPut
-        );
-
-        return ABDKMath64x64.toUInt(premium64x64 * denominator);
+        return
+            _volatilitySurfaceOracle
+                .getBlackScholesPrice64x64(
+                    _baseToken,
+                    _underlyingToken,
+                    spot64x64,
+                    strike64x64,
+                    timeToMaturity64x64,
+                    !isPut
+                )
+                .mulu(10**_DECIMALS);
     }
 
     /// @inheritdoc IPutOptionsPricer
@@ -105,26 +104,11 @@ contract PremiaOptionsPricer is ERC165, IPutOptionsPricer {
         return _DECIMALS;
     }
 
-    function _getSpot() internal view returns (uint256 spotPrice) {
+    function _getSpot() internal view returns (uint256) {
         return
             uint256(_chainlinkOracle.latestAnswer()).adjust(
                 _chainlinkDecimals,
                 _DECIMALS
             );
-    }
-
-    function _verifyTokens(address base, address underlying) internal view {
-        if (
-            keccak256(abi.encodePacked(IERC20Metadata(base).symbol())) !=
-            _USDC_HASH
-        ) {
-            revert Aera__UnexpectedBaseToken();
-        }
-        if (
-            keccak256(abi.encodePacked(IERC20Metadata(underlying).symbol())) !=
-            _WETH_HASH
-        ) {
-            revert Aera__UnexpectedUnderlyingToken();
-        }
     }
 }
