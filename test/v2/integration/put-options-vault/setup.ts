@@ -20,7 +20,7 @@ import {
   createOToken,
   fillBuyOrder,
 } from "../../functions/put-options-vault/options-utils";
-import { impersonate, toUnit, toWei } from "../../utils";
+import { impersonate, reset, toUnit, toWei } from "../../utils";
 import { shouldBehaveLikePutOptionsCreateFillRedeemBuyOrder } from "./create-fill-redeem-buy-order";
 import { shouldBehaveLikePutOptionsVaultDeployment } from "./deployment";
 
@@ -87,6 +87,13 @@ export function integrationTestPutOptionsVault(): void {
       pricer,
     };
   }
+
+  before(async function () {
+    await reset(
+      hre.config.networks.hardhat.forking?.url,
+      hre.config.networks.hardhat.forking?.blockNumber,
+    );
+  });
 
   beforeEach(async function () {
     const { pricer, vault, weth, usdc, addressBook } = await this.loadFixture(

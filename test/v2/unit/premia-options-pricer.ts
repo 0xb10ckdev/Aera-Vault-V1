@@ -1,5 +1,4 @@
-import hre, { ethers } from "hardhat";
-import { DeployPremiaOptionsPricer } from "../../../tasks/deploy/premia-options-pricer";
+import { ethers } from "hardhat";
 import {
   ERC20Mock__factory,
   MockVolatilitySurfaceOracle__factory,
@@ -31,15 +30,12 @@ baseContext("Premia Options Pricer: Unit Tests", function () {
       toUnit(1_000_000, USDC_DECIMALS),
     );
 
-    const pricerAddress = await hre.run("deploy:premia-options-pricer", {
-      volatilitySurfaceOracle: volatilitySurfaceOracle.address,
-      chainlinkOracle: chainlinkOracle.address,
-      baseToken: usdc.address,
-      underlyingToken: weth.address,
-      silent: true,
-    } as DeployPremiaOptionsPricer);
-
-    const pricer = PremiaOptionsPricer__factory.connect(pricerAddress, admin);
+    const pricer = await new PremiaOptionsPricer__factory(admin).deploy(
+      volatilitySurfaceOracle.address,
+      chainlinkOracle.address,
+      usdc.address,
+      weth.address,
+    );
 
     return {
       pricer,
@@ -53,7 +49,6 @@ baseContext("Premia Options Pricer: Unit Tests", function () {
   beforeEach(async function () {
     const { pricer, volatilitySurfaceOracle, chainlinkOracle, weth, usdc } =
       await this.loadFixture(premiaOptionsPricerFixture);
-
     this.pricer = pricer;
     this.weth = weth;
     this.usdc = usdc;

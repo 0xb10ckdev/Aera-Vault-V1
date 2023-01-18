@@ -44,13 +44,13 @@ task(
       { deployments, ethers },
     ) => {
       if (!silent) {
-        console.log("Deploying PremiaOptionsPricer with");
+        console.log("Deploying PremiaOptionsPricer with:");
         console.log(
-          `Premia VolatilitySurfaceOracle: ${volatilitySurfaceOracle}`,
+          `\tPremia VolatilitySurfaceOracle: ${volatilitySurfaceOracle}`,
         );
-        console.log(`Chainlink oracle: ${chainlinkOracle}`);
-        console.log(`Base Token: ${baseToken}`);
-        console.log(`Underlying Token: ${underlyingToken}`);
+        console.log(`\tChainlink oracle: ${chainlinkOracle}`);
+        console.log(`\tBase Token: ${baseToken}`);
+        console.log(`\tUnderlying Token: ${underlyingToken}`);
       }
       const { admin } = await ethers.getNamedSigners();
 

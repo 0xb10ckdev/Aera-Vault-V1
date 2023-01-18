@@ -63,13 +63,6 @@ export function integrationTestPremiaOptionsPricer(): void {
     this.chainlinkOracle = chainlinkOracle;
   });
 
-  after(async function () {
-    await reset(
-      hre.config.networks.hardhat.forking?.url,
-      hre.config.networks.hardhat.forking?.blockNumber,
-    );
-  });
-
   describe("Premia Options Pricer", function () {
     describe("getSpot", function () {
       shouldBehaveLikePremiaOptionsPricerGetSpot();
