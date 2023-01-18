@@ -1,13 +1,15 @@
 import { expect } from "chai";
+import { DeployPutOptionsVault } from "../../../../tasks/deploy/put-options-vault";
+import { PutOptionsVault__factory } from "../../../../typechain/factories/PutOptionsVault__factory";
+import { toUnit } from "../../../common/utils";
 import { ZERO_ADDRESS } from "../../constants";
 import { toWei } from "../../utils";
-import { DeployPutOptionsVault } from "./../../../../tasks/deploy/put-options-vault";
-import { PutOptionsVault__factory } from "./../../../../typechain/factories/PutOptionsVault__factory";
 import {
   EXPIRY_DELTA_MAX,
   EXPIRY_DELTA_MIN,
   STRIKE_MULTIPLIER_MAX,
   STRIKE_MULTIPLIER_MIN,
+  USDC_DECIMALS,
 } from "./constants";
 
 type DeployPutOptionsVaultRaw = Omit<DeployPutOptionsVault, "silent">;
@@ -30,6 +32,8 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
         expiryDeltaMax: EXPIRY_DELTA_MAX,
         strikeMultiplierMin: toWei(STRIKE_MULTIPLIER_MIN),
         strikeMultiplierMax: toWei(STRIKE_MULTIPLIER_MAX),
+        minChunkValue: toUnit(1, USDC_DECIMALS),
+        minOrderActive: 60 * 60 * 24 * 3, // 3 days
         name: "USDC Put Option Vault",
         symbol: "oUSDCpVault",
         opynAddressBook: this.mocks.addressBook.address,
@@ -39,19 +43,24 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
     });
 
     function deployVault(args: DeployPutOptionsVaultRaw) {
-      return factory.deploy(
-        args.controller,
-        args.liquidator,
-        args.broker,
-        args.pricer,
-        args.underlyingAsset,
-        args.underlyingOptionsAsset,
-        { min: args.expiryDeltaMin, max: args.expiryDeltaMax },
-        { min: args.strikeMultiplierMin, max: args.strikeMultiplierMax },
-        args.name,
-        args.symbol,
-        args.opynAddressBook,
-      );
+      return factory.deploy({
+        controller: args.controller,
+        liquidator: args.liquidator,
+        broker: args.broker,
+        pricer: args.pricer,
+        underlyingAsset: args.underlyingAsset,
+        underlyingOptionsAsset: args.underlyingOptionsAsset,
+        expiryDelta: { min: args.expiryDeltaMin, max: args.expiryDeltaMax },
+        strikeMultiplier: {
+          min: args.strikeMultiplierMin,
+          max: args.strikeMultiplierMax,
+        },
+        minChunkValue: args.minChunkValue,
+        minOrderActive: args.minOrderActive ?? 60 * 60 * 24 * 3, // 3 days
+        name: args.name,
+        symbol: args.symbol,
+        opynAddressBook: args.opynAddressBook,
+      });
     }
 
     it("deploys", async () => {

@@ -23,19 +23,17 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     using SafeERC20 for IERC20;
 
     uint256 private constant _ONE = 10**18;
-
-    /// @notice Minimum total value in vault underlying asset terms (e.g., USDC) that can be used to purchase options
-    uint256 private constant _MIN_CHUNK_VALUE = 1 * 10**6;
-
-    /// @notice Period of time for a broker to fill buy/sell order.
-    ///         After that period order can be cancelled by anyone.
-    uint256 private constant _MIN_ORDER_ACTIVE = 3 days;
-
-    /// @notice oToken decimals
     uint8 private constant _O_TOKEN_DECIMALS = 8;
 
     bool private constant _BUY_O_TOKEN = true;
     bool private constant _SELL_O_TOKEN = false;
+
+    /// @notice Minimum total value in vault underlying asset terms (e.g., USDC) that can be used to purchase options
+    uint256 private immutable _minChunkValue;
+
+    /// @notice Period of time for a broker to fill buy/sell order.
+    ///         After that period order can be cancelled by anyone.
+    uint256 private immutable _minOrderActive;
 
     IPutOptionsPricer private immutable _pricer;
     address private immutable _broker;
@@ -85,51 +83,49 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         _;
     }
 
-    constructor(
-        address controller_,
-        address liquidator_,
-        address broker_,
-        address pricer_,
-        address underlyingAsset_,
-        address underlyingOptionsAsset_,
-        Range memory expiryDelta_,
-        Range memory strikeMultiplier_,
-        string memory name_,
-        string memory symbol_,
-        address opynAddressBook_
-    ) ERC4626(ERC20(underlyingAsset_)) ERC20(name_, symbol_) {
-        if (controller_ == address(0))
+    constructor(ConstructorArgs memory args)
+        ERC4626(IERC20(args.underlyingAsset))
+        ERC20(args.name, args.symbol)
+    {
+        if (args.controller == address(0)) {
             revert AeraPOV__ControllerIsZeroAddress();
-        if (liquidator_ == address(0))
+        }
+        if (args.liquidator == address(0)) {
             revert AeraPOV__LiquidatorIsZeroAddress();
-        if (broker_ == address(0)) revert AeraPOV__BrokerIsZeroAddress();
-        if (opynAddressBook_ == address(0)) {
+        }
+        if (args.broker == address(0)) revert AeraPOV__BrokerIsZeroAddress();
+        if (args.opynAddressBook == address(0)) {
             revert AeraPOV__OpynAddressBookIsZeroAddress();
         }
-        if (underlyingAsset_ == address(0)) {
+        if (args.underlyingAsset == address(0)) {
             revert AeraPOV__UnderlyingAssetIsZeroAddress();
         }
-        if (underlyingOptionsAsset_ == address(0)) {
+        if (args.underlyingOptionsAsset == address(0)) {
             revert AeraPOV__UnderlyingOptionsAssetIsZeroAddress();
         }
         if (
             !ERC165Checker.supportsInterface(
-                pricer_,
+                args.pricer,
                 type(IPutOptionsPricer).interfaceId
             )
         ) {
-            revert AeraPOV__PutOptionsPricerIsNotValid(pricer_);
+            revert AeraPOV__PutOptionsPricerIsNotValid(args.pricer);
         }
 
-        _pricer = IPutOptionsPricer(pricer_);
+        _pricer = IPutOptionsPricer(args.pricer);
         _pricerDecimals = _pricer.decimals();
-        _broker = broker_;
-        _controller = controller_;
-        _liquidator = liquidator_;
-        _underlyingOptionsAsset = underlyingOptionsAsset_;
-        _opynAddressBook = opynAddressBook_;
-        _setExpiryDelta(expiryDelta_.min, expiryDelta_.max);
-        _setStrikeMultiplier(strikeMultiplier_.min, strikeMultiplier_.max);
+        _broker = args.broker;
+        _controller = args.controller;
+        _liquidator = args.liquidator;
+        _underlyingOptionsAsset = args.underlyingOptionsAsset;
+        _opynAddressBook = args.opynAddressBook;
+        _setExpiryDelta(args.expiryDelta.min, args.expiryDelta.max);
+        _setStrikeMultiplier(
+            args.strikeMultiplier.min,
+            args.strikeMultiplier.max
+        );
+        _minChunkValue = args.minChunkValue;
+        _minOrderActive = args.minOrderActive;
     }
 
     /// @inheritdoc IPutOptionsVault
@@ -289,7 +285,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     /// @inheritdoc IPutOptionsVault
     function cancelBuyOrder() external override whenBuyOrderActive {
         if (
-            block.timestamp - _buyOrder.created < _MIN_ORDER_ACTIVE &&
+            block.timestamp - _buyOrder.created < _minOrderActive &&
             msg.sender != _broker
         ) revert AeraPOV__CallerIsNotBroker();
 
@@ -299,7 +295,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     /// @inheritdoc IPutOptionsVault
     function cancelSellOrder() external override whenSellOrderActive {
         if (
-            block.timestamp - _sellOrder.created < _MIN_ORDER_ACTIVE &&
+            block.timestamp - _sellOrder.created < _minOrderActive &&
             msg.sender != _broker
         ) revert AeraPOV__CallerIsNotBroker();
 
@@ -495,7 +491,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     function _afterDeposit(uint256, uint256) internal override {
         uint256 balance = IERC20(asset()).balanceOf(address(this));
 
-        if (balance < _MIN_CHUNK_VALUE) return;
+        if (balance < _minChunkValue) return;
 
         if (_buyOrder.active) {
             _cancelBuyOrder();

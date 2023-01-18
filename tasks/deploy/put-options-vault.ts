@@ -12,6 +12,8 @@ export type DeployPutOptionsVault = {
   expiryDeltaMax: number;
   strikeMultiplierMin: BigNumberish;
   strikeMultiplierMax: BigNumberish;
+  minChunkValue: BigNumberish;
+  minOrderActive?: BigNumberish;
   name: string;
   symbol: string;
   opynAddressBook: string;
@@ -28,7 +30,7 @@ task(
   .addParam("pricer", "Pricer address", null, types.string)
   .addParam(
     "underlyingAsset",
-    "Underlying asset of ERC4626 token (e.g. USDC)",
+    "Underlying asset of ERC4626 token (for example USDC)",
     null,
     types.string,
   )
@@ -42,6 +44,12 @@ task(
   .addParam("expiryDeltaMax", "Expiry delta max", null, types.float)
   .addParam("strikeMultiplierMin", "Strike multiplier min", null, types.float)
   .addParam("strikeMultiplierMax", "Strike multiplier max", null, types.float)
+  .addParam(
+    "minChunkValue",
+    "Minimum total value in vault underlying asset terms (e.g., USDC) that can be used to purchase options",
+    null,
+    types.string,
+  )
   .addParam("name", "ERC4626 token name", null, types.string)
   .addParam("symbol", "ERC4626 token symbol", null, types.string)
   .addParam(
@@ -49,6 +57,12 @@ task(
     "Opyn V2 Address Book address",
     null,
     types.string,
+  )
+  .addOptionalParam(
+    "minOrderActive",
+    "Period of time for a broker to fill buy/sell order. After that period order can be cancelled by anyone.",
+    60 * 60 * 24 * 3, // 3 days
+    types.int,
   )
   .addOptionalParam(
     "silent",
@@ -69,6 +83,8 @@ task(
         expiryDeltaMax,
         strikeMultiplierMin,
         strikeMultiplierMax,
+        minChunkValue,
+        minOrderActive,
         name,
         symbol,
         opynAddressBook,
@@ -88,6 +104,8 @@ task(
         console.log(
           `Strike Multiplier: (${strikeMultiplierMin}, ${strikeMultiplierMax})`,
         );
+        console.log(`Min Chunk Value: ${minChunkValue}`);
+        console.log(`Min Order Active: ${minOrderActive}`);
         console.log(`Name: ${name}`);
         console.log(`Symbol: ${symbol}`);
         console.log(`Opyn Address Book: ${opynAddressBook}`);
@@ -116,20 +134,24 @@ task(
       const vault = await deployments.deploy("PutOptionsVault", {
         contract: "PutOptionsVault",
         args: [
-          controller,
-          liquidator,
-          broker,
-          pricer,
-          underlyingAsset,
-          underlyingOptionsAsset,
-          { min: expiryDeltaMin, max: expiryDeltaMax },
           {
-            min: ethers.utils.parseEther(strikeMultiplierMin.toString()),
-            max: ethers.utils.parseEther(strikeMultiplierMax.toString()),
+            controller,
+            liquidator,
+            broker,
+            pricer,
+            underlyingAsset,
+            underlyingOptionsAsset,
+            expiryDelta: { min: expiryDeltaMin, max: expiryDeltaMax },
+            strikeMultiplier: {
+              min: ethers.utils.parseEther(strikeMultiplierMin.toString()),
+              max: ethers.utils.parseEther(strikeMultiplierMax.toString()),
+            },
+            minChunkValue,
+            minOrderActive,
+            name,
+            symbol,
+            opynAddressBook,
           },
-          name,
-          symbol,
-          opynAddressBook,
         ],
         from: admin.address,
         log: true,

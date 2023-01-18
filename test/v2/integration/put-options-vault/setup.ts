@@ -45,6 +45,8 @@ export function integrationTestPutOptionsVault(): void {
       expiryDeltaMax: EXPIRY_DELTA_MAX,
       strikeMultiplierMin: STRIKE_MULTIPLIER_MIN,
       strikeMultiplierMax: STRIKE_MULTIPLIER_MAX,
+      minChunkValue: toUnit(1, USDC_DECIMALS).toString(),
+      minOrderActive: 60 * 60 * 24 * 3, // 3 days
       name: "USDC Option",
       symbol: "oUSDC",
       opynAddressBook: OPYN_ADDRESS_BOOK_ADDRESS,

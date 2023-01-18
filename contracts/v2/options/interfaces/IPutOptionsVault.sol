@@ -106,6 +106,23 @@ interface IPutOptionsVault is IERC4626 {
 
     /// STRUCTS ///
 
+    /// @notice Container for vault creation
+    struct ConstructorArgs {
+        address controller;
+        address liquidator;
+        address broker;
+        address pricer;
+        address underlyingAsset;
+        address underlyingOptionsAsset;
+        Range expiryDelta;
+        Range strikeMultiplier;
+        uint256 minChunkValue;
+        uint256 minOrderActive;
+        string name;
+        string symbol;
+        address opynAddressBook;
+    }
+
     /// @notice Container for range information
     struct Range {
         uint256 min;
