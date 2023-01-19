@@ -7,6 +7,20 @@ import "./IBVault.sol";
 interface IBManagedPool {
     function addAllowedAddress(address member) external;
 
+    function addToken(
+        IERC20 tokenToAdd,
+        address assetManager,
+        uint256 tokenToAddNormalizedWeight,
+        uint256 mintAmount,
+        address recipient
+    ) external;
+
+    function removeToken(
+        IERC20 tokenToRemove,
+        uint256 burnAmount,
+        address sender
+    ) external;
+
     function updateWeightsGradually(
         uint256 startTime,
         uint256 endTime,
