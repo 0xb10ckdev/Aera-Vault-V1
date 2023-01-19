@@ -4,7 +4,7 @@ import { MockOToken } from "../../../../../typechain";
 import { getCurrentTime, setNextBlockTimestamp, toUnit } from "../../../utils";
 import {
   EXPIRY_DELTA_MIN,
-  MIN_ORDER_ACTIVE,
+  MAX_ORDER_ACTIVE,
   O_TOKEN_DECIMALS,
   USDC_DECIMALS,
 } from "../constants";
@@ -48,7 +48,7 @@ export function shouldBehaveLikeCancelSellOrder(): void {
     });
 
     describe("when called by stranger", function () {
-      describe("before MIN_ORDER_ACTIVE", function () {
+      describe("before MAX_ORDER_ACTIVE", function () {
         it("reverts", async function () {
           await expect(
             this.putOptionsVault
@@ -58,10 +58,10 @@ export function shouldBehaveLikeCancelSellOrder(): void {
         });
       });
 
-      describe("after MIN_ORDER_ACTIVE", function () {
+      describe("after MAX_ORDER_ACTIVE", function () {
         beforeEach(async function () {
           await setNextBlockTimestamp(
-            (await getCurrentTime()) + MIN_ORDER_ACTIVE + 1,
+            (await getCurrentTime()) + MAX_ORDER_ACTIVE + 1,
           );
         });
 

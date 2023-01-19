@@ -9,6 +9,7 @@ import {
 import {
   EXPIRY_DELTA_MAX,
   EXPIRY_DELTA_MIN,
+  MAX_ORDER_ACTIVE,
   STRIKE_MULTIPLIER_MAX,
   STRIKE_MULTIPLIER_MIN,
   USDC_DECIMALS,
@@ -46,7 +47,7 @@ export function integrationTestPutOptionsVault(): void {
       strikeMultiplierMin: STRIKE_MULTIPLIER_MIN,
       strikeMultiplierMax: STRIKE_MULTIPLIER_MAX,
       minChunkValue: toUnit(1, USDC_DECIMALS).toString(),
-      maxOrderActive: 60 * 60 * 24 * 3, // 3 days
+      maxOrderActive: MAX_ORDER_ACTIVE, // 3 days
       name: "USDC Option",
       symbol: "oUSDC",
       opynAddressBook: OPYN_ADDRESS_BOOK_ADDRESS,

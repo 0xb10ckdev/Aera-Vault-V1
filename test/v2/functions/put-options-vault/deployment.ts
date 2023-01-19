@@ -7,6 +7,7 @@ import { toWei } from "../../utils";
 import {
   EXPIRY_DELTA_MAX,
   EXPIRY_DELTA_MIN,
+  MAX_ORDER_ACTIVE,
   STRIKE_MULTIPLIER_MAX,
   STRIKE_MULTIPLIER_MIN,
   USDC_DECIMALS,
@@ -33,7 +34,7 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
         strikeMultiplierMin: toWei(STRIKE_MULTIPLIER_MIN),
         strikeMultiplierMax: toWei(STRIKE_MULTIPLIER_MAX),
         minChunkValue: toUnit(1, USDC_DECIMALS),
-        maxOrderActive: 60 * 60 * 24 * 3, // 3 days
+        maxOrderActive: MAX_ORDER_ACTIVE,
         name: "USDC Put Option Vault",
         symbol: "oUSDCpVault",
         opynAddressBook: this.mocks.addressBook.address,
@@ -56,7 +57,7 @@ export function shouldBehaveLikePutOptionsVaultDeployment(): void {
           max: args.strikeMultiplierMax,
         },
         minChunkValue: args.minChunkValue,
-        maxOrderActive: args.maxOrderActive ?? 60 * 60 * 24 * 3, // 3 days
+        maxOrderActive: args.maxOrderActive ?? MAX_ORDER_ACTIVE,
         name: args.name,
         symbol: args.symbol,
         opynAddressBook: args.opynAddressBook,

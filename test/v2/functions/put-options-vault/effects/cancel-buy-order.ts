@@ -2,7 +2,7 @@ import { setNextBlockTimestamp, getCurrentTime } from "../../../utils";
 import { expect } from "chai";
 import { ONE } from "../../../constants";
 import { toUnit } from "../../../utils";
-import { MIN_ORDER_ACTIVE } from "../constants";
+import { MAX_ORDER_ACTIVE } from "../constants";
 
 export function shouldBehaveLikeCancelBuyOrder(): void {
   const AMOUNT = toUnit(10, 6);
@@ -43,7 +43,7 @@ export function shouldBehaveLikeCancelBuyOrder(): void {
     });
 
     describe("when called by stranger", function () {
-      describe("before MIN_ORDER_ACTIVE", function () {
+      describe("before MAX_ORDER_ACTIVE", function () {
         it("reverts", async function () {
           await expect(
             this.putOptionsVault
@@ -53,10 +53,10 @@ export function shouldBehaveLikeCancelBuyOrder(): void {
         });
       });
 
-      describe("after MIN_ORDER_ACTIVE", function () {
+      describe("after MAX_ORDER_ACTIVE", function () {
         beforeEach(async function () {
           await setNextBlockTimestamp(
-            (await getCurrentTime()) + MIN_ORDER_ACTIVE + 1,
+            (await getCurrentTime()) + MAX_ORDER_ACTIVE + 1,
           );
         });
 

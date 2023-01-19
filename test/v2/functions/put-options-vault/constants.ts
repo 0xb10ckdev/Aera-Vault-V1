@@ -9,7 +9,7 @@ export const EXPIRY_DELTA_MAX = 7200;
 export const STRIKE_MULTIPLIER_MIN = 0.7;
 export const STRIKE_MULTIPLIER_MAX = 0.99;
 
-export const MIN_ORDER_ACTIVE = 60 * 60 * 24 * 3; // 3 days
+export const MAX_ORDER_ACTIVE = 60 * 60 * 24 * 3; // 3 days
 
 export const O_TOKEN_DECIMALS = 8;
 export const USDC_DECIMALS = 6;
