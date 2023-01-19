@@ -17,6 +17,7 @@
     "./hardhat.config.ts",
     "./hardhat.config.v1.ts",
     "./hardhat.config.v2.ts",
+    "./hardhat.config.v3.ts",
     "./hardhat.config.v4.ts"
   ],
   "include": [
