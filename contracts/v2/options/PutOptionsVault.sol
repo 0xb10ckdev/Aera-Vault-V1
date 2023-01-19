@@ -33,7 +33,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
 
     /// @notice Period of time for a broker to fill buy/sell order.
     ///         After that period order can be cancelled by anyone.
-    uint256 private immutable _minOrderActive;
+    uint256 private immutable _maxOrderActive;
 
     IPutOptionsPricer private immutable _pricer;
     address private immutable _broker;
@@ -125,7 +125,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             args.strikeMultiplier.max
         );
         _minChunkValue = args.minChunkValue;
-        _minOrderActive = args.minOrderActive;
+        _maxOrderActive = args.maxOrderActive;
     }
 
     /// @inheritdoc IPutOptionsVault
@@ -285,7 +285,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     /// @inheritdoc IPutOptionsVault
     function cancelBuyOrder() external override whenBuyOrderActive {
         if (
-            block.timestamp - _buyOrder.created < _minOrderActive &&
+            block.timestamp - _buyOrder.created < _maxOrderActive &&
             msg.sender != _broker
         ) revert AeraPOV__CallerIsNotBroker();
 
@@ -295,7 +295,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     /// @inheritdoc IPutOptionsVault
     function cancelSellOrder() external override whenSellOrderActive {
         if (
-            block.timestamp - _sellOrder.created < _minOrderActive &&
+            block.timestamp - _sellOrder.created < _maxOrderActive &&
             msg.sender != _broker
         ) revert AeraPOV__CallerIsNotBroker();
 

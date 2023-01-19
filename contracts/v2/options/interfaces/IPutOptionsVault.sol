@@ -117,7 +117,7 @@ interface IPutOptionsVault is IERC4626 {
         Range expiryDelta;
         Range strikeMultiplier;
         uint256 minChunkValue;
-        uint256 minOrderActive;
+        uint256 maxOrderActive;
         string name;
         string symbol;
         address opynAddressBook;

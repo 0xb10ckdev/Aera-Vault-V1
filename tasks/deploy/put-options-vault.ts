@@ -13,7 +13,7 @@ export type DeployPutOptionsVault = {
   strikeMultiplierMin: BigNumberish;
   strikeMultiplierMax: BigNumberish;
   minChunkValue: BigNumberish;
-  minOrderActive?: BigNumberish;
+  maxOrderActive?: BigNumberish;
   name: string;
   symbol: string;
   opynAddressBook: string;
@@ -59,7 +59,7 @@ task(
     types.string,
   )
   .addOptionalParam(
-    "minOrderActive",
+    "maxOrderActive",
     "Period of time for a broker to fill buy/sell order. After that period order can be cancelled by anyone.",
     60 * 60 * 24 * 3, // 3 days
     types.int,
@@ -84,7 +84,7 @@ task(
         strikeMultiplierMin,
         strikeMultiplierMax,
         minChunkValue,
-        minOrderActive,
+        maxOrderActive,
         name,
         symbol,
         opynAddressBook,
@@ -105,7 +105,7 @@ task(
           `Strike Multiplier: (${strikeMultiplierMin}, ${strikeMultiplierMax})`,
         );
         console.log(`Min Chunk Value: ${minChunkValue}`);
-        console.log(`Min Order Active: ${minOrderActive}`);
+        console.log(`Max Order Active: ${maxOrderActive}`);
         console.log(`Name: ${name}`);
         console.log(`Symbol: ${symbol}`);
         console.log(`Opyn Address Book: ${opynAddressBook}`);
@@ -147,7 +147,7 @@ task(
               max: ethers.utils.parseEther(strikeMultiplierMax.toString()),
             },
             minChunkValue,
-            minOrderActive,
+            maxOrderActive,
             name,
             symbol,
             opynAddressBook,
