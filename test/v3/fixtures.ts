@@ -48,7 +48,7 @@ export const setupTokens = async (): Promise<ERC20Mock[]> => {
     "ERC20Mock",
   );
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 20; i++) {
     const token = await erc20
       .connect(admin)
       .deploy(`TOKEN${i} Test`, `TTOKEN${i}`, 18, parseEther("1000000000"));
