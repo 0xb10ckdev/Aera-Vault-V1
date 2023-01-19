@@ -13,13 +13,14 @@ contract AeraVaultV3Mock is AeraVaultV2 {
 
     function depositAndBindTokens(IERC20[] memory tokens) external {
         uint256 numAmounts = numPoolTokens;
+        uint256[] memory depositAmounts;
 
         for (uint256 i = 0; i < tokens.length; i++) {
             pool.addToken(tokens[i], address(this), 1e17, 1, address(this));
 
             numAmounts++;
 
-            uint256[] memory depositAmounts = new uint256[](numAmounts);
+            depositAmounts = new uint256[](numAmounts);
 
             depositAmounts[numAmounts - 1] = ONE;
 
@@ -28,11 +29,11 @@ contract AeraVaultV3Mock is AeraVaultV2 {
     }
 
     function unbindAndWithdrawTokens(IERC20[] memory tokens) external {
-        uint256[] memory poolHoldings = getPoolHoldings();
-        uint256[] memory withdrawAmounts = new uint256[](poolHoldings.length);
+        uint256[] memory weights = pool.getNormalizedWeights();
+        uint256[] memory withdrawAmounts = new uint256[](weights.length);
 
         for (uint256 i = 0; i < tokens.length; i++) {
-            withdrawAmounts[i] = poolHoldings[i];
+            withdrawAmounts[i] = ONE;
 
             withdrawFromPool(withdrawAmounts);
 
