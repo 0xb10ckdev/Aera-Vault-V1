@@ -488,6 +488,21 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         return _itmOptionPriceRatio;
     }
 
+    /// @inheritdoc IPutOptionsVault
+    function maxOrderActive() external view returns (uint256) {
+        return _maxOrderActive;
+    }
+
+    /// @inheritdoc IPutOptionsVault
+    function minChunkValue() external view returns (uint256) {
+        return _minChunkValue;
+    }
+
+    /// @inheritdoc IPutOptionsVault
+    function opynAddressBook() external view returns (address) {
+        return _opynAddressBook;
+    }
+
     function _afterDeposit(uint256, uint256) internal override {
         uint256 balance = IERC20(asset()).balanceOf(address(this));
 
@@ -792,10 +807,10 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         uint256 underlyingAssetAmount,
         bool buyingOTokens
     ) internal view returns (uint256) {
-        uint256 oneOptionPremium = _pricer.getPremium(
+        uint256 optionPremium = _getOptionPrice(
             strikePrice,
             expiryTimestamp,
-            true
+            buyingOTokens
         );
 
         // In case of USDC (which have 6 decimals) we're upscaling amount
@@ -805,14 +820,30 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
             _pricerDecimals
         );
 
+        return
+            ((adjustedAmount * 10**_O_TOKEN_DECIMALS) / optionPremium).adjust(
+                _pricerDecimals,
+                _O_TOKEN_DECIMALS
+            );
+    }
+
+    function _getOptionPrice(
+        uint256 strikePrice,
+        uint256 expiryTimestamp,
+        bool buyingOTokens
+    ) internal view returns (uint256) {
+        uint256 oneOptionPremium = _pricer.getPremium(
+            strikePrice,
+            expiryTimestamp,
+            true
+        );
+
+        if (_optionPremiumDiscount >= _ONE) return 0;
+
         uint256 discount = buyingOTokens
             ? (_ONE + _optionPremiumDiscount)
             : (_ONE - _optionPremiumDiscount);
 
-        uint256 optionWithDiscount = (oneOptionPremium * discount) / _ONE;
-
-        return
-            ((adjustedAmount * 10**_O_TOKEN_DECIMALS) / optionWithDiscount)
-                .adjust(_pricerDecimals, _O_TOKEN_DECIMALS);
+        return (oneOptionPremium * discount) / _ONE;
     }
 }

@@ -240,4 +240,14 @@ interface IPutOptionsVault is IERC4626 {
 
     /// @notice Returns ITM option price ratio
     function itmOptionPriceRatio() external view returns (uint256 ratio);
+
+    /// @notice Period of time for a broker to fill buy/sell order.
+    ///         After that period order can be cancelled by anyone.
+    function maxOrderActive() external view returns (uint256);
+
+    /// @notice Minimum total value in vault underlying asset terms (e.g., USDC) that can be used to purchase options
+    function minChunkValue() external view returns (uint256);
+
+    /// @notice Opyn V2 Address Book contract address
+    function opynAddressBook() external view returns (address);
 }

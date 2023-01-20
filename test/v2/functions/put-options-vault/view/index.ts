@@ -16,3 +16,6 @@ export * from "./max-mint";
 export * from "./total-assets";
 export * from "./max-withdraw";
 export * from "./max-redeem";
+export * from "./max-order-active";
+export * from "./min-chunk-value";
+export * from "./opyn-address-book";

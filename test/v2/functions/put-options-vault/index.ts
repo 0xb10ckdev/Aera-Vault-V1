@@ -23,9 +23,12 @@ import {
   shouldBehaveLikeLiquidatorGetter,
   shouldBehaveLikeMaxDepositGetter,
   shouldBehaveLikeMaxMintGetter,
+  shouldBehaveLikeMaxOrderActiveGetter,
   shouldBehaveLikeMaxRedeemGetter,
   shouldBehaveLikeMaxWithdrawGetter,
+  shouldBehaveLikeMinChunkValueGetter,
   shouldBehaveLikeOptionsPremiumDiscountGetter,
+  shouldBehaveLikeOpynAddressBookGetter,
   shouldBehaveLikePositionsGetter,
   shouldBehaveLikePricerGetter,
   shouldBehaveLikeSellOrderGetter,
@@ -111,6 +114,18 @@ export function shouldBehaveLikePutOptionsVault(): void {
 
       describe("maxRedeem", function () {
         shouldBehaveLikeMaxRedeemGetter();
+      });
+
+      describe("maxOrderActive", function () {
+        shouldBehaveLikeMaxOrderActiveGetter();
+      });
+
+      describe("minChunkValue", function () {
+        shouldBehaveLikeMinChunkValueGetter();
+      });
+
+      describe("opynAddressBook", function () {
+        shouldBehaveLikeOpynAddressBookGetter();
       });
     });
 
