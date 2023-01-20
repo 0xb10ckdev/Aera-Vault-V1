@@ -8,7 +8,8 @@ import {
   STRIKE_MULTIPLIER_MAX,
   STRIKE_MULTIPLIER_MIN,
   USDC_DECIMALS,
-} from "../../constants";
+} from "../../functions/put-options-vault/constants";
+
 import { toUnit, toWei } from "../../utils";
 
 type DeployPutOptionsVaultRaw = Omit<DeployPutOptionsVault, "silent">;

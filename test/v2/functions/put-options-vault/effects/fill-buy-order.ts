@@ -227,12 +227,12 @@ export function shouldBehaveLikeFillBuyOrder(): void {
       });
 
       it("reverts", async function () {
-        // 140 + 5% = 147 (premium with discount)
-        // 560 USDC / 147 ~= 3.80952380 oTokens
+        // 140 * (1 / 0.95) = 147.368421 (premium with discount)
+        // 560 USDC / 147.368421 = 3.8 oTokens
         await expect(
           this.putOptionsVault.fillBuyOrder(oToken.address, OFFERED_O_TOKENS),
         ).to.be.revertedWith(
-          `AeraPOV__NotEnoughOTokens(380952380, ${OFFERED_O_TOKENS})`,
+          `AeraPOV__NotEnoughOTokens(380000000, ${OFFERED_O_TOKENS})`,
         );
       });
     });

@@ -8,7 +8,7 @@ export * from "./sell-order";
 export * from "./expiry-delta";
 export * from "./strike-multiplier";
 export * from "./asset";
-export * from "./options-premium-discount";
+export * from "./options-premium-ratio";
 export * from "./itm-option-price-ratio";
 export * from "./pricer";
 export * from "./max-deposit";

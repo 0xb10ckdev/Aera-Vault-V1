@@ -6,7 +6,7 @@ export * from "./fill-buy-order";
 export * from "./fill-sell-order";
 export * from "./cancel-buy-order";
 export * from "./cancel-sell-order";
-export * from "./set-option-premium-discount";
+export * from "./set-option-premium-ratio";
 export * from "./set-itm-option-price-ratio";
 export * from "./deposit";
 export * from "./withdraw";

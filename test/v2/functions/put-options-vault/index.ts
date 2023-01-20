@@ -9,7 +9,7 @@ import {
   shouldBehaveLikeSell,
   shouldBehaveLikeSetExpiryDelta,
   shouldBehaveLikeSetITMOptionPriceRatio,
-  shouldBehaveLikeSetOptionPremiumDiscount,
+  shouldBehaveLikeSetOptionPremiumRatio,
   shouldBehaveLikeSetStrikeMultiplier,
   shouldBehaveLikeWithdraw,
 } from "./effects";
@@ -27,7 +27,7 @@ import {
   shouldBehaveLikeMaxRedeemGetter,
   shouldBehaveLikeMaxWithdrawGetter,
   shouldBehaveLikeMinChunkValueGetter,
-  shouldBehaveLikeOptionsPremiumDiscountGetter,
+  shouldBehaveLikeOptionPremiumRatioGetter,
   shouldBehaveLikeOpynAddressBookGetter,
   shouldBehaveLikePositionsGetter,
   shouldBehaveLikePricerGetter,
@@ -88,8 +88,8 @@ export function shouldBehaveLikePutOptionsVault(): void {
         shouldBehaveLikeStrikeMultiplierGetter();
       });
 
-      describe("optionsPremiumDiscount", function () {
-        shouldBehaveLikeOptionsPremiumDiscountGetter();
+      describe("optionPremiumRatio", function () {
+        shouldBehaveLikeOptionPremiumRatioGetter();
       });
 
       describe("itmOptionPriceRatio", function () {
@@ -162,8 +162,8 @@ export function shouldBehaveLikePutOptionsVault(): void {
         shouldBehaveLikeCancelSellOrder();
       });
 
-      describe("setOptionPremiumDiscount", function () {
-        shouldBehaveLikeSetOptionPremiumDiscount();
+      describe("setOptionPremiumRatio", function () {
+        shouldBehaveLikeSetOptionPremiumRatio();
       });
 
       describe("setITMOptionPriceRatio", function () {

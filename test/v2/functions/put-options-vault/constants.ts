@@ -1,6 +1,6 @@
 import { toUnit, toWei } from "../../utils";
 
-export const DEFAULT_OPTION_PREMIUM_DISCOUNT = toWei(0.05); // Discount for option premium, when buying/selling option from/to the broker
+export const DEFAULT_OPTION_PREMIUM_RATIO = toWei(0.95); // Discount ratio for option premium, when buying/selling option from/to the broker
 export const DEFAULT_ITM_OPTION_PRICE_RATIO = toWei(0.99); // ITM option price ratio which is applied after option is expired, but before price is finalized
 
 export const EXPIRY_DELTA_MIN = 3600;

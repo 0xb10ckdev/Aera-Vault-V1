@@ -45,7 +45,7 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     uint8 private immutable _pricerDecimals;
 
     /// @notice Discount for option premium, when buying/selling option from/to the broker
-    uint256 private _optionPremiumDiscount = 0.05 * 10**18;
+    uint256 private _optionPremiumRatio = 0.95 * 10**18;
 
     /// @notice ITM option price ratio which is applied after option is expired, but before
     ///         price is finalized
@@ -303,18 +303,15 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     }
 
     /// @inheritdoc IPutOptionsVault
-    function setOptionPremiumDiscount(uint256 discount)
+    function setOptionPremiumRatio(uint256 ratio)
         external
         override
         onlyController
     {
-        if (discount > _ONE) {
-            revert AeraPOV__DiscountExceedsMaximumValue(discount, _ONE);
-        }
+        if (ratio == 0) revert AeraPOV__OptionPremiumRatioIsZero();
 
-        _optionPremiumDiscount = discount;
-
-        emit OptionPremiumDiscountChanged(discount);
+        _optionPremiumRatio = ratio;
+        emit OptionPremiumRatioChanged(ratio);
     }
 
     /// @inheritdoc IPutOptionsVault
@@ -474,13 +471,13 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
     }
 
     /// @inheritdoc IPutOptionsVault
-    function optionsPremiumDiscount()
+    function optionPremiumRatio()
         external
         view
         override
-        returns (uint256 discount)
+        returns (uint256 ratio)
     {
-        return _optionPremiumDiscount;
+        return _optionPremiumRatio;
     }
 
     /// @inheritdoc IPutOptionsVault
@@ -832,18 +829,16 @@ contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
         uint256 expiryTimestamp,
         bool buyingOTokens
     ) internal view returns (uint256) {
-        uint256 oneOptionPremium = _pricer.getPremium(
+        uint256 premium = _pricer.getPremium(
             strikePrice,
             expiryTimestamp,
             true
         );
 
-        if (_optionPremiumDiscount >= _ONE) return 0;
-
-        uint256 discount = buyingOTokens
-            ? (_ONE + _optionPremiumDiscount)
-            : (_ONE - _optionPremiumDiscount);
-
-        return (oneOptionPremium * discount) / _ONE;
+        if (buyingOTokens) {
+            return (premium * _ONE) / _optionPremiumRatio;
+        } else {
+            return (premium * _optionPremiumRatio) / _ONE;
+        }
     }
 }

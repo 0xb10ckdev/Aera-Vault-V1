@@ -12,8 +12,8 @@ interface IPutOptionsVault is IERC4626 {
     /// @notice Raised when strike multiplier is changed
     event StrikeMultiplierChanged(uint256 min, uint256 max);
 
-    /// @notice Raised when option premium discount is changed
-    event OptionPremiumDiscountChanged(uint256 discount);
+    /// @notice Raised when option premium ratio is changed
+    event OptionPremiumRatioChanged(uint256 ratio);
 
     /// @notice Raise when ITM option price ratio is changed
     event ITMOptionPriceRatioChanged(uint256 ratio);
@@ -84,10 +84,7 @@ interface IPutOptionsVault is IERC4626 {
     error AeraPOV__NotEnoughOTokens(uint256 expected, uint256 actual);
     error AeraPOV__NotEnoughAssets(uint256 actual);
     error AeraPOV__UnknownOToken(address oToken);
-    error AeraPOV__DiscountExceedsMaximumValue(
-        uint256 discount,
-        uint256 maximum
-    );
+    error AeraPOV__OptionPremiumRatioIsZero();
     error AeraPOV__ExpectedPutOption();
     error AeraPOV__InvalidUnderlyingAsset(address expected, address actual);
     error AeraPOV__InvalidCollateralAsset(address expected, address actual);
@@ -183,7 +180,7 @@ interface IPutOptionsVault is IERC4626 {
 
     /// @notice Ratio representing discount over the option premium which
     ///         the vault is agreed to tolerate over ideal premium returned by the pricer
-    function setOptionPremiumDiscount(uint256 discount) external;
+    function setOptionPremiumRatio(uint256 ratio) external;
 
     /// @notice Ratio representing ITM option price change when option is expired,
     ///         but the oracle price is not finalized yet.
@@ -236,7 +233,7 @@ interface IPutOptionsVault is IERC4626 {
         returns (uint256 min, uint256 max);
 
     /// @notice Returns options premium discount
-    function optionsPremiumDiscount() external view returns (uint256 discount);
+    function optionPremiumRatio() external view returns (uint256 ratio);
 
     /// @notice Returns ITM option price ratio
     function itmOptionPriceRatio() external view returns (uint256 ratio);

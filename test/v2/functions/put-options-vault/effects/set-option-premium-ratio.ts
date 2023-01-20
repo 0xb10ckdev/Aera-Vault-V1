@@ -1,14 +1,14 @@
 import { expect } from "chai";
-import { toWei } from "../../../utils";
+import { toUnit } from "../../../utils";
 
-export function shouldBehaveLikeSetOptionPremiumDiscount(): void {
+export function shouldBehaveLikeSetOptionPremiumRatio(): void {
   describe("access", function () {
     describe("when called by controller", function () {
       it("works", async function () {
         await expect(
           this.putOptionsVault
             .connect(this.signers.admin)
-            .setOptionPremiumDiscount(100),
+            .setOptionPremiumRatio(100),
         ).not.to.be.reverted;
       });
     });
@@ -18,35 +18,33 @@ export function shouldBehaveLikeSetOptionPremiumDiscount(): void {
         await expect(
           this.putOptionsVault
             .connect(this.signers.stranger)
-            .setOptionPremiumDiscount(100),
+            .setOptionPremiumRatio(100),
         ).to.be.revertedWith("AeraPOV__CallerIsNotController");
       });
     });
   });
 
   describe("values", function () {
-    describe("when discount > 1", function () {
+    describe("when ratio = 0", function () {
       it("reverts", async function () {
-        const max = toWei(1);
         await expect(
-          this.putOptionsVault.setOptionPremiumDiscount(max.add(1)),
-        ).to.be.revertedWith(
-          `AeraPOV__DiscountExceedsMaximumValue(${max.add(1)}, ${max})`,
-        );
+          this.putOptionsVault.setOptionPremiumRatio(0),
+        ).to.be.revertedWith(`AeraPOV__OptionPremiumRatioIsZero()`);
       });
     });
 
     describe("when value is valid", function () {
+      const value = toUnit(0.85, 18);
       it("works", async function () {
-        await this.putOptionsVault.setOptionPremiumDiscount(100);
+        await this.putOptionsVault.setOptionPremiumRatio(value);
 
-        expect(await this.putOptionsVault.optionsPremiumDiscount()).to.eq(100);
+        expect(await this.putOptionsVault.optionPremiumRatio()).to.eq(value);
       });
 
       it("emits", async function () {
-        await expect(this.putOptionsVault.setOptionPremiumDiscount(100))
-          .to.emit(this.putOptionsVault, "OptionPremiumDiscountChanged")
-          .withArgs(100);
+        await expect(this.putOptionsVault.setOptionPremiumRatio(value))
+          .to.emit(this.putOptionsVault, "OptionPremiumRatioChanged")
+          .withArgs(value);
       });
     });
   });
