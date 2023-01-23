@@ -3,7 +3,7 @@ name: Unit Tests for V2
 on:
   push:
     branches:
-      - '**'
+      - "**"
 
 jobs:
   protocol:
