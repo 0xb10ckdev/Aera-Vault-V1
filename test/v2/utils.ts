@@ -1,10 +1,10 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signers";
-import { BigNumber, BigNumberish, Signer } from "ethers";
+import { BigNumber, BigNumberish, ContractTransaction, Signer } from "ethers";
 import hre, { ethers } from "hardhat";
 import { getChainId, getConfig } from "../../scripts/config";
 import {
-  AeraVaultV2Mock,
-  AeraVaultV2Mock__factory,
+  AeraVaultFactoryV2,
+  AeraVaultFactoryV2__factory,
   ManagedPoolFactory,
   ManagedPoolFactory__factory,
 } from "../../typechain";
@@ -15,8 +15,8 @@ import {
   MIN_FEE_DURATION,
   MIN_RELIABLE_VAULT_VALUE,
   MIN_SIGNIFICANT_DEPOSIT_VALUE,
-  ONE,
   MIN_YIELD_ACTION_THRESHOLD,
+  ONE,
   ZERO_ADDRESS,
 } from "./constants";
 
@@ -37,6 +37,7 @@ export type VaultParams = {
   }[];
   numeraireAssetIndex: number;
   swapFeePercentage: BigNumberish;
+  owner: string;
   guardian: string;
   minReliableVaultValue?: BigNumberish;
   minSignificantDepositValue?: BigNumberish;
@@ -91,14 +92,22 @@ export const deployFactory = async (
     .deploy(config.bVault, protocolFeeProvider.address);
 };
 
-export const deployVault = async (
-  params: VaultParams,
-): Promise<AeraVaultV2Mock> => {
-  const vault = await ethers.getContractFactory<AeraVaultV2Mock__factory>(
-    "AeraVaultV2Mock",
-  );
+export const deployVaultFactory = async (
+  signer: Signer,
+): Promise<AeraVaultFactoryV2> => {
+  const vaultFactory =
+    await ethers.getContractFactory<AeraVaultFactoryV2__factory>(
+      "AeraVaultFactoryV2",
+    );
 
-  return await vault.connect(params.signer).deploy({
+  return await vaultFactory.connect(signer).deploy();
+};
+
+export const deployVault = async (
+  factory: AeraVaultFactoryV2,
+  params: VaultParams,
+): Promise<ContractTransaction> => {
+  return await factory.connect(params.signer).create({
     factory: params.factory,
     name: params.name,
     symbol: params.symbol,
@@ -108,6 +117,7 @@ export const deployVault = async (
     yieldTokens: params.yieldTokens,
     numeraireAssetIndex: params.numeraireAssetIndex,
     swapFeePercentage: params.swapFeePercentage,
+    owner: params.owner,
     guardian: params.guardian,
     minReliableVaultValue:
       params.minReliableVaultValue || MIN_RELIABLE_VAULT_VALUE,

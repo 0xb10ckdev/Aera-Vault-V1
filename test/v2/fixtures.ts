@@ -193,6 +193,7 @@ export const setupVaultWithBalancerVaultMock =
       })),
       numeraireAssetIndex: 0,
       swapFeePercentage: MIN_SWAP_FEE,
+      owner: admin.address,
       guardian: guardian.address,
       minReliableVaultValue: MIN_RELIABLE_VAULT_VALUE,
       minSignificantDepositValue: MIN_SIGNIFICANT_DEPOSIT_VALUE,

@@ -1,7 +1,7 @@
 import { task, types } from "hardhat/config";
 import { getConfig } from "../../scripts/config";
 
-task("deploy:factory", "Deploys a Base Managed Pool Factory")
+task("deploy:managedPoolFactory", "Deploys a Managed Pool Factory")
   .addOptionalParam(
     "silent",
     "Disable console log on deployment",
