@@ -4,7 +4,7 @@ pragma solidity 0.8.11;
 // This is a copy from https://github.com/opynfinance/GammaProtocol/blob/master/contracts/interfaces/OtokenInterface.sol
 
 interface OtokenInterface {
-    // Added by Blockvis/Auditless/Gauntlet
+    // Added by Aera Team
     function controller() external view returns (address);
 
     function addressBook() external view returns (address);
