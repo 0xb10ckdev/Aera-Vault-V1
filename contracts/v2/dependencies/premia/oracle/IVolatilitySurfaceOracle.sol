@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-// This is a copy from https://github.com/Premian-Labs/premia-contracts/blob/master/contracts/oracle/VolatilitySurfaceOracleStorage.sol
-// NOTE: removed getParams function to drop dependency on VolatilitySurfaceOracleStorage
+// This is a copy from https://github.com/Premian-Labs/premia-contracts/blob/master/contracts/oracle/IVolatilitySurfaceOracle.sol
+// Note by Aera Team: removed getParams function to drop dependency on VolatilitySurfaceOracleStorage
 
 interface IVolatilitySurfaceOracle {
     /**
