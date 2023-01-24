@@ -17,7 +17,6 @@ import "./pricers/IPutOptionsPricer.sol";
 import "./Decimals.sol";
 
 contract PutOptionsVault is ERC4626, Multicall, Ownable, IPutOptionsVault {
-    using Math for uint256;
     using Decimals for uint256;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
