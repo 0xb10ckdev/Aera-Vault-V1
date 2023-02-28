@@ -25,6 +25,7 @@ export const getConfig = (
     case chainIds.kovan:
     case chainIds.rinkeby:
     case chainIds.goerli:
+    case chainIds.mumbai:
       return {
         bVault: "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
         merkleOrchard: merkleOrchards[chainId],
