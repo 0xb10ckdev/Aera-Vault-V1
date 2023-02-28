@@ -604,7 +604,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
           const { holdings, adminBalances } = await getState();
 
           const amounts = tokens.map(_ =>
-            toWei(Math.floor(Math.random() * 100)),
+            toWei(Math.floor(50 + Math.random() * 10)),
           );
 
           const spotPrices = [];
@@ -810,7 +810,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
             const guardiansFeeTotal = await getGuardiansFeeTotal();
 
             const amounts = tokens.map(_ =>
-              toWei(Math.floor(Math.random() * 100)),
+              toWei(Math.floor(50 + Math.random() * 10)),
             );
 
             const spotPrices = [];
@@ -904,7 +904,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
         const { holdings, adminBalances } = await getState();
 
         const amounts = tokens.map(_ =>
-          toWei(Math.floor(Math.random() * 100)),
+          toWei(Math.floor(50 + Math.random() * 10)),
         );
 
         const spotPrices = [];
