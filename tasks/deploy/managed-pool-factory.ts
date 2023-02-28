@@ -12,6 +12,7 @@ task("deploy:managedPoolFactory", "Deploys a Managed Pool Factory")
     const config = getConfig(network.config.chainId || 1);
 
     const { admin } = await ethers.getNamedSigners();
+    console.log(await admin.getAddress());
 
     if (!taskArgs.silent) {
       console.log("Deploying factory with");
