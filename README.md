@@ -262,4 +262,15 @@ MalformedAbiError: Not a valid ABI
 
     Everything requires running with the specific version number, e.g. yarn typechain-v1 as opposed to yarn typechain, or in general passing in the hardhat config `yarn hardhat node --config hardhat.config.v1.ts`
 
+Was able to deploy to local fork after deploying ManagedPoolFactory and Validator to goerli:
 
+
+```bash
+yarn hardhat --network goerli deploy:managedPoolFactory
+
+yarn deploy:validator --count 2 --network goerli --config hardhat.config.v1.ts
+
+HARDHAT_FORK=goerli yarn hardhat --network hardhat deploy:vault --factory 0x14c7F6fC66EcA3954894CF54469CF6d7f2076Aa2 --name test --symbol TEST --tokens 0x2f3A40A3db8a7e3D09B0adfEfbCe4f6F81927557,0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6 --weights 100000000000000000,900000000000000000 --swap-fee 1000000000000 --guardian 0x3345261FDae0BC146B2F45484DcCeB4708a3FEC4 --validator 0xFa60a31d9a684795af7E8c2F5E35eC1C5fA5a84B --notice-period 30 --management-fee 100000  --description goerlitestvault --config hardhat.config.v1.ts
+```
+
+Note that deploying the actual vault contract is expensive and its difficult to acquire enough goerli eth to do it
