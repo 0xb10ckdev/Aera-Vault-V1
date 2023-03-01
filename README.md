@@ -47,6 +47,12 @@ Compile the smart contracts and generate TypeChain artifacts:
 $ yarn typechain
 ```
 
+Compile the smart contracts and generate TypeChain artifacts for v1 contracts:
+
+```sh
+$ yarn typechain-v1
+```
+
 ### Analyze Solidity
 
 Analyze the Solidity code:
@@ -87,6 +93,12 @@ Generate the code coverage report with env variables:
 
 ```sh
 $ yarn coverage
+```
+
+Generate the code coverage report for v1 contracts with env variables:
+
+```sh
+$ yarn coverage-v1
 ```
 
 Generate the code coverage report on local with hardhat fork:
