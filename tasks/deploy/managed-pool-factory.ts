@@ -8,7 +8,8 @@ task("deploy:managedPoolFactory", "Deploys a Managed Pool Factory")
     false,
     types.boolean,
   )
-  .setAction(async (taskArgs, { deployments, ethers, network }) => {
+  .addFlag("gasEstimation", "Get gas cost estimation for deployment")
+  .setAction(async (taskArgs, { ethers, network }) => {
     const config = getConfig(network.config.chainId || 1);
 
     const { admin } = await ethers.getNamedSigners();
@@ -18,27 +19,38 @@ task("deploy:managedPoolFactory", "Deploys a Managed Pool Factory")
       console.log(`Balancer Vault: ${config.bVault}`);
     }
 
-    const baseManagedPoolFactoryContract = "BaseManagedPoolFactory";
-    const baseManagedPoolFactory = await deployments.deploy(
-      baseManagedPoolFactoryContract,
-      {
-        contract: baseManagedPoolFactoryContract,
-        args: [config.bVault],
-        from: admin.address,
-        log: true,
-      },
+    const baseManagedPoolFactoryContract = await ethers.getContractFactory(
+      "BaseManagedPoolFactory",
+    );
+    const managedPoolFactoryContract = await ethers.getContractFactory(
+      "ManagedPoolFactory",
     );
 
-    const managedPoolFactoryContract = "ManagedPoolFactory";
-    const managedPoolFactory = await deployments.deploy(
-      managedPoolFactoryContract,
-      {
-        contract: managedPoolFactoryContract,
-        args: [baseManagedPoolFactory.address],
-        from: admin.address,
-        log: true,
-      },
-    );
+    if (taskArgs.gasEstimation) {
+      const estimatedGas0 = await ethers.provider.estimateGas({
+        data: baseManagedPoolFactoryContract.getDeployTransaction(
+          config.bVault,
+        ).data,
+      });
+      const estimatedGas1 = await ethers.provider.estimateGas({
+        data: managedPoolFactoryContract.getDeployTransaction(config.bVault)
+          .data,
+      });
+
+      console.log(
+        "Deployment Gas Estimation:",
+        estimatedGas0.add(estimatedGas1).toString(),
+      );
+      return;
+    }
+
+    const baseManagedPoolFactory = await baseManagedPoolFactoryContract
+      .connect(admin)
+      .deploy(config.bVault);
+
+    const managedPoolFactory = await managedPoolFactoryContract
+      .connect(admin)
+      .deploy(baseManagedPoolFactory.address);
 
     if (!taskArgs.silent) {
       console.log("Factory is deployed to:", managedPoolFactory.address);

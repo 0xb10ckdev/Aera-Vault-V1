@@ -37,6 +37,7 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
     types.boolean,
   )
   .addFlag("printTransactionData", "Get transaction data for deployment")
+  .addFlag("gasEstimation", "Get gas cost estimation for deployment")
   .setAction(async (taskArgs, { ethers, network }) => {
     const config = getConfig(network.config.chainId || 1);
 
@@ -88,7 +89,7 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
 
     const vaultFactory = await ethers.getContractFactory(contract);
 
-    if (taskArgs.printTransactionData) {
+    if (taskArgs.printTransactionData || taskArgs.gasEstimation) {
       const calldata = vaultFactory.getDeployTransaction([
         factory,
         name,
@@ -103,7 +104,18 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
         merkleOrchard,
         description,
       ]).data;
-      console.log("Deployment Transaction Data:", calldata);
+
+      if (taskArgs.printTransactionData) {
+        console.log("Deployment Transaction Data:", calldata);
+      }
+
+      if (taskArgs.gasEstimation) {
+        const estimatedGas = await ethers.provider.estimateGas({
+          data: calldata,
+        });
+        console.log("Deployment Gas Estimation:", estimatedGas.toString());
+      }
+
       return;
     }
 
