@@ -162,7 +162,7 @@ Deploy the Validator, ManagedPoolFactory and Vault to Hardhat Network:
 ```sh
 $ yarn deploy:validator --count <TOKEN_COUNT>
 $ yarn deploy:factory
-$ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swap-fee <FEE> --guardian <GUARDIAN> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION> --print-transaction-data
+$ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swap-fee <FEE> --guardian <GUARDIAN> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION> --print-transaction-data --gas-estimation
 ```
 
 **Legend**:
@@ -183,6 +183,7 @@ $ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKE
 - MANAGEMENT_FEE: Management fee earned proportion per second
 - DESCRIPTION: Vault text description
 - print-transaction-data: Flag to print transaction data for deployment
+- gas-estimation: Flag to print gas cost estimation for deployment
 
 **Important**:
 
