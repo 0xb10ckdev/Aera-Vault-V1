@@ -234,17 +234,30 @@ $ yarn hardhat node --fork $GOERLI_API_URL --config hardhat.config.v1.ts
 ```
 
 # ERRORS
+- programmatically run typechain inside solcover.js does not work- i had to run the specific typechain version before running coverage
+- coverage-v1 fails with
 
-
-## Coverage
-`yarn coverage-v1` and `yarn test:unit-v1` work except for:
 ```
-1) Aera Vault V1 Mainnet Functionality
-       when Vault is initialized
-         when depositing to Vault
-           should be possible to deposit tokens
-             when depositing tokens:
-     Error: VM Exception while processing transaction: reverted with reason string 'BAL#302'
-```
+1) Aera Vault V1 Mainnet Deployment
+       should be reverted to deploy vault
+         when total sum of weights is not one:
+     AssertionError: Expected transaction to be reverted with BAL#308, but other exception was thrown: Error: Transaction reverted without a reason string
 
-yarn coverage:local fails with a compilation error `DeclarationError: Undeclared identifier`
+
+  2) Aera Vault V1 Mainnet Functionality
+       "before each" hook for "should be possible to initialize the vault":
+     Error: Transaction reverted without a reason string
+```
+- yarn coverage:local fails with a compilation error `DeclarationError: Undeclared identifier`
+
+- yarn coverage-v2 fails with
+```
+1) Aera Vault V2 Mainnet Deployment
+       "before all" hook for "should be possible to deploy vault":
+     Error: Transaction reverted: function call to a non-contract account
+...
+
+ 2) Integration Test
+       "before each" hook for "when call deposit":
+     Error: Transaction reverted: function call to a non-contract account
+```
