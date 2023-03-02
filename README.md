@@ -84,6 +84,11 @@ $ yarn test
 
 Tests run against hardhat forks of target environments (ie Kovan, Mainnet) and require a node provider to be authenticated in your [.env](./.env).
 
+Gotchas:
+First run `yarn typechain-v1`. Currently the tests are only setup to run against v1
+
+When running integration tests, if you see an error like `Errors: Invalid value undefined supplied to : RpcTransactionReceipt | null/to: ADDRESS | null`, you probably need to clean your generated deployments folder. This indicates that you have existing deployments to the network your running your integration test against (a forked copy), and for some reason the test suite doesn't like that.
+
 ### Coverage
 
 Generate the code coverage report with env variables:
@@ -232,7 +237,7 @@ $ yarn hardhat node --fork $GOERLI_API_URL --config hardhat.config.v1.ts
 
 
 ## Coverage
-yarn coverage-v1 works except for:
+`yarn coverage-v1` and `yarn test:unit-v1` work except for:
 ```
 1) Aera Vault V1 Mainnet Functionality
        when Vault is initialized
@@ -243,23 +248,3 @@ yarn coverage-v1 works except for:
 ```
 
 yarn coverage:local fails with a compilation error `DeclarationError: Undeclared identifier`
-
-## Test
-
-yarn test:unit, yarn test:integration, yarn test:goerli fail with:
-
-```
-An unexpected error occurred:
-
-MalformedAbiError: Not a valid ABI
-    at Object.extractAbi (/Users/ben/Gauntlet/aera-contracts/node_modules/typechain/src/parser/abiParser.ts:309:9)
-    at /Users/ben/Gauntlet/aera-contracts/node_modules/typechain/src/typechain/io.ts:45:21
-    at Array.filter (<anonymous>)
-    at Object.skipEmptyAbis (/Users/ben/Gauntlet/aera-contracts/node_modules/typechain/src/typechain/io.ts:45:6)
-    at Object.runTypeChain (/Users/ben/Gauntlet/aera-contracts/node_modules/typechain/src/typechain/runTypeChain.ts:20:15)
-    at SimpleTaskDefinition.action (/Users/ben/Gauntlet/aera-contracts/node_modules/@typechain/hardhat/src/index.ts:67:26)
-    at Environment._runTaskDefinition (/Users/ben/Gauntlet/aera-contracts/node_modules/hardhat/src/internal/core/runtime-environment.ts:217:35)
-    at Environment.run (/Users/ben/Gauntlet/aera-contracts/node_modules/hardhat/src/internal/core/runtime-environment.ts:129:25)
-    at OverriddenTaskDefinition._action (/Users/ben/Gauntlet/aera-contracts/node_modules/@typechain/hardhat/src/index.ts:31:11)
-    at async Environment._runTaskDefinition (/Users/ben/Gauntlet/aera-contracts/node_modules/hardhat/src/internal/core/runtime-environment.ts:217:14)
-    ```
