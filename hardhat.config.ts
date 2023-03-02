@@ -22,7 +22,7 @@ export const chainIds = {
   ganache: 1337,
   goerli: 5,
   hardhat: 31337,
-  kovan: 42,
+  // kovan: 42, unsupported
   mainnet: 1,
   rinkeby: 4,
   ropsten: 3,
@@ -73,13 +73,17 @@ function createAlchemyUrl(network: string) {
       "Warning: Please set your ALCHEMY_API_KEY in the env file if doing a deployment",
     );
   }
+
+  let supported_networks = ["mainnet", "rinkeby", "ropsten", "goerli", "mumbai", "polygon"];
   let urlPrefix = `eth-${network}`;
   if (network === "polygon") {
-    urlPrefix = "polygon-mainnet.g";
+    urlPrefix = "polygon-mainnet";
   } else if (network === "mumbai") {
-    urlPrefix = "polygon-mumbai.g";
+    urlPrefix = "polygon-mumbai";
+  } else if (!supported_networks.includes("mainnet")) {
+    throw new Error("Alchemy does not support network: " + network);
   }
-  return `https://${urlPrefix}.alchemyapi.io/v2/${alchemyApiKey}`;
+  return `https://${urlPrefix}.g.alchemy.com/v2/${alchemyApiKey}`;
 }
 
 function getNetworkUrl(network: string) {
@@ -161,7 +165,6 @@ const config: HardhatUserConfig = {
     },
     mainnet: createNetworkConfig("mainnet"),
     goerli: createNetworkConfig("goerli"),
-    kovan: createNetworkPrivateKeyConfig("kovan"),
     rinkeby: createNetworkConfig("rinkeby"),
     ropsten: createNetworkConfig("ropsten"),
     polygon: createNetworkPrivateKeyConfig("polygon"),

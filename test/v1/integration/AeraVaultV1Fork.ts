@@ -69,6 +69,7 @@ describe("Aera Vault V1 Mainnet Deployment", function () {
         from: admin.address,
         log: true,
       });
+
       validator = WithdrawalValidatorMock__factory.connect(
         (await deployments.get("Validator")).address,
         admin,
