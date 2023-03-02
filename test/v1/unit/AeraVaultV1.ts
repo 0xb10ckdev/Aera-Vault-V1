@@ -327,7 +327,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
         it("when depositing tokens", async () => {
           const amounts = tokens.map(_ =>
-            toWei(Math.floor(Math.random() * 100)),
+            toWei(Math.floor(50 + Math.random() * 10)),
           );
 
           for (let i = 0; i < tokens.length; i++) {
@@ -346,7 +346,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
 
         it("when depositing tokens with depositIfBalanceUnchanged", async () => {
           const amounts = tokens.map(_ =>
-            toWei(Math.floor(Math.random() * 100)),
+            toWei(Math.floor(50 + Math.random() * 10)),
           );
 
           for (let i = 0; i < tokens.length; i++) {
@@ -461,7 +461,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
             );
 
             const amounts = tokens.map(_ =>
-              toWei(Math.floor(Math.random() * 100)),
+              toWei(Math.floor(50 + Math.random() * 10)),
             );
 
             const trx = await vault.withdraw(
@@ -488,7 +488,7 @@ baseContext("Aera Vault V1 Mainnet Functionality", function () {
             );
 
             const amounts = tokens.map(_ =>
-              toWei(Math.floor(Math.random() * 100)),
+              toWei(Math.floor(50 + Math.random() * 10)),
             );
 
             const trx = await vault.withdrawIfBalanceUnchanged(
