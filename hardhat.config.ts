@@ -74,7 +74,7 @@ function createAlchemyUrl(network: string) {
     );
   }
 
-  let supported_networks = ["mainnet", "rinkeby", "ropsten", "goerli", "mumbai", "polygon"];
+  const supported_networks = ["mainnet", "rinkeby", "ropsten", "goerli", "mumbai", "polygon"];
   let urlPrefix = `eth-${network}`;
   if (network === "polygon") {
     urlPrefix = "polygon-mainnet";
