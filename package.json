@@ -85,11 +85,10 @@
     "coverage-v4": "yarn coverage --config hardhat.config.v4.ts",
     "coverage:local": "cross-env HARDHAT_FORK=mainnet HARDHAT_FORK_NUMBER=13000000 yarn coverage-all",
     "deploy:validator": "hardhat deploy:validator",
-    "deploy:factory": "hardhat deploy:factory",
+    "deploy:managedPoolFactory": "hardhat deploy:managedPoolFactory",
     "deploy:vault": "hardhat deploy:vault",
     "deploy:guardianWhitelistFactory": "hardhat deploy:guardianWhitelistFactory",
     "deploy:guardianWhitelist": "hardhat deploy:guardianWhitelist",
-    "deploy": "yarn deploy:validator && yarn deploy:vault",
     "deploy:goerli": "yarn deploy:vault --network goerli",
     "deploy:kovan": "yarn deploy:vault --network kovan",
     "deploy:mainnet": "yarn deploy:vault --network mainnet",
@@ -107,12 +106,13 @@
     "test:integration": "cross-env TEST_PATH=./test/v1/integration HARDHAT_FORK=mainnet HARDHAT_FORK_NUMBER=13000000 hardhat test",
     "test:kovan": "cross-env TEST_PATH=./test/v1/integration HARDHAT_FORK=kovan HARDHAT_FORK_NUMBER=27000000 hardhat test",
     "test:goerli": "cross-env TEST_PATH=./test/v1/integration HARDHAT_FORK=goerli HARDHAT_FORK_NUMBER=8574342 hardhat test",
+    "test:mumbai": "cross-env TEST_PATH=./test/v1/integration HARDHAT_FORK=mumbai HARDHAT_FORK_NUMBER=32621014 hardhat test",
     "test": "yarn test:unit && yarn test:integration",
     "gas": "cross-env REPORT_GAS=true hardhat test",
     "size": "cross-env REPORT_SIZE=true hardhat compile",
-    "typechain": "hardhat typechain",
-    "typechain-v1": "hardhat typechain --config hardhat.config.v1.ts",
-    "typechain-v2": "hardhat typechain --config hardhat.config.v2.ts",
-    "typechain-v4": "hardhat typechain --config hardhat.config.v4.ts"
+    "typechain": "yarn clean && hardhat typechain",
+    "typechain-v1": "yarn clean && hardhat typechain --config hardhat.config.v1.ts",
+    "typechain-v2": "yarn clean && hardhat typechain --config hardhat.config.v2.ts",
+    "typechain-v4": "yarn clean && hardhat typechain --config hardhat.config.v4.ts"
   }
 }

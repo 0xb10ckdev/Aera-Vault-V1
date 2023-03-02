@@ -41,7 +41,7 @@ $ yarn compile
 
 ### TypeChain
 
-Compile the smart contracts and generate TypeChain artifacts. Note that you should only run one of these, depending on which set of contracts you want to deploy or test, running `yarn clean` before switching between different versions
+Compile the smart contracts and generate TypeChain artifacts. Note that you should only run one of these, depending on which set of contracts you want to deploy or test (each runs `yarn clean` beforehand)
 
 ```sh
 $ yarn typechain
@@ -127,7 +127,7 @@ $ yarn deploy:validator --network <NETWORK> --count <TOKEN_COUNT>
 Deploy the ManagedPoolFactory to a specific network:
 
 ```sh
-$ yarn deploy:factory --network <NETWORK>
+$ yarn deploy:managedPoolFactory --network <NETWORK>
 ```
 
 Deploy the GuardianWhitelistFactory to a specific network:
@@ -137,13 +137,11 @@ $ yarn deploy:guardianWhitelistFactory --network <NETWORK>
 ```
 
 Deploy the GuardianWhitelist to a specific network:
+NOTE: Currently broken- GuardianWhiteListFactory is not emitting a Deploy event
 
 ```sh
 $ yarn deploy:guardianWhitelist --network <NETWORK> --factory <GUARDIAN_WHITELIST_FACTORY> --guardians <GUARDIANS> --salt <SALT>
 ```
-
-Deploy the Vault to a specific network:
-NOTE: I had to use --config hardhat.config.v1.ts
 
 ```sh
 $ yarn deploy:vault --network <NETWORK> --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swap-fee <FEE> --guardian <GUARDIAN> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION>
@@ -169,30 +167,31 @@ $ yarn deploy:managedPoolFactory
 $ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swap-fee <FEE> --guardian <GUARDIAN> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION> --print-transaction-data
 ```
 
-Example working deployment to goerli with actual numbers:
+Example working deployment to local fork of goerli with actual numbers:
 
 ```sh
-$ yarn hardhat --network goerli deploy:vault --factory 0x14c7F6fC66EcA3954894CF54469CF6d7f2076Aa2 --name test --symbol TEST --tokens 0x2f3A40A3db8a7e3D09B0adfEfbCe4f6F81927557,0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6 --weights 100000000000000000,900000000000000000 --swap-fee 1000000000000 --guardian 0xA3b78855D8de9846ABD478a47b81579d1651deA8 --validator 0xFa60a31d9a684795af7E8c2F5E35eC1C5fA5a84B --notice-period 30 --management-fee 1000000000000 --description goerlitestvault
+$ yarn HARDHAT_FORK=goerli yarn deploy:vault --network hardhat --factory 0x14c7F6fC66EcA3954894CF54469CF6d7f2076Aa2 --name test --symbol TEST --tokens 0x2f3A40A3db8a7e3D09B0adfEfbCe4f6F81927557,0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6 --weights 100000000000000000,900000000000000000 --swap-fee 1000000000000 --guardian 0x3345261FDae0BC146B2F45484DcCeB4708a3FEC4 --validator 0xFa60a31d9a684795af7E8c2F5E35eC1C5fA5a84B --notice-period 30 --management-fee 100000  --description goerlitestvault
 ```
->>>
+
+Note that deploying the actual vault contract is expensive and its difficult to acquire enough goerli eth to do it
 
 **Legend**:
 
 - GUARDIAN_WHITELIST_FACTORY: GuardianWhitelistFactory address
-- GUARDIANS: Initial Guardians addresses
-- SALT: Salt value for GuardianWhitelist deployment
+- GUARDIANS: Initial Guardians addresses (comma-separated)
+- SALT: Salt value for GuardianWhitelist deployment (uint256)
 - FACTORY: Balancer's Managed Pool Factory address
-- TOKEN_COUNT: Token Count
-- NAME: Pool token name
-- SYMBOL: Pool token symbol
-- TOKENS: Tokens' addresses
-- Weights: Tokens' weights
-- FEE: Swap fee percentage
+- TOKEN_COUNT: Token Count (uint256)
+- NAME: Pool token name (string)
+- SYMBOL: Pool token symbol (string)
+- TOKENS: Tokens' addresses (comma-separated)
+- Weights: Tokens' weights (comma-separated uint256)
+- FEE: Swap fee percentage (uint256, in 1e18 decimals)
 - GUARDIAN: Guardian's address
 - VALIDATOR: Address of withdrawal validator contract
-- NOTICE_PERIOD: Finalization notice period in seconds
-- MANAGEMENT_FEE: Management fee earned proportion per second
-- DESCRIPTION: Vault text description
+- NOTICE_PERIOD: Finalization notice period in seconds (uint256)
+- MANAGEMENT_FEE: Management fee earned proportion per second (uint256, in 1e18 decimals)
+- DESCRIPTION: Vault text description (string)
 - print-transaction-data: Flag to print transaction data for deployment
 
 **Important**:
@@ -230,6 +229,9 @@ $ yarn hardhat node --fork $GOERLI_API_URL --config hardhat.config.v1.ts
 ```
 
 # ERRORS
+
+
+## Coverage
 yarn coverage-v1 works except for:
 ```
 1) Aera Vault V1 Mainnet Functionality
@@ -238,9 +240,13 @@ yarn coverage-v1 works except for:
            should be possible to deposit tokens
              when depositing tokens:
      Error: VM Exception while processing transaction: reverted with reason string 'BAL#302'
-     ```
+```
 
-yarn test:unit and yarn test:goerli both fail with:
+yarn coverage:local fails with a compilation error `DeclarationError: Undeclared identifier`
+
+## Test
+
+yarn test:unit, yarn test:integration, yarn test:goerli fail with:
 
 ```
 An unexpected error occurred:
@@ -257,20 +263,3 @@ MalformedAbiError: Not a valid ABI
     at OverriddenTaskDefinition._action (/Users/ben/Gauntlet/aera-contracts/node_modules/@typechain/hardhat/src/index.ts:31:11)
     at async Environment._runTaskDefinition (/Users/ben/Gauntlet/aera-contracts/node_modules/hardhat/src/internal/core/runtime-environment.ts:217:14)
     ```
-
-
-
-    Everything requires running with the specific version number, e.g. yarn typechain-v1 as opposed to yarn typechain, or in general passing in the hardhat config `yarn hardhat node --config hardhat.config.v1.ts`
-
-Was able to deploy to local fork after deploying ManagedPoolFactory and Validator to goerli:
-
-
-```bash
-yarn hardhat --network goerli deploy:managedPoolFactory
-
-yarn deploy:validator --count 2 --network goerli --config hardhat.config.v1.ts
-
-HARDHAT_FORK=goerli yarn hardhat --network hardhat deploy:vault --factory 0x14c7F6fC66EcA3954894CF54469CF6d7f2076Aa2 --name test --symbol TEST --tokens 0x2f3A40A3db8a7e3D09B0adfEfbCe4f6F81927557,0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6 --weights 100000000000000000,900000000000000000 --swap-fee 1000000000000 --guardian 0x3345261FDae0BC146B2F45484DcCeB4708a3FEC4 --validator 0xFa60a31d9a684795af7E8c2F5E35eC1C5fA5a84B --notice-period 30 --management-fee 100000  --description goerlitestvault --config hardhat.config.v1.ts
-```
-
-Note that deploying the actual vault contract is expensive and its difficult to acquire enough goerli eth to do it
