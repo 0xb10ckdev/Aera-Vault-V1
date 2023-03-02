@@ -52,8 +52,5 @@ jobs:
       - name: Run slither analyzer for v2
         run: yarn run slither-v2
 
-      - name: Compile the contracts and generate TypeChain artifacts for v2
-        run: yarn run typechain-v2
-
       - name: Test the contracts and run code coverage for v2
         run: yarn run coverage-v2
