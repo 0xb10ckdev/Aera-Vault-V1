@@ -41,10 +41,13 @@ $ yarn compile
 
 ### TypeChain
 
-Compile the smart contracts and generate TypeChain artifacts:
+Compile the smart contracts and generate TypeChain artifacts. Note that you should only run one of these, depending on which set of contracts you want to deploy or test (each runs `yarn clean` beforehand)
 
 ```sh
 $ yarn typechain
+$ yarn typechain-v1
+$ yarn typechain-v2
+$ yarn typechain-v4
 ```
 
 ### Analyze Solidity
@@ -80,6 +83,11 @@ $ yarn test
 ```
 
 Tests run against hardhat forks of target environments (ie Kovan, Mainnet) and require a node provider to be authenticated in your [.env](./.env).
+
+Gotchas:
+First run `yarn typechain-v1`. Currently the tests are only setup to run against v1
+
+When running integration tests, if you see an error like `Errors: Invalid value undefined supplied to : RpcTransactionReceipt | null/to: ADDRESS | null`, you probably need to clean your generated deployments folder. This indicates that you have existing deployments to the network your running your integration test against (a forked copy), and for some reason the test suite doesn't like that.
 
 ### Coverage
 
@@ -124,7 +132,7 @@ $ yarn deploy:validator --network <NETWORK> --count <TOKEN_COUNT>
 Deploy the ManagedPoolFactory to a specific network:
 
 ```sh
-$ yarn deploy:factory --network <NETWORK>
+$ yarn deploy:managedPoolFactory --network <NETWORK>
 ```
 
 Deploy the GuardianWhitelistFactory to a specific network:
@@ -134,12 +142,11 @@ $ yarn deploy:guardianWhitelistFactory --network <NETWORK>
 ```
 
 Deploy the GuardianWhitelist to a specific network:
+NOTE: Currently broken- GuardianWhiteListFactory is not emitting a Deploy event
 
 ```sh
 $ yarn deploy:guardianWhitelist --network <NETWORK> --factory <GUARDIAN_WHITELIST_FACTORY> --guardians <GUARDIANS> --salt <SALT>
 ```
-
-Deploy the Vault to a specific network:
 
 ```sh
 $ yarn deploy:vault --network <NETWORK> --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swap-fee <FEE> --guardian <GUARDIAN> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION>
@@ -161,27 +168,35 @@ Deploy the Validator, ManagedPoolFactory and Vault to Hardhat Network:
 
 ```sh
 $ yarn deploy:validator --count <TOKEN_COUNT>
-$ yarn deploy:factory
+$ yarn deploy:managedPoolFactory
 $ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swap-fee <FEE> --guardian <GUARDIAN> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION> --print-transaction-data
 ```
+
+Example working deployment to local fork of goerli with actual numbers:
+
+```sh
+$ yarn HARDHAT_FORK=goerli yarn deploy:vault --network hardhat --factory 0x14c7F6fC66EcA3954894CF54469CF6d7f2076Aa2 --name test --symbol TEST --tokens 0x2f3A40A3db8a7e3D09B0adfEfbCe4f6F81927557,0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6 --weights 100000000000000000,900000000000000000 --swap-fee 1000000000000 --guardian 0x3345261FDae0BC146B2F45484DcCeB4708a3FEC4 --validator 0xFa60a31d9a684795af7E8c2F5E35eC1C5fA5a84B --notice-period 30 --management-fee 100000  --description goerlitestvault
+```
+
+Note that deploying the actual vault contract is expensive and its difficult to acquire enough goerli eth to do it
 
 **Legend**:
 
 - GUARDIAN_WHITELIST_FACTORY: GuardianWhitelistFactory address
-- GUARDIANS: Initial Guardians addresses
-- SALT: Salt value for GuardianWhitelist deployment
+- GUARDIANS: Initial Guardians addresses (comma-separated)
+- SALT: Salt value for GuardianWhitelist deployment (uint256)
 - FACTORY: Balancer's Managed Pool Factory address
-- TOKEN_COUNT: Token Count
-- NAME: Pool token name
-- SYMBOL: Pool token symbol
-- TOKENS: Tokens' addresses
-- Weights: Tokens' weights
-- FEE: Swap fee percentage
+- TOKEN_COUNT: Token Count (uint256)
+- NAME: Pool token name (string)
+- SYMBOL: Pool token symbol (string)
+- TOKENS: Tokens' addresses (comma-separated)
+- Weights: Tokens' weights (comma-separated uint256)
+- FEE: Swap fee percentage (uint256, in 1e18 decimals)
 - GUARDIAN: Guardian's address
 - VALIDATOR: Address of withdrawal validator contract
-- NOTICE_PERIOD: Finalization notice period in seconds
-- MANAGEMENT_FEE: Management fee earned proportion per second
-- DESCRIPTION: Vault text description
+- NOTICE_PERIOD: Finalization notice period in seconds (uint256)
+- MANAGEMENT_FEE: Management fee earned proportion per second (uint256, in 1e18 decimals)
+- DESCRIPTION: Vault text description (string)
 - print-transaction-data: Flag to print transaction data for deployment
 
 **Important**:
@@ -207,3 +222,42 @@ compiler version is to add the following fields to your VSCode user settings:
 ```
 
 Where of course `v0.8.11` can be replaced with any other version.
+
+
+## Forking a network
+
+Use the same config you used to generate typechains
+
+E.g. for goerli with v1 typechain
+```sh
+$ yarn hardhat node --fork $GOERLI_API_URL --config hardhat.config.v1.ts
+```
+
+# ERRORS
+- programmatically run typechain inside solcover.js does not work- i had to run the specific typechain version before running coverage
+- coverage-v1 fails with
+
+```
+1) Aera Vault V1 Mainnet Deployment
+       should be reverted to deploy vault
+         when total sum of weights is not one:
+     AssertionError: Expected transaction to be reverted with BAL#308, but other exception was thrown: Error: Transaction reverted without a reason string
+
+
+  2) Aera Vault V1 Mainnet Functionality
+       "before each" hook for "should be possible to initialize the vault":
+     Error: Transaction reverted without a reason string
+```
+- yarn coverage:local fails with a compilation error `DeclarationError: Undeclared identifier`
+
+- yarn coverage-v2 fails with
+```
+1) Aera Vault V2 Mainnet Deployment
+       "before all" hook for "should be possible to deploy vault":
+     Error: Transaction reverted: function call to a non-contract account
+...
+
+ 2) Integration Test
+       "before each" hook for "when call deposit":
+     Error: Transaction reverted: function call to a non-contract account
+```

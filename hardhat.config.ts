@@ -10,9 +10,11 @@ import { HardhatUserConfig } from "hardhat/config";
 import { NetworkUserConfig } from "hardhat/types";
 import { resolve } from "path";
 import "solidity-coverage";
+import "./tasks/accounts";
 import "./tasks/clean";
 import "./tasks/deploy";
 import "./tasks/guardian-whitelist-factory-address";
+
 
 dotenvConfig({ path: resolve(__dirname, "./.env") });
 
@@ -20,7 +22,7 @@ export const chainIds = {
   ganache: 1337,
   goerli: 5,
   hardhat: 31337,
-  kovan: 42,
+  // kovan: 42, unsupported
   mainnet: 1,
   rinkeby: 4,
   ropsten: 3,
@@ -48,9 +50,10 @@ if (!etherscanApiKey) {
 
 const infuraApiKey = process.env.INFURA_API_KEY;
 const alchemyApiKey = process.env.ALCHEMY_API_KEY;
-if (!infuraApiKey && !alchemyApiKey) {
+const alchemyApiUrl = process.env.ALCHEMY_API_URL;
+if (!infuraApiKey && !alchemyApiKey && !alchemyApiUrl) {
   throw new Error(
-    "Please set your INFURA_API_KEY or ALCHEMY_API_KEY in a .env file",
+    "Please set your INFURA_API_KEY or ALCHEMY_API_KEY or ALCHEMY_API_URL in a .env file",
   );
 }
 
@@ -70,26 +73,38 @@ function createAlchemyUrl(network: string) {
       "Warning: Please set your ALCHEMY_API_KEY in the env file if doing a deployment",
     );
   }
+
+  const supported_networks = ["mainnet", "rinkeby", "ropsten", "goerli", "mumbai", "polygon"];
   let urlPrefix = `eth-${network}`;
   if (network === "polygon") {
-    urlPrefix = "polygon-mainnet.g";
+    urlPrefix = "polygon-mainnet";
   } else if (network === "mumbai") {
-    urlPrefix = "polygon-mumbai.g";
+    urlPrefix = "polygon-mumbai";
+  } else if (!supported_networks.includes("mainnet")) {
+    throw new Error("Alchemy does not support network: " + network);
   }
-  return `https://${urlPrefix}.alchemyapi.io/v2/${alchemyApiKey}`;
+  return `https://${urlPrefix}.g.alchemy.com/v2/${alchemyApiKey}`;
+}
+
+function getNetworkUrl(network: string) {
+  if (alchemyApiUrl) {
+    return alchemyApiUrl;
+  } else if (alchemyApiKey) {
+    return createAlchemyUrl(network);
+  } else if (infuraApiKey) {
+    return createInfuraUrl(network);;
+  }
+  return "";
 }
 
 const forkUrl = process.env.HARDHAT_FORK
-  ? alchemyApiKey
-    ? createAlchemyUrl(process.env.HARDHAT_FORK)
-    : createInfuraUrl(process.env.HARDHAT_FORK)
+  ? getNetworkUrl(process.env.HARDHAT_FORK)
   : "";
 
 // use mnemonic for deployment
-function createTestnetConfig(
+function createNetworkConfig(
   network: keyof typeof chainIds,
 ): NetworkUserConfig {
-  const url = createInfuraUrl(network);
   return {
     accounts: {
       count: 10,
@@ -98,15 +113,15 @@ function createTestnetConfig(
       path: "m/44'/60'/0'/0",
     },
     chainId: chainIds[network],
-    url,
+    url: getNetworkUrl(network)
   };
 }
 
 // use private key for deployment rather than mnemonic
-function createTestnetPrivateKeyConfig(
+function createNetworkPrivateKeyConfig(
   network: keyof typeof chainIds,
 ): NetworkUserConfig {
-  const url = createAlchemyUrl(network);
+  const url = getNetworkUrl(network);
   return {
     // eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
     accounts: [testnetPrivateKey!],
@@ -148,13 +163,12 @@ const config: HardhatUserConfig = {
       allowUnlimitedContractSize: true,
       chainId: chainIds.hardhat,
     },
-    mainnet: createTestnetConfig("mainnet"),
-    goerli: createTestnetConfig("goerli"),
-    kovan: createTestnetPrivateKeyConfig("kovan"),
-    rinkeby: createTestnetConfig("rinkeby"),
-    ropsten: createTestnetConfig("ropsten"),
-    polygon: createTestnetPrivateKeyConfig("polygon"),
-    mumbai: createTestnetPrivateKeyConfig("mumbai"),
+    mainnet: createNetworkConfig("mainnet"),
+    goerli: createNetworkConfig("goerli"),
+    rinkeby: createNetworkConfig("rinkeby"),
+    ropsten: createNetworkConfig("ropsten"),
+    polygon: createNetworkPrivateKeyConfig("polygon"),
+    mumbai: createNetworkPrivateKeyConfig("mumbai"),
   },
   etherscan: {
     apiKey: etherscanApiKey,
