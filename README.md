@@ -87,7 +87,7 @@ Tests run against hardhat forks of target environments (ie Kovan, Mainnet) and r
 Gotchas:
 First run `yarn typechain-v1`. Currently the tests are only setup to run against v1
 
-When running integration tests, if you see an error like `Errors: Invalid value undefined supplied to : RpcTransactionReceipt | null/to: ADDRESS | null`, you probably need to clean your generated deployments folder. This indicates that you have existing deployments to the network your running your integration test against (a forked copy), and for some reason the test suite doesn't like that.
+When running integration tests, if you see an error like `Errors: Invalid value undefined supplied to : RpcTransactionReceipt | null/to: ADDRESS | null`, you probably need to clean your generated deployments folder. This indicates that you have existing deployments to the network you're running your integration test against (a forked copy), and for some reason the test suite doesn't like that.
 
 ### Coverage
 
@@ -169,7 +169,7 @@ Deploy the Validator, ManagedPoolFactory and Vault to Hardhat Network:
 ```sh
 $ yarn deploy:validator --count <TOKEN_COUNT>
 $ yarn deploy:managedPoolFactory
-$ yarn deploy --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swap-fee <FEE> --guardian <GUARDIAN> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION> --print-transaction-data
+$ yarn deploy:vault --factory <FACTORY> --name <NAME> --symbol <SYMBOL> --tokens <TOKENS> --weights <WEIGHTS> --swap-fee <FEE> --guardian <GUARDIAN> --validator <VALIDATOR> --notice-period <NOTICE_PERIOD> --management-fee <MANAGEMENT_FEE> --description <DESCRIPTION> --print-transaction-data
 ```
 
 Example working deployment to local fork of goerli with actual numbers:
