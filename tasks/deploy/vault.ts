@@ -36,9 +36,15 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
     false,
     types.boolean,
   )
+  .addOptionalParam(
+    "gasPrice",
+    "Set manual gas price",
+    null,
+    types.int,
+  )
   .addFlag("printTransactionData", "Get transaction data for deployment")
   .setAction(async (taskArgs, { ethers, network }) => {
-    const config = getConfig(network.config.chainId || 1);
+    const config = getConfig(network.config.chainId || 1, {gasPrice: taskArgs.gasPrice});
 
     const factory = taskArgs.factory;
     const name = taskArgs.name;
@@ -82,6 +88,7 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
       console.log(`Management Fee: ${managementFee}`);
       console.log(`Merkle Orchard: ${merkleOrchard}`);
       console.log(`Description: ${description}`);
+      console.log(`Gas Price: ${config.gasPrice}`);
     }
 
     const contract = taskArgs.test ? "AeraVaultV1Mock" : "AeraVaultV1";
@@ -120,7 +127,7 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
       managementFee,
       merkleOrchard,
       description,
-    });
+    }, {gasPrice: config.gasPrice});
 
     if (!taskArgs.silent) {
       console.log("Vault is deployed to:", vault.address);
