@@ -30,8 +30,8 @@ task(
     // We need to fund the calculated sender first
     const funding = await admin.sendTransaction({
       to: deployment.sender,
-      value: ethers.BigNumber.from(config.proxyDeployGasLimit).mul(
-        config.proxyDeployGasPrice,
+      value: ethers.BigNumber.from(config.gasLimit).mul(
+        config.gasPrice,
       ),
     });
     await funding.wait();

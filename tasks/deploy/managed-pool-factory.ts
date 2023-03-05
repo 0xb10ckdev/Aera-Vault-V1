@@ -8,8 +8,17 @@ task("deploy:managedPoolFactory", "Deploys a Managed Pool Factory")
     false,
     types.boolean,
   )
+  .addOptionalParam(
+    "gasPrice",
+    "Set manual gas price",
+    null,
+    types.int,
+  )
   .setAction(async (taskArgs, { deployments, ethers, network }) => {
-    const config = getConfig(network.config.chainId || 1);
+    if (taskArgs.gasPrice) {
+      console.log(`Using gas price: ${taskArgs.gasPrice}`);
+    }
+    const config = getConfig(network.config.chainId || 1, {gasPrice: taskArgs.gasPrice});
 
     const { admin } = await ethers.getNamedSigners();
 
@@ -26,6 +35,8 @@ task("deploy:managedPoolFactory", "Deploys a Managed Pool Factory")
         args: [config.bVault],
         from: admin.address,
         log: true,
+        gasLimit: config.gasLimit,
+        gasPrice: config.gasPrice
       },
     );
 
@@ -37,6 +48,8 @@ task("deploy:managedPoolFactory", "Deploys a Managed Pool Factory")
         args: [baseManagedPoolFactory.address],
         from: admin.address,
         log: true,
+        gasLimit: config.gasLimit,
+        gasPrice: config.gasPrice
       },
     );
 
