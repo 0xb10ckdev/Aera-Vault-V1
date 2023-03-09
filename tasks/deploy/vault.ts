@@ -45,7 +45,7 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
   )
   .addFlag("printTransactionData", "Get transaction data for deployment")
   .setAction(async (taskArgs, { deployments, ethers, network }) => {
-    let configOptions = {gasPrice: undefined};
+    const configOptions = {gasPrice: undefined};
     if (taskArgs.gasPrice !== "") {
       configOptions.gasPrice = taskArgs.gasPrice;
     }
