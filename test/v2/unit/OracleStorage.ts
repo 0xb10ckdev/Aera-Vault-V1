@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 import { OracleStorage, OracleStorage__factory } from "../../../typechain";
-import { baseContext } from "../../shared/contexts";
+import { baseContext } from "../../common/contexts";
 import { ZERO_ADDRESS } from "../constants";
 import { setupOracles } from "../fixtures";
 import { toUnit } from "../utils";

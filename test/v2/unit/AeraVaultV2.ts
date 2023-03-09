@@ -1,4 +1,4 @@
-import { baseContext } from "../../shared/contexts";
+import { baseContext } from "../../common/contexts";
 import { setupVaultWithBalancerVaultMock } from "../fixtures";
 import { testAeraVaultV2 } from "../functions/vault";
 

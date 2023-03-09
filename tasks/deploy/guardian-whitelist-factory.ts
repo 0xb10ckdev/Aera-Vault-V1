@@ -1,6 +1,7 @@
 import { task, types } from "hardhat/config";
 import { getConfig } from "../../scripts/config";
 import { GuardianWhitelistFactoryDeployment } from "../guardian-whitelist-factory-address";
+import { BigNumberish } from "ethers";
 
 task(
   "deploy:guardianWhitelistFactory",
@@ -31,7 +32,7 @@ task(
     const funding = await admin.sendTransaction({
       to: deployment.sender,
       value: ethers.BigNumber.from(config.gasLimit).mul(
-        config.gasPrice,
+        config.gasPrice as BigNumberish,
       ),
     });
     await funding.wait();
