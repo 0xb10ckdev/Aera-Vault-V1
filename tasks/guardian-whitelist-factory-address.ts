@@ -24,10 +24,10 @@ task(
       "GuardianWhitelistFactory",
     );
 
-    let gasPrice: number | string | undefined;
+    let gasPrice: number | undefined;
 
-    if (config.gasPrice === undefined || config.gasPrice === "auto") {
-      gasPrice = "auto";
+    if (config.gasPrice === undefined) {
+      gasPrice = undefined;
     } else {
       gasPrice = (config.gasPrice as BigNumber).toNumber();
     }
