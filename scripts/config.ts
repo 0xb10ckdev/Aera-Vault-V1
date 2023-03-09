@@ -28,37 +28,31 @@ export function getMerkleOrchard(chainId: number): string | undefined {
   return merkle_orchards[chainId];
 }
 
-export function getGasPrice(chainId: number, options: { gasPrice?: number | string | undefined} | undefined): BigNumber | string | undefined {
+export function getGasPrice(chainId: number, maybeGasPrice?: number | string | undefined): BigNumber | undefined {
   const default_gas_prices = {
     [chainIds.hardhat]: BigNumber.from(100000000000)
-  }
-  if (options === undefined) {
-    options = {};
   }
   let defaultPrice: BigNumber | string | undefined = undefined;
   if (default_gas_prices[chainId] !== undefined) {
     defaultPrice = default_gas_prices[chainId];
   }
-  let gasPrice = options.gasPrice? options.gasPrice: defaultPrice;
+  let gasPrice = maybeGasPrice? maybeGasPrice: defaultPrice;
   if (typeof gasPrice === "number" || typeof gasPrice == "string") {
     gasPrice = BigNumber.from(gasPrice);
   }
   return gasPrice;
 }
 
-export function getGasLimit(chainId: number, options: { gasLimit?: number | string | undefined} | undefined): number | string | undefined{
+export function getGasLimit(chainId: number, maybeGasLimit?: number | undefined): number | undefined{
   const default_gas_limits = {
     [chainIds.hardhat]: 3000000,
     [chainIds.mumbai]: 1100000
   }
-  if (options === undefined) {
-    options = {};
-  }
-  let defaultLimit: number | string | undefined = undefined;
+  let defaultLimit: number | undefined = undefined;
   if (default_gas_limits[chainId] !== undefined) {
     defaultLimit = default_gas_limits[chainId];
   }
-  return options.gasLimit? options.gasLimit: defaultLimit;
+  return maybeGasLimit? maybeGasLimit: defaultLimit;
 }
 
 export const DEFAULT_NOTICE_PERIOD = 3600;
@@ -71,12 +65,12 @@ export const getChainId = (network?: string): number => {
 
 export const getConfig = (
   chainId: number,
-  options?: { gasPrice?: number; gasLimit?: number },
+  options?: { gasPrice?: number | string | undefined; gasLimit?: number | undefined},
 ): {
   bVault: string; // Balancer Vault address
   merkleOrchard?: string;
-  gasPrice: string | BigNumber | undefined;
-  gasLimit: string | number | undefined;
+  gasPrice: BigNumber | undefined;
+  gasLimit: number | undefined;
 } => {
   if (!(Object.values(chainIds).includes(chainId))) {
       throw "unsupported chain ID";
@@ -84,7 +78,7 @@ export const getConfig = (
   return {
     bVault: getBVault(chainId),
     merkleOrchard: getMerkleOrchard(chainId),
-    gasPrice: getGasPrice(chainId, options),
-    gasLimit: getGasLimit(chainId, options),
+    gasPrice: getGasPrice(chainId, options? options.gasPrice: undefined),
+    gasLimit: getGasLimit(chainId, options? options.gasLimit: undefined),
   };
 };
