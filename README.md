@@ -223,17 +223,18 @@ compiler version is to add the following fields to your VSCode user settings:
 
 Where of course `v0.8.11` can be replaced with any other version.
 
-
 ## Forking a network
 
 Use the same config you used to generate typechains
 
 E.g. for goerli with v1 typechain
+
 ```sh
 $ yarn hardhat node --fork $GOERLI_API_URL --config hardhat.config.v1.ts
 ```
 
 # ERRORS
+
 - programmatically run typechain inside solcover.js does not work- i had to run the specific typechain version before running coverage
 - coverage-v1 fails with
 
@@ -248,9 +249,11 @@ $ yarn hardhat node --fork $GOERLI_API_URL --config hardhat.config.v1.ts
        "before each" hook for "should be possible to initialize the vault":
      Error: Transaction reverted without a reason string
 ```
+
 - yarn coverage:local fails with a compilation error `DeclarationError: Undeclared identifier`
 
 - yarn coverage-v2 fails with
+
 ```
 1) Aera Vault V2 Mainnet Deployment
        "before all" hook for "should be possible to deploy vault":

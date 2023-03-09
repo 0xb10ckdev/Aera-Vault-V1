@@ -2,7 +2,6 @@ import { AssetHelpers } from "@balancer-labs/balancer-js";
 import { task, types } from "hardhat/config";
 import { getConfig } from "../../scripts/config";
 
-
 // https://github.com/balancer-labs/balancer-v2-monorepo/blob/master/pkg/balancer-js/test/tokens.test.ts
 const wethAddress = "0x000000000000000000000000000000000000000F";
 const assetHelpers = new AssetHelpers(wethAddress);
@@ -37,15 +36,10 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
     false,
     types.boolean,
   )
-  .addOptionalParam(
-    "gasPrice",
-    "Set manual gas price",
-    "",
-    types.string,
-  )
+  .addOptionalParam("gasPrice", "Set manual gas price", "", types.string)
   .addFlag("printTransactionData", "Get transaction data for deployment")
   .setAction(async (taskArgs, { deployments, ethers, network }) => {
-    const configOptions = {gasPrice: undefined};
+    const configOptions = { gasPrice: undefined };
     if (taskArgs.gasPrice !== "") {
       configOptions.gasPrice = taskArgs.gasPrice;
     }
@@ -121,16 +115,13 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
       return;
     }
 
-    const deployedVault = await deployments.deploy(
-      contractName,
-      {
-        contract: contractName,
-        args: [deployArgs],
-        from: admin.address,
-        log: true,
-        gasPrice: config.gasPrice,
-      },
-    );
+    const deployedVault = await deployments.deploy(contractName, {
+      contract: contractName,
+      args: [deployArgs],
+      from: admin.address,
+      log: true,
+      gasPrice: config.gasPrice,
+    });
     if (!taskArgs.silent) {
       console.log("Vault is deployed to:", deployedVault.address);
     }
