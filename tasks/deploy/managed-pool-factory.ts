@@ -11,14 +11,20 @@ task("deploy:managedPoolFactory", "Deploys a Managed Pool Factory")
   .addOptionalParam(
     "gasPrice",
     "Set manual gas price",
-    null,
-    types.int,
+    "",
+    types.string,
   )
   .setAction(async (taskArgs, { deployments, ethers, network }) => {
-    if (taskArgs.gasPrice) {
-      console.log(`Using gas price: ${taskArgs.gasPrice}`);
+    const config = getConfig(
+      network.config.chainId || 1,
+      {gasPrice: taskArgs.gasPrice === "" ? undefined : taskArgs.gasPrice}
+    );
+    if (config.gasLimit) {
+      console.log(`Using gas limit: ${config.gasLimit}`);
     }
-    const config = getConfig(network.config.chainId || 1, {gasPrice: taskArgs.gasPrice});
+    if (config.gasPrice) {
+      console.log(`Using gas price: ${config.gasPrice}`);
+    }
 
     const { admin } = await ethers.getNamedSigners();
 
