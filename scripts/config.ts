@@ -28,7 +28,7 @@ export function getMerkleOrchard(chainId: number): string | undefined {
   return merkle_orchards[chainId];
 }
 
-function getGasPrice(chainId: number, options: { gasPrice?: number | string | undefined} | undefined): BigNumber | string | undefined {
+export function getGasPrice(chainId: number, options: { gasPrice?: number | string | undefined} | undefined): BigNumber | string | undefined {
   const default_gas_prices = {
     [chainIds.hardhat]: BigNumber.from(100000000000)
   }
@@ -46,7 +46,7 @@ function getGasPrice(chainId: number, options: { gasPrice?: number | string | un
   return gasPrice;
 }
 
-function getGasLimit(chainId: number, options: { gasLimit?: number | string | undefined} | undefined): number | string | undefined{
+export function getGasLimit(chainId: number, options: { gasLimit?: number | string | undefined} | undefined): number | string | undefined{
   const default_gas_limits = {
     [chainIds.hardhat]: 3000000,
     [chainIds.mumbai]: 1100000
