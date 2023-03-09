@@ -13,7 +13,7 @@ import {
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
 } from "../../../typechain";
-import { baseContext } from "../../shared/contexts";
+import { baseContext } from "../../common/contexts";
 import {
   MAXIMUM_SWAP_FEE_PERCENT_CHANGE,
   MAX_MANAGEMENT_FEE,

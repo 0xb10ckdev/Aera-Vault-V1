@@ -12,7 +12,7 @@ import {
   WithdrawalValidatorMock,
   WithdrawalValidatorMock__factory,
 } from "../../../typechain";
-import { baseContext } from "../../shared/contexts";
+import { baseContext } from "../../common/contexts";
 import {
   BALANCER_ERRORS,
   DEVIATION,

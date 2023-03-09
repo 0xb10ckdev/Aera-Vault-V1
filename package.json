@@ -100,6 +100,7 @@
     "slither-v1": "slither ./contracts/v1/ --filter-paths \"dependencies|mocks\" --exclude solc-version,similar-names,timestamp,unused-return,uninitialized-local",
     "slither-v2": "slither ./contracts/v2/ --filter-paths \"dependencies|mocks\" --exclude solc-version,similar-names,timestamp,unused-return,uninitialized-local",
     "slither-v4": "slither ./contracts/v4/ --filter-paths \"dependencies|mocks\" --exclude solc-version,similar-names,timestamp,unused-return,uninitialized-local",
+    "test:common": "cross-env TEST_PATH=./test/common hardhat test",
     "test:unit-v1": "cross-env TEST_PATH=./test/v1/unit hardhat test --config hardhat.config.v1.ts",
     "test:integration-v1": "cross-env TEST_PATH=./test/v1/integration HARDHAT_FORK=mainnet HARDHAT_FORK_NUMBER=13000000 hardhat test --config hardhat.config.v1.ts",
     "test:goerli-v1": "cross-env TEST_PATH=./test/v1/integration HARDHAT_FORK=goerli HARDHAT_FORK_NUMBER=8574342 hardhat test --config hardhat.config.v1.ts",
