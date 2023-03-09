@@ -8,17 +8,11 @@ task("deploy:managedPoolFactory", "Deploys a Managed Pool Factory")
     false,
     types.boolean,
   )
-  .addOptionalParam(
-    "gasPrice",
-    "Set manual gas price",
-    "",
-    types.string,
-  )
+  .addOptionalParam("gasPrice", "Set manual gas price", "", types.string)
   .setAction(async (taskArgs, { deployments, ethers, network }) => {
-    const config = getConfig(
-      network.config.chainId || 1,
-      {gasPrice: taskArgs.gasPrice === "" ? undefined : taskArgs.gasPrice}
-    );
+    const config = getConfig(network.config.chainId || 1, {
+      gasPrice: taskArgs.gasPrice === "" ? undefined : taskArgs.gasPrice,
+    });
     if (config.gasLimit) {
       console.log(`Using gas limit: ${config.gasLimit}`);
     }
@@ -42,7 +36,7 @@ task("deploy:managedPoolFactory", "Deploys a Managed Pool Factory")
         from: admin.address,
         log: true,
         gasLimit: config.gasLimit,
-        gasPrice: config.gasPrice
+        gasPrice: config.gasPrice,
       },
     );
 
@@ -55,7 +49,7 @@ task("deploy:managedPoolFactory", "Deploys a Managed Pool Factory")
         from: admin.address,
         log: true,
         gasLimit: config.gasLimit,
-        gasPrice: config.gasPrice
+        gasPrice: config.gasPrice,
       },
     );
 
