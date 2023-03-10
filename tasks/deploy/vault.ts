@@ -125,4 +125,5 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
     if (!taskArgs.silent) {
       console.log("Vault is deployed to:", deployedVault.address);
     }
+    return await vaultFactory.attach(deployedVault.address);
   });
