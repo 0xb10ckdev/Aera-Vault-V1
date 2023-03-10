@@ -153,7 +153,7 @@ task("deploy:vaultV2", "Deploys an Aera vault v2 with the given parameters")
 
     const vault = await vaultFactory
       .connect(admin)
-      .deploy({ factory: "test" });
+      .deploy(vaultConfig);
 
     if (!taskArgs.silent) {
       console.log("Vault is deployed to:", vault.address);
