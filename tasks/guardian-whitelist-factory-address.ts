@@ -1,6 +1,7 @@
 import { Transaction } from "ethereumjs-tx";
 import { task, types } from "hardhat/config";
 import { getConfig } from "../scripts/config";
+import { BigNumber } from "ethers";
 
 // Referred to https://github.com/0xjac/ERC1820/tree/master/js
 // `r` and `s` are random numbers.
@@ -23,9 +24,17 @@ task(
       "GuardianWhitelistFactory",
     );
 
+    let gasPrice: number | undefined;
+
+    if (config.gasPrice === undefined) {
+      gasPrice = undefined;
+    } else {
+      gasPrice = (config.gasPrice as BigNumber).toNumber();
+    }
+
     const rawTransaction = {
       nonce: 0,
-      gasPrice: config.proxyDeployGasPrice,
+      gasPrice: gasPrice,
       value: 0,
       data:
         contractFactory.bytecode +
@@ -33,7 +42,7 @@ task(
           .solidityPack(["address"], [owner])
           .slice(2)
           .padStart(64, "0"),
-      gasLimit: config.proxyDeployGasLimit,
+      gasLimit: config.gasLimit,
       v: 27,
       r: "0x1889898989898989898989898989898989898989898989898989898989898989",
       s: "0x1889898989898989898989898989898989898989898989898989898989898989",

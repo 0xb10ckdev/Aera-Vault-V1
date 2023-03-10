@@ -36,9 +36,14 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
     false,
     types.boolean,
   )
+  .addOptionalParam("gasPrice", "Set manual gas price", "", types.string)
   .addFlag("printTransactionData", "Get transaction data for deployment")
-  .setAction(async (taskArgs, { ethers, network }) => {
-    const config = getConfig(network.config.chainId || 1);
+  .setAction(async (taskArgs, { deployments, ethers, network }) => {
+    const configOptions = { gasPrice: undefined };
+    if (taskArgs.gasPrice !== "") {
+      configOptions.gasPrice = taskArgs.gasPrice;
+    }
+    const config = getConfig(network.config.chainId || 1, configOptions);
 
     const factory = taskArgs.factory;
     const name = taskArgs.name;
@@ -82,32 +87,14 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
       console.log(`Management Fee: ${managementFee}`);
       console.log(`Merkle Orchard: ${merkleOrchard}`);
       console.log(`Description: ${description}`);
+      console.log(`Gas Price: ${config.gasPrice}`);
     }
 
-    const contract = taskArgs.test ? "AeraVaultV1Mock" : "AeraVaultV1";
+    const contractName = taskArgs.test ? "AeraVaultV1Mock" : "AeraVaultV1";
 
-    const vaultFactory = await ethers.getContractFactory(contract);
+    const vaultFactory = await ethers.getContractFactory(contractName);
 
-    if (taskArgs.printTransactionData) {
-      const calldata = vaultFactory.getDeployTransaction([
-        factory,
-        name,
-        symbol,
-        tokens,
-        weights,
-        swapFeePercentage,
-        guardian,
-        validator,
-        noticePeriod,
-        managementFee,
-        merkleOrchard,
-        description,
-      ]).data;
-      console.log("Deployment Transaction Data:", calldata);
-      return;
-    }
-
-    const vault = await vaultFactory.connect(admin).deploy({
+    const deployArgs = {
       factory,
       name,
       symbol,
@@ -120,11 +107,23 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
       managementFee,
       merkleOrchard,
       description,
-    });
+    };
 
-    if (!taskArgs.silent) {
-      console.log("Vault is deployed to:", vault.address);
+    if (taskArgs.printTransactionData) {
+      const calldata = vaultFactory.getDeployTransaction(deployArgs).data;
+      console.log("Deployment Transaction Data:", calldata);
+      return;
     }
 
-    return vault;
+    const deployedVault = await deployments.deploy(contractName, {
+      contract: contractName,
+      args: [deployArgs],
+      from: admin.address,
+      log: true,
+      gasPrice: config.gasPrice,
+    });
+    if (!taskArgs.silent) {
+      console.log("Vault is deployed to:", deployedVault.address);
+    }
+    return await vaultFactory.attach(deployedVault.address);
   });

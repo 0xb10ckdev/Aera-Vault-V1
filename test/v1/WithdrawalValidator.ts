@@ -3,7 +3,7 @@ import { expect } from "chai";
 import { artifacts, waffle } from "hardhat";
 import { Artifact } from "hardhat/types";
 import { PermissiveWithdrawalValidator } from "../../typechain";
-import { baseContext } from "../shared/contexts";
+import { baseContext } from "../common/contexts";
 
 const { deployContract } = waffle;
 

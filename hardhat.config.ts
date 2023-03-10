@@ -15,7 +15,6 @@ import "./tasks/clean";
 import "./tasks/deploy";
 import "./tasks/guardian-whitelist-factory-address";
 
-
 dotenvConfig({ path: resolve(__dirname, "./.env") });
 
 export const chainIds = {
@@ -74,7 +73,14 @@ function createAlchemyUrl(network: string) {
     );
   }
 
-  const supported_networks = ["mainnet", "rinkeby", "ropsten", "goerli", "mumbai", "polygon"];
+  const supported_networks = [
+    "mainnet",
+    "rinkeby",
+    "ropsten",
+    "goerli",
+    "mumbai",
+    "polygon",
+  ];
   let urlPrefix = `eth-${network}`;
   if (network === "polygon") {
     urlPrefix = "polygon-mainnet";
@@ -92,7 +98,7 @@ function getNetworkUrl(network: string) {
   } else if (alchemyApiKey) {
     return createAlchemyUrl(network);
   } else if (infuraApiKey) {
-    return createInfuraUrl(network);;
+    return createInfuraUrl(network);
   }
   return "";
 }
@@ -113,7 +119,7 @@ function createNetworkConfig(
       path: "m/44'/60'/0'/0",
     },
     chainId: chainIds[network],
-    url: getNetworkUrl(network)
+    url: getNetworkUrl(network),
   };
 }
 
