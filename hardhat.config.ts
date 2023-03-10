@@ -4,6 +4,7 @@ import "@primitivefi/hardhat-dodoc";
 import "@typechain/hardhat";
 import { config as dotenvConfig } from "dotenv";
 import "hardhat-contract-sizer";
+import * as tdly from "@tenderly/hardhat-tenderly";
 import "hardhat-deploy";
 import "hardhat-gas-reporter";
 import { HardhatUserConfig } from "hardhat/config";
@@ -16,6 +17,8 @@ import "./tasks/deploy";
 import "./tasks/guardian-whitelist-factory-address";
 
 dotenvConfig({ path: resolve(__dirname, "./.env") });
+
+tdly.setup();
 
 export const chainIds = {
   ganache: 1337,
@@ -178,6 +181,12 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: etherscanApiKey,
+  },
+  tenderly: {
+    project: "AeraV1Test",
+    username: "nickborg@gauntlet.network",
+    forkNetwork: "80001",
+    privateVerification: true,
   },
   paths: {
     artifacts: "./artifacts",

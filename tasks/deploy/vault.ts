@@ -72,6 +72,7 @@ task("deploy:vault", "Deploys an Aera vault with the given parameters")
     }
 
     const { admin } = await ethers.getNamedSigners();
+    return;
 
     if (!taskArgs.silent) {
       console.log("Deploying vault with");

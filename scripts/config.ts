@@ -52,7 +52,6 @@ export function getGasLimit(
 ): number | undefined {
   const default_gas_limits = {
     [chainIds.hardhat]: 3000000,
-    [chainIds.mumbai]: 1100000,
   };
   let defaultLimit: number | undefined = undefined;
   if (default_gas_limits[chainId] !== undefined) {
