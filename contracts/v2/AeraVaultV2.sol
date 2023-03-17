@@ -59,7 +59,7 @@ contract AeraVaultV2 is
     ///      Weight growth range for n seconds: [1 / Fn - 1, Fn - 1]
     ///      E.g. increment/decrement factor per 2000 seconds is 2
     ///      Weight growth range for 2000 seconds is [-50%, 100%]
-    uint256 private constant MAX_WEIGHT_CHANGE_RATIO = 10**15;
+    uint256 private constant MAX_WEIGHT_CHANGE_RATIO = 10**16;
 
     /// @notice Largest management fee earned proportion per one second.
     /// @dev 0.0000001% per second, i.e. 3.1536% per year.
