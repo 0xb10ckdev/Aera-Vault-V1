@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 // solhint-disable-next-line compiler-version
 pragma solidity ^0.7.0;
 pragma experimental ABIEncoderV2;
