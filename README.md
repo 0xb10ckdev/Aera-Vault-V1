@@ -1,6 +1,9 @@
 # Aera Protocol
 
-[![Unit Tests](https://github.com/GauntletNetworks/aera-contracts/actions/workflows/unit.yml/badge.svg)](https://github.com/GauntletNetworks/aera-contracts/actions/workflows/unit.yml)
+[![Common Unit Tests](https://github.com/GauntletNetworks/aera-contracts/actions/workflows/unit-common.yml/badge.svg)](https://github.com/GauntletNetworks/aera-contracts/actions/workflows/unit-common.yml)
+[![V1 Unit Tests](https://github.com/GauntletNetworks/aera-contracts/actions/workflows/unit-v1.yml/badge.svg)](https://github.com/GauntletNetworks/aera-contracts/actions/workflows/unit-v1.yml)
+[![V2 Unit Tests](https://github.com/GauntletNetworks/aera-contracts/actions/workflows/unit-v2.yml/badge.svg)](https://github.com/GauntletNetworks/aera-contracts/actions/workflows/unit-v2.yml)
+[![V4 Unit Tests](https://github.com/GauntletNetworks/aera-contracts/actions/workflows/unit-v4.yml/badge.svg)](https://github.com/GauntletNetworks/aera-contracts/actions/workflows/unit-v4.yml)
 
 Tools used:
 
