@@ -11,7 +11,7 @@ export const MAXIMUM_SWAP_FEE_PERCENT_CHANGE = toWei("0.005");
 export const SWAP_FEE_COOLDOWN_PERIOD = 60; // 1 minute
 export const ZERO_ADDRESS = constants.AddressZero;
 export const MAX_MANAGEMENT_FEE = toWei("0.000000001"); // 60 days in seconds
-export const MAX_WEIGHT_CHANGE_RATIO = 1e15; // Maximum weight change ratio
+export const MAX_WEIGHT_CHANGE_RATIO = 1e16; // Maximum weight change ratio
 export const MINIMUM_WEIGHT_CHANGE_DURATION = 14400; // 4 hours in seconds
 export const DEVIATION = 1e10; // Deviation of weights in wei
 
